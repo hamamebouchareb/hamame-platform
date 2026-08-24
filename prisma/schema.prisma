@@ -1,0 +1,828 @@
+// Hamame — Prisma schema
+//
+// This is a direct translation of docs/hamame_database_schema.md ("Hamame — Database
+// Schema (Draft v0.1)") into Prisma syntax. It is NOT a redesign: every table, column,
+// type, nullability, default, and relationship in that document is represented here.
+//
+// Two deliberate, narrow decisions were made to resolve ambiguity in the source draft
+// (confirmed with the product owner before writing this file):
+//
+// 1. `notification_preferences` in the draft declares `user_id` as a single-column PK
+//    while also having `channel`/`category` columns, which would only allow one
+//    preference row per user in total. Since a user needs one row per
+//    category/channel combination, the primary key here is the composite
+//    (user_id, category, channel) instead of user_id alone.
+// 2. No table in the source draft specifies ON DELETE/ON UPDATE behavior, so none is
+//    added here — all relations rely on Prisma's implicit defaults
+//    (Restrict for required relations, SetNull for optional relations) rather than
+//    inventing cascade rules that weren't specified.
+//
+// Table names and column names are preserved exactly (snake_case) via @@map/@map so the
+// actual PostgreSQL schema matches the draft literally; Prisma model/field names follow
+// standard PascalCase/camelCase convention on the application side only.
+//
+// Section numbering below mirrors the source document's sections 1-9.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// 1. Identity & Access
+// ---------------------------------------------------------------------------
+
+model Role {
+  id        String   @id @default(uuid()) @db.Uuid
+  // 'guest' | 'student_free' | 'student_premium' | 'instructor' | 'academic_reviewer' |
+  // 'moderator' | 'support_agent' | 'institution_admin' | 'admin' | 'super_admin'
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  userRoles UserRole[]
+
+  @@map("roles")
+}
+
+model User {
+  id                          String    @id @default(uuid()) @db.Uuid
+  // Nullable: FR-1 allows phone-only registration, so a user may have no email yet.
+  email                       String?   @unique
+  phone                       String?   @unique // FR-1 phone-based registration
+  passwordHash                String    @map("password_hash")
+  // Single-use password reset token stored as its sha256 hash (NOT bcrypt — it's a
+  // lookup token, not a password) plus a 1h expiry. Null except between
+  // forgot-password and reset-password. Hashing means a DB leak never exposes a usable
+  // token; the raw token only ever leaves the server via the MVP console/response path.
+  passwordResetTokenHash      String?   @map("password_reset_token_hash")
+  passwordResetTokenExpiresAt DateTime? @map("password_reset_token_expires_at") @db.Timestamptz
+  // Single-use email/phone verification token stored as its sha256 hash plus a 24h
+  // expiry (FR-3). Null except between register and verify. Same hashing rationale and
+  // MVP delivery workaround as the password reset token above.
+  verificationTokenHash       String?   @map("verification_token_hash")
+  verificationTokenExpiresAt  DateTime? @map("verification_token_expires_at") @db.Timestamptz
+  // Nullable: PUT /api/users/me accepts {"fullName": null} as an explicit
+  // "clear this field" signal (same semantics as wilaya/facultyId/yearId).
+  fullName                    String?   @map("full_name")
+  facultyId                   String?   @map("faculty_id") @db.Uuid
+  yearId                      String?   @map("year_id") @db.Uuid
+  // Nullable: not collected at registration; filled in later via profile completion (FR-4).
+  // Vestigial free text, superseded by universityId below. Kept (rather than dropped or
+  // renamed) so the GET /api/users/me and auth response shapes don't change; safe to drop
+  // in a later cleanup migration once nothing reads it.
+  university                  String?
+  // FR-10a per-university content scoping. Null means "no university set", which resolves
+  // to global-content-only visibility — see src/lib/university-scope.ts.
+  universityId                String?   @map("university_id") @db.Uuid
+  wilaya                      String? // city/province, per FR-4
+  profilePhotoUrl             String?   @map("profile_photo_url")
+  uiLanguage                  String    @default("fr") @map("ui_language") // 'fr' | 'ar' -- NFR-6
+  theme                       String    @default("light") // 'light' | 'dark'
+  emailVerifiedAt             DateTime? @map("email_verified_at") @db.Timestamptz
+  phoneVerifiedAt             DateTime? @map("phone_verified_at") @db.Timestamptz
+  isMinor                     Boolean   @default(false) @map("is_minor") // BR-11 data-handling awareness
+  status                      String    @default("active") // 'active' | 'suspended' | 'deleted'
+  // For time-based suspensions (POST /api/moderation/users/:id/restrict with
+  // durationDays): null means indefinite. Once this timestamp passes,
+  // src/jobs/unsuspendUsers.ts flips status back to 'active' and clears it.
+  suspendedUntil              DateTime? @map("suspended_until") @db.Timestamptz
+  createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt                   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  faculty       Faculty?    @relation(fields: [facultyId], references: [id])
+  year          Year?       @relation(fields: [yearId], references: [id])
+  // Named universityRef, not university, because the vestigial free-text `university`
+  // column above still owns that name.
+  universityRef University? @relation(fields: [universityId], references: [id])
+
+  userRoles                      UserRole[]
+  notificationPreferences        NotificationPreference[]
+  instructorApplications         InstructorApplication[]  @relation("InstructorApplicant")
+  reviewedInstructorApplications InstructorApplication[]  @relation("InstructorApplicationReviewer")
+  authoredLessonVersions         LessonVersion[]          @relation("LessonVersionAuthor")
+  reviewedLessonVersions         LessonVersion[]          @relation("LessonVersionReviewer")
+  authoredQuestions              Question[]               @relation("QuestionAuthor")
+  reviewedQuestions              Question[]               @relation("QuestionReviewer")
+  studySessions                  StudySession[]
+  notes                          Note[]
+  flashcards                     Flashcard[]
+  progress                       Progress[]
+  streak                         Streak?
+  reviewSettings                 ReviewSettings?
+  reviewQueueItems               ReviewQueueItem[]
+  userBadges                     UserBadge[]
+  leaderboardSnapshots           LeaderboardSnapshot[]
+  friendshipsInitiated           Friendship[]             @relation("FriendshipUserA")
+  friendshipsReceived            Friendship[]             @relation("FriendshipUserB")
+  aiInteractions                 AiInteraction[]
+  aiCreditBalance                AiCreditBalance?
+  subscriptions                  Subscription[]
+  promoCodeRedemptions           PromoCodeRedemption[]
+  reportsFiled                   Report[]                 @relation("ReportReporter")
+  reportsResolved                Report[]                 @relation("ReportResolver")
+  notifications                  Notification[]
+  institutionsAdministered       Institution[]
+  pushSubscriptions              PushSubscription[]
+  pushPreference                 PushPreference?
+
+  @@map("users")
+}
+
+// Many-to-many; roles are additive (PRD Section 6)
+model UserRole {
+  userId String @map("user_id") @db.Uuid
+  roleId String @map("role_id") @db.Uuid
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id])
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+// Self-service "Apply as Instructor" (FR: promote-to-instructor path) — a logged-in user
+// submits an application; an admin approves/rejects it. Approving grants the 'instructor'
+// role in the same transaction (see admin.routes.ts / instructorApplications.routes.ts).
+model InstructorApplication {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  motivationText String    @map("motivation_text")
+  status         String    @default("pending") // 'pending' | 'approved' | 'rejected'
+  reviewedBy     String?   @map("reviewed_by") @db.Uuid
+  reviewedAt     DateTime? @map("reviewed_at") @db.Timestamptz
+  reviewComment  String?   @map("review_comment")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  user     User  @relation("InstructorApplicant", fields: [userId], references: [id])
+  reviewer User? @relation("InstructorApplicationReviewer", fields: [reviewedBy], references: [id])
+
+  @@map("instructor_applications")
+}
+
+// NOTE: composite PK (user_id, category, channel) — see file header, decision 1.
+model NotificationPreference {
+  userId   String  @map("user_id") @db.Uuid
+  channel  String // 'in_app' | 'email' | 'push'
+  category String // 'revision' | 'subscription' | 'content_update' | 'moderation' | 'social'
+  enabled  Boolean @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, category, channel])
+  @@map("notification_preferences")
+}
+
+// ---------------------------------------------------------------------------
+// 2. Curriculum Structure (FR-9, FR-10 — must stay faculty-agnostic/configurable)
+// ---------------------------------------------------------------------------
+
+// FR-10a optional per-university content scoping, LAYERED (not siloed): content with a
+// null universityId is global and visible to everyone in the right faculty, while content
+// with a universityId is visible only to users at that university. University scoping
+// composes with the existing faculty rolloutStatus gate via AND — see
+// src/lib/university-scope.ts for the single predicate all callers share.
+//
+// A normalized table (rather than the free-text User.university it supersedes) is required
+// precisely because this drives a visibility decision: string matching would make a typo
+// or a spelling variant silently change what a student can see.
+model University {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  wilaya    String? // city/province, same vocabulary as User.wilaya
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  users     User[]
+  lessons   Lesson[]
+  questions Question[]
+
+  @@map("universities")
+}
+
+model Faculty {
+  id                       String   @id @default(uuid()) @db.Uuid
+  name                     String // 'Medicine','Dentistry','Pharmacy', ...
+  slug                     String   @unique
+  rolloutStatus            String   @default("planned") @map("rollout_status") // 'planned' | 'beta' | 'live' -- FR-64, BR-15
+  minCoverageYearsRequired Int      @default(2) @map("min_coverage_years_required") // BR-15 gating threshold
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  years                Year[]
+  users                User[]
+  leaderboardSnapshots LeaderboardSnapshot[]
+
+  @@map("faculties")
+}
+
+model Year {
+  id         String   @id @default(uuid()) @db.Uuid
+  facultyId  String   @map("faculty_id") @db.Uuid
+  label      String // 'Year 1', ..., 'Résidanat Prep'
+  orderIndex Int      @map("order_index")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  faculty              Faculty               @relation(fields: [facultyId], references: [id])
+  modules              Module[]
+  users                User[]
+  leaderboardSnapshots LeaderboardSnapshot[]
+
+  @@map("years")
+}
+
+model Module {
+  id         String @id @default(uuid()) @db.Uuid
+  yearId     String @map("year_id") @db.Uuid
+  name       String
+  orderIndex Int    @map("order_index")
+
+  year     Year       @relation(fields: [yearId], references: [id])
+  units    Unit[]
+  progress Progress[]
+
+  @@map("modules")
+}
+
+model Unit {
+  id         String @id @default(uuid()) @db.Uuid
+  moduleId   String @map("module_id") @db.Uuid
+  name       String
+  orderIndex Int    @map("order_index")
+
+  module    Module     @relation(fields: [moduleId], references: [id])
+  lessons   Lesson[]
+  questions Question[]
+
+  @@map("units")
+}
+
+model Lesson {
+  id               String   @id @default(uuid()) @db.Uuid
+  unitId           String   @map("unit_id") @db.Uuid
+  title            String
+  contentTier      String   @map("content_tier") // 'official' | 'hamame_plus' -- FR-13
+  currentVersionId String?  @map("current_version_id") @db.Uuid
+  // FR-10a: null = global/shared (the default for all pre-existing content), a value =
+  // visible only to users at that university. ANDed with the faculty gate.
+  universityId     String?  @map("university_id") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  unit             Unit              @relation(fields: [unitId], references: [id])
+  currentVersion   LessonVersion?    @relation("LessonCurrentVersion", fields: [currentVersionId], references: [id])
+  versions         LessonVersion[]   @relation("LessonVersions")
+  // Restrict, NOT the default SetNull: under the layered model a null universityId means
+  // "global/visible to everyone", so deleting a university would silently promote all of
+  // its scoped content to global. Deleting a university with content must fail instead.
+  university       University?       @relation(fields: [universityId], references: [id], onDelete: Restrict)
+  notes            Note[]
+  progress         Progress[]
+  reviewQueueItems ReviewQueueItem[]
+  flashcards       Flashcard[]
+
+  @@index([universityId])
+  @@map("lessons")
+}
+
+// FR-12, NFR-11 versioning/rollback
+model LessonVersion {
+  id            String    @id @default(uuid()) @db.Uuid
+  lessonId      String    @map("lesson_id") @db.Uuid
+  bodyRichtext  Json      @map("body_richtext") @db.JsonB
+  versionNumber Int       @map("version_number")
+  status        String // 'draft' | 'pending_review' | 'approved' | 'archived'
+  authoredBy    String    @map("authored_by") @db.Uuid
+  reviewedBy    String?   @map("reviewed_by") @db.Uuid
+  reviewedAt    DateTime? @map("reviewed_at") @db.Timestamptz
+  // Reviewer's mandatory comment when status becomes 'rejected' (or changes are
+  // requested) — null while draft/pending_review/approved.
+  reviewComment String?   @map("review_comment")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  lesson            Lesson             @relation("LessonVersions", fields: [lessonId], references: [id])
+  currentForLessons Lesson[]           @relation("LessonCurrentVersion")
+  author            User               @relation("LessonVersionAuthor", fields: [authoredBy], references: [id])
+  reviewer          User?              @relation("LessonVersionReviewer", fields: [reviewedBy], references: [id])
+  attachments       LessonAttachment[]
+
+  @@map("lesson_versions")
+}
+
+model LessonAttachment {
+  id              String @id @default(uuid()) @db.Uuid
+  lessonVersionId String @map("lesson_version_id") @db.Uuid
+  fileUrl         String @map("file_url")
+  type            String // 'image' | 'pdf' | 'video' -- video later
+
+  lessonVersion LessonVersion @relation(fields: [lessonVersionId], references: [id])
+
+  @@map("lesson_attachments")
+}
+
+// ---------------------------------------------------------------------------
+// 3. Question Bank & Assessment (FR-14 to FR-21)
+// ---------------------------------------------------------------------------
+
+model Question {
+  id                    String    @id @default(uuid()) @db.Uuid
+  unitId                String    @map("unit_id") @db.Uuid // scoping for session builder filters
+  type                  String // 'QCM' | 'QCS' | 'QROC' | 'CLINICAL_CASE'
+  source                String // 'official_exam' | 'hamame_authored' | 'ai_generated'
+  status                String    @default("pending_review") // BR-2 mandatory validation gate
+  difficulty            String?
+  bodyRichtext          Json      @map("body_richtext") @db.JsonB
+  explanationRichtext   Json      @map("explanation_richtext") @db.JsonB // validated baseline explanation (FR-18)
+  aiEnhancedExplanation Json?     @map("ai_enhanced_explanation") @db.JsonB // V2 -- layered, never replaces baseline
+  authoredBy            String?   @map("authored_by") @db.Uuid
+  reviewedBy            String?   @map("reviewed_by") @db.Uuid
+  reviewedAt            DateTime? @map("reviewed_at") @db.Timestamptz
+  // Reviewer's mandatory comment when status becomes 'rejected' (or changes are
+  // requested) — null while draft/pending_review/approved.
+  reviewComment         String?   @map("review_comment")
+  // FR-10a: null = global/shared (the default for all pre-existing content), a value =
+  // visible only to users at that university. ANDed with the faculty gate and the BR-2
+  // status gate in src/lib/question-filters.ts.
+  universityId          String?   @map("university_id") @db.Uuid
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  unit              Unit               @relation(fields: [unitId], references: [id])
+  author            User?              @relation("QuestionAuthor", fields: [authoredBy], references: [id])
+  reviewer          User?              @relation("QuestionReviewer", fields: [reviewedBy], references: [id])
+  // Restrict for the same reason as Lesson.university above — a deleted university must
+  // not silently turn scoped questions into globally-visible ones.
+  university        University?        @relation(fields: [universityId], references: [id], onDelete: Restrict)
+  options           QuestionOption[]
+  clinicalCaseParts ClinicalCasePart[]
+  sessionQuestions  SessionQuestion[]
+  notes             Note[]
+  reviewQueueItems  ReviewQueueItem[]
+  flashcards        Flashcard[]
+
+  @@index([universityId])
+  @@map("questions")
+}
+
+// for QCM/QCS
+model QuestionOption {
+  id         String  @id @default(uuid()) @db.Uuid
+  questionId String  @map("question_id") @db.Uuid
+  bodyText   String  @map("body_text")
+  isCorrect  Boolean @map("is_correct")
+  orderIndex Int     @map("order_index")
+
+  question Question @relation(fields: [questionId], references: [id])
+
+  @@map("question_options")
+}
+
+// multi-part clinical case questions
+model ClinicalCasePart {
+  id                 String  @id @default(uuid()) @db.Uuid
+  questionId         String  @map("question_id") @db.Uuid
+  partOrder          Int     @map("part_order")
+  promptText         String  @map("prompt_text")
+  expectedAnswerText String? @map("expected_answer_text") // for QROC-style grading reference
+
+  question Question @relation(fields: [questionId], references: [id])
+
+  @@map("clinical_case_parts")
+}
+
+model StudySession {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  name             String
+  mode             String // 'practice' | 'exam'
+  isOfficialMock   Boolean   @default(false) @map("is_official_mock") // FR-19
+  timeLimitSeconds Int?      @map("time_limit_seconds")
+  startedAt        DateTime  @map("started_at") @db.Timestamptz
+  completedAt      DateTime? @map("completed_at") @db.Timestamptz
+  score            Decimal?
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionQuestions SessionQuestion[]
+
+  @@map("study_sessions")
+}
+
+// randomized order per attempt, BR-4
+model SessionQuestion {
+  id             String @id @default(uuid()) @db.Uuid
+  sessionId      String @map("session_id") @db.Uuid
+  questionId     String @map("question_id") @db.Uuid
+  presentedOrder Int    @map("presented_order")
+  optionOrder    Json?  @map("option_order") @db.JsonB // shuffled option order snapshot
+
+  session  StudySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  question Question     @relation(fields: [questionId], references: [id])
+  attempts Attempt[]
+
+  @@map("session_questions")
+}
+
+model Attempt {
+  id                String   @id @default(uuid()) @db.Uuid
+  sessionQuestionId String   @map("session_question_id") @db.Uuid
+  selectedOptionIds Json?    @map("selected_option_ids") @db.JsonB // QCM/QCS
+  freeTextAnswer    String?  @map("free_text_answer") // QROC/clinical case
+  isCorrect         Boolean? @map("is_correct")
+  flaggedForReview  Boolean  @default(false) @map("flagged_for_review")
+  answeredAt        DateTime @map("answered_at") @db.Timestamptz
+
+  sessionQuestion SessionQuestion @relation(fields: [sessionQuestionId], references: [id], onDelete: Cascade)
+
+  @@map("attempts")
+}
+
+// FR-20
+model Note {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  questionId String?  @map("question_id") @db.Uuid
+  lessonId   String?  @map("lesson_id") @db.Uuid
+  bodyText   String   @map("body_text")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question? @relation(fields: [questionId], references: [id])
+  lesson   Lesson?   @relation(fields: [lessonId], references: [id])
+
+  @@map("notes")
+}
+
+// V2 -- user-generated flashcards. Convenience flow: one-shot creation from a question
+// via POST /api/flashcards/from-question/:questionId (pre-fills front/back from the
+// question's rich text). Flashcards are NOT a second queue system — they are enqueued
+// into the existing ReviewQueueItem engine via ReviewQueueItem.flashcardId, so the
+// due/review/SM-2 scheduling in src/routes/reviews.routes.ts works unchanged.
+model Flashcard {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  front            String
+  back             String
+  sourceQuestionId String?  @map("source_question_id") @db.Uuid
+  sourceLessonId   String?  @map("source_lesson_id") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceQuestion Question? @relation(fields: [sourceQuestionId], references: [id], onDelete: SetNull)
+  sourceLesson   Lesson?   @relation(fields: [sourceLessonId], references: [id], onDelete: SetNull)
+
+  reviewQueueItems ReviewQueueItem[]
+
+  // Dedup gate for auto-generated-from-question cards: one card per (user, source
+  // question). Rows with a NULL sourceQuestionId (free-form cards) are unaffected —
+  // Postgres treats NULLs as distinct, so unlimited untagged cards remain allowed.
+  @@unique([userId, sourceQuestionId])
+  @@map("flashcards")
+}
+
+// ---------------------------------------------------------------------------
+// 4. Progress, Streaks & Revision (FR-22 to FR-28)
+// ---------------------------------------------------------------------------
+
+model Progress {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  lessonId        String?  @map("lesson_id") @db.Uuid
+  subjectModuleId String?  @map("subject_module_id") @db.Uuid
+  percentage      Decimal  @default(0)
+  lastStudiedAt   DateTime @map("last_studied_at") @db.Timestamptz
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson? @relation(fields: [lessonId], references: [id])
+  module Module? @relation(fields: [subjectModuleId], references: [id])
+
+  // Enables a real atomic upsert for per-lesson progress tracking instead of a
+  // manual find-then-create/update (which could race under concurrent requests).
+  @@unique([userId, lessonId])
+  @@map("progress")
+}
+
+model Streak {
+  userId            String   @id @map("user_id") @db.Uuid
+  currentStreakDays Int      @default(0) @map("current_streak_days")
+  longestStreakDays Int      @default(0) @map("longest_streak_days")
+  lastActiveDate    DateTime @map("last_active_date") @db.Date
+  dailyGoalMinutes  Int      @default(20) @map("daily_goal_minutes")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("streaks")
+}
+
+// V2 -- spaced repetition, FR-26/27. Modeled now per FR-60/61 extensibility, same as the
+// source draft, but NOT exposed via any active route yet (see src/routes).
+model ReviewSettings {
+  userId               String  @id @map("user_id") @db.Uuid
+  isEnabled            Boolean @default(false) @map("is_enabled")
+  notificationsEnabled Boolean @default(true) @map("notifications_enabled")
+  scheduleDays         Json    @map("schedule_days") @db.JsonB // e.g. [1,3,7,14,30]
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("review_settings")
+}
+
+// V2
+model ReviewQueueItem {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  lessonId       String?   @map("lesson_id") @db.Uuid
+  questionId     String?   @map("question_id") @db.Uuid
+  flashcardId    String?   @map("flashcard_id") @db.Uuid
+  dueAt          DateTime  @map("due_at") @db.Timestamptz
+  lastReviewedAt DateTime? @map("last_reviewed_at") @db.Timestamptz
+  easeFactor     Decimal   @default(2.5) @map("ease_factor") // forgetting-curve algorithm state
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson    Lesson?    @relation(fields: [lessonId], references: [id])
+  question  Question?  @relation(fields: [questionId], references: [id])
+  flashcard Flashcard? @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
+
+  // One queue item per (user, target). These are the DB half of enqueueReviewQueueItem's
+  // dedup — without them its check-then-create could duplicate under concurrent requests.
+  // Three separate constraints rather than one composite: Postgres treats NULLs as
+  // distinct, so a lesson row (NULL question_id/flashcard_id) never collides with another
+  // lesson row, and each constraint only ever constrains rows that actually use that
+  // target. The single-target CHECK constraint guarantees exactly one is non-NULL.
+  @@unique([userId, lessonId])
+  @@unique([userId, questionId])
+  @@unique([userId, flashcardId])
+  @@map("review_queue_items")
+}
+
+// ---------------------------------------------------------------------------
+// 5. Gamification & Social (FR-36 to FR-40 — V1 streaks only, rest V2/V3)
+// ---------------------------------------------------------------------------
+
+// V2
+model Badge {
+  id       String @id @default(uuid()) @db.Uuid
+  name     String
+  criteria Json   @db.JsonB
+
+  userBadges UserBadge[]
+
+  @@map("badges")
+}
+
+// V2
+model UserBadge {
+  userId   String   @map("user_id") @db.Uuid
+  badgeId  String   @map("badge_id") @db.Uuid
+  earnedAt DateTime @map("earned_at") @db.Timestamptz
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id])
+
+  @@id([userId, badgeId])
+  @@map("user_badges")
+}
+
+// V2 -- BR-12 scoped by faculty+year
+model LeaderboardSnapshot {
+  id          String   @id @default(uuid()) @db.Uuid
+  facultyId   String   @map("faculty_id") @db.Uuid
+  yearId      String   @map("year_id") @db.Uuid
+  period      String // 'monthly'
+  userId      String   @map("user_id") @db.Uuid
+  rank        Int
+  score       Decimal
+  generatedAt DateTime @map("generated_at") @db.Timestamptz
+
+  faculty Faculty @relation(fields: [facultyId], references: [id])
+  year    Year    @relation(fields: [yearId], references: [id])
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("leaderboard_snapshots")
+}
+
+// V2/V3
+model Friendship {
+  userIdA String @map("user_id_a") @db.Uuid
+  userIdB String @map("user_id_b") @db.Uuid
+  status  String // 'pending' | 'accepted'
+
+  userA User @relation("FriendshipUserA", fields: [userIdA], references: [id], onDelete: Cascade)
+  userB User @relation("FriendshipUserB", fields: [userIdB], references: [id], onDelete: Cascade)
+
+  @@id([userIdA, userIdB])
+  @@map("friendships")
+}
+
+// ---------------------------------------------------------------------------
+// 6. AI Tools (V2 — FR-29 to FR-35; schema included now per FR-60/61 extensibility)
+// ---------------------------------------------------------------------------
+
+// V2
+model AiInteraction {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  // 'chat' | 'hint' | 'note_maker' | 'answer_locator' | 'audio_narration' | 'qcm_generation' | ...
+  feature        String
+  contextRefType String?  @map("context_ref_type") // 'lesson' | 'question'
+  contextRefId   String?  @map("context_ref_id") @db.Uuid
+  inputSummary   String?  @map("input_summary")
+  outputSummary  String?  @map("output_summary")
+  flagged        Boolean  @default(false) // NFR-9 error reporting
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ai_interactions")
+}
+
+// V2 -- BR-6 governance
+model AiCreditBalance {
+  userId           String   @id @map("user_id") @db.Uuid
+  dailyAllowance   Int      @map("daily_allowance")
+  monthlyAllowance Int      @map("monthly_allowance")
+  usedToday        Int      @default(0) @map("used_today")
+  usedThisMonth    Int      @default(0) @map("used_this_month")
+  resetAt          DateTime @map("reset_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ai_credit_balances")
+}
+
+// ---------------------------------------------------------------------------
+// 7. Monetization (FR-44 to FR-47, BR-1, BR-6 to BR-9, BR-16)
+// ---------------------------------------------------------------------------
+
+model Plan {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String // 'free' | 'premium' | 'institutional'
+  priceDzd      Decimal? @map("price_dzd") // BR-8 currency
+  billingPeriod String?  @map("billing_period") // 'monthly' | 'yearly'
+  features      Json     @db.JsonB
+  isActive      Boolean  @default(true) @map("is_active")
+
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  planId           String    @map("plan_id") @db.Uuid
+  status           String // 'active' | 'cancelled' | 'expired'
+  startedAt        DateTime  @map("started_at") @db.Timestamptz
+  currentPeriodEnd DateTime  @map("current_period_end") @db.Timestamptz
+  cancelledAt      DateTime? @map("cancelled_at") @db.Timestamptz
+  autoRenew        Boolean   @default(true) @map("auto_renew") // BR-7
+
+  user     User      @relation(fields: [userId], references: [id])
+  plan     Plan      @relation(fields: [planId], references: [id])
+  payments Payment[]
+
+  @@map("subscriptions")
+}
+
+model Payment {
+  id             String   @id @default(uuid()) @db.Uuid
+  subscriptionId String   @map("subscription_id") @db.Uuid
+  amountDzd      Decimal  @map("amount_dzd")
+  method         String // 'cib_edahabia' | 'baridimob' | 'manual_assisted' | ...
+  status         String // 'succeeded' | 'failed' | 'refunded'
+  externalRef    String?  @map("external_ref")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+
+  @@map("payments")
+}
+
+// V2
+model PromoCode {
+  id                String    @id @default(uuid()) @db.Uuid
+  code              String    @unique
+  type              String // 'referral' | 'discount'
+  value             Json      @db.JsonB
+  maxUsesPerAccount Int       @default(1) @map("max_uses_per_account") // BR-16 abuse cap
+  expiresAt         DateTime? @map("expires_at") @db.Timestamptz
+
+  redemptions PromoCodeRedemption[]
+
+  @@map("promo_codes")
+}
+
+// V2
+model PromoCodeRedemption {
+  id          String   @id @default(uuid()) @db.Uuid
+  promoCodeId String   @map("promo_code_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  redeemedAt  DateTime @default(now()) @map("redeemed_at") @db.Timestamptz
+
+  promoCode PromoCode @relation(fields: [promoCodeId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@map("promo_code_redemptions")
+}
+
+// V2/V3
+model Institution {
+  id            String @id @default(uuid()) @db.Uuid
+  name          String
+  seatsLicensed Int    @map("seats_licensed")
+  adminUserId   String @map("admin_user_id") @db.Uuid
+
+  adminUser User @relation(fields: [adminUserId], references: [id])
+
+  @@map("institutions")
+}
+
+// ---------------------------------------------------------------------------
+// 8. Moderation, Reporting & Trust (FR-53 to FR-55, BR-5)
+// ---------------------------------------------------------------------------
+
+model Report {
+  id             String    @id @default(uuid()) @db.Uuid
+  reporterUserId String    @map("reporter_user_id") @db.Uuid
+  targetType     String    @map("target_type") // 'question' | 'lesson' | 'comment' | 'user'
+  targetId       String    @map("target_id") @db.Uuid
+  reason         String
+  severity       String    @default("normal") // drives SLA priority (BR-5)
+  status         String    @default("open") // 'open' | 'in_review' | 'resolved' | 'dismissed'
+  resolvedBy     String?   @map("resolved_by") @db.Uuid
+  resolvedAt     DateTime? @map("resolved_at") @db.Timestamptz
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  reporter User  @relation("ReportReporter", fields: [reporterUserId], references: [id])
+  resolver User? @relation("ReportResolver", fields: [resolvedBy], references: [id])
+
+  @@map("reports")
+}
+
+// ---------------------------------------------------------------------------
+// 9. Notifications (FR-41 to FR-43)
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  category  String
+  title     String
+  body      String
+  readAt    DateTime? @map("read_at") @db.Timestamptz
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+// ---------------------------------------------------------------------------
+// 10. Push notifications (native Web Push / VAPID — no third-party provider)
+// ---------------------------------------------------------------------------
+
+// One row per subscribed browser/device (a student can have several: phone, laptop,
+// a second browser, etc.) — NOT one row per user. `endpoint` is the Push API's own
+// per-installation URL, guaranteed unique per browser+origin+service-worker
+// registration, so it is the natural dedupe key: re-subscribing the same
+// device/browser (permission re-granted, two tabs both calling subscribe on load)
+// returns the SAME endpoint, and src/routes/push.routes.ts upserts on it via
+// `INSERT ... ON CONFLICT (endpoint) DO UPDATE` (never a caught P2002) — the same
+// idempotency idiom already used for UserBadge/ReviewQueueItem — instead of a
+// composite (user_id, endpoint) key, which would still allow duplicate rows (and
+// duplicate sends to the same physical device) if the same device were queried
+// under two different user ids over time (e.g. a shared/lab computer).
+model PushSubscription {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  endpoint   String   @unique @db.Text
+  p256dhKey  String   @map("p256dh_key")
+  authKey    String   @map("auth_key")
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  lastSeenAt DateTime @default(now()) @updatedAt @map("last_seen_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+// One row per user (not per subscription), single-table 4-boolean shape rather than
+// reusing NotificationPreference's (user_id, category, channel) taxonomy — that table's
+// 5 categories (revision/subscription/content_update/moderation/social) don't map
+// cleanly onto these 3 push-specific types (badgeEarned in particular isn't any of
+// them), and it has no room for a master switch. No row for a user = all four default
+// true, same "missing row -> default" convention already used by Streak/ReviewSettings
+// (see src/lib/daily-goal.ts, src/routes/streaks.routes.ts).
+model PushPreference {
+  userId            String  @id @map("user_id") @db.Uuid
+  masterEnabled     Boolean @default(true) @map("master_enabled")
+  dailyGoalReminder Boolean @default(true) @map("daily_goal_reminder")
+  streakAtRisk      Boolean @default(true) @map("streak_at_risk")
+  badgeEarned       Boolean @default(true) @map("badge_earned")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("push_preferences")
+}

@@ -1,0 +1,41 @@
+@import "tailwindcss";
+@import "../styles/tokens.css";
+
+/* Bridge the Next font CSS variables (set on <html> by next/font) into Tailwind's
+   font-family namespaces. All spacing/size/color tokens live in tokens.css. */
+@theme inline {
+  --font-sans: var(--font-hamame-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-hamame-display), ui-serif, Georgia, serif;
+}
+
+body {
+  background:
+    radial-gradient(1200px 480px at 10% -10%, color-mix(in srgb, var(--color-accent-primary) 16%, transparent), transparent 60%),
+    radial-gradient(900px 420px at 100% 0%, color-mix(in srgb, var(--color-accent-suivi) 12%, transparent), transparent 55%),
+    var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-body);
+  line-height: 1.5;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+@keyframes hamame-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.hamame-skeleton {
+  animation: hamame-pulse 1.4s ease-in-out infinite;
+  background: var(--color-surface-3);
+  border-radius: var(--radius-control);
+}

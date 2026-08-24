@@ -1,0 +1,48 @@
+# dependencies
+node_modules/
+
+# env & secrets — never commit
+.env
+.env.local
+.env.*.local
+
+# build artifacts
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# logs
+*.log
+
+# session scratch — OpenCode/Cursor debug & verification scripts
+web/tmp-*.mjs
+tmp-*.ts
+tmp-*.mjs
+tmp-*.js
+
+# one-off curl payloads and shell debris from past sessions
+/login-*.json
+/create*.json
+/redeem*.json
+/expire.json
+/empty.json
+/export_test*.json
+/curl
+/npm
+/$PSVersionTable
+/web/cd
+/web/npm
+/web/next
+/web/web@0.1.0
+
+# large binaries that don't belong in the code baseline
+/docs/Hermes-Setup.exe
+
+# prisma
+prisma/*.db
+
+# OS/editor
+.DS_Store
+Thumbs.db
