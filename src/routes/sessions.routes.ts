@@ -1,8 +1,8 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { Prisma, Streak, StudySession } from "@prisma/client";
 import { z } from "zod";
-import { validateBody, validateParams } from "../middleware/validate";
-import { uuidParam } from "../lib/common-schemas";
+import { validateBody, validateParams, validateQuery } from "../middleware/validate";
+import { paginationQuery, uuidParam } from "../lib/common-schemas";
 import { requireAuth } from "../middleware/auth";
 import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
@@ -125,6 +125,13 @@ function loadSessionWithQuestions(sessionId: string) {
               source: true,
               difficulty: true,
               bodyRichtext: true,
+              // P5 player chips: unit/module labels + sitting metadata. No new
+              // schema — examYear/sittingLabel came from Phase 1; the paper-number
+              // suffix MedSparkDZ shows (e.g. "2019 EMD N°1") already fits the
+              // free-text sittingLabel field.
+              examYear: true,
+              sittingLabel: true,
+              unit: { select: { name: true, module: { select: { name: true } } } },
               options: { select: { id: true, bodyText: true } },
               clinicalCaseParts: {
                 orderBy: { partOrder: "asc" },
@@ -162,6 +169,8 @@ function formatSessionForResponse(session: SessionWithQuestions) {
     mode: session.mode,
     isOfficialMock: session.isOfficialMock,
     timeLimitSeconds: session.timeLimitSeconds,
+    resultSort: session.resultSort,
+    showStats: session.showStats,
     startedAt: session.startedAt,
     completedAt: session.completedAt,
     score: serializeScore(session.score),
@@ -175,6 +184,10 @@ function formatSessionForResponse(session: SessionWithQuestions) {
         source: sessionQuestion.question.source,
         difficulty: sessionQuestion.question.difficulty,
         bodyRichtext: sessionQuestion.question.bodyRichtext,
+        examYear: sessionQuestion.question.examYear,
+        sittingLabel: sessionQuestion.question.sittingLabel,
+        unitName: sessionQuestion.question.unit.name,
+        moduleName: sessionQuestion.question.unit.module.name,
       },
       options: reorderOptions(sessionQuestion.question.options, sessionQuestion.optionOrder),
       clinicalCaseParts: sessionQuestion.question.clinicalCaseParts,
@@ -183,6 +196,17 @@ function formatSessionForResponse(session: SessionWithQuestions) {
 }
 
 // POST /api/sessions — create session (mode, filters, size), FR-15/16.
+//
+// Contract extras (FR-15/16, MedSparkDZ audit):
+//   sort      — 'random' (default, BR-4) | 'by_year' | 'by_course'. Ordering applies to
+//               the SELECTED pool only: candidates are shuffled first, then grouped by
+//               curriculum key (year order_index; +module order_index for by_course),
+//               preserving the shuffled order inside each group so BR-4 randomness
+//               survives within groups while groups themselves follow the chosen order.
+//   examMode  — boolean switch form of mode (contract param). When both are sent, the
+//               explicit boolean wins over `mode`.
+//   showStats — persisted and echoed so the results surface can gate its detailed
+//               accuracy/breakdown section (plain score when false).
 const createSessionSchema = z.object({
   name: z.string().min(1),
   mode: z.enum(["practice", "exam"]),
@@ -194,9 +218,18 @@ const createSessionSchema = z.object({
   source: z.enum(["official_exam", "hamame_authored", "ai_generated", "mixed"]).optional(),
   dateFrom: z.coerce.date().optional(),
   dateTo: z.coerce.date().optional(),
+  // Exam-sitting scope (past-exam picker + period filter). Passed straight into the
+  // shared buildQuestionWhere — the candidate-pool query itself needed no other change.
+  examYear: z.number().int().min(1000).max(9999).optional(),
+  examYearFrom: z.number().int().min(1000).max(9999).optional(),
+  examYearTo: z.number().int().min(1000).max(9999).optional(),
+  sittingLabel: z.string().min(1).max(120).optional(),
   size: z.number().int().min(1).max(200),
   isOfficialMock: z.boolean().optional().default(false),
   timeLimitSeconds: z.number().int().min(1).optional(),
+  sort: z.enum(["by_year", "by_course", "random"]).optional().default("random"),
+  examMode: z.boolean().optional(),
+  showStats: z.boolean().optional().default(true),
 });
 
 async function createSession(req: Request, res: Response, next: NextFunction) {
@@ -213,10 +246,20 @@ async function createSession(req: Request, res: Response, next: NextFunction) {
       source,
       dateFrom,
       dateTo,
+      examYear,
+      examYearFrom,
+      examYearTo,
+      sittingLabel,
       size,
       isOfficialMock,
       timeLimitSeconds,
+      sort,
+      examMode,
+      showStats,
     } = req.body as z.infer<typeof createSessionSchema>;
+
+    // examMode is the contract's boolean-switch spelling of mode; explicit beats enum.
+    const effectiveMode = examMode === undefined ? mode : examMode ? "exam" : "practice";
 
     if (unitIds && unitIds.length > 0) {
       // Same faculty-visibility gate as buildQuestionWhere below: a unit under a hidden
@@ -248,6 +291,10 @@ async function createSession(req: Request, res: Response, next: NextFunction) {
       source: source && source !== "mixed" ? source : undefined,
       dateFrom,
       dateTo,
+      examYear,
+      examYearFrom,
+      examYearTo,
+      sittingLabel,
       viewerUniversityId,
     });
 
@@ -258,16 +305,44 @@ async function createSession(req: Request, res: Response, next: NextFunction) {
       where,
       select: { id: true, options: { select: { id: true } } },
     });
-    const selected = shuffle(candidates).slice(0, size);
+    let selected = shuffle(candidates).slice(0, size);
+
+    // FR-15 result ordering — see createSessionSchema docs. Shuffle first (BR-4), then a
+    // stable group-sort by curriculum key; ties keep their shuffled order so randomness
+    // is preserved inside every group. 'random' skips this entirely.
+    if (sort !== "random" && selected.length > 1) {
+      const keyRows = await prisma.question.findMany({
+        where: { id: { in: selected.map((question) => question.id) } },
+        select: {
+          id: true,
+          unit: { select: { module: { select: { orderIndex: true, year: { select: { orderIndex: true } } } } } },
+        },
+      });
+      const shuffledIndexById = new Map(selected.map((question, index) => [question.id, index]));
+      const keyById = new Map(keyRows.map((row) => [row.id, row]));
+      selected = [...selected].sort((a, b) => {
+        const keyA = keyById.get(a.id)!;
+        const keyB = keyById.get(b.id)!;
+        const yearDiff = keyA.unit.module.year.orderIndex - keyB.unit.module.year.orderIndex;
+        if (yearDiff !== 0) return yearDiff;
+        if (sort === "by_course") {
+          const moduleDiff = keyA.unit.module.orderIndex - keyB.unit.module.orderIndex;
+          if (moduleDiff !== 0) return moduleDiff;
+        }
+        return shuffledIndexById.get(a.id)! - shuffledIndexById.get(b.id)!;
+      });
+    }
 
     const session = await prisma.$transaction(async (tx) => {
       const createdSession = await tx.studySession.create({
         data: {
           userId,
           name,
-          mode,
+          mode: effectiveMode,
           isOfficialMock,
           timeLimitSeconds,
+          resultSort: sort,
+          showStats,
           startedAt: new Date(),
         },
       });
@@ -299,6 +374,132 @@ async function createSession(req: Request, res: Response, next: NextFunction) {
 }
 
 router.post("/", validateBody(createSessionSchema), createSession);
+
+// GET /api/sessions — own session history, newest first (Phase 3 history page).
+//
+// Read-only over existing tables (study_sessions + session_questions + attempts):
+// no new columns or tables. Each entry carries totals plus a per-unit breakdown
+// (answered/total/correct with unit/module/year/faculty labels) so the UI can
+// group by curriculum without extra round-trips. Correctness uses the latest
+// attempt per session_question — the same rule scoring itself uses. "Continuer"
+// is a client-side route to /sessions/:id (player) or .../results; the player
+// does not restore per-question UI state on reload, so resume means re-answering
+// from the top with history intact server-side — stated, not oversold.
+const listSessionsQuerySchema = paginationQuery.extend({
+  // P12 cheap simulations history: filter to past exam-mode sessions only.
+  mode: z.enum(["practice", "exam"]).optional(),
+});
+
+async function listSessions(req: Request, res: Response, next: NextFunction) {
+  try {
+    const userId = req.auth!.userId;
+    const { page, limit, mode } = req.query as unknown as z.infer<typeof listSessionsQuerySchema>;
+
+    const where = { userId, ...(mode ? { mode } : {}) };
+    // Sequential awaits (pooler guidance: no large Promise.all).
+    const total = await prisma.studySession.count({ where });
+    const sessions = await prisma.studySession.findMany({
+      where,
+      orderBy: { startedAt: "desc" },
+      skip: (page - 1) * limit,
+      take: limit,
+      include: {
+        sessionQuestions: {
+          orderBy: { presentedOrder: "asc" },
+          select: {
+            attempts: {
+              orderBy: { answeredAt: "desc" },
+              take: 1,
+              select: { isCorrect: true },
+            },
+            question: {
+              select: {
+                id: true,
+                unit: {
+                  select: {
+                    id: true,
+                    name: true,
+                    module: {
+                      select: {
+                        id: true,
+                        name: true,
+                        year: {
+                          select: {
+                            id: true,
+                            label: true,
+                            faculty: { select: { id: true, name: true } },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    res.status(200).json({
+      sessions: sessions.map((session) => {
+        let answered = 0;
+        let correct = 0;
+        const byUnit = new Map<
+          string,
+          {
+            unitId: string;
+            unitName: string;
+            moduleName: string;
+            yearLabel: string;
+            facultyName: string;
+            total: number;
+            answered: number;
+            correct: number;
+          }
+        >();
+        for (const sq of session.sessionQuestions) {
+          const latest = sq.attempts[0] ?? null;
+          const isAnswered = latest !== null;
+          const isCorrect = latest?.isCorrect === true;
+          if (isAnswered) answered += 1;
+          if (isCorrect) correct += 1;
+          const unit = sq.question.unit;
+          const key = unit.id;
+          const entry = byUnit.get(key) ?? {
+            unitId: unit.id,
+            unitName: unit.name,
+            moduleName: unit.module.name,
+            yearLabel: unit.module.year.label,
+            facultyName: unit.module.year.faculty.name,
+            total: 0,
+            answered: 0,
+            correct: 0,
+          };
+          entry.total += 1;
+          if (isAnswered) entry.answered += 1;
+          if (isCorrect) entry.correct += 1;
+          byUnit.set(key, entry);
+        }
+        return {
+          id: session.id,
+          name: session.name,
+          mode: session.mode,
+          startedAt: session.startedAt,
+          completedAt: session.completedAt,
+          score: serializeScore(session.score),
+          stats: { total: session.sessionQuestions.length, answered, correct },
+          units: [...byUnit.values()],
+        };
+      }),
+      pagination: { page, limit, total },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+router.get("/", validateQuery(listSessionsQuerySchema), listSessions);
 
 // GET /api/sessions/:id — session detail + questions.
 async function getSessionDetail(req: Request, res: Response, next: NextFunction) {
@@ -382,9 +583,14 @@ async function submitAnswer(req: Request, res: Response, next: NextFunction) {
 
     // BR-4: no feedback until the whole session is submitted — only practice mode gets
     // immediate isCorrect/explanation; exam mode gets neither until GET .../results.
+    // correctOptionIds is practice-only for the same reason: revealing it in exam mode
+    // would leak the answer key before submission.
     if (session.mode === "practice") {
       responseAttempt.isCorrect = attempt.isCorrect;
       responseAttempt.explanation = sessionQuestion.question.explanationRichtext;
+      responseAttempt.correctOptionIds = sessionQuestion.question.options
+        .filter((option) => option.isCorrect)
+        .map((option) => option.id);
     }
 
     res.status(201).json({ attempt: responseAttempt });
@@ -668,6 +874,8 @@ async function finalizeSession(req: Request, res: Response, next: NextFunction) 
         id: updatedSession.id,
         name: updatedSession.name,
         mode: updatedSession.mode,
+        showStats: updatedSession.showStats,
+        resultSort: updatedSession.resultSort,
         startedAt: updatedSession.startedAt,
         completedAt: updatedSession.completedAt,
         score: serializeScore(updatedSession.score),
@@ -745,6 +953,10 @@ async function getSessionResults(req: Request, res: Response, next: NextFunction
         id: session.id,
         name: session.name,
         mode: session.mode,
+        // Read-side of the FR-16 toggle: false tells the results UI to render a plain
+        // score without the detailed accuracy/breakdown section.
+        showStats: session.showStats,
+        resultSort: session.resultSort,
         startedAt: session.startedAt,
         completedAt: session.completedAt,
         score: serializeScore(session.score),

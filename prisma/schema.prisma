@@ -128,6 +128,8 @@ model User {
   institutionsAdministered       Institution[]
   pushSubscriptions              PushSubscription[]
   pushPreference                 PushPreference?
+  activationCodesIssued          ActivationCode[]         @relation("ActivationCodeIssuer")
+  activationCodesRedeemed        ActivationCode[]         @relation("ActivationCodeRedeemer")
 
   @@map("users")
 }
@@ -213,6 +215,8 @@ model Faculty {
   years                Year[]
   users                User[]
   leaderboardSnapshots LeaderboardSnapshot[]
+  activationCodes      ActivationCode[]
+  resources            Resource[]
 
   @@map("faculties")
 }
@@ -228,6 +232,8 @@ model Year {
   modules              Module[]
   users                User[]
   leaderboardSnapshots LeaderboardSnapshot[]
+  activationCodes      ActivationCode[]
+  resources            Resource[]
 
   @@map("years")
 }
@@ -312,7 +318,7 @@ model LessonVersion {
 model LessonAttachment {
   id              String @id @default(uuid()) @db.Uuid
   lessonVersionId String @map("lesson_version_id") @db.Uuid
-  fileUrl         String @map("file_url")
+  fileUrl           String
   type            String // 'image' | 'pdf' | 'video' -- video later
 
   lessonVersion LessonVersion @relation(fields: [lessonVersionId], references: [id])
@@ -329,6 +335,12 @@ model Question {
   unitId                String    @map("unit_id") @db.Uuid // scoping for session builder filters
   type                  String // 'QCM' | 'QCS' | 'QROC' | 'CLINICAL_CASE'
   source                String // 'official_exam' | 'hamame_authored' | 'ai_generated'
+  // Exam-sitting metadata (past-exam picker + period filter). Separate concern from
+  // `source` (authorship provenance): NULL = not tagged to any real sitting (the
+  // default for all freshly-authored content). sittingLabel is free text
+  // ('EMD', 'Résidanat', 'Rattrapage', ...) — no enum/table by decision.
+  examYear              Int?    @map("exam_year")
+  sittingLabel          String? @map("sitting_label")
   status                String    @default("pending_review") // BR-2 mandatory validation gate
   difficulty            String?
   bodyRichtext          Json      @map("body_richtext") @db.JsonB
@@ -396,6 +408,12 @@ model StudySession {
   mode             String // 'practice' | 'exam'
   isOfficialMock   Boolean   @default(false) @map("is_official_mock") // FR-19
   timeLimitSeconds Int?      @map("time_limit_seconds")
+  // FR-15 result ordering requested at creation ('by_year' | 'by_course' | 'random').
+  // Applied once when session_questions rows are created; stored so responses can echo it.
+  resultSort       String    @default("random") @map("result_sort")
+  // FR-16 inline "show statistics" toggle — false gates the results screen's detailed
+  // accuracy/breakdown section down to a plain score (the per-question review stays).
+  showStats        Boolean   @default(true) @map("show_stats")
   startedAt        DateTime  @map("started_at") @db.Timestamptz
   completedAt      DateTime? @map("completed_at") @db.Timestamptz
   score            Decimal?
@@ -443,6 +461,10 @@ model Note {
   questionId String?  @map("question_id") @db.Uuid
   lessonId   String?  @map("lesson_id") @db.Uuid
   bodyText   String   @map("body_text")
+  // Phase 3 notes library: fixed 6-tag taxonomy (validated server-side, see
+  // notes.routes.ts NOTE_TAGS) + favorites. Defaults keep old rows valid.
+  tags       String[] @default([]) @map("tags")
+  isFavorite Boolean  @default(false) @map("is_favorite")
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -695,7 +717,36 @@ model Payment {
 
   subscription Subscription @relation(fields: [subscriptionId], references: [id])
 
+  activationCodes ActivationCode[]
+
   @@map("payments")
+}
+
+// FR-65/BR-18 — the MVP's manual-payment bridge, formalized as an auditable table:
+// a Support Agent/Admin confirms payment off-platform, issues a single-use opaque
+// code scoped to exactly one faculty-year, and the student redeems it in-app for
+// premium access (granted as a premium Subscription — the same mechanism every
+// other manual path uses; no parallel gating system).
+model ActivationCode {
+  id         String    @id @default(uuid()) @db.Uuid
+  code       String    @unique // opaque, crypto-random — never sequential/guessable
+  facultyId  String    @map("faculty_id") @db.Uuid
+  yearId     String    @map("year_id") @db.Uuid
+  issuedBy   String    @map("issued_by") @db.Uuid // Support Agent/Admin (BR-18)
+  redeemedBy String?   @map("redeemed_by") @db.Uuid
+  paymentId  String?   @map("payment_id") @db.Uuid // links to the manually-confirmed payment (BR-18/NFR-10)
+  status     String    @default("active") // 'active' | 'redeemed' | 'expired' | 'revoked'
+  expiresAt  DateTime? @map("expires_at") @db.Timestamptz
+  redeemedAt DateTime? @map("redeemed_at") @db.Timestamptz
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  faculty  Faculty  @relation(fields: [facultyId], references: [id])
+  year     Year     @relation(fields: [yearId], references: [id])
+  issuer   User     @relation("ActivationCodeIssuer", fields: [issuedBy], references: [id])
+  redeemer User?    @relation("ActivationCodeRedeemer", fields: [redeemedBy], references: [id])
+  payment  Payment? @relation(fields: [paymentId], references: [id])
+
+  @@map("activation_codes")
 }
 
 // V2
@@ -775,6 +826,34 @@ model Notification {
   user User @relation(fields: [userId], references: [id])
 
   @@map("notifications")
+}
+
+// ---------------------------------------------------------------------------
+// 9. Resources — "Hamame Drive" (PRD 10.2)
+// ---------------------------------------------------------------------------
+
+// Curated official resources/references, served from the dashboard resource hub.
+// Filterable by faculty and year. No university scoping — `universityId` is omitted
+// per the data-layer design: resources are faculty-/year-scoped only, not per-university.
+// Type legend: 'official_drive' = official curated, 'reference' = reference material,
+// 'past_exam' = past exam paper, 'other' = community or miscellaneous. No separate
+// verified/official boolean flag exists in the data model — the `type` field itself
+// encodes the distinction per the audit's guidance (inventing a fake flag is avoided).
+model Resource {
+  id          String   @id @default(uuid()) @db.Uuid
+  facultyId   String?  @map("faculty_id") @db.Uuid
+  yearId      String?  @map("year_id") @db.Uuid
+  title       String
+  type        String // 'official_drive' | 'reference' | 'past_exam' | 'other'
+  fileUrl     String @map("file_url")
+  sourceLabel String?  @map("source_label") // attribution/source name shown to students
+  addedBy     String?  @map("added_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  faculty Faculty? @relation(fields: [facultyId], references: [id])
+  year    Year?    @relation(fields: [yearId], references: [id])
+
+  @@map("resources")
 }
 
 // ---------------------------------------------------------------------------

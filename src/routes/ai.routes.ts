@@ -19,11 +19,19 @@ router.use(requireAuth);
 async function getCredits(req: Request, res: Response, next: NextFunction) {
   try {
     const balance = await getAiCreditBalance(prisma, req.auth!.userId);
+    // Task 7(a): server-computed low-balance flag using the same <20% rule the
+    // dashboard previously computed client-side (since removed). Zero remaining
+    // is its own empty state, not "low" — the UI treats those separately.
+    const lowBalance =
+      balance.dailyAllowance > 0 &&
+      balance.remainingToday > 0 &&
+      balance.remainingToday / balance.dailyAllowance < 0.2;
     res.status(200).json({
       dailyAllowance: balance.dailyAllowance,
       usedToday: balance.usedToday,
       remainingToday: balance.remainingToday,
       resetAt: balance.resetAt.toISOString(),
+      lowBalance,
     });
   } catch (err) {
     next(err);

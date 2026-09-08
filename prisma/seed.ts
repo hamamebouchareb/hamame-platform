@@ -524,6 +524,84 @@ async function main() {
   } else {
     console.log(`  UserRole: ${TEST_ACCOUNT_EMAIL} not found — role grant skipped.`);
   }
+
+  // 7. Resources — "Hamame Drive" (PRD 10.2)
+  // Seed a few cross-faculty and faculty-specific resources. Upsert with fixed
+  // IDs for idempotency; this script is meant to be re-runnable.
+  const RESOURCE_IDS = {
+    res1: "00000000-0000-0000-0000-000000000120",
+    res2: "00000000-0000-0000-0000-000000000130",
+    res3: "00000000-0000-0000-0000-000000000140",
+    res4: "00000000-0000-0000-0000-000000000150",
+  } as const;
+
+  const resourceData = [
+    {
+      id: RESOURCE_IDS.res1,
+      title: "Pharmacology Guidelines 2024",
+      type: "official_drive" as const,
+      facultyId: medicine.id,
+      yearId: year1.id,
+      fileUrl: "/resources/pharmacology-guidelines-2024.pdf",
+      sourceLabel: "Ministry of Higher Education",
+    },
+    {
+      id: RESOURCE_IDS.res2,
+      title: "Radiology Image Library",
+      type: "reference" as const,
+      facultyId: medicine.id,
+      yearId: year1.id,
+      fileUrl: "/resources/radiology-image-library.pdf",
+      sourceLabel: "University Hospital",
+    },
+    {
+      id: RESOURCE_IDS.res3,
+      title: "Past Exam Session 2023 — Year 1",
+      type: "past_exam" as const,
+      yearId: year1.id, // cross-faculty (NULL faculty_id)
+      fileUrl: "/resources/past-exam-2023-year1.pdf",
+      sourceLabel: "Faculty of Medicine archive",
+    },
+    {
+      id: RESOURCE_IDS.res4,
+      title: "Dental Anatomy Reference",
+      type: "other" as const,
+      facultyId: dentistry.id,
+      yearId: year1.id,
+      fileUrl: "/resources/dental-anatomy-reference.pdf",
+      sourceLabel: "Dentistry Department",
+    },
+  ];
+
+  for (const { id, title, type, facultyId, yearId, fileUrl, sourceLabel } of resourceData) {
+    await prisma.resource.upsert({
+      where: { id },
+      create: {
+        id,
+        title,
+        type,
+        fileUrl,
+        sourceLabel,
+        facultyId,
+        yearId,
+        addedBy: seedAuthor.id,
+        createdAt: new Date(),
+      },
+      update: {
+        title,
+        type,
+        fileUrl,
+        sourceLabel,
+        facultyId,
+        yearId,
+        addedBy: seedAuthor.id,
+        createdAt: new Date(),
+      },
+    });
+  }
+
+  console.log(`  Seeded ${resourceData.length} resources.`);
+
 }
 
 main()

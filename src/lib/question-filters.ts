@@ -22,6 +22,14 @@ export interface QuestionFilterInput {
   source?: string;
   dateFrom?: Date;
   dateTo?: Date;
+  // Exam-sitting metadata (past-exam picker + period filter). examYear is an exact
+  // match; examYearFrom/examYearTo form an inclusive range (either end omittable).
+  // NULL (untagged) questions never match a sitting filter — only an explicit
+  // choice the student made should narrow to tagged sittings.
+  examYear?: number;
+  examYearFrom?: number;
+  examYearTo?: number;
+  sittingLabel?: string;
   // Defaults to 'approved' — per BR-2, non-approved questions must never be surfaced to
   // students through any of these callers.
   status?: string;
@@ -49,6 +57,19 @@ export function buildQuestionWhere(input: QuestionFilterInput): Prisma.QuestionW
 
   if (input.source) {
     where.source = input.source;
+  }
+
+  if (input.examYear !== undefined) {
+    where.examYear = input.examYear;
+  } else if (input.examYearFrom !== undefined || input.examYearTo !== undefined) {
+    where.examYear = {
+      ...(input.examYearFrom !== undefined ? { gte: input.examYearFrom } : {}),
+      ...(input.examYearTo !== undefined ? { lte: input.examYearTo } : {}),
+    };
+  }
+
+  if (input.sittingLabel) {
+    where.sittingLabel = input.sittingLabel;
   }
 
   if (input.dateFrom || input.dateTo) {

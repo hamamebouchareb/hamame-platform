@@ -1,9 +1,8 @@
 import crypto from "node:crypto";
 import { NextFunction, Request, Response, Router } from "express";
 import { z } from "zod";
-import { validateBody } from "../middleware/validate";
+import { validateBody, validateQuery } from "../middleware/validate";
 import { requireAuth } from "../middleware/auth";
-import { stubHandler } from "../lib/stub";
 import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
 
@@ -59,6 +58,46 @@ async function getCurrentProfile(req: Request, res: Response, next: NextFunction
 }
 
 router.get("/me", getCurrentProfile);
+
+// GET /api/users/search — find users to befriend (Phase 4 friends search UI).
+//
+// Enumeration-resistant by design: no username column exists, so the approved
+// "username-style" lookup maps to (a) EXACT email match (unique → at most one
+// row; the caller must already know the address) or (b) fullName PREFIX match
+// (startsWith, case-insensitive) with a 3-character minimum and a 10-row cap.
+// Free-text substring search is deliberately NOT offered. router-level
+// requireAuth applies; self and soft-deleted accounts are excluded. Returns id
+// + fullName only — the same PII discipline as the friends lists. If a real
+// handle column is ever added, extend this endpoint rather than loosening
+// these rules.
+const searchUsersQuerySchema = z.object({
+  q: z.string().trim().min(3).max(120),
+});
+
+async function searchUsers(req: Request, res: Response, next: NextFunction) {
+  try {
+    const userId = req.auth!.userId;
+    const { q } = req.query as unknown as z.infer<typeof searchUsersQuerySchema>;
+
+    const users = await prisma.user.findMany({
+      where: {
+        id: { not: userId },
+        status: { not: "deleted" },
+        OR: [{ email: q }, { fullName: { startsWith: q, mode: "insensitive" } }],
+      },
+      select: { id: true, fullName: true },
+      take: 10,
+    });
+
+    res.status(200).json({
+      users: users.map((user) => ({ id: user.id, fullName: user.fullName })),
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+router.get("/search", validateQuery(searchUsersQuerySchema), searchUsers);
 
 // PUT /api/users/me — FR-4: full_name, faculty, year, university, wilaya, photo.
 //
@@ -154,11 +193,73 @@ const updatePreferencesSchema = z.object({
     .optional(),
 });
 
-router.put(
-  "/me/preferences",
-  validateBody(updatePreferencesSchema),
-  stubHandler("Update preferences")
-);
+// Real persistence (was a 501 stub): uiLanguage/theme write straight onto the
+// User row (columns already existed); notificationPreferences entries upsert
+// into NotificationPreference (composite PK [userId, category, channel] —
+// untouched by /api/push/preferences, which owns the separate PushPreference
+// table, so the two preference centers cannot clobber each other). Partial
+// update: only keys actually present in the body are written. Response echoes
+// the full canonical state, not just what was sent.
+async function updateCurrentPreferences(req: Request, res: Response, next: NextFunction) {
+  try {
+    const userId = req.auth!.userId;
+    const body = req.body as z.infer<typeof updatePreferencesSchema>;
+
+    // Sequential awaits (pooler guidance: no large Promise.all).
+    if (body.uiLanguage !== undefined || body.theme !== undefined) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          ...(body.uiLanguage !== undefined ? { uiLanguage: body.uiLanguage } : {}),
+          ...(body.theme !== undefined ? { theme: body.theme } : {}),
+        },
+      });
+    }
+
+    if (body.notificationPreferences !== undefined) {
+      for (const entry of body.notificationPreferences) {
+        await prisma.notificationPreference.upsert({
+          where: {
+            userId_category_channel: {
+              userId,
+              category: entry.category,
+              channel: entry.channel,
+            },
+          },
+          update: { enabled: entry.enabled },
+          create: {
+            userId,
+            category: entry.category,
+            channel: entry.channel,
+            enabled: entry.enabled,
+          },
+        });
+      }
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { uiLanguage: true, theme: true },
+    });
+    const notificationPreferences = await prisma.notificationPreference.findMany({
+      where: { userId },
+      select: { category: true, channel: true, enabled: true },
+      orderBy: [{ category: "asc" }, { channel: "asc" }],
+    });
+
+    res.status(200).json({
+      preferences: {
+        uiLanguage: user!.uiLanguage,
+        theme: user!.theme,
+        notificationPreferences,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+router.put("/me/preferences", validateBody(updatePreferencesSchema), updateCurrentPreferences);
 
 // GET /api/users/me/export — FR-8 / NFR-5: Law 18-07 data portability compliance (same
 // legal category as the account-deletion endpoint below).
