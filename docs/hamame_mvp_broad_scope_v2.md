@@ -77,6 +77,32 @@ oversight.
 - **V3:** Expansion faculties, instructor marketplace, community features, native
   mobile apps if needed — as originally planned.
 
+## 4a. Addendum — MedSparkDZ live-product audit cross-reference (August 2026)
+
+A route-by-route audit of the live MedSparkDZ product (dashboard, QCM, Studio, Suivi,
+Profil, Paramètres, plus the remaining public/auth routes, Sparky chat, Spark Drive,
+Study With Me, notifications, and activation flow) was cross-referenced against this PRD.
+**Result: the overwhelming majority of MedSparkDZ's observed feature surface was
+already planned in Hamame's PRD**, mostly under the MBset-inspired items added earlier.
+The audit surfaced only three genuinely new, actionable items, now added to the PRD as
+`[MedSparkDZ-confirmed]`:
+
+1. **Activation-code redemption (FR-65/BR-18)** — a concrete mechanism for the
+   manual/assisted payment bridge this scope doc already anticipated (Section 1,
+   "premium thinness at launch" risk) — cheap to build, directly reduces the payment-flow
+   risk called out there.
+2. **Optional focus/study-timer presets (FR-66)** — Pomodoro-style and custom timers,
+   client-side only, no backend cost. Low-effort polish item; safe to fold into V1.
+3. **Session-builder refinements** — result ordering (by year/course/random) and inline
+   exam-mode/statistics toggles inside the builder itself (FR-15/16 detail, no schema
+   change beyond what's already in the API contract).
+
+Everything else observed (Spark Drive, Sparky AI chat, Study With Me, notifications
+center, leaderboard/badges, gamification, PDF-to-question authoring aid, per-option
+explanation justification) maps to features Hamame already scoped under MBset-inspired
+items or the core V1/V2/V3 roadmap — no scope change needed there, just confirmation
+that the roadmap direction matches what a live competitor is actually shipping.
+
 ## 5. Still open, and still worth answering when you're ready
 
 1. Reviewers: any committed yet, across any of the three specialties?

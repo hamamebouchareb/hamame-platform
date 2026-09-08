@@ -208,6 +208,8 @@ gaps, not re-implement what already existed.
 **Audit findings (already done, confirmed not re-touched):**
 - `tokens.css` — single token source, Hamame's own volt-lime/navy palette
   (deliberately not a MedSpark-orange clone), no competing token system found.
+  **⚠️ SUPERSEDED 2026-09-08 by the Phase 8 design pass (§9.0): palette is now
+  Blue → Violet (`#2563EB → #5B54E8 → #7C3AED`), reversing this decision.**
 - Dashboard primary action — `ResumeBar` already first-child with a clear
   "Reprendre l'étude" CTA; KPI row already capped at 3 metrics.
 - Accessible icon labels — every icon-only/stateful control already carries an
@@ -1061,8 +1063,209 @@ session builder should support cross-module unit selection (only if a fresh
 live check finds MedSparkDZ actually does this somewhere the original
 spot-check didn't cover).
 
+**Phase 6 (hygiene + LOW polish + observations) — ✅ DONE, verified 2026-09-07.**
 
-   Root cause was the dev-mode `forgot-password`→`reset-password` token-leak
+Task 0 (docs hygiene): the `(1).md` duplicate mix-up recurred (canonical path
+staged-deleted, only `(1).md` on disk). Verified via punctuation-insensitive
+header diff that `(1).md` is a strict superset continuation (41 HEAD headers
+vs 46; the single HEAD-only header is the same §2 renumbered 16→18), then
+moved it back to the canonical filename (`git mv` refuses untracked sources;
+`Move-Item + git add`). Gap-analysis §24 checklist ticked for all Phases 1–5
+closures, gates, and the P18 SKIP / P19 N/A dispositions.
+
+Task 1 (frontend type-clean, was blocking): `npx tsc --noEmit
+-p web/tsconfig.json --incremental false` → **0 errors** (97.8s first run,
+44.7s post-edit re-run); `npm run build --prefix web` → **exit 0** (176.2s,
+140.7s post-edit). No strict loosening, no ignores. Backend re-verified in
+the same pass: tsc exit 2 with errors ONLY in pre-existing
+`verify-resources-raw.ts`. Next 16.2.10 bundled docs checked first — the only
+relevant breaking-change class (v15 async request APIs) is server-side; all
+touched files are "use client" components, so no doc-driven changes.
+
+Task 2 (P17 sitting time presets): live check found NO per-paper time on
+MedSparkDZ (Mode Examen switch only) → scaled down to presets-by-count per
+the brief's own fallback. One constant, `EXAM_SECONDS_PER_QUESTION = 90`,
+documented as Hamame's convention: exam mode + sitting picked + untouched
+time control → smallest preset ≥ count×90s, with an on-screen basis line
+("Proposé d'après N questions × 90 s — modifiable"); manual override wins
+permanently. Verified: proposed 600 vs override 1800 in DB rows; no
+exam_papers entity; neutrality untouched.
+
+Task 3 (LOW bundle): (a) practice count-up pill from existing `startedAt`
+(1:25→1:41 monotonic; exam countdown separate branch, unchanged,
+`aria-live="off"` vs the countdown's polite); (b) reusable `BackLink`
+(router.back with history.length>1 else fallback href, French aria-label) on
+historique/classement/couverture/notes (resource detail already had one;
+player keeps Quitter); (c) French `title=` on state-driven disables only
+(year/module/sitting prerequisites, submit, Valider, Prev/Suivant) —
+transient loading states skipped (their labels already explain), and the
+known limitation is stated (native title doesn't fire on disabled elements;
+matches the reference pattern literally); (d) exam-mode trust notice next
+to the mode switch, worded from Phase 2 mechanics exactly.
+
+Task 4 (mobile 390×844 headed): no h-scroll anywhere, drawer opens/Esc/focus
+returns to a button, builder→started session, player five interactions, all
+four pages. Triage: 44×24 switches pass WCAG 24px AA (reported, not fixed);
+16px native inputs sit inside full-width min-height labels (standard, not
+broken). ONE genuine breakage found and fixed: fixed stacked session nav is
+181px tall on mobile vs 112px page padding → 69px of content slidable
+underneath, and the Valider CTA was literally untappable (Playwright
+intercept errors from both the nav and the floating timer pill). Fix: player
+`pb-28` → `pb-60 sm:pb-28`, re-proven by a successful mobile Valider click
+with before/after captures.
+
+Task 5 (UNCLEAR, observe-only): `/signup` exists (15-faculty form, no Google
+button — OAuth drift); OUTILS classified (wand→Indice IA modal = AI;
+bottom-doc→Mes notes panel = non-AI; green-book→AI-fed course notes = AI;
+pencil arms highlight, no persistent mark observed; bookmark/chart/book/bulb/
+chat unconfirmed, not guessed); results = Session Terminée modal (per-mode
+Tallies, /20, time stats — deltas listed, nothing built); simhistory still
+year-picker-only; x-module CLOSED permanently (checkbox state resets on
+module switch). New gap-analysis §25 appendix holds it all.
+
+Task 7a (only optional taken): `lowBalance` server flag on
+`GET /ai/credits` (<20% rule moved server-side), client computation deleted
+(grep: zero matches); (b)/(c) assessed and skipped (recommendedNext needs
+real per-unit accuracy aggregation — not "smallest"; submittedAt needs a
+migration — likely skip per Rule 6).
+
+Full evidence in `docs/verification/phase6-verify-raw-1788779263.log`.
+Cleanup: 1900-tags reverted, all VERIFY/auto-named sessions + children
+deleted, norole at 0 sessions, baseline 8 approved / 0 tagged / sittings []
+re-curbed from the test account.
+
+**What a future decision-gated phase would cover (ONLY what Task 6
+sign-offs produce — nothing beyond; NOT yet numbered as "Phase 7" — see the
+real Phase 7 entry below, which is a different, already-completed pass):**
+- Google OAuth — ONLY if signed off. Biggest risk: consent-screen + app
+  verification calendar time, not code. Needs: provider setup,
+  account-linking rule for existing email users, soft-delete interaction
+  review. Live today: no Google entry on /login or /signup (drifted away).
+- EN/FR toggle UI — ONLY if signed off. Sizing: 43 files, 868 accented
+  chars (essentially the whole UI). Recommendation: hand-maintained lookup
+  table (a) now — bounded, reviewable, no dependency; framework (b)
+  only when string count or pluralization needs outgrow it. They differ in
+  ongoing maintenance cost, not just setup.
+- Scheduled simulations — ONLY if signed off. Last live fields: 4 sept.
+  2026, 20:30, 180 min, 150 Q, Affichage registration. Needs simulations
+  table + scheduling job at minimum.
+- Cross-module multi-select — CLOSED, do not queue (see Task 5 above).
+- Per-mode scoring (/20, Tout ou rien/Partiel), results time stats — NEW
+  candidate from Task 5 deltas, needs a product decision first.
+
+**Final line (Phase 6):** backend `tsc` exit 2 (only pre-existing script
+errors), frontend `tsc` exit 0 (97.8s / 44.7s), `next build` exit 0
+(176.2s / 140.7s). All wall-clock, all captured.
+
+**Phase 7 (fresh live discovery pass, observation-only) — ✅ DONE, verified
+2026-09-0x.** With all 37 original gap-analysis items closed (Phases 1-6),
+this was a from-scratch re-walkthrough of MedSparkDZ end-to-end — not a
+re-check of known items — to catch anything the original audit (by now
+weeks old) missed or that has appeared since. Nothing was built; findings
+went into a new gap-analysis §26 appendix.
+
+**Result: quasi-clean.** Zero CRITICAL, zero HIGH findings. One MEDIUM, ten
+LOW, and four drift-corrections to prior findings.
+
+- **N3 (MEDIUM) — MedSparkDZ's exam mode is enforced client-side only**
+  (`?examMode=1&examDuration=65` as a URL param): reloading the bare URL —
+  exactly what clicking "Continuer" from history does — silently drops the
+  session back into practice mode with Vérifier re-enabled. **Confirmed by
+  contrast that Hamame does NOT have this bug** — Phase 2 and Phase 6 both
+  independently documented exam-mode gating as enforced server-side
+  (`correctOptionIds` withheld from the API response in exam mode, not just
+  hidden by the client). This is a genuine quality point worth remembering,
+  not just a MedSparkDZ curiosity: don't ever "simplify" Hamame's exam mode
+  toward a client-side-only pattern.
+- **N4 — `EXAM_SECONDS_PER_QUESTION = 90` is now independently confirmed,
+  not just assumed.** Phase 6 picked 90s/question as "Hamame's own
+  documented convention, not copied from anywhere." This pass measured
+  MedSparkDZ's live exam countdown directly (43 questions → 65 minutes =
+  90.7s/question) and found it matches almost exactly. Coincidence or not,
+  the constant no longer needs the "arbitrary but reasonable" caveat.
+- **N5 — first full exam-mode E2E capture** (43 QCS, scored 7/43, 3.26/20):
+  documents MedSparkDZ's real "Examen Terminé!" modal (per-mode-scoring
+  notes, total time, per-course breakdown) and its in-place review flow
+  (colored QST rail, community %, comments) — useful reference detail for
+  any future results-screen parity work, not something to build now.
+- **N1/N2 (LOW) — two previously undocumented header dropdowns**:
+  a revision-notifications bell (brain icon) and a new-courses bell (book
+  icon), plus a main notification bell with Tout/Social/Prix/Système tabs.
+- **Drift corrections (supersede prior findings, do not just add
+  alongside them):** the MedSparkDZ theme toggle, diagnosed as genuinely
+  broken (headed test) in **Phase 5, is now fixed live** — that Phase 5
+  finding is stale as of this pass, not currently true. Also: the exam
+  picker's year range has extended to 2005-2025 (was narrower), leaderboard
+  rules now describe bonus points for hints/sessions/daily activity, ECOS
+  is confirmed to still be an empty shell, and Studio has a 4th tab
+  ("Enregistrés," locked) not previously noted.
+- **Mobile (390x844):** zero horizontal-overflow issues across 13 routes
+  checked; no fixed bottom tab bar exists (re-confirms Phase 5's P19 N/A
+  finding — still correct, not superseded).
+
+**Disclosed side effect, accepted as necessary:** capturing the exam-mode
+results screen (N5) required completing one real exam session on the
+MedSparkDZ test account — this is unavoidable, since the results screen
+cannot be observed without actually finishing a real exam. This changed the
+test account's real score (60→80) and monthly rank (#143→#142) on
+MedSparkDZ's own leaderboard. No activation code was consumed, no account
+was created, and no Hamame setting was touched. Evidence in
+`%TEMP%\opencode\phase7-live\` (JSON + PNGs, including a `mobile/`
+subfolder).
+
+Full findings in `docs/MEDSPARKDZ_COMPLETE_GAP_ANALYSIS.md` §26. No Phase 8
+build work is queued from this pass — the one MEDIUM finding (N3) is a
+confirmation that Hamame is already correct, not a gap to close, and the
+ten LOW items are informational/reference material rather than an active
+backlog. (Note: "Phase 8" below reuses the number for a different,
+design-scoped pass approved later — it is NOT the queued build work this
+paragraph declines.)
+
+**Phase 8 (design / animation / UX-UI parity pass) — ✅ DONE, verified
+2026-09-08.** Full visual + interaction-feel alignment with MedSparkDZ,
+measured live (HEADED Chrome DevTools) rather than from the drifted
+15-Aug spec PDF (whose hex/px values extract as unreadable placeholders —
+only its layout/copy/invariant descriptions were usable).
+
+- **Palette reversal (approved checkpoint):** Blue → Violet `#2563EB →
+  #5B54E8 → #7C3AED` replaces volt-lime/navy, reversing the §2C brand
+  decision. Structural approach copied (dark shell, gradient accent bands,
+  glow elevation); hues are Hamame's own at matched energy (measured
+  MedSpark stops S 75–95%/L 48–59%; ours S 76–83%/L 53–62%). White-text
+  ratios 5.17/5.41/5.70 (AA PASS — MedSpark's own orange CTAs fail this).
+  Checkpoint ran dashboard-only first (preview screenshot, then revert),
+  which caught two real issues fixed in rollout: CTA text dark-on-blue
+  (≈3.7 FAIL → white, required) and accent KPI numerals (→ white).
+  CTA shape stays Hamame's solid + full pill (approved decision c —
+  gradient CTAs can't hold contrast across their range).
+- **Tokens:** `tokens.css` still the single source; added `--color-on-accent`
+  (white), `--color-accent-soft` `#8FB0FF` (small accent text on dark:
+  8–9:1 vs saturated blue text ≈3.7 FAIL), `--ease-standard` +
+  `--duration-fast/base/slow/enter`. Surfaces/text/semantics untouched.
+- **Motion (all live-measured, single ease `cubic-bezier(0.4,0,0.2,1)`):**
+  150ms colors, 200ms pills, 300ms tabs/options, 150ms dialog-enter (new
+  `hamame-dialog-enter` wired into `Modal`); skeleton re-timed to live
+  2s pulse; QST rail resized to measured 48px/20px + ring (no scale-110,
+  disclosed deviation). Radii/spacing already matched (12/18/24px,
+  16–24px card padding) — no churn.
+- **Reference values captured for the record:** Poppins everywhere,
+  60px/900 flat hero (PDF "gradient hero" claim wrong live), profile cover
+  `linear-gradient(to right, #F97316, #EC4899, #7C3AED)` 96px, Radix menu
+  panel (#121216, 18px, 150ms enter), QST/player state styles, exam
+  countdown re-confirmed 90s/question.
+- **Verification:** `npx tsc -p web/tsconfig.json` exit 0; zero Playwright
+  pageerrors across all before/after runs; 15 before/after screen pairs
+  (heavy@hamame.dz); computed proofs (white-on-blue CTA, 48px rail).
+  Raw logs: `docs/verification/design-pass-verify-raw-1788815905889.log`
+  (reference) + `...-1788868536097.log` (rollout). Edits are className /
+  token / keyframe only — no handler, route, data, ARIA, or copy change.
+  Disclosed: tree had pre-existing uncommitted work (untracked Phase dirs,
+  dashboard/review/index/types hunks) untouched by this pass; residuals
+  (faculties:88 ghost CTA, danger dark-text, scaffold page) pixel-identical.
+  Infra recurrences: API tsx-child silent death (killed + relaunched, login
+  200 re-verified), flaky shell/filesystem episodes.
+
+    Root cause was the dev-mode `forgot-password`→`reset-password` token-leak
    path; no source changes needed. See Section 7 for the two verification
    logs. Login now works normally with `NewTestPass123!` — no workaround
    required for future QA against this account.

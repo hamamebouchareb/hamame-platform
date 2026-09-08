@@ -4,7 +4,7 @@
 **Product:** Hamame — Algerian digital learning platform for health-science students (expandable to all faculties)
 **Author:** Product Team
 **Date:** 11 July 2026
-**Inspiration source:** MedSpark blueprint and MBset feature analysis (both used strictly as inspirational references — not copied; Hamame is designed independently for the Algerian market and a multi-faculty future). Items below marked **[MBset-inspired]** were added following a competitive feature review of MBset (August 2026) and represent deliberate roadmap additions, not literal feature parity.
+**Inspiration source:** MedSpark blueprint and MBset feature analysis (both used strictly as inspirational references — not copied; Hamame is designed independently for the Algerian market and a multi-faculty future). Items below marked **[MBset-inspired]** were added following a competitive feature review of MBset (August 2026) and represent deliberate roadmap additions, not literal feature parity. Items marked **[MedSparkDZ-confirmed]** were added or refined following a direct, route-by-route frontend/UX audit of the live MedSparkDZ product (August 2026); most of MedSparkDZ's observed feature surface was already covered by this PRD prior to that audit — items so marked are the genuine net-new additions or refinements it surfaced, not a wholesale rewrite.
 
 > Scope note: This document defines **what** Hamame is and **why** it exists — product vision, users, requirements, rules, roadmap and business model. It intentionally does **not** define technical architecture, database schema, API contracts, or code. Those belong to a separate technical design document produced after this PRD is approved.
 
@@ -179,8 +179,8 @@ Requirements are grouped by module. Each is a product capability the platform mu
 
 ### 8.3 Question Bank & Assessment Engine
 - FR-14: The platform supports multiple question types: single-choice (QCS), multiple-choice (QCM), short open-answer (QROC), and clinical case vignettes with multi-part questions.
-- FR-15: Students can build a custom practice session by filtering on faculty, year, module/unit, question type, source (e.g., past official exams vs. Hamame-authored), and date range.
-- FR-16: Students can choose between **Practice Mode** (immediate feedback) and **Exam Mode** (timed, no feedback until submission, real-exam conditions).
+- FR-15: Students can build a custom practice session by filtering on faculty, year, module/unit, question type, source (e.g., past official exams vs. Hamame-authored), and date range. **[MedSparkDZ-confirmed]** The builder also lets students choose a result **ordering** (by year, by course, or randomized) and search/filter the course list by name while multi-selecting units/modules with visible per-course question counts, rather than requiring one unit at a time.
+- FR-16: Students can choose between **Practice Mode** (immediate feedback) and **Exam Mode** (timed, no feedback until submission, real-exam conditions). **[MedSparkDZ-confirmed]** Exam Mode and a "show statistics" toggle are exposed as inline switches inside the same session-builder flow (not a separate screen), so switching modes doesn't interrupt setup.
 - FR-17: The session interface supports navigating between questions, striking out answer options, flagging a question for later review, and reporting an error.
 - FR-18: Every question has a stored correct answer and an explanation; explanations can be enhanced by AI (Version 2+) without replacing the validated baseline explanation.
 - FR-19: Students can run official-format mock/simulation exams that mirror real national exam or résidanat concours structure (duration, question count, scoring weights).
@@ -256,6 +256,10 @@ Requirements are grouped by module. Each is a product capability the platform mu
 - FR-63: Admins can view platform-wide usage, financial, and content-coverage analytics.
 - FR-64: Admins can configure AI credit allowances, feature flags per plan tier, and faculty rollout status (e.g., "beta," "live").
 
+### 8.16 Access Activation & Study Utilities **[MedSparkDZ-confirmed, new]**
+- FR-65: Students can redeem an **activation code** to unlock premium/official content for a specific faculty-year, as a lightweight alternative front-end to the manual/assisted payment path already anticipated in Section 18.3 — a human confirms payment off-platform (per BR-7/Localization 18.3) and issues a single-use code the student enters in-app to unlock access immediately, without waiting for manual account activation by an Admin. This does not replace the goal of automated self-service payment (Version 2, Section 15); it is the MVP-stage bridge.
+- FR-66: The platform offers optional, non-gated **focus/study-timer presets** (e.g., Pomodoro 25/5, 52/17, 90-minute deep-focus, and a fully custom interval) that a student can run during any study or QCM session, purely as a client-side productivity aid — no account state, credits, or backend session data required.
+
 ## 9. Non-Functional Requirements
 
 - NFR-1 **Performance:** Core interactions (opening a lesson, starting a QCM session, submitting an answer) must feel instant on mid-range Android devices and 3G/4G connections typical in Algeria.
@@ -284,6 +288,7 @@ Requirements are grouped by module. Each is a product capability the platform mu
 - Language selection (FR/AR, with Darja tone in AI chat)
 - Subscription & billing management
 - Data export / account deletion request
+- **[MedSparkDZ-confirmed]** Activation-code redemption for manually-confirmed payments (per faculty-year)
 
 ### 10.2 Dashboard
 - Streak, total score, accuracy at a glance
@@ -315,6 +320,7 @@ Requirements are grouped by module. Each is a product capability the platform mu
 - Shared/group sessions (Version 2/3)
 - Question/answer randomization per attempt
 - **[MBset-inspired]** Live "Challenge" mode — timed, head-to-head or small-group competitive session against peers
+- **[MedSparkDZ-confirmed]** Optional focus/study-timer presets (Pomodoro-style and custom) usable during any session
 
 ### 10.5 AI Tools
 (See full catalog in Section 13.)
@@ -458,6 +464,8 @@ All AI features share three non-negotiable behaviors, enforced as policy regardl
 
 **BR-17 — Institutional data boundaries.** Institutional partners (Version 2/3) may only access aggregated, anonymized performance data about their affiliated students, never individual-level academic records, without explicit student consent.
 
+**BR-18 — Activation code integrity. [MedSparkDZ-confirmed, new]** Activation codes (FR-65) are single-use, scoped to exactly one faculty-year per code, expire if unused after a configurable window, and are only ever issued by a Support Agent or Admin after payment confirmation — students cannot self-generate or transfer codes. Redemption is logged for audit (NFR-10) alongside the payment record it corresponds to.
+
 ## 14. MVP (Version 1)
 
 **Scope:** Medicine, Dentistry, and Pharmacy — all years including résidanat-prep track — launched together so the platform feels complete within its chosen niche from day one, rather than partially covering one faculty.
@@ -469,7 +477,8 @@ All AI features share three non-negotiable behaviors, enforced as policy regardl
 - Practice mode and Exam mode, including official-format mock exam simulations.
 - Personal notes tied to questions/lessons.
 - Core progress dashboard: streak, score, accuracy, activity history, per-subject basic tracking.
-- Free and Premium plan structure with a locally viable initial payment flow (may start semi-manual/assisted if needed, per Localization section, but must be self-service by end of MVP hardening).
+- Free and Premium plan structure with a locally viable initial payment flow (may start semi-manual/assisted if needed, per Localization section, but must be self-service by end of MVP hardening). **[MedSparkDZ-confirmed]** The MVP's manual/assisted path is implemented concretely as activation-code redemption (FR-65/BR-18) rather than left undefined.
+- **[MedSparkDZ-confirmed]** Optional focus/study-timer presets (FR-66) — cheap, client-side, no backend dependency, worth including at MVP for perceived polish.
 - Basic notification set (in-app + email) for account and subscription events.
 - French primary UI with Arabic secondary UI (RTL supported).
 - Light/dark theme, responsive design (mobile-first, works well on low/mid-end Android).
@@ -535,6 +544,8 @@ Freemium subscription, consumer-first, with institutional licensing layered on t
 
 ### 17.4 Pricing philosophy
 Pricing is set in DZD at a level calibrated to Algerian student purchasing power — deliberately positioned as an easy, low-friction impulse purchase rather than a major financial decision, while institutional pricing is negotiated to reflect bulk value. Exact price points are a commercial decision outside this PRD's scope, but must respect BR-8.
+
+**[MedSparkDZ-confirmed, market data point]** MedSpark's observed premium tier ("Contenus Cours": reorganized courses + Spark Choice + AI tools + trilingual podcasts) is priced at 500 DA/year with a fully manual, contact-the-team payment flow — no online payment gateway was found live in the audited account. This is informational market context only, not a target price for Hamame; it confirms that a manual/activation-code payment bridge (FR-65) is a viable, currently-used pattern in this exact market segment, not a stopgap unique to Hamame.
 
 ## 18. Localization
 

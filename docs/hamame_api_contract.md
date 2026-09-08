@@ -31,7 +31,7 @@ Grounded in the PRD's FRs and the database schema (v0.1). Auth via Bearer JWT un
 | Method | Endpoint | Description |
 |---|---|---|
 | GET | /api/questions | Filtered list (faculty/year/module/unit/type/source/date) — FR-15 |
-| POST | /api/sessions | Create session (mode, filters, size) — FR-15/16 |
+| POST | /api/sessions | Create session (mode, filters, size, `sort`: `by_year`\|`by_course`\|`random`, `examMode`, `showStats`) — FR-15/16 |
 | GET | /api/sessions/:id | Session detail + questions |
 | POST | /api/sessions/:id/answers | Submit answer(s) for a question in-session |
 | POST | /api/sessions/:id/submit | Finalize session, compute score |
@@ -75,6 +75,15 @@ Grounded in the PRD's FRs and the database schema (v0.1). Auth via Bearer JWT un
 | GET | /api/subscriptions/me | Current subscription |
 | PUT | /api/subscriptions/me/cancel | Cancel (BR-7: effective end of period) |
 | POST | /api/promo-codes/redeem `[V2]` | Redeem referral/discount code |
+| POST | /api/activation-codes/redeem | Redeem a single-use activation code to unlock a faculty-year (FR-65/BR-18) |
+| POST | /api/admin/activation-codes | Issue a new activation code after manual payment confirmation (Support Agent/Admin only) — FR-65/BR-18 |
+| GET | /api/admin/activation-codes | List issued codes with redemption/audit status (NFR-10) |
+
+## Resources ("Hamame Drive")
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | /api/resources | List curated official resources/references, filterable by faculty/year/type — supports the dashboard resource hub (PRD 10.2) |
+| GET | /api/resources/:id | Resource detail / download link |
 
 ## Content Authoring & Validation (Instructor/Reviewer)
 | Method | Endpoint | Description |

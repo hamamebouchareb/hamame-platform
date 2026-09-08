@@ -161,6 +161,8 @@ study_sessions (
   mode TEXT,                          -- 'practice' | 'exam'
   is_official_mock BOOLEAN DEFAULT FALSE,  -- FR-19
   time_limit_seconds INT NULL,
+  result_sort TEXT DEFAULT 'random',  -- FR-15 (Aug 2026): 'by_year' | 'by_course' | 'random'
+  show_stats BOOLEAN DEFAULT TRUE,    -- FR-16 (Aug 2026): false gates results-screen detail stats
   started_at TIMESTAMPTZ,
   completed_at TIMESTAMPTZ NULL,
   score NUMERIC NULL,
@@ -341,6 +343,20 @@ institutions (                        -- V2/V3
   seats_licensed INT,
   admin_user_id UUID FK -> users.id
 )
+
+activation_codes (                    -- FR-65/BR-18 -- MedSparkDZ-confirmed
+  id UUID PK,
+  code TEXT UNIQUE,                   -- single-use, opaque token shown to student
+  faculty_id UUID FK -> faculties.id,
+  year_id UUID FK -> years.id,
+  issued_by UUID FK -> users.id,      -- Support Agent/Admin who issued it (BR-18)
+  redeemed_by UUID FK -> users.id NULL,
+  payment_id UUID FK -> payments.id NULL,  -- links back to the manually-confirmed payment
+  status TEXT DEFAULT 'active',       -- 'active','redeemed','expired','revoked'
+  expires_at TIMESTAMPTZ NULL,
+  redeemed_at TIMESTAMPTZ NULL,
+  created_at TIMESTAMPTZ
+)
 ```
 
 ## 8. Moderation, Reporting & Trust (FR-53 to FR-55, BR-5)
@@ -360,7 +376,23 @@ reports (
 )
 ```
 
-## 9. Notifications (FR-41 to FR-43)
+## 9. Resources — "Hamame Drive" (PRD 10.2 -- MedSparkDZ-confirmed)
+
+```sql
+resources (
+  id UUID PK,
+  faculty_id UUID FK -> faculties.id NULL,   -- NULL = cross-faculty resource
+  year_id UUID FK -> years.id NULL,
+  title TEXT,
+  type TEXT,                          -- 'official_drive','reference','past_exam','other'
+  file_url TEXT,
+  source_label TEXT NULL,             -- e.g. attribution/source name shown to students
+  added_by UUID FK -> users.id NULL,
+  created_at TIMESTAMPTZ
+)
+```
+
+## 10. Notifications (FR-41 to FR-43)
 
 ```sql
 notifications (
@@ -392,6 +424,11 @@ notifications (
 5. Not yet modeled: **institution-level aggregated analytics views** (BR-17) — these
    should be read-only SQL views over existing tables, not new base tables, once V2/V3
    institutional features are scoped in detail.
+6. **`activation_codes` and `resources` were added following the MedSparkDZ audit**
+   (August 2026). `activation_codes` formalizes the MVP's manual-payment bridge (FR-65/
+   BR-18) as a real, auditable table rather than an ad-hoc Admin action; `resources`
+   backs the dashboard resource hub already named in the PRD (10.2) but previously
+   undefined at the data layer.
 
 ## Open question for you
 
