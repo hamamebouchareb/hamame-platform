@@ -67,7 +67,7 @@ export function RevisionCard({ item, isSubmitting = false, error, onRate, classN
     >
       {/* Item type badge */}
       <div className="flex items-center justify-between gap-3">
-        <span className="rounded-pill border border-accent-revision/40 bg-accent-revision/15 px-2.5 py-0.5 text-caption font-medium text-accent-revision">
+        <span className="rounded-pill border border-accent-revision/40 bg-accent-revision/15 px-2.5 py-0.5 text-caption font-medium text-accent-soft">
           {type}
         </span>
         <span className="text-caption text-text-tertiary">
@@ -94,7 +94,7 @@ export function RevisionCard({ item, isSubmitting = false, error, onRate, classN
             disabled={isSubmitting}
             onClick={() => onRate(opt.value)}
             className={cx(
-              "flex flex-col items-center gap-1 rounded-control border px-2 py-3 text-center transition active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none",
+              "flex flex-col items-center gap-1 rounded-control border px-2 py-3 text-center transition duration-200 active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none",
               toneBorder[opt.tone]
             )}
             title={opt.description}

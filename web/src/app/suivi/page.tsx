@@ -11,14 +11,6 @@ import { accentVar } from "@/components/FeatureCard";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import type { CurriculumModule, ExamReadiness, ModuleProgress, ProgressSummary, Year } from "@/lib/types";
 
-const HEADER_NAV = [
-  { href: "/dashboard", label: "Tableau de bord" },
-  { href: "/qcm", label: "QCM" },
-  { href: "/suivi", label: "Suivi", active: true },
-  { href: "/notes", label: "Notes" },
-  { href: "/subscription", label: "Abonnement" },
-];
-
 function InfoTooltip({ tooltip, className }: { tooltip: string; className?: string }) {
   return (
     <button
@@ -132,19 +124,19 @@ export default function SuiviPage() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <p className="text-meta text-text-secondary">Chargement...</p>
+        <LoadingSkeleton className="h-8 w-48" ariaLabel="Chargement" />
       </main>
     );
   }
 
   return (
     <>
-      <AppHeader user={user} onLogout={handleLogout} nav={HEADER_NAV} />
+      <AppHeader user={user} onLogout={handleLogout} />
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-card-padding py-section-gap">
         {/* Hero */}
         <section aria-label="En-tête du suivi" className="mx-auto max-w-3xl text-center">
-          <p className="text-meta font-medium uppercase tracking-wide text-accent-suivi">Progression</p>
+          <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">Progression</p>
           <h1 className="mt-2 font-display text-hero font-bold leading-tight text-text-primary">
             Suivi de progression
           </h1>
@@ -161,6 +153,8 @@ export default function SuiviPage() {
             value={progress.data?.streak.currentStreakDays ?? 0}
             subtitle="au total"
             loading={progress.isLoading}
+            error={progress.error ? "Série indisponible" : null}
+            onRetry={progress.refetch}
             tone="primary"
           />
           <MetricCard
@@ -168,6 +162,8 @@ export default function SuiviPage() {
             value={progress.data?.accuracy !== null && progress.data?.accuracy !== undefined ? `${progress.data.accuracy}%` : "—"}
             subtitle="QCM / QCS, au total"
             loading={progress.isLoading}
+            error={progress.error ? "Précision indisponible" : null}
+            onRetry={progress.refetch}
             tone="primary"
           />
           <MetricCard
@@ -175,6 +171,8 @@ export default function SuiviPage() {
             value={progress.data?.averageScore !== null && progress.data?.averageScore !== undefined ? `${progress.data.averageScore}%` : "—"}
             subtitle="sessions terminées"
             loading={progress.isLoading}
+            error={progress.error ? "Score indisponible" : null}
+            onRetry={progress.refetch}
             tone="qcm"
           />
           <MetricCard
@@ -182,6 +180,8 @@ export default function SuiviPage() {
             value={progress.data?.totalCompletedSessions ?? 0}
             subtitle="au total"
             loading={progress.isLoading}
+            error={progress.error ? "Sessions indisponibles" : null}
+            onRetry={progress.refetch}
             tone="library"
           />
         </section>
@@ -190,7 +190,7 @@ export default function SuiviPage() {
         <section aria-label="Progression dans le programme" className="mx-auto mt-section-gap max-w-4xl">
           <h2 className="font-display text-h2 font-semibold text-text-primary">Progression dans le programme</h2>
 
-          {progress.isLoading || moduleProgressLoading ? (
+          {progress.isLoading || moduleProgressLoading || yearsData.isLoading ? (
             <div className="mt-4 flex flex-col gap-4">
               {[0, 1].map((i) => (
                 <div key={i} className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
@@ -198,6 +198,19 @@ export default function SuiviPage() {
                   <LoadingSkeleton className="h-4 w-full" ariaLabel="" />
                 </div>
               ))}
+            </div>
+          ) : yearsData.error ? (
+            <div className="mt-4 rounded-card border border-danger bg-surface-1 p-card-padding">
+              <p role="alert" className="text-body text-danger">
+                Impossible de charger le programme. {yearsData.error}
+              </p>
+              <button
+                type="button"
+                onClick={yearsData.refetch}
+                className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 sm:w-auto"
+              >
+                Réessayer
+              </button>
             </div>
           ) : showEmpty && !user.yearId ? (
             <div className="mt-4">
@@ -232,7 +245,7 @@ export default function SuiviPage() {
                           : "Aucune leçon publiée"}
                       </p>
                     </div>
-                    <span className="font-display text-display font-bold tabular-nums text-accent-suivi">
+                    <span className="font-display text-display font-bold tabular-nums text-text-primary">
                       {yh.percentage}%
                     </span>
                   </div>
@@ -316,15 +329,24 @@ export default function SuiviPage() {
               ))}
             </div>
           ) : readiness.error ? (
-            <p role="alert" className="mt-4 rounded-panel border border-danger/30 bg-danger/10 px-3 py-2 text-meta text-danger">
-              {readiness.error}
-            </p>
+            <div className="mt-4 rounded-card border border-danger bg-surface-1 p-card-padding">
+              <p role="alert" className="text-body text-danger">
+                {readiness.error}
+              </p>
+              <button
+                type="button"
+                onClick={readiness.refetch}
+                className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 sm:w-auto"
+              >
+                Réessayer
+              </button>
+            </div>
           ) : readinessData ? (
             <div className="mt-4 rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
               <div className="mb-4 flex items-baseline gap-3">
                 <span className="font-display text-display font-bold text-text-primary">{readinessData.score}</span>
                 <span className="font-display text-h3 font-semibold text-text-secondary">/100</span>
-                <span className="ml-auto rounded-pill border border-accent-suivi/40 bg-accent-suivi/15 px-2.5 py-0.5 text-caption font-medium text-accent-suivi">
+                <span className="ml-auto rounded-pill border border-accent-suivi/40 bg-accent-suivi/15 px-2.5 py-0.5 text-caption font-medium text-accent-soft">
                   {readinessLabelFr(readinessData.label)}
                 </span>
               </div>
@@ -394,7 +416,9 @@ export default function SuiviPage() {
               };
             })}
             loading={progress.isLoading}
-            emptyTitle="Aucune activité pour l&apos;instant"
+            error={progress.error ? `Impossible de charger l'activité. ${progress.error}` : null}
+            onRetry={progress.refetch}
+            emptyTitle="Aucune activité pour l'instant"
             emptyDescription="Commencez par créer une session QCM pour suivre votre progression ici."
             emptyAction={{ label: "Créer une session QCM", href: "/qcm" }}
           />
@@ -405,7 +429,7 @@ export default function SuiviPage() {
           <section aria-label="Commencer à étudier" className="mx-auto mt-section-gap max-w-4xl">
             <EmptyState
               title="Commencez votre préparation"
-              description="Vous n&apos;avez pas encore de progression. Lancez votre première session QCM ou explorez les cours disponibles."
+              description="Vous n'avez pas encore de progression. Lancez votre première session QCM ou explorez les cours disponibles."
               action={{ label: "Créer une session QCM", href: "/qcm" }}
             />
           </section>

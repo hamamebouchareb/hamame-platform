@@ -11,15 +11,6 @@ import { useToast } from "@/components/Toast";
 import { AppHeader, Footer, LoadingSkeleton } from "@/components";
 import type { PushPreferences } from "@/lib/types";
 
-const HEADER_NAV = [
-  { href: "/dashboard", label: "Tableau de bord" },
-  { href: "/qcm", label: "QCM" },
-  { href: "/suivi", label: "Suivi" },
-  { href: "/revision", label: "Révision" },
-  { href: "/notes", label: "Notes" },
-  { href: "/subscription", label: "Abonnement" },
-];
-
 const WILAYAS = [
   "Adrar","Chlef","Laghouat","Oum El Bouaghi","Batna","Béjaïa","Biskra","Béchar",
   "Blida","Bouira","Tamanrasset","Tébessa","Tlemcen","Tiaret","Tizi Ouzou","Alger",
@@ -54,7 +45,7 @@ function Switch({
       type="button"
       role="switch"
       aria-checked={checked}
-      aria-label={label}
+      aria-label={`${label} — ${checked ? "activé" : "désactivé"}`}
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition disabled:opacity-50 ${
@@ -127,17 +118,23 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordFieldErrors, setPasswordFieldErrors] = useState<{
+    newPassword?: string;
+    confirmPassword?: string;
+  }>({});
 
   async function changePassword() {
     setPasswordError(null);
+    const fieldErrors: { newPassword?: string; confirmPassword?: string } = {};
     if (newPassword.length < 8) {
-      setPasswordError("Le nouveau mot de passe doit contenir au moins 8 caractères.");
-      return;
+      fieldErrors.newPassword = "Le nouveau mot de passe doit contenir au moins 8 caractères.";
     }
     if (newPassword !== confirmPassword) {
-      setPasswordError("Les mots de passe ne correspondent pas.");
-      return;
+      fieldErrors.confirmPassword = "Les mots de passe ne correspondent pas.";
     }
+    setPasswordFieldErrors(fieldErrors);
+    if (Object.keys(fieldErrors).length > 0) return;
+
     setChangingPassword(true);
     try {
       await apiFetch("/auth/change-password", {
@@ -148,8 +145,11 @@ export default function SettingsPage() {
       setNewPassword("");
       setConfirmPassword("");
       toast.success({ title: "Mot de passe mis à jour." });
-    } catch (err) {
-      setPasswordError(err instanceof ApiError ? err.message : "Impossible de changer le mot de passe.");
+    } catch {
+      // Generic on purpose — the API rejects every failure mode with the same
+      // PASSWORD_CHANGE_FAILED code so the UI must not reveal whether the current
+      // password was wrong.
+      setPasswordError("Impossible de changer le mot de passe. Vérifiez vos informations et réessayez.");
     } finally {
       setChangingPassword(false);
     }
@@ -252,10 +252,7 @@ export default function SettingsPage() {
 
   return (
     <>
-      <AppHeader user={user} onLogout={handleLogout} nav={HEADER_NAV} menuLinks={[
-        { href: "/profile", label: "Mon profil" },
-        { href: "/settings", label: "Paramètres" },
-      ]} />
+      <AppHeader user={user} onLogout={handleLogout} />
 
       <main className="mx-auto w-full max-w-4xl flex-1 px-card-padding py-section-gap">
         <h1 className="font-display text-h1 font-bold text-text-primary">Paramètres</h1>
@@ -361,7 +358,7 @@ export default function SettingsPage() {
                 type="button"
                 onClick={saveProfile}
                 disabled={savingProfile}
-                className="mt-2 inline-flex min-h-touch-target items-center justify-center rounded-control bg-accent-primary px-5 text-body font-medium text-background shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none"
+                className="mt-2 inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-primary px-5 text-body font-medium text-on-accent shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none sm:w-auto"
               >
                 {savingProfile ? "Sauvegarde..." : "Sauvegarder"}
               </button>
@@ -391,10 +388,21 @@ export default function SettingsPage() {
                   type="password"
                   autoComplete="new-password"
                   value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
+                  onChange={(e) => {
+                    setNewPassword(e.target.value);
+                    if (passwordFieldErrors.newPassword) {
+                      setPasswordFieldErrors((prev) => ({ ...prev, newPassword: undefined }));
+                    }
+                  }}
                   className={inputClass}
+                  aria-invalid={!!passwordFieldErrors.newPassword || undefined}
+                  aria-describedby={passwordFieldErrors.newPassword ? "new-password-error" : "new-password-hint"}
                 />
-                <p className="mt-1 text-caption text-text-tertiary">Minimum 8 caractères.</p>
+                {passwordFieldErrors.newPassword ? (
+                  <p id="new-password-error" className={errorTextClass}>{passwordFieldErrors.newPassword}</p>
+                ) : (
+                  <p id="new-password-hint" className="mt-1 text-caption text-text-tertiary">Minimum 8 caractères.</p>
+                )}
               </div>
               <div>
                 <label htmlFor="confirm-password" className={labelClass}>Confirmer le nouveau mot de passe</label>
@@ -403,9 +411,19 @@ export default function SettingsPage() {
                   type="password"
                   autoComplete="new-password"
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    if (passwordFieldErrors.confirmPassword) {
+                      setPasswordFieldErrors((prev) => ({ ...prev, confirmPassword: undefined }));
+                    }
+                  }}
                   className={inputClass}
+                  aria-invalid={!!passwordFieldErrors.confirmPassword || undefined}
+                  aria-describedby={passwordFieldErrors.confirmPassword ? "confirm-password-error" : undefined}
                 />
+                {passwordFieldErrors.confirmPassword ? (
+                  <p id="confirm-password-error" className={errorTextClass}>{passwordFieldErrors.confirmPassword}</p>
+                ) : null}
               </div>
 
               {passwordError ? (
@@ -418,7 +436,7 @@ export default function SettingsPage() {
                 type="button"
                 onClick={changePassword}
                 disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
-                className="mt-2 inline-flex min-h-touch-target items-center justify-center rounded-control bg-accent-primary px-5 text-body font-medium text-background shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none"
+                className="mt-2 inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-primary px-5 text-body font-medium text-on-accent shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none sm:w-auto"
               >
                 {changingPassword ? "Mise à jour..." : "Changer le mot de passe"}
               </button>
@@ -447,7 +465,7 @@ export default function SettingsPage() {
                 className={
                   push.isSubscribed
                     ? "mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50"
-                    : "mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control bg-accent-primary px-4 text-body font-medium text-background shadow-glow-primary transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50"
+                    : "mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control bg-accent-primary px-4 text-body font-medium text-on-accent shadow-glow-primary transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50"
                 }
               >
                 {push.isLoading ? "Chargement..." : push.isSubscribed ? "Désactiver sur cet appareil" : "Activer sur cet appareil"}

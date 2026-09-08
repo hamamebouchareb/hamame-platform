@@ -53,7 +53,7 @@ export function ResumeBar({
 
       <Link
         href={primaryHref}
-        className="inline-flex min-h-touch-target shrink-0 items-center justify-center rounded-control bg-accent-primary px-6 text-body font-semibold text-background shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+        className="inline-flex min-h-touch-target w-full shrink-0 items-center justify-center rounded-control bg-accent-primary px-6 text-body font-semibold text-on-accent shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring sm:w-auto"
       >
         {primaryLabel}
       </Link>

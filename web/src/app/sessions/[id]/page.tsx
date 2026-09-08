@@ -6,8 +6,21 @@ import { useRequireAuth } from "@/lib/useRequireAuth";
 import { useApiResource } from "@/lib/useApiResource";
 import { apiFetch, ApiError } from "@/lib/api";
 import { extractParagraphs } from "@/lib/richtext";
-import { ConfirmDialog, LoadingSkeleton, QuestionCard } from "@/components";
-import type { AnswerAttemptResponse, SessionDetail, SessionQuestionEntry } from "@/lib/types";
+import { ConfirmDialog, LoadingSkeleton, Modal, QuestionCard, StudyTimer } from "@/components";
+import { useToast } from "@/components/Toast";
+import type { AnswerAttemptResponse, AnswerStatsResponse, SessionDetail, SessionQuestionEntry } from "@/lib/types";
+
+// P7 report categories (MedSparkDZ-confirmed shape) mapped onto the existing
+// POST /api/questions/:id/report contract ({reason, severity?}) — the mapping
+// below IS the work, not a pass-through: their three UI kinds become our
+// reason text + severity tier.
+const REPORT_TYPES = [
+  { id: "incorrect", label: "Réponse incorrecte", severity: "high" },
+  { id: "typo", label: "Faute de frappe", severity: "normal" },
+  { id: "other", label: "Autre", severity: "normal" },
+] as const;
+
+type ReportTypeId = (typeof REPORT_TYPES)[number]["id"];
 
 interface AnswerState {
   selectedOptionIds: string[];
@@ -16,6 +29,10 @@ interface AnswerState {
   isCorrect?: boolean | null;
   explanationParagraphs?: string[];
   submitError?: string | null;
+  /** Correct option ids (practice mode, post-submit only — never in exam mode). */
+  correctOptionIds?: string[];
+  /** Community pick-rates (practice mode, post-submit only; null = no data). */
+  answerStats?: { attempts: number; byOption: Record<string, number> } | null;
 }
 
 function emptyAnswerState(): AnswerState {
@@ -59,6 +76,7 @@ export default function SessionQuestionPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const sessionId = params.id;
+  const toast = useToast();
 
   const { data, error, isLoading, refetch } = useApiResource<{ session: SessionDetail }>(
     isHydrated && user ? `/sessions/${sessionId}` : null
@@ -99,16 +117,23 @@ export default function SessionQuestionPage() {
   const timed = session?.timeLimitSeconds != null && session.timeLimitSeconds > 0;
 
   useEffect(() => {
-    if (!timed || !session) return;
+    if (!session) return;
     const id = window.setInterval(() => setNowMs(Date.now()), 1000);
     return () => window.clearInterval(id);
-  }, [timed, session]);
+  }, [session]);
 
   const remainingSeconds = useMemo(() => {
     if (!session?.timeLimitSeconds) return null;
     const endsAt = new Date(session.startedAt).getTime() + session.timeLimitSeconds * 1000;
     return Math.max(0, Math.floor((endsAt - nowMs) / 1000));
   }, [session, nowMs]);
+
+  // Task 3a — practice elapsed timer (count-up): same 1s tick, derived from the
+  // existing startedAt field. Exam mode keeps its countdown above, unchanged.
+  const elapsedSeconds = useMemo(() => {
+    if (!session || timed) return null;
+    return Math.max(0, Math.floor((nowMs - new Date(session.startedAt).getTime()) / 1000));
+  }, [session, timed, nowMs]);
 
   const questions = useMemo(() => session?.questions ?? [], [session]);
   const currentEntry: SessionQuestionEntry | undefined = questions[currentIndex];
@@ -187,7 +212,37 @@ export default function SessionQuestionPage() {
         // feedback is shown, just the "Answered" marker.
         isCorrect: attempt.isCorrect,
         explanationParagraphs: attempt.explanation ? extractParagraphs(attempt.explanation) : undefined,
+        // Practice-only (see AnswerAttemptResponse): never set in exam mode, where
+        // revealing the key pre-submission would leak answers.
+        correctOptionIds: attempt.correctOptionIds,
       }));
+
+      // Community pick-rates: enrichment only, practice + choice types. Best-effort —
+      // a stats failure must never break or delay the correctness feedback above.
+      // Keyed by sessionQuestionId (captured now) in case the student navigates away
+      // while the fetch is in flight.
+      if (session.mode === "practice" && isChoiceType) {
+        const statsQuestionId = currentEntry.question.id;
+        const statsSessionQuestionId = currentEntry.sessionQuestionId;
+        try {
+          const stats = await apiFetch<AnswerStatsResponse>(
+            `/questions/${statsQuestionId}/answer-stats`
+          );
+          if (stats.options.length > 0) {
+            const byOption: Record<string, number> = {};
+            for (const option of stats.options) byOption[option.optionId] = option.percentage;
+            setAnswers((prev) => ({
+              ...prev,
+              [statsSessionQuestionId]: {
+                ...(prev[statsSessionQuestionId] ?? emptyAnswerState()),
+                answerStats: { attempts: stats.attempts, byOption },
+              },
+            }));
+          }
+        } catch {
+          // No stats (no attempts yet, offline, …) — feedback already stands alone.
+        }
+      }
     } catch (err) {
       setCurrentAnswer((prev) => ({
         ...prev,
@@ -230,6 +285,46 @@ export default function SessionQuestionPage() {
     router.push("/dashboard");
   }
 
+  // P7 report flow: icon button in the header opens a small modal (type +
+  // optional description) that POSTs to the existing FR-17 report endpoint.
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportType, setReportType] = useState<ReportTypeId>("incorrect");
+  const [reportDescription, setReportDescription] = useState("");
+  const [reportSending, setReportSending] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [reportSent, setReportSent] = useState(false);
+
+  function openReport() {
+    setReportType("incorrect");
+    setReportDescription("");
+    setReportError(null);
+    setReportSent(false);
+    setReportOpen(true);
+  }
+
+  async function handleSendReport() {
+    if (!currentEntry || reportSending) return;
+    setReportSending(true);
+    setReportError(null);
+    try {
+      const kind = REPORT_TYPES.find((entry) => entry.id === reportType)!;
+      const reason =
+        reportDescription.trim().length > 0
+          ? `${kind.label} — ${reportDescription.trim()}`
+          : kind.label;
+      await apiFetch(`/questions/${currentEntry.question.id}/report`, {
+        method: "POST",
+        body: JSON.stringify({ reason, severity: kind.severity }),
+      });
+      setReportSent(true);
+      toast.success({ title: "Signalement envoyé — merci." });
+    } catch (err) {
+      setReportError(err instanceof ApiError ? err.message : "Envoi impossible. Réessayez.");
+    } finally {
+      setReportSending(false);
+    }
+  }
+
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
@@ -239,7 +334,7 @@ export default function SessionQuestionPage() {
   }
 
   return (
-    <main className="min-h-screen bg-background pb-28 text-text-primary">
+    <main className="min-h-screen bg-background pb-60 text-text-primary sm:pb-28">
       <h1 className="sr-only">Session QCM</h1>
       {/* Sticky header */}
       <header
@@ -276,12 +371,45 @@ export default function SessionQuestionPage() {
               {formatRemaining(remainingSeconds)}
             </p>
           )}
+          {/* Practice elapsed time (count-up). aria-live off: announcing every
+              second would spam screen readers, unlike the exam countdown. */}
+          {!timed && elapsedSeconds !== null && (
+            <p
+              aria-live="off"
+              className="shrink-0 rounded-pill border border-border px-3 py-2 font-display text-h3 font-semibold tabular-nums text-text-secondary"
+            >
+              {formatRemaining(elapsedSeconds)}
+            </p>
+          )}
           <button
             type="button"
             onClick={() => setExitOpen(true)}
             className="inline-flex min-h-touch-target shrink-0 items-center justify-center rounded-control border border-border px-3 text-meta font-medium text-text-secondary transition hover:bg-surface-2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
           >
             Quitter
+          </button>
+          {/* P7 report/flag: icon-only like the reference (title mirrors it). */}
+          <button
+            type="button"
+            onClick={openReport}
+            title="Signaler une erreur"
+            aria-label="Signaler une erreur sur cette question"
+            className="inline-flex min-h-touch-target w-11 shrink-0 items-center justify-center rounded-control border border-border text-text-secondary transition hover:bg-surface-2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+              <line x1="4" y1="22" x2="4" y2="15" />
+            </svg>
           </button>
         </div>
         <div className="h-0.5 w-full bg-accent-qcm" aria-hidden />
@@ -312,7 +440,7 @@ export default function SessionQuestionPage() {
             <button
               type="button"
               onClick={() => refetch()}
-              className="mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control bg-accent-qcm px-4 text-body font-medium text-background transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+              className="mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control bg-accent-qcm px-4 text-body font-medium text-on-accent transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
             >
               Réessayer
             </button>
@@ -336,7 +464,39 @@ export default function SessionQuestionPage() {
         )}
 
         {session && !session.completedAt && currentEntry && (
-          <QuestionCard
+          <>
+            {/* P4 numbered rail: jump between questions with answered/current
+                states. Horizontal strip (not a sidebar) for the single-column
+                layout — same states and behavior as the reference rail. */}
+            {questions.length > 1 ? (
+              <nav aria-label="Aller à la question" className="mx-auto mb-4 flex max-w-xl gap-1.5 overflow-x-auto pb-1">
+                {questions.map((entry, index) => {
+                  const isCurrent = index === currentIndex;
+                  const isAnswered = !!answers[entry.sessionQuestionId]?.submitted;
+                  return (
+                    <button
+                      key={entry.sessionQuestionId}
+                      type="button"
+                      onClick={() => setCurrentIndex(index)}
+                      aria-label={`Aller à la question ${index + 1}${isCurrent ? " (actuelle)" : ""}${isAnswered ? " (répondue)" : ""}`}
+                      aria-current={isCurrent ? "true" : undefined}
+                      className={[
+                        "flex h-12 w-12 shrink-0 items-center justify-center rounded-[20px] border text-meta font-semibold tabular-nums transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+                        isCurrent
+                          ? "border-accent-qcm bg-accent-qcm text-on-accent ring-2 ring-accent-soft"
+                          : isAnswered
+                            ? "border-success/60 bg-success/10 text-success"
+                            : "border-border bg-surface-1 text-text-secondary hover:bg-surface-2",
+                      ].join(" ")}
+                    >
+                      {index + 1}
+                    </button>
+                  );
+                })}
+              </nav>
+            ) : null}
+            <QuestionCard
+              key={currentEntry.sessionQuestionId}
             meta={
               <>
                 {currentEntry.question.type}
@@ -355,6 +515,10 @@ export default function SessionQuestionPage() {
             options={currentEntry.options}
             answer={currentAnswer}
             mode={session.mode}
+            unitName={currentEntry.question.unitName}
+            moduleName={currentEntry.question.moduleName}
+            examYear={currentEntry.question.examYear}
+            sittingLabel={currentEntry.question.sittingLabel}
             onToggleOption={toggleQcmOption}
             onSelectOption={selectQcsOption}
             onFreeTextChange={setFreeText}
@@ -362,6 +526,7 @@ export default function SessionQuestionPage() {
             onRetrySubmit={handleSubmitAnswer}
             isSubmitting={isSubmittingAnswer}
           />
+          </>
         )}
       </div>
 
@@ -377,6 +542,7 @@ export default function SessionQuestionPage() {
                 type="button"
                 onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
                 disabled={currentIndex === 0}
+                title={currentIndex === 0 ? "Première question" : undefined}
                 className="inline-flex min-h-touch-target flex-1 items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-40 sm:flex-none"
               >
                 Précédent
@@ -385,6 +551,7 @@ export default function SessionQuestionPage() {
                 type="button"
                 onClick={() => setCurrentIndex((i) => Math.min(questions.length - 1, i + 1))}
                 disabled={currentIndex >= questions.length - 1}
+                title={currentIndex >= questions.length - 1 ? "Dernière question" : undefined}
                 className="inline-flex min-h-touch-target flex-1 items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-40 sm:flex-none"
               >
                 Suivant
@@ -398,7 +565,7 @@ export default function SessionQuestionPage() {
               className={[
                 "inline-flex min-h-touch-target items-center justify-center rounded-control px-4 text-body font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
                 isMarked
-                  ? "border border-accent-qcm bg-accent-qcm/15 text-accent-qcm"
+                  ? "border border-accent-qcm bg-accent-qcm/15 text-accent-soft"
                   : "border border-transparent text-text-secondary underline-offset-2 hover:text-text-primary hover:underline",
               ].join(" ")}
             >
@@ -409,7 +576,7 @@ export default function SessionQuestionPage() {
               type="button"
               onClick={handleFinishSession}
               disabled={isFinishing}
-              className="inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-qcm px-5 text-body font-semibold text-background shadow-glow-qcm transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-60 sm:w-auto"
+              className="inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-qcm px-5 text-body font-semibold text-on-accent shadow-glow-qcm transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-60 sm:w-auto"
             >
               {isFinishing ? "Finalisation..." : "Terminer la session"}
             </button>
@@ -422,6 +589,77 @@ export default function SessionQuestionPage() {
         </nav>
       )}
 
+      <Modal
+        open={reportOpen}
+        onClose={() => {
+          if (!reportSending) setReportOpen(false);
+        }}
+        title="Signaler une erreur"
+      >
+        {reportSent ? (
+          <p role="status" className="text-body text-text-primary">
+            Signalement envoyé — merci pour votre aide.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {currentEntry ? (
+              <p className="text-meta text-text-tertiary">
+                Question : {extractParagraphs(currentEntry.question.bodyRichtext)[0]?.slice(0, 80) ?? "—"}
+                {(extractParagraphs(currentEntry.question.bodyRichtext)[0]?.length ?? 0) > 80 ? "…" : ""}
+              </p>
+            ) : null}
+            <fieldset>
+              <legend className="mb-2 text-meta font-medium text-text-secondary">Type d&apos;erreur *</legend>
+              <div className="flex flex-col gap-2">
+                {REPORT_TYPES.map((kind) => (
+                  <label
+                    key={kind.id}
+                    className="flex min-h-touch-target cursor-pointer items-center gap-2 rounded-panel border border-border bg-surface-2 px-3 text-body text-text-primary transition hover:bg-surface-3 has-[:checked]:border-accent-qcm"
+                  >
+                    <input
+                      type="radio"
+                      name="report-type"
+                      checked={reportType === kind.id}
+                      onChange={() => setReportType(kind.id)}
+                      disabled={reportSending}
+                      className="h-4 w-4 shrink-0 accent-[var(--color-accent-qcm)]"
+                    />
+                    {kind.id === "incorrect" ? "❌ " : kind.id === "typo" ? "✏️ " : "💬 "}
+                    {kind.label}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <div>
+              <label htmlFor="report-description" className="mb-2 block text-meta font-medium text-text-secondary">
+                Description (optionnel)
+              </label>
+              <textarea
+                id="report-description"
+                value={reportDescription}
+                onChange={(event) => setReportDescription(event.target.value)}
+                disabled={reportSending}
+                rows={3}
+                className="min-h-touch-target w-full rounded-input border border-border bg-surface-2 px-4 py-3 text-body text-text-primary placeholder:text-text-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-60"
+              />
+            </div>
+            {reportError ? (
+              <p role="alert" className="text-meta text-danger">
+                {reportError}
+              </p>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => void handleSendReport()}
+              disabled={reportSending}
+              className="inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-qcm px-5 text-body font-semibold text-on-accent shadow-glow-qcm transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none"
+            >
+              {reportSending ? "Envoi..." : "Envoyer le signalement"}
+            </button>
+          </div>
+        )}
+      </Modal>
+
       <ConfirmDialog
         open={exitOpen}
         title="Quitter la session ?"
@@ -432,6 +670,12 @@ export default function SessionQuestionPage() {
         onConfirm={confirmExit}
         onCancel={() => setExitOpen(false)}
       />
+
+      {/* FR-66 — optional study-timer presets. Practice sessions only: exam mode already
+          has its own FR-19 chronometer in the header above. Purely client-side. */}
+      {session && !session.completedAt && session.mode === "practice" && questions.length > 0 && (
+        <StudyTimer />
+      )}
     </main>
   );
 }

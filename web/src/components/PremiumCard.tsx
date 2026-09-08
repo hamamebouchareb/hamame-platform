@@ -93,7 +93,7 @@ export function PremiumCard({
           {upgradeHref ? (
             <Link
               href={upgradeHref}
-              className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-secondary px-4 text-body font-medium text-background transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+              className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-secondary px-4 text-body font-medium text-on-accent transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
             >
               Passer Premium
             </Link>
@@ -101,7 +101,7 @@ export function PremiumCard({
             <button
               type="button"
               onClick={onUpgrade}
-              className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-secondary px-4 text-body font-medium text-background transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+              className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-secondary px-4 text-body font-medium text-on-accent transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
             >
               Passer Premium
             </button>
@@ -111,7 +111,7 @@ export function PremiumCard({
 
       {status === "active" ? (
         <>
-          <p className={cx(titleBase, "mt-2 text-accent-secondary")}>{planName ?? "Plan Premium"}</p>
+          <p className={cx(titleBase, "mt-2 text-accent-soft")}>{planName ?? "Plan Premium"}</p>
           {priceLabel ? <p className="mt-1 text-meta text-text-secondary">{priceLabel}</p> : null}
           {renewsAt ? <p className="mt-1 text-meta text-text-tertiary">Renouvellement le {renewsAt}</p> : null}
           {onCancel ? (
@@ -136,7 +136,7 @@ export function PremiumCard({
           {upgradeHref ? (
             <Link
               href={upgradeHref}
-              className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-secondary px-4 text-body font-medium text-background transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+              className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-secondary px-4 text-body font-medium text-on-accent transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
             >
               Choisir un plan
             </Link>

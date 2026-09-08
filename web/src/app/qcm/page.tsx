@@ -4,16 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useRequireAuth } from "@/lib/useRequireAuth";
-import { AppHeader, Footer } from "@/components";
+import { AppHeader, Footer, LoadingSkeleton } from "@/components";
 import { accentText, accentVar, type AccentTone } from "@/components/FeatureCard";
 import { cx } from "@/lib/cx";
-
-const HEADER_NAV = [
-  { href: "/dashboard", label: "Tableau de bord" },
-  { href: "/qcm", label: "QCM", active: true },
-  { href: "/notes", label: "Notes" },
-  { href: "/subscription", label: "Abonnement" },
-];
 
 interface DecisionCardProps {
   href: string;
@@ -64,14 +57,14 @@ function cxBadge(tone: AccentTone): string {
   return cx(
     "shrink-0 rounded-pill border px-2.5 py-0.5 text-caption font-medium",
     tone === "secondary"
-      ? "border-accent-secondary/40 bg-accent-secondary/15 text-accent-secondary"
-      : "border-accent-qcm/40 bg-accent-qcm/15 text-accent-qcm"
+      ? "border-accent-secondary/40 bg-accent-secondary/15 text-accent-soft"
+      : "border-accent-qcm/40 bg-accent-qcm/15 text-accent-soft"
   );
 }
 
 function cxCta(tone: AccentTone): string {
   const base =
-    "inline-flex min-h-touch-target w-fit items-center justify-center gap-2 rounded-control px-5 text-body font-semibold text-background transition group-hover:brightness-110 active:scale-[0.98]";
+    "inline-flex min-h-touch-target w-fit items-center justify-center gap-2 rounded-control px-5 text-body font-semibold text-on-accent transition group-hover:brightness-110 active:scale-[0.98]";
   return cx(
     base,
     tone === "secondary" ? "bg-accent-secondary shadow-glow-secondary" : "bg-accent-qcm shadow-glow-qcm"
@@ -91,18 +84,18 @@ export default function QcmPage() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <p className="text-meta text-text-secondary">Chargement...</p>
+        <LoadingSkeleton className="h-8 w-48" ariaLabel="Chargement" />
       </main>
     );
   }
 
   return (
     <>
-      <AppHeader user={user} onLogout={handleLogout} nav={HEADER_NAV} />
+      <AppHeader user={user} onLogout={handleLogout} />
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-card-padding py-section-gap">
         <section aria-label="Présentation de la banque QCM" className="mx-auto max-w-3xl text-center">
-          <p className="text-meta font-medium uppercase tracking-wide text-accent-qcm">Banque de questions</p>
+          <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">Banque de questions</p>
           <h1 className="mt-2 font-display text-hero font-bold leading-tight text-text-primary">
             Entraînez-vous sur de vrais sujets d&apos;examen
           </h1>
@@ -112,7 +105,7 @@ export default function QcmPage() {
           </p>
         </section>
 
-        <section aria-label="Choix du mode" className="mx-auto mt-section-gap grid max-w-4xl gap-card-gap md:grid-cols-2">
+        <section aria-label="Choix du mode" className="mx-auto mt-section-gap grid max-w-4xl grid-cols-1 gap-card-gap md:grid-cols-2">
           <DecisionCard
             href="/qcm/builder?mode=practice"
             title="Créer une session"

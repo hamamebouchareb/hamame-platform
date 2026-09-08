@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { useApiResource } from "@/lib/useApiResource";
 import {
+  ActivationCodeCard,
   AppHeader,
   Footer,
   FriendsPanel,
@@ -26,15 +27,6 @@ import type {
   RecentActivityItem,
   Subscription,
 } from "@/lib/types";
-
-const HEADER_NAV = [
-  { href: "/dashboard", label: "Tableau de bord", active: true },
-  { href: "/qcm", label: "QCM" },
-  { href: "/suivi", label: "Suivi" },
-  { href: "/revision", label: "Révision" },
-  { href: "/notes", label: "Notes" },
-  { href: "/subscription", label: "Abonnement" },
-];
 
 // Study-space navigation — the four Hamame pillars.
 const STUDY_TABS = [
@@ -126,11 +118,6 @@ function formatDate(iso: string): string {
 
 function formatDateShort(iso: string): string {
   return new Date(iso).toLocaleDateString("fr-DZ", { dateStyle: "medium" });
-}
-
-function isCreditsLow(credits: AiCredits): boolean {
-  if (credits.dailyAllowance <= 0) return false;
-  return credits.remainingToday > 0 && credits.remainingToday / credits.dailyAllowance < 0.2;
 }
 
 export default function DashboardPage() {
@@ -231,10 +218,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <AppHeader user={user} onLogout={handleLogout} nav={HEADER_NAV} menuLinks={[
-        { href: "/profile", label: "Mon profil" },
-        { href: "/settings", label: "Paramètres" },
-      ]} />
+      <AppHeader user={user} onLogout={handleLogout} />
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-card-padding py-section-gap">
         <div className="grid gap-section-gap lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
@@ -345,7 +329,7 @@ export default function DashboardPage() {
                 "rounded-card border bg-surface-1 p-card-padding shadow-card",
                 credits.data && credits.data.remainingToday === 0
                   ? "border-danger"
-                  : credits.data && isCreditsLow(credits.data)
+                  : credits.data && credits.data.lowBalance
                     ? "border-warning"
                     : "border-border",
               ].join(" ")}
@@ -388,7 +372,7 @@ export default function DashboardPage() {
                   <p
                     className={[
                       "font-display text-h3 font-semibold",
-                      isCreditsLow(credits.data) ? "text-warning" : "text-text-primary",
+                      credits.data.lowBalance ? "text-warning" : "text-text-primary",
                     ].join(" ")}
                   >
                     {credits.data.remainingToday}
@@ -396,12 +380,59 @@ export default function DashboardPage() {
                       / {credits.data.dailyAllowance} restants
                     </span>
                   </p>
-                  {isCreditsLow(credits.data) && (
+                  {credits.data.lowBalance && (
                     <p className="mt-1 text-meta text-warning">Solde bas — économisez vos indices pour aujourd&apos;hui.</p>
                   )}
                   <p className="mt-1 text-meta text-text-tertiary">
                     Reset {new Date(credits.data.resetAt).toLocaleString("fr-DZ", { timeStyle: "short", dateStyle: "short" })}
                   </p>
+                </div>
+              )}
+            </article>
+
+            {/* Révision dues (Phase 4) — small widget over GET /reviews/due.
+                No efficacy stat exists anywhere (verified: no such field in the
+                endpoint, jobs, or ReviewSettings), so the widget shows the due
+                count only — it does not invent one. */}
+            <article
+              aria-label="Révisions dues"
+              className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card"
+            >
+              <p className="text-meta font-medium uppercase tracking-wide text-text-secondary">
+                Révisions dues
+              </p>
+              {dueReviews.isLoading && dueReviewCount === 0 ? (
+                <LoadingSkeleton className="mt-2 h-8 w-24" ariaLabel="Chargement des révisions" />
+              ) : dueReviews.error ? (
+                <div className="mt-2">
+                  <p className="text-body text-danger">Révisions indisponibles. {dueReviews.error}</p>
+                  <button
+                    type="button"
+                    onClick={dueReviews.refetch}
+                    className="mt-2 inline-flex min-h-touch-target items-center justify-center rounded-control border border-border bg-surface-1 px-3 text-meta font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
+                  >
+                    Réessayer
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-2">
+                  <p className="font-display text-h3 font-semibold text-text-primary">
+                    {dueReviewCount}{" "}
+                    <span className="ml-1 text-meta font-medium text-text-secondary">
+                      révision{dueReviewCount === 1 ? "" : "s"} à faire
+                    </span>
+                  </p>
+                  <p className="mt-1 text-meta text-text-tertiary">
+                    {dueReviewCount === 0
+                      ? "À jour — revenez après vos prochaines sessions."
+                      : "File de mémorisation espacée, les plus urgentes d'abord."}
+                  </p>
+                  <Link
+                    href="/revision"
+                    className="mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control border border-border px-4 text-meta font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+                  >
+                    {dueReviewCount === 0 ? "Ouvrir les révisions" : "Réviser maintenant"}
+                  </Link>
                 </div>
               )}
             </article>
@@ -428,6 +459,12 @@ export default function DashboardPage() {
               upgradeHref="/subscription"
             />
 
+            {/* Activation code (FR-65/BR-18) — the manual-payment redemption path,
+                shown next to the upgrade prompt it is an alternative to. */}
+            {!currentSubscription || currentSubscription.cancelledAt ? (
+              <ActivationCodeCard onRedeemed={subscription.refetch} />
+            ) : null}
+
             {/* Social / friends */}
             <FriendsPanel
               friends={(friends.data?.friends ?? []).map((friend) => ({
@@ -448,32 +485,12 @@ export default function DashboardPage() {
             {/* Resources */}
             <article className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
               <p className="text-meta font-medium uppercase tracking-wide text-text-secondary">Ressources</p>
-              <ul className="mt-2 flex flex-col gap-2">
-                <li>
-                  <Link
-                    href="/subscription"
-                    className="inline-flex min-h-touch-target items-center text-body font-medium text-accent-suivi transition hover:text-accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
-                  >
-                    Abonnement
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/settings"
-                    className="inline-flex min-h-touch-target items-center text-body font-medium text-accent-suivi transition hover:text-accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
-                  >
-                    Notifications
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/notes"
-                    className="inline-flex min-h-touch-target items-center text-body font-medium text-accent-suivi transition hover:text-accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
-                  >
-                    Mes notes
-                  </Link>
-                </li>
-              </ul>
+              <Link
+                href="/resources"
+                className="inline-flex min-h-touch-target items-center text-body font-medium text-accent-soft transition hover:text-accent-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+              >
+                Voir toutes les ressources
+              </Link>
             </article>
           </aside>
         </div>

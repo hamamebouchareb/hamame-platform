@@ -7,21 +7,24 @@ import { ProgressBar } from "@/components/ProgressBar";
 
 export type AccentTone = "neutral" | "primary" | "secondary" | "qcm" | "library" | "suivi" | "revision";
 
-/** Resolves an accent tone to its Tailwind color utility. */
+/** Resolves an accent tone to its Tailwind color utility.
+ *  Small text/icons on dark surfaces use the AA-safe soft tint (saturated
+ *  accent text ≈3.6:1 FAIL; soft #8FB0FF ≈8–9:1 PASS); hue coding survives
+ *  via borders/backgrounds (accentVar, unchanged). */
 export function accentText(tone: AccentTone): string {
   switch (tone) {
     case "primary":
-      return "text-accent-primary";
+      return "text-accent-soft";
     case "secondary":
-      return "text-accent-secondary";
+      return "text-accent-soft";
     case "library":
-      return "text-accent-library";
+      return "text-accent-soft";
     case "suivi":
-      return "text-accent-suivi";
+      return "text-accent-soft";
     case "revision":
-      return "text-accent-revision";
+      return "text-accent-soft";
     case "qcm":
-      return "text-accent-qcm";
+      return "text-accent-soft";
     default:
       return "text-text-secondary";
   }
@@ -69,7 +72,7 @@ export function FeatureCard({ icon, title, description, tone = "primary", badge,
           {icon}
         </div>
         {badge ? (
-          <span className="rounded-pill border border-accent-secondary/40 bg-accent-secondary/15 px-2 py-0.5 text-caption font-medium text-accent-secondary">
+          <span className="rounded-pill border border-accent-secondary/40 bg-accent-secondary/15 px-2 py-0.5 text-caption font-medium text-accent-soft">
             {badge}
           </span>
         ) : null}

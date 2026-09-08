@@ -19,7 +19,7 @@ export interface PrimaryTabsProps {
 
 /**
  * Pill-style segmented control. Real <button> elements with arrow-key navigation
- * and aria-selected. Active tab is a filled accent pill (dark text on volt).
+ * and aria-selected. Active tab is a filled accent pill (white text on blue).
  */
 export function PrimaryTabs({ tabs, activeId, onChange, ariaLabel, className }: PrimaryTabsProps) {
   const listRef = useRef<HTMLDivElement>(null);
@@ -72,9 +72,9 @@ export function PrimaryTabs({ tabs, activeId, onChange, ariaLabel, className }: 
               if (event.key === "End") moveToEdge("last");
             }}
             className={cx(
-              "inline-flex min-h-touch-target items-center justify-center whitespace-nowrap rounded-pill px-4 text-body font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none",
+              "inline-flex min-h-touch-target items-center justify-center whitespace-nowrap rounded-pill px-4 text-body font-medium transition duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none",
               active
-                ? "bg-accent-primary text-background shadow-glow-primary"
+                ? "bg-accent-primary text-on-accent shadow-glow-primary"
                 : "text-text-secondary hover:bg-surface-3 hover:text-text-primary active:bg-surface-3"
             )}
           >

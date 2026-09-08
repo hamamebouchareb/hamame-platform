@@ -7,16 +7,8 @@ import { useAuth } from "@/context/AuthContext";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { useApiResource } from "@/lib/useApiResource";
 import { useApiList } from "@/lib/useApiList";
-import { AppHeader, Footer, CourseCard, CurriculumToolbar } from "@/components";
+import { AppHeader, Footer, CourseCard, CurriculumToolbar, EmptyState, LoadingSkeleton } from "@/components";
 import type { CurriculumModule, ModuleProgress, Unit } from "@/lib/types";
-
-const HEADER_NAV = [
-  { href: "/dashboard", label: "Tableau de bord" },
-  { href: "/faculties", label: "Bibliothèque", active: true },
-  { href: "/qcm", label: "QCM" },
-  { href: "/notes", label: "Notes" },
-  { href: "/subscription", label: "Abonnement" },
-];
 
 function plural(count: number, singular: string): string {
   return `${count} ${count === 1 ? singular : `${singular}s`}`;
@@ -35,7 +27,7 @@ export default function YearModulesPage() {
   const [sort, setSort] = useState<SortValue>("progress-desc");
   const [filter, setFilter] = useState<FilterValue>("all");
 
-  const { data, error, isLoading } = useApiResource<{ modules: CurriculumModule[] }>(
+  const { data, error, isLoading, refetch } = useApiResource<{ modules: CurriculumModule[] }>(
     isHydrated && user ? `/years/${params.id}/modules` : null
   );
 
@@ -93,25 +85,25 @@ export default function YearModulesPage() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <p className="text-meta text-text-secondary">Chargement...</p>
+        <LoadingSkeleton className="h-8 w-48" ariaLabel="Chargement" />
       </main>
     );
   }
 
   return (
     <>
-      <AppHeader user={user} onLogout={handleLogout} nav={HEADER_NAV} />
+      <AppHeader user={user} onLogout={handleLogout} />
 
       <main className="mx-auto w-full max-w-4xl flex-1 px-card-padding py-section-gap">
         <Link
           href="/faculties"
-          className="inline-flex min-h-touch-target items-center gap-1 text-meta font-medium text-text-secondary transition hover:text-accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+          className="inline-flex min-h-touch-target items-center gap-1 text-meta font-medium text-text-secondary transition hover:text-accent-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
         >
           <span aria-hidden>←</span> Bibliothèque
         </Link>
 
         <header className="mt-2">
-          <p className="text-meta font-medium uppercase tracking-wide text-accent-library">Modules</p>
+          <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">Modules</p>
           <h1 className="mt-1 font-display text-hero font-bold leading-tight text-text-primary">
             Modules de votre année
           </h1>
@@ -147,20 +139,54 @@ export default function YearModulesPage() {
           ]}
         />
 
-        {isLoading && <p className="mt-4 text-meta text-text-secondary">Chargement des modules...</p>}
-        {error && (
-          <p role="alert" className="mt-4 rounded-panel border border-danger/30 bg-danger/10 px-3 py-2 text-meta text-danger">
-            {error}
-          </p>
-        )}
+        {isLoading ? (
+          <div className="mt-4 flex flex-col gap-card-gap">
+            {[0, 1, 2].map((i) => (
+              <LoadingSkeleton key={i} className="h-24 w-full rounded-card" ariaLabel={i === 0 ? "Chargement des modules" : undefined} />
+            ))}
+          </div>
+        ) : null}
+        {error ? (
+          <div className="mt-4 rounded-card border border-danger bg-surface-1 p-card-padding">
+            <p role="alert" className="text-body text-danger">
+              {error}
+            </p>
+            <button
+              type="button"
+              onClick={refetch}
+              className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 sm:w-auto"
+            >
+              Réessayer
+            </button>
+          </div>
+        ) : null}
 
-        {!isLoading && !error && modules.length === 0 && (
-          <p className="mt-4 text-meta text-text-secondary">Aucun module n&apos;est disponible pour cette année.</p>
-        )}
+        {!isLoading && !error && modules.length === 0 ? (
+          <div className="mt-4">
+            <EmptyState
+              title="Aucun module pour cette année"
+              description="Cette année ne contient pas encore de modules publiés."
+              action={{ label: "Retour à la bibliothèque", href: "/faculties" }}
+            />
+          </div>
+        ) : null}
 
-        {!isLoading && !error && modules.length > 0 && visibleModules.length === 0 && (
-          <p className="mt-4 text-meta text-text-secondary">Aucun module ne correspond à ces critères.</p>
-        )}
+        {!isLoading && !error && modules.length > 0 && visibleModules.length === 0 ? (
+          <div className="mt-4">
+            <EmptyState
+              title="Aucun module ne correspond"
+              description="Modifiez la recherche ou réinitialisez les filtres pour revoir tous les modules."
+              action={{
+                label: "Réinitialiser les filtres",
+                onClick: () => {
+                  setSearch("");
+                  setFilter("all");
+                  setSort("progress-desc");
+                },
+              }}
+            />
+          </div>
+        ) : null}
 
         <ul className="mt-4 grid gap-card-gap">
           {visibleModules.map((module) => {
@@ -188,7 +214,7 @@ export default function YearModulesPage() {
                         percentage === 100
                           ? "rounded-pill border border-success/40 bg-success/15 px-2 py-0.5 font-medium text-success"
                           : percentage > 0
-                            ? "rounded-pill border border-accent-library/40 bg-accent-library/15 px-2 py-0.5 font-medium text-accent-library"
+                            ? "rounded-pill border border-accent-library/40 bg-accent-library/15 px-2 py-0.5 font-medium text-accent-soft"
                             : "rounded-pill border border-text-tertiary/40 bg-surface-3 px-2 py-0.5 font-medium text-text-tertiary"
                       }
                     >

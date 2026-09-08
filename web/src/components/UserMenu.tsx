@@ -61,7 +61,7 @@ export function UserMenu({ user, onLogout, links = [] }: UserMenuProps) {
         onClick={() => setOpen((prev) => !prev)}
         className="inline-flex min-h-touch-target min-w-touch-target items-center justify-center gap-2 rounded-pill border border-border bg-surface-1 px-3 text-body font-medium text-text-primary transition hover:border-border-strong hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
       >
-        <span className="flex h-7 w-7 items-center justify-center rounded-pill bg-accent-primary font-display text-caption font-bold text-background" aria-hidden>
+        <span className="flex h-7 w-7 items-center justify-center rounded-pill bg-accent-primary font-display text-caption font-bold text-on-accent" aria-hidden>
           {initials(user.fullName)}
         </span>
         <span className="hidden max-w-[10rem] truncate sm:inline">{user.fullName}</span>

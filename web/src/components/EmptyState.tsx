@@ -27,7 +27,7 @@ export interface EmptyStateProps {
  */
 export function EmptyState({ title, description, icon, action, className }: EmptyStateProps) {
   const actionClass =
-    "inline-flex min-h-touch-target items-center justify-center gap-2 rounded-control bg-accent-primary px-5 text-body font-medium text-background shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none";
+    "inline-flex min-h-touch-target w-full items-center justify-center gap-2 rounded-control bg-accent-primary px-5 text-body font-medium text-on-accent shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none sm:w-auto";
 
   return (
     <div
@@ -36,7 +36,7 @@ export function EmptyState({ title, description, icon, action, className }: Empt
         className
       )}
     >
-      {icon ? <div className="flex h-12 w-12 items-center justify-center rounded-panel bg-surface-2 text-accent-primary">{icon}</div> : null}
+      {icon ? <div className="flex h-12 w-12 items-center justify-center rounded-panel bg-surface-2 text-accent-soft">{icon}</div> : null}
       <div>
         <p className="font-display text-h3 font-semibold text-text-primary">{title}</p>
         {description ? <p className="mt-1 text-body text-text-secondary">{description}</p> : null}

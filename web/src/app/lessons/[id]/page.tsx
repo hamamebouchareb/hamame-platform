@@ -6,23 +6,15 @@ import { useAuth } from "@/context/AuthContext";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { useApiResource } from "@/lib/useApiResource";
 import { extractParagraphs } from "@/lib/richtext";
-import { AppHeader, Footer } from "@/components";
+import { AppHeader, EmptyState, Footer, LoadingSkeleton } from "@/components";
 import type { LessonDetail } from "@/lib/types";
-
-const HEADER_NAV = [
-  { href: "/dashboard", label: "Tableau de bord" },
-  { href: "/faculties", label: "Bibliothèque", active: true },
-  { href: "/qcm", label: "QCM" },
-  { href: "/notes", label: "Notes" },
-  { href: "/subscription", label: "Abonnement" },
-];
 
 export default function LessonDetailPage() {
   const { logout } = useAuth();
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const { user, isHydrated } = useRequireAuth();
-  const { data: lesson, error, isLoading } = useApiResource<LessonDetail>(
+  const { data: lesson, error, isLoading, refetch } = useApiResource<LessonDetail>(
     isHydrated && user ? `/lessons/${params.id}` : null
   );
 
@@ -34,34 +26,55 @@ export default function LessonDetailPage() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <p className="text-meta text-text-secondary">Chargement...</p>
+        <LoadingSkeleton className="h-8 w-48" ariaLabel="Chargement" />
       </main>
     );
   }
 
   return (
     <>
-      <AppHeader user={user} onLogout={handleLogout} nav={HEADER_NAV} />
+      <AppHeader user={user} onLogout={handleLogout} />
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-card-padding py-section-gap">
-        {isLoading && <p className="text-meta text-text-secondary">Chargement de la leçon...</p>}
-        {error && (
-          <p role="alert" className="rounded-panel border border-danger/30 bg-danger/10 px-3 py-2 text-meta text-danger">
-            {error}
-          </p>
-        )}
+        {isLoading ? (
+          <div className="flex flex-col gap-4">
+            <LoadingSkeleton className="h-8 w-64" ariaLabel="Chargement de la leçon" />
+            <LoadingSkeleton className="h-48 w-full rounded-card" />
+          </div>
+        ) : null}
+        {error ? (
+          <div className="rounded-card border border-danger bg-surface-1 p-card-padding">
+            <p role="alert" className="text-body text-danger">
+              {error}
+            </p>
+            <button
+              type="button"
+              onClick={refetch}
+              className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 sm:w-auto"
+            >
+              Réessayer
+            </button>
+          </div>
+        ) : null}
+        {!isLoading && !error && !lesson ? (
+          <EmptyState
+            title="Leçon introuvable"
+            description="Cette leçon n'est pas disponible. Revenez à la bibliothèque pour en choisir une autre."
+            action={{ label: "Retour à la bibliothèque", href: "/faculties" }}
+          />
+        ) : null}
 
         {lesson && (
           <>
             <Link
               href={`/units/${lesson.unitId}`}
-              className="inline-flex min-h-touch-target items-center gap-1 text-meta font-medium text-text-secondary transition hover:text-accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+              className="inline-flex min-h-touch-target items-center gap-1 text-meta font-medium text-text-secondary transition hover:text-accent-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
             >
               <span aria-hidden>←</span> Retour aux leçons
             </Link>
 
             <header className="mt-2">
-              <p className="text-meta font-medium uppercase tracking-wide text-accent-library">Leçon</p>
+              <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">Leçon</p>
               <h1 className="mt-1 font-display text-h1 font-bold leading-tight text-text-primary">{lesson.title}</h1>
             </header>
 

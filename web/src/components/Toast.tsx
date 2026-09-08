@@ -46,7 +46,7 @@ const toneIcon: Record<ToastTone, ReactNode> = {
 const toneClass: Record<ToastTone, string> = {
   success: "border-success/40 text-success",
   error: "border-danger/40 text-danger",
-  info: "border-accent-suivi/40 text-accent-suivi",
+  info: "border-accent-suivi/40 text-accent-soft",
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {

@@ -32,12 +32,12 @@ export interface MetricCardProps {
 
 const toneText: Record<MetricTone, string> = {
   neutral: "text-text-primary",
-  primary: "text-accent-primary",
-  secondary: "text-accent-secondary",
-  qcm: "text-accent-qcm",
-  library: "text-accent-library",
-  suivi: "text-accent-suivi",
-  revision: "text-accent-revision",
+  primary: "text-text-primary",
+  secondary: "text-text-primary",
+  qcm: "text-text-primary",
+  library: "text-text-primary",
+  suivi: "text-text-primary",
+  revision: "text-text-primary",
   success: "text-success",
   warning: "text-warning",
   danger: "text-danger",

@@ -27,15 +27,30 @@ body {
 @keyframes hamame-pulse {
   0%,
   100% {
-    opacity: 0.45;
+    opacity: 1;
   }
   50% {
+    opacity: 0.85;
+  }
+}
+
+/* Dialog/dropdown open motion — live-measured 150ms `enter` (opacity only,
+   matching tw-animate-css default with no translate/scale vars set). */
+@keyframes hamame-enter {
+  from {
+    opacity: 0;
+  }
+  to {
     opacity: 1;
   }
 }
 
+.hamame-dialog-enter {
+  animation: hamame-enter var(--duration-enter, 150ms) var(--ease-standard, ease-out) both;
+}
+
 .hamame-skeleton {
-  animation: hamame-pulse 1.4s ease-in-out infinite;
+  animation: hamame-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   background: var(--color-surface-3);
   border-radius: var(--radius-control);
 }

@@ -7,16 +7,8 @@ import { useAuth } from "@/context/AuthContext";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { useApiResource } from "@/lib/useApiResource";
 import { apiFetch, ApiError } from "@/lib/api";
-import { AppHeader, Footer, CourseCard } from "@/components";
+import { AppHeader, Footer, CourseCard, EmptyState, LoadingSkeleton } from "@/components";
 import type { LessonSummary, SessionDetail } from "@/lib/types";
-
-const HEADER_NAV = [
-  { href: "/dashboard", label: "Tableau de bord" },
-  { href: "/faculties", label: "Bibliothèque", active: true },
-  { href: "/qcm", label: "QCM" },
-  { href: "/notes", label: "Notes" },
-  { href: "/subscription", label: "Abonnement" },
-];
 
 function plural(count: number, singular: string): string {
   return `${count} ${count === 1 ? singular : `${singular}s`}`;
@@ -43,7 +35,7 @@ export default function UnitDetailPage() {
   const [startError, setStartError] = useState<string | null>(null);
 
   const canFetch = isHydrated && !!user;
-  const { data: lessonsData, error: lessonsError, isLoading: lessonsLoading } = useApiResource<{
+  const { data: lessonsData, error: lessonsError, isLoading: lessonsLoading, refetch: refetchLessons } = useApiResource<{
     lessons: LessonSummary[];
   }>(canFetch ? `/units/${unitId}/lessons` : null);
   const { data: questionsData } = useApiResource<QuestionListInfo>(
@@ -90,25 +82,25 @@ export default function UnitDetailPage() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <p className="text-meta text-text-secondary">Chargement...</p>
+        <LoadingSkeleton className="h-8 w-48" ariaLabel="Chargement" />
       </main>
     );
   }
 
   return (
     <>
-      <AppHeader user={user} onLogout={handleLogout} nav={HEADER_NAV} />
+      <AppHeader user={user} onLogout={handleLogout} />
 
       <main className="mx-auto w-full max-w-4xl flex-1 px-card-padding py-section-gap">
         <Link
           href="/faculties"
-          className="inline-flex min-h-touch-target items-center gap-1 text-meta font-medium text-text-secondary transition hover:text-accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+          className="inline-flex min-h-touch-target items-center gap-1 text-meta font-medium text-text-secondary transition hover:text-accent-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
         >
           <span aria-hidden>←</span> Bibliothèque
         </Link>
 
         <header className="mt-2">
-          <p className="text-meta font-medium uppercase tracking-wide text-accent-library">Leçons de l&apos;unité</p>
+          <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">Leçons de l&apos;unité</p>
           <h1 className="mt-1 font-display text-hero font-bold leading-tight text-text-primary">Cours et entraînement</h1>
           <p className="mt-2 text-body text-text-secondary">
             {lessonsLoading
@@ -124,7 +116,7 @@ export default function UnitDetailPage() {
               type="button"
               onClick={() => startSession("practice")}
               disabled={startingMode !== null}
-              className="inline-flex min-h-touch-target items-center justify-center gap-2 rounded-control bg-accent-library px-5 text-body font-semibold text-background shadow-glow-library transition hover:brightness-110 active:scale-[0.98] disabled:opacity-60"
+              className="inline-flex min-h-touch-target items-center justify-center gap-2 rounded-control bg-accent-library px-5 text-body font-semibold text-on-accent shadow-glow-library transition hover:brightness-110 active:scale-[0.98] disabled:opacity-60"
             >
               {startingMode === "practice" ? "Démarrage…" : "Entraînement — correction immédiate"}
             </button>
@@ -132,7 +124,7 @@ export default function UnitDetailPage() {
               type="button"
               onClick={() => startSession("exam")}
               disabled={startingMode !== null}
-              className="inline-flex min-h-touch-target items-center justify-center gap-2 rounded-control border border-accent-secondary/50 bg-accent-secondary/10 px-5 text-body font-semibold text-accent-secondary transition hover:bg-accent-secondary/20 active:scale-[0.98] disabled:opacity-60"
+              className="inline-flex min-h-touch-target items-center justify-center gap-2 rounded-control border border-accent-secondary/50 bg-accent-secondary/10 px-5 text-body font-semibold text-accent-soft transition hover:bg-accent-secondary/20 active:scale-[0.98] disabled:opacity-60"
             >
               {startingMode === "exam" ? "Démarrage…" : "Examen chronométré (20 min)"}
             </button>
@@ -169,18 +161,48 @@ export default function UnitDetailPage() {
             </svg>
           </label>
 
-          {lessonsLoading && <p className="mt-4 text-meta text-text-secondary">Chargement des leçons...</p>}
-          {lessonsError && (
-            <p role="alert" className="mt-4 rounded-panel border border-danger/30 bg-danger/10 px-3 py-2 text-meta text-danger">
-              {lessonsError}
-            </p>
-          )}
-          {!lessonsLoading && !lessonsError && lessons.length === 0 && (
-            <p className="mt-4 text-meta text-text-secondary">Aucune leçon n&apos;est disponible pour le moment.</p>
-          )}
-          {!lessonsLoading && !lessonsError && lessons.length > 0 && visibleLessons.length === 0 && (
-            <p className="mt-4 text-meta text-text-secondary">Aucune leçon ne correspond à ces critères.</p>
-          )}
+          {lessonsLoading ? (
+            <div className="mt-4 flex flex-col gap-card-gap">
+              {[0, 1, 2].map((i) => (
+                <LoadingSkeleton key={i} className="h-20 w-full rounded-card" ariaLabel={i === 0 ? "Chargement des leçons" : undefined} />
+              ))}
+            </div>
+          ) : null}
+          {lessonsError ? (
+            <div className="mt-4 rounded-card border border-danger bg-surface-1 p-card-padding">
+              <p role="alert" className="text-body text-danger">
+                {lessonsError}
+              </p>
+              <button
+                type="button"
+                onClick={refetchLessons}
+                className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 sm:w-auto"
+              >
+                Réessayer
+              </button>
+            </div>
+          ) : null}
+          {!lessonsLoading && !lessonsError && lessons.length === 0 ? (
+            <div className="mt-4">
+              <EmptyState
+                title="Aucune leçon pour cette unité"
+                description="Cette unité n'a pas encore de leçons publiées. Vous pouvez quand même lancer une session QCM."
+                action={{ label: "Créer une session QCM", href: "/qcm" }}
+              />
+            </div>
+          ) : null}
+          {!lessonsLoading && !lessonsError && lessons.length > 0 && visibleLessons.length === 0 ? (
+            <div className="mt-4">
+              <EmptyState
+                title="Aucune leçon ne correspond"
+                description="Modifiez la recherche pour revoir toutes les leçons de cette unité."
+                action={{
+                  label: "Réinitialiser la recherche",
+                  onClick: () => setSearch(""),
+                }}
+              />
+            </div>
+          ) : null}
 
           <ul className="mt-4 flex flex-col gap-card-gap">
             {visibleLessons.map((lesson) => (
@@ -194,7 +216,7 @@ export default function UnitDetailPage() {
                     <span
                       className={
                         lesson.contentTier === "hamame_plus"
-                          ? "rounded-pill border border-accent-secondary/40 bg-accent-secondary/15 px-2 py-0.5 font-medium text-accent-secondary"
+                          ? "rounded-pill border border-accent-secondary/40 bg-accent-secondary/15 px-2 py-0.5 font-medium text-accent-soft"
                           : "rounded-pill border border-success/40 bg-success/15 px-2 py-0.5 font-medium text-success"
                       }
                     >

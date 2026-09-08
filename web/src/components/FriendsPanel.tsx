@@ -74,7 +74,7 @@ export function FriendsPanel({
         <ul className="mt-2 flex flex-col gap-1">
           {friends.map((friend) => (
             <li key={friend.id} className="flex min-h-touch-target items-center gap-2 rounded-card px-2 py-1 transition hover:bg-surface-2">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-surface-3 font-display text-caption font-bold text-accent-primary" aria-hidden>
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-surface-3 font-display text-caption font-bold text-accent-soft" aria-hidden>
                 {initials(friend.name)}
               </span>
               <div className="min-w-0">

@@ -59,7 +59,7 @@ export function ProfileHero({
             <button
               type="button"
               onClick={onRetry}
-              className="inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-primary px-4 text-body font-medium text-background transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring sm:w-auto sm:px-5"
+              className="inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-primary px-4 text-body font-medium text-on-accent transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring sm:w-auto sm:px-5"
             >
               Réessayer
             </button>
@@ -78,7 +78,7 @@ export function ProfileHero({
           {ctaHref ? (
             <Link
               href={ctaHref}
-              className="inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-primary px-4 text-body font-medium text-background shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring sm:w-auto sm:px-5"
+              className="inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-primary px-4 text-body font-medium text-on-accent shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring sm:w-auto sm:px-5"
             >
               {ctaLabel ?? "Commencez à étudier"}
             </Link>
@@ -102,7 +102,7 @@ export function ProfileHero({
         {ctaHref ? (
           <Link
             href={ctaHref}
-            className="inline-flex min-h-touch-target items-center justify-center rounded-control bg-accent-primary px-5 text-body font-medium text-background shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+            className="inline-flex min-h-touch-target items-center justify-center rounded-control bg-accent-primary px-5 text-body font-medium text-on-accent shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
           >
             {ctaLabel ?? "Reprendre l'étude"}
           </Link>

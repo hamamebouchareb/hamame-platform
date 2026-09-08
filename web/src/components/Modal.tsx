@@ -50,7 +50,7 @@ export function Modal({ open, onClose, title, children, footer, className }: Mod
         aria-labelledby="hamame-dialog-title"
         tabIndex={-1}
         className={cx(
-          "w-full max-w-sm rounded-card-lg border border-border bg-surface-2 p-card-padding shadow-card-lg focus:outline-none",
+          "hamame-dialog-enter w-full max-w-sm rounded-card-lg border border-border bg-surface-2 p-card-padding shadow-card-lg focus:outline-none",
           className
         )}
       >

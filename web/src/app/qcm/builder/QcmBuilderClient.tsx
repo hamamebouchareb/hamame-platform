@@ -6,14 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { apiFetch, ApiError } from "@/lib/api";
-import { AppHeader, Footer, SessionBuilder, type SessionConfig } from "@/components";
-
-const HEADER_NAV = [
-  { href: "/dashboard", label: "Tableau de bord" },
-  { href: "/qcm", label: "QCM", active: true },
-  { href: "/notes", label: "Notes" },
-  { href: "/subscription", label: "Abonnement" },
-];
+import { AppHeader, Footer, LoadingSkeleton, SessionBuilder, type SessionConfig } from "@/components";
 
 export interface QcmBuilderClientProps {
   initialMode?: "practice" | "exam";
@@ -43,9 +36,16 @@ export default function QcmBuilderClient({ initialMode = "practice" }: QcmBuilde
           ...(config.facultyId ? { facultyId: config.facultyId } : {}),
           ...(config.yearId ? { yearId: config.yearId } : {}),
           ...(config.moduleId ? { moduleIds: [config.moduleId] } : {}),
-          ...(config.unitId ? { unitIds: [config.unitId] } : {}),
+          ...(config.unitIds && config.unitIds.length > 0 ? { unitIds: config.unitIds } : {}),
           questionTypes: config.questionTypes,
+          ...(config.source ? { source: config.source } : {}),
+          ...(config.examYear !== undefined ? { examYear: config.examYear } : {}),
+          ...(config.sittingLabel ? { sittingLabel: config.sittingLabel } : {}),
+          ...(config.examYearFrom !== undefined ? { examYearFrom: config.examYearFrom } : {}),
+          ...(config.examYearTo !== undefined ? { examYearTo: config.examYearTo } : {}),
           size: config.size,
+          sort: config.resultSort,
+          showStats: config.showStats,
           ...(config.mode === "exam" && config.timeLimitSeconds
             ? { timeLimitSeconds: config.timeLimitSeconds }
             : {}),
@@ -65,19 +65,19 @@ export default function QcmBuilderClient({ initialMode = "practice" }: QcmBuilde
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <p className="text-meta text-text-secondary">Chargement...</p>
+        <LoadingSkeleton className="h-8 w-48" ariaLabel="Chargement" />
       </main>
     );
   }
 
   return (
     <>
-      <AppHeader user={user} onLogout={handleLogout} nav={HEADER_NAV} />
+      <AppHeader user={user} onLogout={handleLogout} />
 
       <main className="mx-auto w-full max-w-2xl flex-1 px-card-padding py-section-gap">
         <Link
           href="/qcm"
-          className="inline-flex min-h-touch-target items-center gap-1 text-body font-medium text-accent-qcm transition hover:text-accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+          className="inline-flex min-h-touch-target items-center gap-1 text-body font-medium text-accent-soft transition hover:text-accent-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
         >
           <span aria-hidden>←</span> Retour à la banque QCM
         </Link>

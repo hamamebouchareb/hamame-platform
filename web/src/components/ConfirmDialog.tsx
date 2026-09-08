@@ -21,8 +21,8 @@ export interface ConfirmDialogProps {
 }
 
 const confirmButtonClass: Record<ConfirmTone, string> = {
-  primary: "bg-accent-primary text-background shadow-glow-primary",
-  secondary: "bg-accent-secondary text-background shadow-glow-secondary",
+  primary: "bg-accent-primary text-on-accent shadow-glow-primary",
+  secondary: "bg-accent-secondary text-on-accent shadow-glow-secondary",
   danger: "bg-danger text-background",
 };
 

@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { useApiResource } from "@/lib/useApiResource";
+import { apiFetch, ApiError } from "@/lib/api";
 import { AppHeader, BadgeShelf, EmptyState, Footer, MetricCard } from "@/components";
 import type { EarnedBadge } from "@/components";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
@@ -15,15 +16,6 @@ import type {
   QcmStats,
   Subscription,
 } from "@/lib/types";
-
-const HEADER_NAV = [
-  { href: "/dashboard", label: "Tableau de bord" },
-  { href: "/qcm", label: "QCM" },
-  { href: "/suivi", label: "Suivi" },
-  { href: "/revision", label: "Révision" },
-  { href: "/notes", label: "Notes" },
-  { href: "/subscription", label: "Abonnement" },
-];
 
 function initials(fullName: string): string {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
@@ -37,6 +29,31 @@ function subscriptionStatusLabel(sub: Subscription | null): string {
   if (sub.status === "active") return sub.plan.name;
   if (sub.status === "cancelled") return "Annulé";
   return sub.status;
+}
+
+/**
+ * P16 cohort-rank chip for the metrics row. Reads the same Phase 3 leaderboard
+ * snapshots as /classement (score board, viewer's own cohort) and matches the
+ * viewer's row by display name — the response carries no user ids by design.
+ * Renders "—" while loading, on error, or when unranked: never an error card.
+ */
+function RankMetricCard({ facultyId, yearId, fullName }: { facultyId: string; yearId: string; fullName: string }) {
+  const board = useApiResource<{ leaderboard: { rank: number; score: number; fullName: string }[] }>(
+    `/leaderboard?facultyId=${facultyId}&yearId=${yearId}`
+  );
+  const rank = useMemo(
+    () => board.data?.leaderboard.find((row) => row.fullName === fullName)?.rank ?? null,
+    [board.data, fullName]
+  );
+  return (
+    <MetricCard
+      label="Classement"
+      value={rank !== null ? `#${rank}` : "—"}
+      subtitle="promotion"
+      loading={board.isLoading}
+      tone="primary"
+    />
+  );
 }
 
 export default function ProfilePage() {
@@ -72,12 +89,60 @@ export default function ProfilePage() {
   }, [user, yearData]);
 
   const [friendSearch, setFriendSearch] = useState("");
-  const friends = useMemo(() => friendsData.data?.friends ?? [], [friendsData.data]);
-  const filteredFriends = useMemo(() => {
+  const friends = useMemo(() => friendsData.data?.friends ?? [], [friendsData.data]);  const filteredFriends = useMemo(() => {
     if (!friendSearch.trim()) return friends;
     const q = friendSearch.toLowerCase();
     return friends.filter((f) => f.fullName.toLowerCase().includes(q));
   }, [friends, friendSearch]);
+
+  // Find-new-friends search (GET /api/users/search — id+fullName only, min 3
+  // chars server-side). Results carry per-row send state, keyed by user id.
+  const [userQuery, setUserQuery] = useState("");
+  const [userResults, setUserResults] = useState<FriendSummary[]>([]);
+  const [userSearching, setUserSearching] = useState(false);
+  const [userSearchError, setUserSearchError] = useState<string | null>(null);
+  const [userSearched, setUserSearched] = useState(false);
+  const [sentRequests, setSentRequests] = useState<Record<string, boolean>>({});
+  const [sendingId, setSendingId] = useState<string | null>(null);
+
+  async function handleUserSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const query = userQuery.trim();
+    if (query.length < 3) {
+      setUserSearchError("Tapez au moins 3 caractères (nom, prénom ou e-mail exact).");
+      return;
+    }
+    setUserSearching(true);
+    setUserSearchError(null);
+    try {
+      const data = await apiFetch<{ users: FriendSummary[] }>(
+        `/users/search?q=${encodeURIComponent(query)}`
+      );
+      setUserResults(data.users);
+      setUserSearched(true);
+    } catch (err) {
+      setUserSearchError(err instanceof ApiError ? err.message : "Recherche impossible. Réessayez.");
+    } finally {
+      setUserSearching(false);
+    }
+  }
+
+  async function handleSendRequest(targetId: string) {
+    setSendingId(targetId);
+    try {
+      await apiFetch("/friends", {
+        method: "POST",
+        body: JSON.stringify({ userId: targetId }),
+      });
+      // 200 (already pending) and 201 (created) both mean a request now exists.
+      setSentRequests((prev) => ({ ...prev, [targetId]: true }));
+    } catch {
+      // Row-level failure: the button simply stays actionable. A global banner
+      // would punish the whole section for one row's failed POST.
+    } finally {
+      setSendingId(null);
+    }
+  }
 
   const readinessData = readiness.data && !readiness.data.insufficientData ? readiness.data : null;
 
@@ -109,17 +174,14 @@ export default function ProfilePage() {
 
   return (
     <>
-      <AppHeader user={user} onLogout={handleLogout} nav={HEADER_NAV} menuLinks={[
-        { href: "/profile", label: "Mon profil" },
-        { href: "/settings", label: "Paramètres" },
-      ]} />
+      <AppHeader user={user} onLogout={handleLogout} />
 
       <main className="mx-auto w-full max-w-4xl flex-1 px-card-padding py-section-gap">
         {/* Hero */}
         <section aria-label="Profil" className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
           {/* Avatar + identity */}
           <div className="flex flex-col items-center gap-3 sm:items-start">
-            <span className="flex h-20 w-20 items-center justify-center rounded-pill bg-accent-primary font-display text-h1 font-bold text-background">
+            <span className="flex h-20 w-20 items-center justify-center rounded-pill bg-accent-primary font-display text-h1 font-bold text-on-accent">
               {initials(user.fullName)}
             </span>
             <div className="text-center sm:text-left">
@@ -128,12 +190,12 @@ export default function ProfilePage() {
               {user.phone ? <p className="mt-0.5 text-meta text-text-tertiary">{user.phone}</p> : null}
               <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                 {facultyName ? (
-                  <span className="rounded-pill border border-accent-library/40 bg-accent-library/15 px-2.5 py-0.5 text-caption font-medium text-accent-library">
+                    <span className="rounded-pill border border-accent-library/40 bg-accent-library/15 px-2.5 py-0.5 text-caption font-medium text-accent-soft">
                     {facultyName}
                   </span>
                 ) : null}
                 {yearLabel ? (
-                  <span className="rounded-pill border border-accent-suivi/40 bg-accent-suivi/15 px-2.5 py-0.5 text-caption font-medium text-accent-suivi">
+                    <span className="rounded-pill border border-accent-suivi/40 bg-accent-suivi/15 px-2.5 py-0.5 text-caption font-medium text-accent-soft">
                     {yearLabel}
                   </span>
                 ) : null}
@@ -150,7 +212,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Metrics row */}
-          <div className="grid w-full grid-cols-2 gap-3 sm:ml-auto sm:w-auto sm:grid-cols-4">
+          <div className="grid w-full grid-cols-2 gap-3 sm:ml-auto sm:w-auto sm:grid-cols-3 lg:grid-cols-5">
             <MetricCard
               label="Série"
               value={streak.data?.streak.currentStreakDays ?? 0}
@@ -183,6 +245,12 @@ export default function ProfilePage() {
               loading={readiness.isLoading}
               tone={readinessData && readinessData.score !== null && readinessData.score >= 70 ? "success" : "primary"}
             />
+            {/* P16 rank colocation: cohort rank beside the other headline stats.
+                Skipped silently when the profile has no faculty/year (same
+                graceful-omit convention as the faculty/year pills above). */}
+            {user.facultyId && user.yearId ? (
+              <RankMetricCard facultyId={user.facultyId} yearId={user.yearId} fullName={user.fullName} />
+            ) : null}
           </div>
         </section>
 
@@ -223,7 +291,7 @@ export default function ProfilePage() {
               <EmptyState
                 title="Pas encore d'amis"
                 description="Ajoutez des camarades pour comparer vos scores et rester motivé."
-                action={{ label: "Rechercher des amis", href: "/qcm" }}
+                action={{ label: "Retour au tableau de bord", href: "/dashboard" }}
               />
             </div>
           ) : filteredFriends.length === 0 ? (
@@ -235,7 +303,7 @@ export default function ProfilePage() {
                   key={friend.id}
                   className="flex min-h-touch-target items-center gap-3 rounded-card border border-border bg-surface-1 px-3 py-2 shadow-card transition hover:border-border-strong hover:bg-surface-2"
                 >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-surface-3 font-display text-caption font-bold text-accent-primary" aria-hidden>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-surface-3 font-display text-caption font-bold text-accent-soft" aria-hidden>
                     {initials(friend.fullName)}
                   </span>
                   <p className="truncate text-body font-medium text-text-primary">{friend.fullName}</p>
@@ -243,6 +311,72 @@ export default function ProfilePage() {
               ))}
             </ul>
           )}
+
+          {/* Find new friends: server search (id + name only) + request */}
+          <form onSubmit={handleUserSearch} className="mt-4 rounded-card border border-border bg-surface-1 p-3">
+            <label htmlFor="find-friends" className="block text-body font-medium text-text-primary">
+              Ajouter un ami
+            </label>
+            <p className="mt-0.5 text-meta text-text-tertiary">
+              Nom, prénom (3 lettres minimum) ou e-mail exact.
+            </p>
+            <div className="mt-2 flex gap-2">
+              <input
+                id="find-friends"
+                type="search"
+                value={userQuery}
+                onChange={(e) => setUserQuery(e.target.value)}
+                placeholder="Ex. Sara, Amine…"
+                aria-label="Rechercher un utilisateur"
+                className="h-11 min-w-0 flex-1 rounded-control border border-border bg-surface-2 px-3 text-body text-text-primary placeholder:text-text-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+              />
+              <button
+                type="submit"
+                disabled={userSearching}
+                className="inline-flex min-h-touch-target shrink-0 items-center justify-center rounded-control bg-accent-qcm px-4 text-body font-medium text-on-accent transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-60"
+              >
+                {userSearching ? "…" : "Chercher"}
+              </button>
+            </div>
+            {userSearchError ? (
+              <p role="alert" className="mt-2 text-meta text-danger">
+                {userSearchError}
+              </p>
+            ) : null}
+            {userSearched && !userSearching && !userSearchError ? (
+              userResults.length === 0 ? (
+                <p className="mt-2 text-meta text-text-tertiary">Aucun utilisateur trouvé.</p>
+              ) : (
+                <ul className="mt-2 flex flex-col gap-1">
+                  {userResults.map((result) => (
+                    <li
+                      key={result.id}
+                      className="flex min-h-touch-target items-center gap-3 rounded-control border border-border bg-surface-2 px-3 py-2"
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-surface-3 font-display text-caption font-bold text-accent-soft" aria-hidden>
+                        {initials(result.fullName)}
+                      </span>
+                      <p className="min-w-0 flex-1 truncate text-body font-medium text-text-primary">
+                        {result.fullName}
+                      </p>
+                      {sentRequests[result.id] ? (
+                        <span className="shrink-0 text-meta font-medium text-success">Demande envoyée</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleSendRequest(result.id)}
+                          disabled={sendingId === result.id}
+                          className="inline-flex min-h-touch-target shrink-0 items-center justify-center rounded-control border border-border px-3 text-meta font-medium text-text-primary transition hover:bg-surface-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-60"
+                        >
+                          {sendingId === result.id ? "…" : "Ajouter"}
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )
+            ) : null}
+          </form>
         </section>
 
         <BadgeShelf badges={badgesData.data?.badges ?? []} loading={badgesData.isLoading} />

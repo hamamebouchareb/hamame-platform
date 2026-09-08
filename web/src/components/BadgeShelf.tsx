@@ -1,6 +1,7 @@
 "use client";
 
 import { cx } from "@/lib/cx";
+import { EmptyState } from "@/components/EmptyState";
 
 export interface EarnedBadge {
   id: string;
@@ -17,7 +18,7 @@ function formatDateShort(iso: string): string {
 function BadgeIcon({ type }: { type?: string }) {
   const common = { fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
   return (
-    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill bg-accent-primary/15 text-accent-primary">
+    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill bg-accent-primary/15 text-accent-soft">
       {type === "streak" ? (
         <svg viewBox="0 0 24 24" className="h-5 w-5" {...common} aria-hidden>
           <path d="M12 3c1.5 3-1 4.5-1 7a4 4 0 008 .5c1.5 5.5-2.5 10.5-7 10.5S4.5 17 5.5 12c.8 1.2 2 1.8 3 1.5C7 10 8 5.5 12 3z" />
@@ -63,7 +64,13 @@ export function BadgeShelf({
           ))}
         </div>
       ) : badges.length === 0 ? (
-        <p className="mt-3 text-body text-text-secondary">Aucun badge pour l&apos;instant.</p>
+        <div className="mt-3">
+          <EmptyState
+            title="Aucun badge pour l'instant"
+            description="Terminez des sessions QCM et gardez votre série pour débloquer vos premiers badges."
+            action={{ label: "Créer une session QCM", href: "/qcm" }}
+          />
+        </div>
       ) : (
         <ul className="mt-3 flex gap-3 overflow-x-auto pb-2">
           {badges.map((badge) => (

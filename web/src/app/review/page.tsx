@@ -10,13 +10,6 @@ import type { ReviewQueueItem, ReviewQueueResponse } from "@/lib/types";
 
 const PAGE_LIMIT = 20;
 
-const HEADER_NAV = [
-  { href: "/dashboard", label: "Tableau de bord" },
-  { href: "/faculties", label: "QCM" },
-  { href: "/notes", label: "Studio" },
-  { href: "/subscription", label: "Abonnement" },
-];
-
 interface ItemActionState {
   isSubmitting: boolean;
   error: string | null;
@@ -132,7 +125,7 @@ export default function ReviewPage() {
   if (!canReview || errorCode === "FORBIDDEN") {
     return (
       <>
-        <AppHeader user={user} onLogout={handleLogout} nav={HEADER_NAV} />
+        <AppHeader user={user} onLogout={handleLogout} />
         <main className="mx-auto w-full max-w-md flex-1 px-card-padding py-section-gap">
           <h1 className="font-display text-h2 font-semibold text-text-primary">File de revue</h1>
           <div className="mt-4">
@@ -150,7 +143,7 @@ export default function ReviewPage() {
 
   return (
     <>
-      <AppHeader user={user} onLogout={handleLogout} nav={HEADER_NAV} />
+      <AppHeader user={user} onLogout={handleLogout} />
       <main className="mx-auto w-full max-w-md flex-1 px-card-padding py-section-gap">
         <h1 className="font-display text-h2 font-semibold text-text-primary">File de revue</h1>
 

@@ -1,16 +1,21 @@
 /*
-  Hamame — Design System Tokens
-  =============================
-  Source of truth for the Hamame brand. Volt lime (#AAFF00) primary, warm yellow
-  (#FFE000) secondary, on a dark-navy base — deliberately NOT the MedSparkDZ
-  orange/pink/purple palette.
+   Hamame — Design System Tokens
+   =============================
+   Blue → Violet clinical palette (approved checkpoint 2026-09-08, reversing
+   the earlier volt-lime/navy decision): primary #2563EB → via #5B54E8 → to
+   #7C3AED, mirroring MedSparkDZ's structural approach (dark shell, gradient
+   accent bands, glow elevation) with own hues at comparable energy
+   (measured live: MedSpark stops S 75–95% / L 48–59%; ours S 76–83% /
+   L 53–62%; white-text ratios 5.17/5.41/5.70 — all WCAG AA).
+   CTA shape stays Hamame's own solid + full pill (checkpoint decision c).
 
-  Written for Tailwind v4's CSS-first @theme config. Every variable below is
-  emitted as a CSS custom property on :root and drives a Tailwind utility
-  namespace (--color-* → bg/text/border, --font-size-* → text-*, --spacing-* →
-  p/m/gap, --size-* → w/h/min-*, --radius-* → rounded-*, --shadow-* → shadow-*).
+   Written for Tailwind v4's CSS-first @theme config. Every variable below is
+   emitted as a CSS custom property on :root and drives a Tailwind utility
+   namespace (--color-* → bg/text/border, --font-size-* → text-*,
+   --spacing-* → p/m/gap, --size-* → w/h/min-*, --radius-* → rounded-*,
+   --shadow-* → shadow-*, --ease-* → ease-*).
 
-  Imported once from app/globals.css.
+   Imported once from app/globals.css.
 */
 
 @theme {
@@ -29,13 +34,21 @@
                                        background/surface-1/player-header (was #64709a,
                                        measured 3.57:1 on surface-1 — WCAG AA fail). */
 
-  /* ---- Brand accents ---- */
-  --color-accent-primary: #aaff00;      /* volt lime — primary CTAs */
-  --color-accent-secondary: #ffe000;    /* warm yellow — premium/active */
-  --color-accent-qcm: #aaff00;          /* QCM / pratique (lime family) */
-  --color-accent-library: #35e0b8;      /* cours / bibliothèque (teal) */
-  --color-accent-suivi: #5cb8ff;        /* suivi / progression (sky) */
-  --color-accent-revision: #a78bfa;     /* révision / répétition (violet) */
+  /* ---- Brand accents (Blue → Violet; live-measured reference, own hexes) ---- */
+  --color-accent-primary: #2563EB;      /* vivid blue — primary CTAs (white text 5.17 ✓) */
+  --color-accent-secondary: #7C3AED;    /* violet — premium/active (white text 5.70 ✓) */
+  --color-accent-qcm: #2563EB;          /* QCM / pratique (blue family) */
+  --color-accent-library: #5B54E8;      /* cours / bibliothèque (indigo-violet) */
+  --color-accent-suivi: #4F46E5;        /* suivi / progression (indigo, white text 6.29 ✓) */
+  --color-accent-revision: #7C3AED;     /* révision / répétition (violet) */
+
+  /* ---- Contrast companions (computed, not eyeballed) ---- */
+  --color-on-accent: #ffffff;       /* text/icons ON accent fills (replaces text-background
+                                       there: dark #0A0E17 on blue = 3.73 FAIL, on violet
+                                       = 3.39 FAIL; white = 5.17–5.70 PASS) */
+  --color-accent-soft: #8FB0FF;     /* small accent text/links on dark surfaces
+                                       (9.03 on bg / 8.12 on surface-1 / 7.09 on
+                                       surface-2 — saturated #2563EB text = 3.7 FAIL) */
 
   /* ---- Semantic ---- */
   --color-success: #4ade80;         /* correct answers / completed */
@@ -43,7 +56,17 @@
   --color-danger: #f87171;          /* errors / destructive */
   --color-info: #5cb8ff;
   --color-overlay: rgb(5 7 12 / 0.72);  /* modal scrim */
-  --color-focus-ring: #ccff66;      /* focus-visible outline */
+  --color-focus-ring: #a5b4fc;      /* indigo-300 — visible on dark shell */
+
+  /* ---- Motion (live-measured on MedSparkDZ: single ease everywhere;
+         150ms colors / 200ms pills / 300ms tabs+CTAs / 150ms dialog-enter.
+         Use Tailwind bare-number utilities (duration-150/200/300) +
+         ease-standard; the --duration-* vars below are var() references.) ---- */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);  /* the only easing live */
+  --duration-fast: 150ms;    /* buttons, dropdowns, hyperlinks, tiles */
+  --duration-base: 200ms;    /* pills, toggles, option cards */
+  --duration-slow: 300ms;    /* tab switches, primary CTAs, submit buttons */
+  --duration-enter: 150ms;   /* dialog/dropdown open (tw-animate-css `enter`) */
 
   /* ---- Typography scale (Manrope sans + Fraunces display from next/font) ---- */
   --font-size-caption: 0.75rem;      /* 12px — labels */

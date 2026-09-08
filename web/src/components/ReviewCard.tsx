@@ -21,7 +21,7 @@ function itemTitle(item: ReviewQueueItem): string {
 }
 
 const primaryButton =
-  "flex-1 rounded-control bg-accent-primary px-4 py-2 text-sm font-medium text-background transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none";
+  "flex-1 rounded-control bg-accent-primary px-4 py-2 text-sm font-medium text-on-accent transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none";
 const dangerButton =
   "flex-1 rounded-control bg-danger px-4 py-2 text-sm font-medium text-background transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none";
 const secondaryButton =

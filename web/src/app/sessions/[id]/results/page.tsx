@@ -38,6 +38,11 @@ export default function SessionResultsPage() {
     return { correct, incorrect, unanswered, weak, gradableCount: gradable.length };
   }, [data]);
 
+  // FR-16 read side — the builder's "Statistiques détaillées" switch gates the results
+  // screen's detailed accuracy/breakdown (stat chips + weak-points list). The score card
+  // and the per-question review stay visible either way.
+  const showDetailedStats = data?.session.showStats !== false;
+
   const visibleResults = useMemo(() => {
     if (!data) return [];
     if (!reviewMode) return data.results;
@@ -126,7 +131,7 @@ export default function SessionResultsPage() {
             {errorCode === "SESSION_NOT_COMPLETED" ? (
               <Link
                 href={`/sessions/${sessionId}`}
-                className="mt-3 inline-flex min-h-touch-target items-center text-body font-medium text-accent-qcm underline"
+                className="mt-3 inline-flex min-h-touch-target items-center text-body font-medium text-accent-soft underline"
               >
                 Retour à la session
               </Link>
@@ -134,7 +139,7 @@ export default function SessionResultsPage() {
               <button
                 type="button"
                 onClick={() => refetch()}
-                className="mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control bg-accent-qcm px-4 text-body font-medium text-background"
+                className="mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control bg-accent-qcm px-4 text-body font-medium text-on-accent"
               >
                 Réessayer
               </button>
@@ -159,22 +164,24 @@ export default function SessionResultsPage() {
                   : `Précision sur ${stats.gradableCount} question${stats.gradableCount === 1 ? "" : "s"} notée${stats.gradableCount === 1 ? "" : "s"}.`}
               </p>
 
-              <div className="mt-5 flex flex-wrap gap-4">
-                <p className="flex items-center gap-2 text-meta text-text-secondary">
-                  <span className="h-2.5 w-2.5 rounded-full bg-success" aria-hidden />
-                  {stats.correct} correctes
-                </p>
-                <p className="flex items-center gap-2 text-meta text-text-secondary">
-                  <span className="h-2.5 w-2.5 rounded-full bg-danger" aria-hidden />
-                  {stats.incorrect} incorrectes
-                </p>
-                {stats.unanswered > 0 && (
-                  <p className="flex items-center gap-2 text-meta text-text-tertiary">
-                    <span className="h-2.5 w-2.5 rounded-full bg-text-tertiary" aria-hidden />
-                    {stats.unanswered} sans réponse
+              {showDetailedStats && (
+                <div className="mt-5 flex flex-wrap gap-4">
+                  <p className="flex items-center gap-2 text-meta text-text-secondary">
+                    <span className="h-2.5 w-2.5 rounded-full bg-success" aria-hidden />
+                    {stats.correct} correctes
                   </p>
-                )}
-              </div>
+                  <p className="flex items-center gap-2 text-meta text-text-secondary">
+                    <span className="h-2.5 w-2.5 rounded-full bg-danger" aria-hidden />
+                    {stats.incorrect} incorrectes
+                  </p>
+                  {stats.unanswered > 0 && (
+                    <p className="flex items-center gap-2 text-meta text-text-tertiary">
+                      <span className="h-2.5 w-2.5 rounded-full bg-text-tertiary" aria-hidden />
+                      {stats.unanswered} sans réponse
+                    </p>
+                  )}
+                </div>
+              )}
             </section>
 
             {/* Primary actions — visually distinct */}
@@ -191,7 +198,7 @@ export default function SessionResultsPage() {
                 type="button"
                 onClick={startTargetedSession}
                 disabled={isRedoing || stats.weak.length === 0}
-                className="inline-flex min-h-touch-target flex-1 items-center justify-center rounded-control bg-accent-qcm px-4 text-body font-semibold text-background shadow-glow-qcm transition hover:brightness-110 disabled:opacity-50"
+                className="inline-flex min-h-touch-target flex-1 items-center justify-center rounded-control bg-accent-qcm px-4 text-body font-semibold text-on-accent shadow-glow-qcm transition hover:brightness-110 disabled:opacity-50"
               >
                 {isRedoing ? "Création..." : "Refaire une session ciblée"}
               </button>
@@ -211,7 +218,8 @@ export default function SessionResultsPage() {
               </button>
             )}
 
-            {/* Points à revoir — scannable list */}
+            {/* Points à revoir — scannable list (hidden by the FR-16 showStats toggle) */}
+            {showDetailedStats && (
             <section className="mt-section-gap" aria-label="Points à revoir">
               <h2 className="font-display text-h2 font-semibold text-text-primary">Points à revoir</h2>
               {stats.weak.length === 0 ? (
@@ -245,6 +253,7 @@ export default function SessionResultsPage() {
                 </ol>
               )}
             </section>
+            )}
 
             {/* Detailed results */}
             <section className="mt-section-gap" aria-label="Détail des questions">
@@ -337,7 +346,7 @@ export default function SessionResultsPage() {
             <div className="mt-section-gap">
               <Link
                 href="/dashboard"
-                className="inline-flex min-h-touch-target items-center text-body font-medium text-accent-suivi hover:underline"
+                className="inline-flex min-h-touch-target items-center text-body font-medium text-accent-soft hover:underline"
               >
                 Retour au tableau de bord
               </Link>

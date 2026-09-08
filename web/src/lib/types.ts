@@ -35,6 +35,21 @@ export interface Unit {
   orderIndex: number;
 }
 
+/** Raw `source` values stored on questions (see prisma Question.source). */
+export type QuestionSource = "official_exam" | "hamame_authored" | "ai_generated";
+
+/** GET /api/questions/counts — live builder counts sharing the list filters. */
+export interface QuestionCountsResponse {
+  /** Count for the exact requested filter set (the live counter). */
+  total: number;
+  /** Per-unit counts for the module scope (unit selection excluded). Empty without moduleId. */
+  byUnit: Array<{ unitId: string; count: number }>;
+  /** Per-module counts for the year scope (module/unit selection excluded). Empty without yearId. */
+  byModule: Array<{ moduleId: string; count: number }>;
+  /** Distinct sittings actually present in scope (untagged rows excluded). */
+  sittings: Array<{ examYear: number | null; sittingLabel: string | null; count: number }>;
+}
+
 export interface LessonSummary {
   id: string;
   title: string;
@@ -81,6 +96,11 @@ export interface SessionQuestionEntry {
     source: string;
     difficulty: string | null;
     bodyRichtext: unknown;
+    /** P5 player chips (Phase 1 sitting taxonomy; paper-number suffixes fit sittingLabel). */
+    examYear: number | null;
+    sittingLabel: string | null;
+    unitName: string;
+    moduleName: string;
   };
   options: QuestionOptionRef[];
   clinicalCaseParts: ClinicalCasePartRef[];
@@ -92,6 +112,10 @@ export interface SessionDetail {
   mode: "practice" | "exam";
   isOfficialMock: boolean;
   timeLimitSeconds: number | null;
+  /** FR-15 result ordering chosen at creation ('random' unless explicitly set). */
+  resultSort: "by_year" | "by_course" | "random";
+  /** FR-16 toggle — false gates the results screen down to a plain score. */
+  showStats: boolean;
   startedAt: string;
   completedAt: string | null;
   score: number | null;
@@ -107,6 +131,52 @@ export interface AnswerAttemptResponse {
   // Only present in practice mode (BR-4: exam mode gets no feedback until results).
   isCorrect?: boolean | null;
   explanation?: unknown;
+  // Correct option ids, practice mode only — revealing these pre-submission in
+  // exam mode would leak the answer key.
+  correctOptionIds?: string[];
+}
+
+/**
+ * GET /api/questions/:id/answer-stats — community pick-rates per option. * Aggregate-only: percentages are the share of past attempts selecting each
+ * option (NOT correctness). `attempts` is always included so small samples are
+ * visibly small; `options` is empty when there are no attempts yet.
+ */
+export interface AnswerStatsResponse {
+  questionId: string;
+  attempts: number;
+  options: Array<{ optionId: string; percentage: number }>;
+}
+
+/** One unit's progress inside a history entry. */
+export interface SessionHistoryUnit {
+  unitId: string;
+  unitName: string;
+  moduleName: string;
+  yearLabel: string;
+  facultyName: string;
+  total: number;
+  answered: number;
+  correct: number;
+}
+
+/** GET /api/sessions — own session history entry (totals + per-unit breakdown). */
+export interface SessionHistoryEntry {
+  id: string;
+  name: string;
+  mode: string;
+  startedAt: string;
+  completedAt: string | null;
+  score: number | null;
+  stats: { total: number; answered: number; correct: number };
+  units: SessionHistoryUnit[];
+}
+
+/** GET /api/leaderboard — cohort snapshot row (fullName only, no PII). */
+export interface LeaderboardEntry {
+  rank: number;
+  /** Score board: average score %; contributors board: sessions completed. */
+  score: number;
+  fullName: string;
 }
 
 export interface SessionSummary {
@@ -116,6 +186,8 @@ export interface SessionSummary {
   startedAt: string;
   completedAt: string | null;
   score: number | null;
+  /** Present on submit/results responses (FR-16) — false hides detailed stats UI. */
+  showStats?: boolean;
 }
 
 // GET /api/progress/me
@@ -172,6 +244,8 @@ export interface AiCredits {
   usedToday: number;
   remainingToday: number;
   resetAt: string;
+  /** Server-computed <20% flag (Task 7a) — replaces the former client computation. */
+  lowBalance: boolean;
 }
 
 // GET /api/progress/modules/:id
@@ -186,6 +260,9 @@ export interface ModuleProgress {
 export interface Note {
   id: string;
   bodyText: string;
+  /** Fixed-taxonomy tag slugs (see NOTE_TAG_META on the notes page). */
+  tags: string[];
+  isFavorite: boolean;
   createdAt: string;
   question: { id: string; label: string } | null;
   lesson: { id: string; title: string } | null;

@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { cx } from "@/lib/cx";
 import type { AuthUser } from "@/context/AuthContext";
 import { UserMenu } from "@/components/UserMenu";
+import { PRIMARY_NAV, SECONDARY_NAV, isNavActive } from "@/lib/nav";
 
 export interface AppHeaderNavItem {
   href: string;
@@ -24,7 +26,14 @@ export interface AppHeaderProps {
  * Sticky top app bar: Hamame wordmark + primary nav + UserMenu. On mobile, primary
  * nav collapses behind a hamburger button that opens a slide-down drawer.
  */
-export function AppHeader({ user, onLogout, nav = [], brandHref = "/dashboard", menuLinks = [] }: AppHeaderProps) {
+export function AppHeader({
+  user,
+  onLogout,
+  nav = PRIMARY_NAV,
+  brandHref = "/dashboard",
+  menuLinks = SECONDARY_NAV,
+}: AppHeaderProps) {
+  const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -79,7 +88,7 @@ export function AppHeader({ user, onLogout, nav = [], brandHref = "/dashboard", 
           href={brandHref}
           className="inline-flex min-h-touch-target shrink-0 items-center gap-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
         >
-          <span className="flex h-7 w-7 items-center justify-center rounded-pill bg-accent-primary font-display text-caption font-bold text-background" aria-hidden>
+          <span className="flex h-7 w-7 items-center justify-center rounded-pill bg-accent-primary font-display text-caption font-bold text-on-accent" aria-hidden>
             H
           </span>
           <span className="font-display text-h3 font-bold tracking-tight text-text-primary">Hamame</span>
@@ -87,21 +96,24 @@ export function AppHeader({ user, onLogout, nav = [], brandHref = "/dashboard", 
 
         {nav.length > 0 ? (
           <nav aria-label="Navigation principale" className="hidden min-w-0 flex-1 gap-1 overflow-x-auto md:flex">
-            {nav.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={item.active ? "page" : undefined}
-                className={cx(
-                  "inline-flex min-h-touch-target shrink-0 items-center rounded-pill px-4 text-body font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
-                  item.active
-                    ? "bg-surface-3 text-accent-primary"
-                    : "text-text-secondary hover:bg-surface-2 hover:text-text-primary active:bg-surface-2"
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {nav.map((item) => {
+              const active = isNavActive(pathname, item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={cx(
+                    "inline-flex min-h-touch-target shrink-0 items-center rounded-pill px-4 text-body font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+                    active
+                      ? "bg-surface-3 text-accent-soft"
+                      : "text-text-secondary hover:bg-surface-2 hover:text-text-primary active:bg-surface-2"
+                  )}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
         ) : (
           <div className="min-w-0 flex-1" />
@@ -148,22 +160,25 @@ export function AppHeader({ user, onLogout, nav = [], brandHref = "/dashboard", 
           )}
         >
           <nav className="flex flex-col gap-1 pt-2">
-            {nav.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={item.active ? "page" : undefined}
-                onClick={() => setDrawerOpen(false)}
-                className={cx(
-                  "inline-flex min-h-touch-target items-center rounded-control px-4 text-body font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
-                  item.active
-                    ? "bg-surface-3 text-accent-primary"
-                    : "text-text-secondary hover:bg-surface-2 hover:text-text-primary active:bg-surface-2"
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {nav.map((item) => {
+              const active = isNavActive(pathname, item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  onClick={() => setDrawerOpen(false)}
+                  className={cx(
+                    "inline-flex min-h-touch-target items-center rounded-control px-4 text-body font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+                    active
+                      ? "bg-surface-3 text-accent-soft"
+                      : "text-text-secondary hover:bg-surface-2 hover:text-text-primary active:bg-surface-2"
+                  )}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
         </div>
       ) : null}

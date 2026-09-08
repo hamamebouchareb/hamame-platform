@@ -11,14 +11,6 @@ import { RevisionCard } from "@/components/RevisionCard";
 import { accentVar } from "@/components/FeatureCard";
 import type { DueReviewItem, ReviewCompleteResponse, ReviewSettings } from "@/lib/types";
 
-const HEADER_NAV = [
-  { href: "/dashboard", label: "Tableau de bord" },
-  { href: "/qcm", label: "QCM" },
-  { href: "/faculties", label: "Bibliothèque" },
-  { href: "/suivi", label: "Suivi" },
-  { href: "/revision", label: "Révision", active: true },
-];
-
 const ESTIMATED_SECONDS_PER_ITEM = 20;
 
 function formatDuration(seconds: number): string {
@@ -133,19 +125,19 @@ export default function RevisionPage() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <p className="text-meta text-text-secondary">Chargement...</p>
+        <LoadingSkeleton className="h-8 w-48" ariaLabel="Chargement" />
       </main>
     );
   }
 
   return (
     <>
-      <AppHeader user={user} onLogout={handleLogout} nav={HEADER_NAV} />
+      <AppHeader user={user} onLogout={handleLogout} />
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-card-padding py-section-gap">
         {/* Hero */}
         <section aria-label="En-tête des révisions" className="text-center">
-          <p className="text-meta font-medium uppercase tracking-wide text-accent-revision">Répétition espacée</p>
+          <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">Répétition espacée</p>
           <h1 className="mt-2 font-display text-hero font-bold leading-tight text-text-primary">Révision</h1>
           <p className="mx-auto mt-3 max-w-xl text-body text-text-secondary">
             Révisez les éléments que vous avez oubliés ou mal mémorisés. Chaque réponse
@@ -163,6 +155,19 @@ export default function RevisionPage() {
                   <LoadingSkeleton className="mt-3 h-8 w-24" ariaLabel="" />
                 </div>
                 <LoadingSkeleton className="h-12 w-full rounded-card" ariaLabel="" />
+              </div>
+            ) : dueItems.error ? (
+              <div className="mx-auto mt-section-gap max-w-lg rounded-card border border-danger bg-surface-1 p-card-padding">
+                <p role="alert" className="text-body text-danger">
+                  Impossible de charger les révisions. {dueItems.error}
+                </p>
+                <button
+                  type="button"
+                  onClick={dueItems.refetch}
+                  className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 sm:w-auto"
+                >
+                  Réessayer
+                </button>
               </div>
             ) : !hasItems ? (
               /* Empty state — nothing due */
@@ -209,7 +214,7 @@ export default function RevisionPage() {
                 <button
                   type="button"
                   onClick={startSession}
-                  className="mt-4 inline-flex min-h-touch-target w-full items-center justify-center gap-2 rounded-control bg-accent-primary px-5 text-body font-medium text-background shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+                  className="mt-4 inline-flex min-h-touch-target w-full items-center justify-center gap-2 rounded-control bg-accent-primary px-5 text-body font-medium text-on-accent shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
                 >
                   Commencer les révisions
                 </button>
@@ -320,7 +325,7 @@ export default function RevisionPage() {
               <button
                 type="button"
                 onClick={() => router.push("/dashboard")}
-                className="inline-flex min-h-touch-target w-full items-center justify-center gap-2 rounded-control bg-accent-primary px-5 text-body font-medium text-background shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+                className="inline-flex min-h-touch-target w-full items-center justify-center gap-2 rounded-control bg-accent-primary px-5 text-body font-medium text-on-accent shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
               >
                 Retour au tableau de bord
               </button>

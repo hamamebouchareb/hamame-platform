@@ -26,7 +26,7 @@ export function Footer({ links = [], className }: FooterProps) {
               <Link
                 key={link.href}
                 href={link.href}
-                className="inline-flex min-h-touch-target items-center text-meta text-text-secondary transition hover:text-accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+                className="inline-flex min-h-touch-target items-center text-meta text-text-secondary transition hover:text-accent-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
               >
                 {link.label}
               </Link>

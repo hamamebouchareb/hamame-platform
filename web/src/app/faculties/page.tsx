@@ -6,18 +6,10 @@ import { useAuth } from "@/context/AuthContext";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { useApiResource } from "@/lib/useApiResource";
 import { useApiList } from "@/lib/useApiList";
-import { AppHeader, Footer, CourseCard } from "@/components";
+import { AppHeader, EmptyState, Footer, CourseCard, LoadingSkeleton } from "@/components";
 import { accentText, accentVar } from "@/components/FeatureCard";
 import type { Faculty, Year } from "@/lib/types";
 import { cx } from "@/lib/cx";
-
-const HEADER_NAV = [
-  { href: "/dashboard", label: "Tableau de bord" },
-  { href: "/faculties", label: "Bibliothèque", active: true },
-  { href: "/qcm", label: "QCM" },
-  { href: "/notes", label: "Notes" },
-  { href: "/subscription", label: "Abonnement" },
-];
 
 function plural(count: number, singular: string): string {
   return `${count} ${count === 1 ? singular : `${singular}s`}`;
@@ -28,7 +20,7 @@ export default function FacultiesPage() {
   const router = useRouter();
   const { user, isHydrated } = useRequireAuth();
 
-  const { data, error, isLoading } = useApiResource<{ faculties: Faculty[] }>(
+  const { data, error, isLoading, refetch } = useApiResource<{ faculties: Faculty[] }>(
     isHydrated && user ? "/faculties" : null
   );
 
@@ -46,7 +38,7 @@ export default function FacultiesPage() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <p className="text-meta text-text-secondary">Chargement...</p>
+        <LoadingSkeleton className="h-8 w-48" ariaLabel="Chargement" />
       </main>
     );
   }
@@ -58,11 +50,11 @@ export default function FacultiesPage() {
 
   return (
     <>
-      <AppHeader user={user} onLogout={handleLogout} nav={HEADER_NAV} />
+      <AppHeader user={user} onLogout={handleLogout} />
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-card-padding py-section-gap">
         <section aria-label="Présentation de la bibliothèque" className="mx-auto max-w-3xl text-center">
-          <p className="text-meta font-medium uppercase tracking-wide text-accent-library">Catalogue des cours</p>
+          <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">Catalogue des cours</p>
           <h1 className="mt-2 font-display text-hero font-bold leading-tight text-text-primary">
             La bibliothèque de cours
           </h1>
@@ -80,8 +72,8 @@ export default function FacultiesPage() {
               style={{ borderTop: `3px solid ${accentVar("library")}`, boxShadow: "0 0 28px color-mix(in srgb, var(--color-accent-library) 12%, transparent)" }}
             >
               <div className="flex items-center justify-between gap-3">
-                <p className="text-meta font-medium uppercase tracking-wide text-accent-library">Ma filière</p>
-                <span className="rounded-pill border border-accent-library/40 bg-accent-library/15 px-2.5 py-0.5 text-caption font-medium text-accent-library">
+                <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">Ma filière</p>
+                <span className="rounded-pill border border-accent-library/40 bg-accent-library/15 px-2.5 py-0.5 text-caption font-medium text-accent-soft">
                   Votre parcours
                 </span>
               </div>
@@ -102,14 +94,12 @@ export default function FacultiesPage() {
             </Link>
           </section>
         ) : (
-          <section
-            aria-label="Choix de la filière"
-            className="mx-auto mt-section-gap max-w-4xl rounded-panel border border-dashed border-border bg-surface-1 p-card-padding text-center shadow-card"
-          >
-            <p className="font-display text-h3 font-semibold text-text-primary">Choisissez votre filière</p>
-            <p className="mt-1 text-meta text-text-secondary">
-              Indiquez votre faculté et votre année dans votre profil pour accéder directement à votre programme.
-            </p>
+          <section aria-label="Choix de la filière" className="mx-auto mt-section-gap max-w-4xl">
+            <EmptyState
+              title="Choisissez votre filière"
+              description="Indiquez votre faculté et votre année dans vos paramètres pour accéder directement à votre programme."
+              action={{ label: "Compléter mon profil", href: "/settings" }}
+            />
           </section>
         )}
 
@@ -121,16 +111,37 @@ export default function FacultiesPage() {
             </p>
           </div>
 
-          {isLoading && <p className="mt-4 text-meta text-text-secondary">Chargement des facultés...</p>}
-          {error && (
-            <p role="alert" className="mt-4 rounded-panel border border-danger/30 bg-danger/10 px-3 py-2 text-meta text-danger">
-              {error}
-            </p>
-          )}
+          {isLoading ? (
+            <div className="mt-4 grid gap-card-gap sm:grid-cols-2 lg:grid-cols-3">
+              {[0, 1, 2].map((i) => (
+                <LoadingSkeleton key={i} className="h-28 w-full rounded-card" ariaLabel={i === 0 ? "Chargement des facultés" : undefined} />
+              ))}
+            </div>
+          ) : null}
+          {error ? (
+            <div className="mt-4 rounded-card border border-danger bg-surface-1 p-card-padding">
+              <p role="alert" className="text-body text-danger">
+                {error}
+              </p>
+              <button
+                type="button"
+                onClick={refetch}
+                className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 sm:w-auto"
+              >
+                Réessayer
+              </button>
+            </div>
+          ) : null}
 
-          {!isLoading && !error && faculties.length === 0 && (
-            <p className="mt-4 text-meta text-text-secondary">Aucune faculté n&apos;est disponible pour le moment.</p>
-          )}
+          {!isLoading && !error && faculties.length === 0 ? (
+            <div className="mt-4">
+              <EmptyState
+                title="Aucune faculté disponible"
+                description="Le catalogue n'est pas encore publié. Revenez plus tard ou lancez une session QCM."
+                action={{ label: "Créer une session QCM", href: "/qcm" }}
+              />
+            </div>
+          ) : null}
 
           <ul className="mt-4 grid gap-card-gap sm:grid-cols-2 lg:grid-cols-3">
             {faculties.map((faculty, index) => {
@@ -150,7 +161,7 @@ export default function FacultiesPage() {
                     actionLabel="Explorer"
                     meta={
                       isMine ? (
-                        <span className="rounded-pill border border-accent-library/40 bg-accent-library/15 px-2 py-0.5 font-medium text-accent-library">
+                          <span className="rounded-pill border border-accent-library/40 bg-accent-library/15 px-2 py-0.5 font-medium text-accent-soft">
                           Votre filière
                         </span>
                       ) : (
