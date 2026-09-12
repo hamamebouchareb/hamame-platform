@@ -6,7 +6,7 @@ import { useRequireAuth } from "@/lib/useRequireAuth";
 import { useApiResource } from "@/lib/useApiResource";
 import { apiFetch, ApiError } from "@/lib/api";
 import { extractParagraphs } from "@/lib/richtext";
-import { ConfirmDialog, LoadingSkeleton, Modal, QuestionCard, StudyTimer } from "@/components";
+import { ConfirmDialog, EnqueueReviewButton, LoadingSkeleton, Modal, QuestionCard, StudyTimer } from "@/components";
 import { useToast } from "@/components/Toast";
 import type { AnswerAttemptResponse, AnswerStatsResponse, SessionDetail, SessionQuestionEntry } from "@/lib/types";
 
@@ -411,6 +411,13 @@ export default function SessionQuestionPage() {
               <line x1="4" y1="22" x2="4" y2="15" />
             </svg>
           </button>
+          {/* F1 manual revision enrollment for the current question — opt-in
+              only; auto-enqueue on submit stays the default. Rendered only
+              once a question is loaded; the button re-checks membership
+              whenever the question id changes. */}
+          {currentEntry ? (
+            <EnqueueReviewButton variant="icon" questionId={currentEntry.question.id} />
+          ) : null}
         </div>
         <div className="h-0.5 w-full bg-accent-qcm" aria-hidden />
       </header>

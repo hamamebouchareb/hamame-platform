@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { useApiResource } from "@/lib/useApiResource";
 import { extractParagraphs } from "@/lib/richtext";
-import { AppHeader, EmptyState, Footer, LoadingSkeleton } from "@/components";
+import { AppHeader, EmptyState, EnqueueReviewButton, Footer, LoadingSkeleton } from "@/components";
 import type { LessonDetail } from "@/lib/types";
 
 export default function LessonDetailPage() {
@@ -77,6 +77,12 @@ export default function LessonDetailPage() {
               <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">Leçon</p>
               <h1 className="mt-1 font-display text-h1 font-bold leading-tight text-text-primary">{lesson.title}</h1>
             </header>
+
+            {/* F1 manual revision enrollment — opt-in only; auto-enqueue on
+                session submit stays the default mechanism. */}
+            <div className="mt-4">
+              <EnqueueReviewButton lessonId={lesson.id} />
+            </div>
 
             <article className="mt-section-gap rounded-card-lg border border-border bg-surface-1 p-card-padding shadow-card">
               <div className="flex flex-col gap-4 text-body leading-relaxed text-text-primary">
