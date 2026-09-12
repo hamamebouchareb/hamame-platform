@@ -5,6 +5,7 @@ import { uuidParam } from "../lib/common-schemas";
 import { requireAuth } from "../middleware/auth";
 import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
+import { createNotificationBestEffort } from "./notifications.routes";
 
 // V2 social: friends/following via the Friendship model (prisma/schema.prisma).
 //
@@ -84,6 +85,16 @@ async function acceptFriendRequest(req: Request, res: Response, next: NextFuncti
     const updated = await prisma.friendship.update({
       where: { userIdA_userIdB: { userIdA: userId, userIdB: me } },
       data: { status: "accepted" },
+    });
+
+    // Social notification for the original sender (best-effort, never fails
+    // the accept flow). Name lookup kept minimal (fullName only).
+    const acceptor = await prisma.user.findUnique({ where: { id: me }, select: { fullName: true } });
+    await createNotificationBestEffort({
+      userId,
+      category: "social",
+      title: "Nouvel ami",
+      body: `${acceptor?.fullName ?? "Un camarade"} a accepté votre demande d'ami.`,
     });
 
     res.status(200).json({ friendship: updated });

@@ -22,6 +22,7 @@ import adminRoutes from "./admin.routes";
 import leaderboardRoutes from "./leaderboard.routes";
 import badgesRoutes from "./badges.routes";
 import friendsRoutes from "./friends.routes";
+import notificationsRoutes, { adminNotificationsRouter } from "./notifications.routes";
 import pushRoutes from "./push.routes";
 import aiRoutes from "./ai.routes";
 
@@ -59,6 +60,8 @@ router.use("/admin", adminRoutes);
 router.use("/leaderboard", leaderboardRoutes);
 router.use("/badges", badgesRoutes);
 router.use("/friends", friendsRoutes);
+router.use("/notifications", notificationsRoutes);
+router.use("/admin/notifications", adminNotificationsRouter);
 router.use("/push", pushRoutes);
 router.use("/ai", aiRoutes);
 

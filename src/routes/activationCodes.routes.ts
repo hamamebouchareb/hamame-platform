@@ -7,6 +7,7 @@ import { requireAuth } from "../middleware/auth";
 import { requireRole } from "../middleware/requireRole";
 import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
+import { createNotificationBestEffort } from "./notifications.routes";
 
 // FR-65/BR-18 — activation codes: the MVP's manual-payment bridge. A Support
 // Agent/Admin confirms payment off-platform, issues a single-use code scoped to
@@ -151,6 +152,14 @@ async function redeemActivationCode(req: Request, res: Response, next: NextFunct
       });
 
       return { subscription: subscriptionResult, payment: createdPayment };
+    });
+
+    // Billing notification for the redeemer (best-effort, never fails redemption).
+    await createNotificationBestEffort({
+      userId,
+      category: "prix",
+      title: "Premium activé",
+      body: `Votre accès Premium est actif (${activationCode.faculty.name} — ${activationCode.year.label}).`,
     });
 
     res.status(200).json({
