@@ -1,0 +1,14 @@
+# Notification trigger-path verification 2026-09-12T10:52:52.301Z
+USERS A=58debd24-6b29-4986-976f-9b41d298062e B=2b64340d-3d97-4a8b-b667-ef174d941572
+FRIEND_REQUEST 201 {"friendship":{"userIdA":"2b64340d-3d97-4a8b-b667-ef174d941572","userIdB":"58debd24-6b29-4986-976f-9b41d298062e","status":"pending"}}
+FRIEND_ACCEPT 200 {"friendship":{"userIdA":"2b64340d-3d97-4a8b-b667-ef174d941572","userIdB":"58debd24-6b29-4986-976f-9b41d298062e","status":"accepted"}}
+B_SOCIAL_INBOX 200 {"notifications":[{"id":"1aa03df3-29b3-409c-8000-b3f4bbc05e2a","category":"social","title":"Nouvel ami","body":"VERIFY NTF Alice a accepté votre demande d'ami.","isRead":false,"readAt":null,"createdAt":"2026-09-12T10:52:59.567Z"}],"unreadCount":1,"pagination":{"page":1,"limit":20,"total":1}}
+SOCIAL_HOOK_ROW={"id":"1aa03df3-29b3-409c-8000-b3f4bbc05e2a","category":"social","title":"Nouvel ami","body":"VERIFY NTF Alice a accepté votre demande d'ami.","isRead":false,"readAt":null,"createdAt":"2026-09-12T10:52:59.567Z"}
+BEST_EFFORT_RESOLVED=true ghostRows=0 (expect 0)
+CLEANUP1 notif=1 friendships=1 leftN=0 leftF=0 leftU=0
+FIXTURE code=NTFHK-MTY9NQVH143B faculty=Medicine year=Year 1
+REDEEM 200 {"message":"Activation code redeemed successfully. Premium access has been granted.","unlocked":{"faculty":"Medicine","year":"Year 1"},"grantedDays":30,"subscription":{"id":"241df7d9-70fb-4d89-b209-1c3fc0b44109","userId":"ffb69069-a6aa-4ddd-8249-055d251b54f6","planId":"00000000-0000-0000-0000-000000000110","status":"active","startedAt":"2026-09-12T10:53:06.777Z","currentPeriodEnd":"2026-10-12T10:53:06.777Z","cancelledAt":null,"autoRenew":true,"plan":{"id":"00000000-0000-0000-0000-000000000110","name":"premium","priceDzd":1500,"billingPeriod":"monthly","features":{"aiCredits":{"dailyAllowance":30,"monthlyAllowance":900},"description":"Full official courses, unlimited mock exams, priority support"},"isActive":true}},"payment":{"id":"d97305f5-c01a-428c-8fd6-04dfcd1b71d7","amountDzd":0,"method":"manual_assisted"}}
+C_INBOX 200 {"notifications":[{"id":"5bc90e74-064e-4632-897e-7fb6b32069e7","category":"prix","title":"Premium activé","body":"Votre accès Premium est actif (Medicine — Year 1).","isRead":false,"readAt":null,"createdAt":"2026-09-12T10:53:08.681Z"}],"unreadCount":1,"pagination":{"page":1,"limit":20,"total":1}}
+PRIX_HOOK_ROW={"id":"5bc90e74-064e-4632-897e-7fb6b32069e7","category":"prix","title":"Premium activé","body":"Votre accès Premium est actif (Medicine — Year 1).","isRead":false,"readAt":null,"createdAt":"2026-09-12T10:53:08.681Z"}
+CLEANUP2 notif=1 leftN=0 leftS=0 leftC=0 leftU=0
+RESULT=PASS
