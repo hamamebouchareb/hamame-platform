@@ -15,5 +15,8 @@
     "sourceMap": true
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+  // Scratch one-off harnesses and ops scripts (run via tsx, never imported by
+  // runtime code, never shipped in dist/) are excluded so a broken scratch
+  // file can never fail the Railway build (`npm run build` -> tsc).
+  "exclude": ["node_modules", "dist", "src/scripts"]
 }
