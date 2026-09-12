@@ -695,11 +695,18 @@ declared lost.
 
 ## 7. Test accounts & credentials (⚠️ several stale claims corrected)
 
+> 🔐 **ROTATED 2026-09-12 — the passwords previously shown in this table
+> (`NewTestPass123!`, `testpass123`) are burned: they appear in public
+> GitHub history and no longer work (verified 401). New values were issued
+> out-of-band to the owner and are NOT recorded anywhere in the repo.
+> `seed-heavy.ts` still stamps `testpass123` on recreate — re-run it only
+> in a fresh dev DB, or rotate again afterward.
+
 | Account | Password | Roles (verified via DB this session) | Faculty / Year | Notes |
 |---|---|---|---|---|
-| `hamamebouchareb@gmail.com` | ✅ **`NewTestPass123!` — FIXED and verified 2026-09-01.** Root cause was the dev-mode `forgot-password`→`reset-password` token-leak path; no source code changes were required. Verified via two independent raw logs: `docs/verification/auth-fix-verify-raw-1788269804195.log` (DB password-hash change confirmed, reset token cleared, session/stats invariants preserved — 9 sessions, 8 completed, avg 22.32, identical before/after) and `docs/verification/auth-fix-verify-jwt-recheck-1788291898672.log` (two independent login calls returning distinct `iat` values — 1788291925 vs 1788291929 — ruling out a cached/replayed response). No longer broken; no workaround needed going forward. | student_free, **moderator**, instructor, admin, academic_reviewer (⚠️ old doc listed 3 roles; `moderator` has since been added) | Medicine / Year 1 | This is the real account. Login now works normally — no workaround needed. |
-| `heavy@hamame.dz` | `testpass123` | **none** (not even `student_free` — created directly by `seed-heavy.ts`) | Medicine / Year 1 | **NEW.** Heavy-content QA account: 50 completed sessions, 150 attempts, streak 45/61, 3 badges, 12 notes. Recreate anytime with `npx tsx prisma/seed-heavy.ts` (wipes + recreates only its own rows). Used for volume/performance testing. ⚠️ **Also now holds an active premium `Subscription`** (granted by this session's activation-code redemption test — see Section 2A). Re-running `seed-heavy.ts` may or may not clear this; not verified. |
-| `norole@hamame.dz` | `testpass123` | ⚠️ **`student_free` — no longer role-less** (old doc said "none (deliberately)"; drift predates this session) | Medicine (year null) | Still the negative-permission workhorse for role-gated endpoints, but it is no longer literally role-less — keep that in mind when testing "no role" paths. |
+| `hamamebouchareb@gmail.com` | ~~`NewTestPass123!`~~ — **ROTATED 2026-09-12, see notice above.** (History of the old value: FIXED and verified 2026-09-01. Root cause was the dev-mode `forgot-password`→`reset-password` token-leak path; no source code changes were required. Verified via two independent raw logs: `docs/verification/auth-fix-verify-raw-1788269804195.log` and `docs/verification/auth-fix-verify-jwt-recheck-1788291898672.log`.) | student_free, **moderator**, instructor, admin, academic_reviewer (⚠️ old doc listed 3 roles; `moderator` has since been added) | Medicine / Year 1 | This is the real account. Login now works normally — no workaround needed. |
+| `heavy@hamame.dz` | ~~`testpass123`~~ — **ROTATED 2026-09-12, see notice above.** | **none** (not even `student_free` — created directly by `seed-heavy.ts`) | Medicine / Year 1 | **NEW.** Heavy-content QA account: 50 completed sessions, 150 attempts, streak 45/61, 3 badges, 12 notes. Recreate anytime with `npx tsx prisma/seed-heavy.ts` (wipes + recreates only its own rows). Used for volume/performance testing. ⚠️ **Also now holds an active premium `Subscription`** (granted by this session's activation-code redemption test — see Section 2A). Re-running `seed-heavy.ts` may or may not clear this; not verified. |
+| `norole@hamame.dz` | ~~`testpass123`~~ — **ROTATED 2026-09-12, see notice above.** | ⚠️ **`student_free` — no longer role-less** (old doc said "none (deliberately)"; drift predates this session) | Medicine (year null) | Still the negative-permission workhorse for role-gated endpoints, but it is no longer literally role-less — keep that in mind when testing "no role" paths. |
 | `seed-author@hamame.dz` | (random — not loggable) | academic_reviewer, admin, instructor | none | Seed fixture; password is `crypto.randomBytes`, unknowable by design. |
 | Test Student Two — `student2@hamame.dz` (`e6ec77e4-f56d-431d-b9b2-e3ba8f474601`) | n/a | student | Medicine / Year 1 | Leaderboard fixture; 1 completed session. Re-confirmed in DB this session. |
 
@@ -1265,21 +1272,53 @@ only its layout/copy/invariant descriptions were usable).
   Infra recurrences: API tsx-child silent death (killed + relaunched, login
   200 re-verified), flaky shell/filesystem episodes.
 
-    Root cause was the dev-mode `forgot-password`→`reset-password` token-leak
-   path; no source changes needed. See Section 7 for the two verification
-   logs. Login now works normally with `NewTestPass123!` — no workaround
-   required for future QA against this account.
-2. **Judge the AI output for both AI features, once the key exists** (unchanged):
+**Final Sweep (notification center + remaining loose ends) — reported DONE
+2026-09-0x. ⚠️ Accepted from executor summary, NOT independently reviewed
+against a raw verification log the way every phase through Phase 8 was.**
+This distinction matters — say so if this entry is ever relied on for
+something high-stakes; re-request the raw log
+(`docs/verification/final-sweep-verify-raw-1788967807435.log`) first if so.
+
+- **Notification center — now genuinely built** (backend: 5 endpoints +
+  friend-accept/activation-redeem hooks; frontend: header bell + badge +
+  Tout/Social/Prix/Système dropdown + `/notifications` page). This
+  **supersedes** the A1 finding from the prior task ("flag as functional
+  gap, do not build") — that instruction was explicitly overridden by the
+  user's direct go-ahead to build everything, not an executor decision.
+  Per the summary: proven with real HTTP status codes and real UI clicks
+  (unread-badge 2→1 on click), fixtures cleaned up, `heavy@hamame.dz`'s
+  pre-existing rows restored to unread.
+- **Fullscreen toggle** built and reportedly verified (aria-pressed +
+  Esc-sync). **Sound toggle deliberately NOT built** — correct call:
+  Hamame has no audio anywhere, so a mute button would be dead UI with
+  nothing to control.
+- **History group header** ("N sessions · X% global") — read-only
+  aggregate, reportedly added.
+- **A2/A3 finalized:** the wrong-option danger-token translation and QST
+  gradient from the design pass, PLUS the corrected profile-cover
+  implementation (integrated overlap, not the rejected disconnected-band
+  version from the earlier checkpoint).
+- **Deferred, with stated reasons:** per-question notes panel + highlighter/
+  bookmark/chart icons (need a product spec first), per-module performance
+  breakdown (needs new aggregation logic), an unconfirmed chat-bubble
+  sighting, plus the standing decision gates (EN/FR, OAuth, scheduled
+  sims) and shared sessions (N/A, out of V1 scope by original design).
+- **Reported verification:** `tsc` exit 0, `next build` exit 0, zero
+  Playwright page errors across all runs — but this comes from the
+  executor's summary, not a raw log this session independently checked
+  line-by-line the way Phases 1–8 were.
+
+1. **Judge the AI output for both AI features, once the key exists** (unchanged):
    `npm run ai:backfill-explanations -- --dry-run` (read the 3 explanations for
    medical accuracy) and `npm run verify:hints:ai` (~8 Haiku calls). Add
    `ANTHROPIC_API_KEY` to `.env` only when doing this — still absent, confirmed
    via server log this session.
-3. **The one real remaining PRD/MVP compliance gap, deliberately deferred by
+2. **The one real remaining PRD/MVP compliance gap, deliberately deferred by
    choice:** automated self-service payment (CIB/SATIM-class Algerian gateway).
    Manual-assisted flow remains. This is a recorded product decision, not an
    oversight — disproportionately painful integration for a solo portfolio
    project; revisit only if moving toward a real launch.
-4. **Small, real, newly-tracked gaps (not urgent):**
+3. **Small, real, newly-tracked gaps (not urgent):**
    - `GET` list of an author's own drafts (only aggregate stats exist today —
      re-confirmed this session)
    - `submittedAt` column for the review queue (currently `createdAt`-sorted —
@@ -1293,7 +1332,7 @@ only its layout/copy/invariant descriptions were usable).
      2D.** Backend + frontend built from scratch (no backend actually existed
      before this) and independently verified via raw SQL, HTTP, and DOM
      evidence.
-5. **Other PRD Version 2 items not yet built:** AI Study Assistant (chat), AI
+4. **Other PRD Version 2 items not yet built:** AI Study Assistant (chat), AI
    Note Maker, Answer Locator (needs semantic search), FSRS-class spaced
    repetition (SM-2-inspired interim stands), offline download for Premium.
    **⚠️ Old-doc list corrected:** "push notifications + preference center" and
@@ -1301,10 +1340,11 @@ only its layout/copy/invariant descriptions were usable).
    — push subscriptions + preference center + daily reminder job ship today
    (migration 15, `/api/push/*`, settings toggles), and
    `GET /api/progress/readiness` powers the dashboard/profile readiness cards.
-6. **Cosmetic, carried forward:** `@types/node-cron` redundancy was fixed in the
+5. **Cosmetic, carried forward:** `@types/node-cron` redundancy was fixed in the
    cosmetic pass; the "undocumented pre-existing flashcards work" lesson has now
    surfaced a third time (migration #10 missing from the old doc's table) —
    keep assuming nothing about "clean builds."
+
 
 **Explicitly out of scope by decision (not oversights):** live real-time
 "Challenge" infrastructure (websockets), teams/groups, native mobile apps,
