@@ -27,6 +27,17 @@ tmp-*.ts
 tmp-*.mjs
 tmp-*.js
 
+# one-off verification harnesses + local process/debris (untracked scratch only —
+# NOTE: 4 older src/scripts/verify-*.ts files are already TRACKED (committed long
+# ago: verify-ai-credits, verify-contextual-hints, verify-exam-readiness,
+# verify-push-notifications) and are NOT affected by the rule below — gitignore
+# cannot untrack committed files.
+src/scripts/verify-*.ts
+step0_probe.ts
+test_*.ts
+*.pid
+opencode.json
+
 # one-off curl payloads and shell debris from past sessions
 /login-*.json
 /create*.json
