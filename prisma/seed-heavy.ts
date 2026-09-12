@@ -5,8 +5,10 @@ import { PrismaClient } from "@prisma/client";
 /**
  * Heavy-content test-account seed (Task 8 follow-up, item 4).
  *
- * Creates/upserts ONE loggable account — heavy@hamame.dz / testpass123 — with enough
- * data volume to stress-test Dashboard / Profil / QCM Results under realistic load:
+ * Creates/upserts ONE loggable account — heavy@hamame.dz, password from the
+ * SEED_HEAVY_PASSWORD env var (no hardcoded value; the script aborts if unset) —
+ * with enough data volume to stress-test Dashboard / Profil / QCM Results under
+ * realistic load:
  *
  *   - 50 completed practice study sessions with varied scores (28–100), spread over
  *     the last ~60 days (one per day for the last 45 days + 5 older stragglers)
@@ -19,13 +21,23 @@ import { PrismaClient } from "@prisma/client";
  *   - Progress row for the seeded intro lesson
  *
  * Re-runnable: wipes this user's sessions/notes/progress/badges first, then recreates.
- * Run with: npx tsx prisma/seed-heavy.ts
+ * Run with: SEED_HEAVY_PASSWORD='<secret, min 12 chars>' npx tsx prisma/seed-heavy.ts
  */
 
 const prisma = new PrismaClient();
 
 const HEAVY_EMAIL = "heavy@hamame.dz";
-const HEAVY_PASSWORD = "testpass123";
+
+// No hardcoded password by design: "testpass123" was burned 2026-09-12 after
+// appearing in public git history. The seed aborts loudly when
+// SEED_HEAVY_PASSWORD is unset rather than falling back to anything guessable.
+const HEAVY_PASSWORD = process.env.SEED_HEAVY_PASSWORD;
+if (!HEAVY_PASSWORD || HEAVY_PASSWORD.length < 12) {
+  console.error(
+    "FATAL: SEED_HEAVY_PASSWORD must be set (min 12 chars) — refusing to seed heavy@hamame.dz with a default password."
+  );
+  process.exit(1);
+}
 
 // Same fixed fixture ids as prisma/seed.ts (must run AFTER `npm run prisma:migrate:deploy`
 // + `npx tsx prisma/seed.ts` so these exist).
@@ -255,7 +267,7 @@ async function main() {
   console.log(`  Streak: current=${DAILY_SESSION_COUNT} longest=61`);
   console.log(`  Badges: ${badgeDefs.length} earned`);
   console.log(`  Notes: ${noteBodies.length}`);
-  console.log(`  Login: ${HEAVY_EMAIL} / ${HEAVY_PASSWORD}`);
+  console.log(`  Login: ${HEAVY_EMAIL} / (the SEED_HEAVY_PASSWORD value — never printed)`);
 }
 
 main()
