@@ -1,0 +1,41 @@
+VERIFY start 2026-08-27T18:00:51.347Z BASE=http://127.0.0.1:3000/api
+
+===== baseline years (before fixture)
+[
+  {
+    "label": "Year 1",
+    "order_index": 0,
+    "approved_questions": 8
+  }
+]
+
+===== SQL/Prisma: seed temporary Year 2 fixture
+----- years + approved question counts (raw SQL)
+[
+  {
+    "id": "00000000-0000-0000-0000-000000000020",
+    "label": "Year 1",
+    "order_index": 0,
+    "q_count": 8
+  },
+  {
+    "id": "aaaaaaaa-0000-4000-8000-000000000021",
+    "label": "Year 2 VERIFY",
+    "order_index": 1,
+    "q_count": 2
+  }
+]
+
+===== POST http://127.0.0.1:3000/api/auth/login
+----- request body
+{
+  "email": "hamamebouchareb@gmail.com",
+  "password": "NewTestPass123!"
+}
+----- response status 401 (1027ms)
+----- response body
+{"error":{"code":"INVALID_CREDENTIALS","message":"Invalid email/phone or password."}}
+
+===== cleanup temporary Year 2 fixture
+deleted sessions=0 year2 fixture rows
+Error: login failed for hamamebouchareb

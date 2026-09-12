@@ -1,0 +1,181 @@
+# sitting-depth verification — raw literal log
+
+Scope: past-exam picker + period filter on decided taxonomy (examYear INT NULL,
+sittingLabel TEXT NULL on questions; no papers table; source enum untouched;
+module-scoped unit multi-select untouched).
+No prose verdicts below — command + literal output only.
+
+Code footprint (new vs prior task):
+  prisma/schema.prisma                  (+2 nullable columns on Question)
+  prisma/migrations/20260101000019_add_question_sitting_columns/migration.sql (new)
+  src/lib/question-filters.ts           (+examYear/examYearFrom/examYearTo/sittingLabel)
+  src/routes/sessions.routes.ts         (+4 schema params + passthrough only)
+  src/routes/questions.routes.ts        (+list passthrough; +counts params/sittings)
+  web/src/lib/types.ts                  (+sittings on QuestionCountsResponse)
+  web/src/components/SessionBuilder.tsx (+Examen passé section, picker, period)
+  web/src/app/qcm/builder/QcmBuilderClient.tsx (+4 field forwards)
+
+Screenshots (live localhost:3001 DOM):
+  docs/verification/sitting-depth-zero-picker.png (empty hint, untagged data)
+  docs/verification/sitting-depth-picked.png      (picker state, viewport top)
+  docs/verification/sitting-depth-session.png     (player after sitting submit)
+
+=====================================================================
+1. MIGRATION — offline diff, deploy, status, column types
+=====================================================================
+$ npx prisma migrate status   (before; abridged)
+19 migrations found in prisma/migrations
+Database schema is up to date!
+
+$ npx prisma migrate diff --from-url $DATABASE_URL --to-schema-datamodel ./prisma/schema.prisma --script   (abridged; warn line omitted)
+-- DropForeignKey
+ALTER TABLE "resources" DROP CONSTRAINT "resources_added_by_fkey";
+[... unrelated drift statements for resources FKs/indexes and
+    lesson_attachments.file_url also emitted — deliberately NOT included ...]
+-- AlterTable
+ALTER TABLE "questions" ADD COLUMN     "exam_year" INTEGER,
+ADD COLUMN     "sitting_label" TEXT;
+[... unrelated AddForeignKey statements for resources also emitted — NOT included ...]
+NOTE: the live-vs-schema diff emitted pre-existing drift (resources FK/index
+rebuilds, lesson_attachments.file_url rename) unrelated to this task. The
+committed migration contains ONLY the questions ALTER below.
+
+prisma/migrations/20260101000019_add_question_sitting_columns/migration.sql:
+-- AlterTable
+-- Exam-sitting metadata for the past-exam picker + period filter. Nullable: all
+-- pre-existing questions stay untagged (NULL = not attached to any real sitting).
+-- Extracted verbatim from `prisma migrate diff` (live DB vs schema); unrelated
+-- drift statements the diff also emitted (resources FKs, lesson_attachments
+-- file_url) are deliberately NOT included here.
+ALTER TABLE "questions" ADD COLUMN     "exam_year" INTEGER,
+ADD COLUMN     "sitting_label" TEXT;
+
+$ npx prisma migrate deploy
+20 migrations found in prisma/migrations
+Applying migration `20260101000019_add_question_sitting_columns`
+The following migration(s) have been applied:
+migrations/
+  └─ 20260101000019_add_question_sitting_columns/
+    └─ migration.sql
+All migrations have been successfully applied.
+
+$ npx prisma migrate status   (after)
+20 migrations found in prisma/migrations
+Database schema is up to date!
+
+$ .\node_modules\.bin\tsx.cmd tmp-sitting-fixture.ts cols
+=== COLUMNS questions.exam_year/sitting_label ===
+[{"column_name":"exam_year","data_type":"integer","is_nullable":"YES"},{"column_name":"sitting_label","data_type":"text","is_nullable":"YES"}]
+=== BASELINE sitting metadata ===
+[{"approved":8,"tagged_year":0,"tagged_label":0}]
+
+NOTE: `npx prisma generate` first failed with EPERM (query engine DLL locked by
+the running API process); after stopping the API it reported
+"Generated Prisma Client (v6.19.3)" and index.d.ts contains
+examYear: number | null / sittingLabel: string | null. API relaunched after.
+
+=====================================================================
+2. COUNTS — baseline, sitting filters, scoping probes
+=====================================================================
+$ curl.exe -s "http://localhost:3000/api/questions/counts?moduleId=00000000-0000-0000-0000-000000000030"
+{"total":8,"byUnit":[{"unitId":"00000000-0000-0000-0000-000000000040","count":8}],"byModule":[],"sittings":[]}
+(BASELINE: no tagged sittings anywhere → sittings:[])
+
+$ .\node_modules\.bin\tsx.cmd tmp-sitting-fixture.ts tag
+[tags the 2 lowest-id approved questions with examYear=1900,
+ sittingLabel=VERIFY-SITTING — deliberately fake year per instruction]
+=== TAGGED ===
+[{"id":"00000000-0000-0000-0000-000000000070","type":"QCM","exam_year":1900,"sitting_label":"VERIFY-SITTING"},{"id":"00000000-0000-0000-0000-000000000080","type":"QCS","exam_year":1900,"sitting_label":"VERIFY-SITTING"}]
+
+$ curl.exe -s "http://localhost:3000/api/questions/counts?examYear=1900"
+=== COMBO E: examYear=1900 ===
+{"total":2,"byUnit":[],"byModule":[],"sittings":[{"examYear":1900,"sittingLabel":"VERIFY-SITTING","count":2}]}
+
+$ curl.exe -s "http://localhost:3000/api/questions/counts?examYear=1900&sittingLabel=VERIFY-SITTING"
+=== COMBO F: examYear+sittingLabel ===
+{"total":2,"byUnit":[],"byModule":[],"sittings":[{"examYear":1900,"sittingLabel":"VERIFY-SITTING","count":2}]}
+
+$ curl.exe -s "http://localhost:3000/api/questions/counts?examYearFrom=1899&examYearTo=1901"
+=== COMBO G: range 1899-1901 ===
+{"total":2,"byUnit":[],"byModule":[],"sittings":[{"examYear":1900,"sittingLabel":"VERIFY-SITTING","count":2}]}
+
+$ curl.exe -s "http://localhost:3000/api/questions/counts?examYearFrom=2000&examYearTo=2025"
+=== COMBO H: range 2000-2025 ===
+{"total":0,"byUnit":[],"byModule":[],"sittings":[{"examYear":1900,"sittingLabel":"VERIFY-SITTING","count":2}]}
+
+$ curl.exe -s "http://localhost:3000/api/questions/counts?facultyId=74b46ae1-4de8-48df-b188-1a45725f3395"
+=== SCOPING PROBE 1: planned Dentistry faculty ===
+{"total":0,"byUnit":[],"byModule":[],"sittings":[]}
+
+$ curl.exe -s "http://localhost:3000/api/questions/counts?facultyId=b37b039e-2208-4837-b5d5-28b1c338a2cf"
+=== SCOPING PROBE 2: Medicine faculty (tagged home) ===
+{"total":8,"byUnit":[],"byModule":[],"sittings":[{"examYear":1900,"sittingLabel":"VERIFY-SITTING","count":2}]}
+(SCOPING: hidden-faculty probe returns empty sittings — the faculty gate carries
+into the sittings breakdown, which is built by the same buildQuestionWhere with
+the same viewerUniversityId as total/byUnit/byModule. University gate identical
+by construction: sittingsWhere passes viewerUniversityId into the shared filter.)
+
+=====================================================================
+3. DOM ZERO-STATE — untagged production data (before tagging)
+=====================================================================
+$ node sitting-walkA.js   (login norole@hamame.dz → /qcm/builder)
+--- s0-zero-picker http://localhost:3001/qcm/builder
+Sélectionnez un module pour choisir des unités. |  | Types de questions | QCM — choix multiples | QCS — choix simple | QROC — réponse ouverte courte | Cas clinique | Source | Toutes sources | Examen officiel | Hamame | IA | Examen passé |  | Aucun examen tagué pour le moment — les questions ne sont pas encore rattachées à une session d'examen. |  | Période — de | Période — à | Nombre de questions | 5 | 10 | 20 | 30 | 50 | Ordre des résultats | Aléatoire | Par année | Par cours | 7 questions disponibles | Commencer l'entraînement
+--- s1-zero-period http://localhost:3001/qcm/builder   (Période de=1900 à=1900)
+Examen passé |  | Aucun examen tagué pour le moment — les questions ne sont pas encore rattachées à une session d'examen. |  | Période — de | Période — à | Nombre de questions | 5 | 10 | 20 | 30 | 50 | Ordre des résultats | Aléatoire | Par année | Par cours | 0 questions disponibles | Élargissez les filtres pour lancer. | Commencer l'entraînement
+SUBMIT DISABLED (period 1900-1900, untagged): true
+ERRORS: []
+(ZERO-STATE: picker shows the empty hint, period on untagged data counts 0 and
+disables start. Expected and correct — not a bug. Counter reads 7 globally
+because default types QCM+QCS exclude the 1 QROC.)
+
+=====================================================================
+4. DOM NONZERO + UI SUBMIT — tagged fixtures
+=====================================================================
+$ node sitting-walkB.js   (login → /qcm/builder, fixtures tagged)
+YEAR OPTS: ["Toutes les années","1900"]
+SITTING OPTS: ["Toutes les sessions","VERIFY-SITTING"]
+--- t0-picker-nonzero http://localhost:3001/qcm/builder
+Examen passé | Année de session | Toutes les années | 1900 | Session | Toutes les sessions | VERIFY-SITTING | Période — de | Période — à | Nombre de questions | 5 | 10 | 20 | 30 | 50 | Ordre des résultats | Aléatoire | Par année | Par cours | 7 questions disponibles | Commencer l'entraînement
+SITTING OPTS AFTER YEAR: ["Toutes les sessions","VERIFY-SITTING"]
+--- t1-picked http://localhost:3001/qcm/builder   (year 1900 + VERIFY-SITTING)
+Examen passé | Année de session | Toutes les années | 1900 | Session | Toutes les sessions | VERIFY-SITTING | Période — de | Période — à | Nombre de questions | 5 | 10 | 20 | 30 | 50 | Ordre des résultats | Aléatoire | Par année | Par cours | 2 questions disponibles | Commencer l'entraînement
+AFTER SUBMIT URL: http://localhost:3001/sessions/a6a65dff-bc47-45e5-8fbb-8d1535015a76
+--- t2-session http://localhost:3001/sessions/a6a65dff-bc47-45e5-8fbb-8d1535015a76
+Session QCM |  | Question 1/2 |  | 0 répondues |  | Quitter |  | QCM·HAMAME·EASY |  | Which of the following occur during ventricular systole? (Select all that apply) |  | Ventricles are relaxed | Semilunar valves open | Atria contract | AV valves close | Valider la réponse | Précédent | Suivant | Marquer pour revoir | Terminer la session | Minuteur d'étude
+ERRORS: []
+(PICKER: year/sitting dropdowns list exactly the DB-present values, counter drops
+7 → 2 on selection, UI submit lands on a 2-question player — pool limited to the
+tagged sitting despite size 5.)
+
+$ .\node_modules\.bin\tsx.cmd tmp-sitting-rows.ts
+=== UI sitting session row ===
+[{"id":"a6a65dff-bc47-45e5-8fbb-8d1535015a76","name":"Entraînement","mode":"practice"}]
+=== UI sitting session questions carry sitting metadata ===
+[{"ord":0,"exam_year":1900,"sitting_label":"VERIFY-SITTING","type":"QCM"},{"ord":1,"exam_year":1900,"sitting_label":"VERIFY-SITTING","type":"QCS"}]
+
+=====================================================================
+5. SESSION-CREATION STATEMENT + CLEANUP
+=====================================================================
+STATEMENT: POST /api/sessions needed schema additions (examYear/examYearFrom/
+examYearTo/sittingLabel accepted + forwarded) but NO separate selection-query
+change — the candidate pool is built by the shared buildQuestionWhere, verified
+above by the UI-submitted session whose rows all carry the sitting metadata.
+GET /api/sessions/:id and GET /api/sessions/:id/results were not touched (they
+read back rows; selection happens only in the create handler). GET /api/questions
+(list) got the same two passthrough params for consistency.
+
+$ .\node_modules\.bin\tsx.cmd tmp-sitting-fixture.ts down
+=== REVERTED left ===
+[{"n":0}]
+=== BASELINE restored ===
+[{"approved":8,"tagged":0}]
+$ .\node_modules\.bin\tsx.cmd tmp-sitting-fixture.ts sweep   (explicit delete of
+  UI session a6a65dff…, whose auto name matches no VERIFY% pattern)
+=== SWEEP left ===
+[{"n":0}]
+=== ALL norole sessions left ===
+[]
+$ curl.exe -s "http://localhost:3000/api/questions/counts"
+{"total":8,"byUnit":[],"byModule":[],"sittings":[]}
+Temp scripts removed: tmp-sitting-fixture.ts tmp-sitting-rows.ts (git clean).

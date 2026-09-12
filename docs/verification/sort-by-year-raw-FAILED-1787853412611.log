@@ -1,0 +1,10 @@
+VERIFY start 2026-08-27T17:56:49.652Z BASE=http://127.0.0.1:3000/api
+
+===== cleanup temporary Year 2 fixture
+deleted sessions=0 year2 fixture rows
+PrismaClientKnownRequestError: 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Raw query failed. Code: `42883`. Message: `ERROR: operator does not exist: uuid = text
+HINT: No operator matches the given name and argument types. You might need to add explicit type casts.`

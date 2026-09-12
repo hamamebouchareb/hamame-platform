@@ -1,0 +1,4 @@
+# F1 manual-enqueue verification 2026-09-11T10:58:16.973Z
+# API=http://127.0.0.1:3000/api
+REGISTER 201 {"accessToken":"[REDACTED-JWT]","user":{"id":"90209ee1-6937-4eca-a956-07f80f696c6f","email":"f1verify1789124296973@example.com","phone":null,"fullName":"F1 Verify","facultyId":null,"yearId":null,"university":null,"wilaya":null,"uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-09-11T10:58:39.232Z"},"verificationToken":"b70b5236fb25ae94bc53d49014691c67ac5f131e094048a8b105b128b6731467"}
+LOGIN 200 {"accessToken":"[REDACTED-JWT]","user":{"id":"90209ee1-6937-4eca-a956-07f80f696c6f","email":"f1verify1789124296973@example.com","phone":null,"fullName":"F1 Verify","facultyId":null,"yearId":null,"university":null,"wilaya":null,"uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-09-11T10:58:39.232Z"}}

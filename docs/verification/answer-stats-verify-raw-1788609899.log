@@ -1,0 +1,161 @@
+# answer-stats verification — raw literal log
+
+Scope: privacy-safe answer-aggregate endpoint + player percentages + comment
+toggle. No prose verdicts below — command + literal output only.
+
+Code footprint:
+  src/routes/questions.routes.ts         (+GET /questions/:id/answer-stats)
+  src/routes/sessions.routes.ts         (+correctOptionIds, practice-only)
+  web/src/lib/types.ts                  (+correctOptionIds, +AnswerStatsResponse)
+  web/src/components/AnswerOption.tsx   (+isCorrectOption/pickPercentage/revealCorrectness)
+  web/src/components/QuestionCard.tsx   (+stats caption, comment toggle)
+  web/src/app/sessions/[id]/page.tsx    (+stats fetch best-effort, key reset)
+
+Privacy design (stated, then proven): response carries ONLY
+{questionId, attempts, options:[{optionId, percentage}]} — no user/session ids,
+no timestamps, no per-attempt rows. Small-sample rule: 0 attempts →
+options:[] (UI hides block); >=1 → percentages + labeled attempt count.
+
+Screenshots (live localhost:3001 DOM):
+  docs/verification/answer-stats-percentages.png   (0/0/0/100 + caption + toggle)
+  docs/verification/answer-stats-comment.png       (open panel, existing text)
+  docs/verification/answer-stats-exam.png          (Répondu, no %%, no toggle)
+  docs/verification/answer-stats-noexplanation.png (feedback, no toggle)
+
+=====================================================================
+1. ENDPOINT vs REAL DATA — pre-existing 60-attempt question
+=====================================================================
+$ curl.exe .../api/auth/login (norole@hamame.dz) → token len=188
+$ curl.exe "http://localhost:3000/api/questions/00000000-0000-0000-0000-000000000070/answer-stats" -H "Authorization: Bearer ..."
+{"questionId":"00000000-0000-0000-0000-000000000070","attempts":60,"options":[{"optionId":"00000000-0000-0000-0000-000000000071","percentage":5},{"optionId":"00000000-0000-0000-0000-000000000072","percentage":8},{"optionId":"00000000-0000-0000-0000-000000000073","percentage":7},{"optionId":"00000000-0000-0000-0000-000000000074","percentage":3}]}
+$ curl.exe .../answer-stats (id ...0000000000ffff)
+{"error":{"code":"QUESTION_NOT_FOUND","message":"No approved question exists with this id."}}
+$ curl.exe .../answer-stats (no token)
+{"error":{"code":"UNAUTHENTICATED","message":"A Bearer token is required for this endpoint."}}
+
+$ .\node_modules\.bin\tsx.cmd tmp-stats-audit.ts   (why the split is low)
+=== RAW selected_option_ids shapes for Q...70 ===
+[{"shape":"array","n":60}]
+=== SAMPLE values ===
+[{"selected_option_ids":[],"answered_at":"2026-08-23T08:04:00.000Z"},{"selected_option_ids":[],"answered_at":"2026-08-22T08:04:00.000Z"},{"selected_option_ids":[],"answered_at":"2026-08-21T08:04:00.000Z"},{"selected_option_ids":[],"answered_at":"2026-08-20T08:04:00.000Z"},{"selected_option_ids":[],"answered_at":"2026-08-19T08:04:00.000Z"}]
+=== RAW vs DEDUPED counts ===
+[{"raw_attempts":60,"distinct_sq":60}]
+=== OPTION ids of Q...70 ===
+[{"id":"00000000-0000-0000-0000-000000000071","is_correct":true},{"id":"00000000-0000-0000-0000-000000000072","is_correct":true},{"id":"00000000-0000-0000-0000-000000000073","is_correct":false},{"id":"00000000-0000-0000-0000-000000000074","is_correct":false}]
+(READING: all 60 stored selections are arrays; the newest are empty — seeded
+streak/activity attempts with no picks. Denominator = attempts per the specified
+pick-rate semantic, so mostly-empty history yields low shares. Honest output.)
+
+=====================================================================
+2. DEDICATED FIXTURE — snapshot, insert, deterministic attempts
+=====================================================================
+$ .\node_modules\.bin\tsx.cmd tmp-stats-fixture.ts up
+=== SNAPSHOT question absent before ===
+[{"n":0}]
+=== FIXTURE question+options ===
+[{"id":"eeeeeeee-0000-0000-0000-000000000001","type":"QCS","status":"approved","opt":"VERIFY A (correct)","is_correct":true},{"id":"eeeeeeee-0000-0000-0000-000000000001","type":"QCS","status":"approved","opt":"VERIFY B","is_correct":false},{"id":"eeeeeeee-0000-0000-0000-000000000001","type":"QCS","status":"approved","opt":"VERIFY C","is_correct":false},{"id":"eeeeeeee-0000-0000-0000-000000000001","type":"QCS","status":"approved","opt":"VERIFY D","is_correct":false}]
+
+$ node stats-sessions.js create-ui-session
+CREATE status=201 id=875c03e6-9323-493f-b12f-f07b65920cdc n=9
+FIXTURE_SQ=61c6eb7f-505f-47e3-9bf0-480b20b5bd07
+
+$ node stats-browser.js   (login → open session → find VERIFY Q → answer B)
+--- p1-percentages
+VERIFY D | 0% | VERIFY A (correct) | 0% | VERIFY C | 0% | VERIFY B | 100% |  | Incorrect |  | Basé sur 1 réponsed'apprenants. |  | Voir le commentaire
+--- p2-comment-open   (clicked Voir le commentaire)
+Masquer le commentaire |  | VERIFY explanation — option A is correct because the fixture says so.
+ERRORS: []
+(NOTE: caption rendered "1 réponsed'apprenants" — missing space. Fixed in
+QuestionCard.tsx after this capture: {" "} before d'apprenants. Re-proven in
+the e2 capture below which reads "Basé sur 3 réponses d'apprenants.")
+
+$ node stats-sessions.js answer-three   (API sessions answer A, A, B)
+SESSION 2 id=e9b24a3a-af5f-4292-8927-9d0122142685 answer status=201 isCorrect=true
+SESSION 3 id=c6cd4158-6aaf-46f5-a6bf-d0b466606721 answer status=201 isCorrect=true
+SESSION 4 id=5f3d0f83-53bd-4cab-9f38-ae5f7847e155 answer status=201 isCorrect=false
+STATS status=200
+{"questionId":"eeeeeeee-0000-0000-0000-000000000001","attempts":4,"options":[{"optionId":"eeeeeeee-0000-0000-0000-000000000002","percentage":50},{"optionId":"eeeeeeee-0000-0000-0000-000000000003","percentage":50},{"optionId":"eeeeeeee-0000-0000-0000-000000000004","percentage":0},{"optionId":"eeeeeeee-0000-0000-0000-000000000005","percentage":0}]}
+(n=4: UI answer B + API answers A,A,B → 50/50/0/0 in option order.)
+
+=====================================================================
+3. EXAM MODE + NO-EXPLANATION STATE
+=====================================================================
+$ node stats-browser2.js   (exam session ec87e6fe… answer fixture Q;
+  practice session 007b9d5a… answer ffa1 whose explanation was nulled —
+  snapshot first, see below)
+--- e1-exam-answered (first attempt captured mid-flight "Envoi...", re-captured after Répondu)
+Session QCM |  | Question 2/9 |  | 1 répondues |  | Quitter |  | QCS·HAMAME·EASY |  | VERIFY QCS — which option is marked correct? |  | VERIFY D | VERIFY A (correct) | VERIFY C | VERIFY B |  | Répondu |  | Précédent | Suivant | Marquer pour revoir | Terminer la session
+LEAK (Basé sur|commentaire|% present?): false
+HAS Répondu: true
+ERRORS: []
+(EXAM: options neutral, selected accent only, Répondu pill — no percentages,
+no toggle. The first capture fired during POST flight and proved nothing; the
+re-capture waits for Répondu before asserting. Stated so the two e1 artifacts
+are not confused.)
+
+$ .\node_modules\.bin\tsx.cmd tmp-noexpl.ts snap   (BEFORE nulling)
+=== SNAPSHOT ffa1 body+explanation BEFORE nulling ===
+[{"id":"ffffffff-0000-0000-0000-0000000000a1","type":"QCS","status":"approved","body":{"text":"Chez un sujet sain au repos, quelle est la principale déterminante de la précharge ventriculaire gauche ?"},"expl":{"text":"La précharge dépend du volume télédiastolique, lui-même déterminé par le retour veineux."}}]
+=== NULLED explanation paragraphs now ===
+[{"expl":{}}]
+--- e2-noexpl-answered
+Chez un sujet sain au repos, quelle est la principale déterminante de la précharge ventriculaire gauche ? |  | La pression artérielle diastolique | 100% | L'épaisseur pariétale du ventricule droit | 0% | La fréquence cardiaque maximale théorique | 0% | Le retour veineux systémique | 0% |  | Incorrect |  | Basé sur 3 réponses d'apprenants. |  | Précédent | Suivant | Marquer pour revoir | Terminer la session
+NOEXPL TOGGLE PRESENT (want false): false
+ERRORS: []
+(NO-EXPLANATION: feedback + labeled percentages render, toggle absent. Space fix
+confirmed live here: "3 réponses d'apprenants".)
+
+=====================================================================
+4. CLEANUP — restore, delete, baselines
+=====================================================================
+$ .\node_modules\.bin\tsx.cmd tmp-noexpl.ts restore
+=== RESTORED verbatim ===
+[{"expl":{"text":"La précharge dépend du volume télédiastolique, lui-même déterminé par le retour veineux."}}]
+
+$ .\node_modules\.bin\tsx.cmd tmp-stats-fixture.ts down
+=== CLEANUP sessions left ===
+[{"n":0}]
+=== CLEANUP question left ===
+[{"n":0}]
+=== CLEANUP attempts left ===
+[{"n":0}]
+=== BASELINE approved ===
+[{"n":8}]
+
+$ .\node_modules\.bin\tsx.cmd tmp-final-sweep.ts   (fresh check, this task)
+=== ALL norole sessions left ===
+[]
+=== eeeeeeee residue anywhere ===
+[{"q":0,"o":0}]
+=== ffa1 explanation final ===
+[{"expl":{"text":"La précharge dépend du volume télédiastolique, lui-même déterminé par le retour veineux."}}]
+$ curl.exe -s "http://localhost:3000/api/questions/counts"
+{"total":8,"byUnit":[],"byModule":[],"sittings":[]}
+Temp scripts removed: tmp-stats-audit.ts tmp-stats-target.ts tmp-stats-fixture.ts
+tmp-noexpl.ts tmp-final-sweep.ts (git clean; tmp-*.ts gitignored per repo .gitignore).
+
+=====================================================================
+ADDENDUM — arithmetic traceability + 400 probe (gathered after the log was
+written, in response to review; same DB state, fixtures already cleaned)
+=====================================================================
+$ .\node_modules\.bin\tsx.cmd tmp-stats-picks.ts
+=== APPROVED QROC id (for 400 probe) ===
+[{"id":"00000000-0000-0000-0000-000000000090","type":"QROC","status":"approved"}]
+=== PICKS 00000000-0000-0000-0000-000000000071 ===
+{"picks":3}
+=== PICKS 00000000-0000-0000-0000-000000000072 ===
+{"picks":5}
+=== PICKS 00000000-0000-0000-0000-000000000073 ===
+{"picks":4}
+=== PICKS 00000000-0000-0000-0000-000000000074 ===
+{"picks":2}
+=== EMPTY-selection attempts (denominator members picking nothing) ===
+[{"n":50}]
+(TRACE: 3/60→5%, 5/60→8%, 4/60→7%, 2/60→3% — matches the endpoint JSON exactly.
+14 picks spread over 10 non-empty attempts (QCM multi-select) + 50 empty = 60.)
+
+$ curl.exe -s -w "HTTP %{http_code}" .../api/questions/00000000-0000-0000-0000-000000000090/answer-stats (norole token)
+=== 400 PROBE: QROC answer-stats ===
+{"error":{"code":"ANSWER_STATS_UNSUPPORTED_TYPE","message":"Answer statistics are only available for QCM/QCS questions."}}
+HTTP 400
+Temp script removed: tmp-stats-picks.ts (git clean).

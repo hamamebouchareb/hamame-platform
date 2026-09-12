@@ -1,0 +1,415 @@
+===== STEP 1: PRISMA MIGRATION STATUS + RAW SQL (SELECT * FROM resources LIMIT 5)
+
+command: npx prisma migrate status
+warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+For more information, see: https://pris.ly/prisma-config
+
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "postgres", schema "public" at "aws-0-eu-west-1.pooler.supabase.com:5432"
+
+19 migrations found in prisma/migrations
+
+Database schema is up to date!
+
+command: npx tsx tmp-resources-sql.ts select-star
+sql> SELECT * FROM resources LIMIT 5
+[
+  {
+    "id": "00000000-0000-0000-0000-000000000120",
+    "faculty_id": "b37b039e-2208-4837-b5d5-28b1c338a2cf",
+    "year_id": "00000000-0000-0000-0000-000000000020",
+    "title": "Pharmacology Guidelines 2024",
+    "type": "official_drive",
+    "file_url": "/resources/pharmacology-guidelines-2024.pdf",
+    "source_label": "Ministry of Higher Education",
+    "added_by": "27f52f12-df6b-43a6-be8a-12c0d4314aec",
+    "created_at": "2026-09-01T20:43:42.414Z"
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000130",
+    "faculty_id": "b37b039e-2208-4837-b5d5-28b1c338a2cf",
+    "year_id": "00000000-0000-0000-0000-000000000020",
+    "title": "Radiology Image Library",
+    "type": "reference",
+    "file_url": "/resources/radiology-image-library.pdf",
+    "source_label": "University Hospital",
+    "added_by": "27f52f12-df6b-43a6-be8a-12c0d4314aec",
+    "created_at": "2026-09-01T20:43:42.765Z"
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000140",
+    "faculty_id": null,
+    "year_id": "00000000-0000-0000-0000-000000000020",
+    "title": "Past Exam Session 2023 — Year 1",
+    "type": "past_exam",
+    "file_url": "/resources/past-exam-2023-year1.pdf",
+    "source_label": "Faculty of Medicine archive",
+    "added_by": "27f52f12-df6b-43a6-be8a-12c0d4314aec",
+    "created_at": "2026-09-01T20:43:42.949Z"
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000150",
+    "faculty_id": "74b46ae1-4de8-48df-b188-1a45725f3395",
+    "year_id": "00000000-0000-0000-0000-000000000020",
+    "title": "Dental Anatomy Reference",
+    "type": "other",
+    "file_url": "/resources/dental-anatomy-reference.pdf",
+    "source_label": "Dentistry Department",
+    "added_by": "27f52f12-df6b-43a6-be8a-12c0d4314aec",
+    "created_at": "2026-09-01T20:43:43.316Z"
+  }
+]
+
+===== STEP 2: SEED SCRIPT + COUNT BEFORE/AFTER + SEEDED ROWS
+-- resetting to pre-seed state (previous accepted log ended at count 0):
+
+command: npx tsx tmp-resources-sql.ts reset-cleanup
+sql> DELETE FROM resources WHERE id = '00000000-0000-0000-0000-000000000120'; rows affected: 1
+sql> DELETE FROM resources WHERE id = '00000000-0000-0000-0000-000000000130'; rows affected: 1
+sql> DELETE FROM resources WHERE id = '00000000-0000-0000-0000-000000000140'; rows affected: 1
+sql> DELETE FROM resources WHERE id = '00000000-0000-0000-0000-000000000150'; rows affected: 1
+sql> SELECT count(*) FROM resources; -> [{"resource_count":0}]
+
+command: npx tsx tmp-resources-sql.ts count
+sql> SELECT count(*)::int AS resource_count FROM resources
+PrismaClientInitializationError: 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `aws-0-eu-west-1.pooler.supabase.com:5432`
+
+Please make sure your database server is running at `aws-0-eu-west-1.pooler.supabase.com:5432`.
+    at ei.handleRequestError (C:\dev\hamame1\node_modules\@prisma\client\src\runtime\RequestHandler.ts:242:13)
+    at ei.handleAndLogRequestError (C:\dev\hamame1\node_modules\@prisma\client\src\runtime\RequestHandler.ts:174:12)
+    at ei.request (C:\dev\hamame1\node_modules\@prisma\client\src\runtime\RequestHandler.ts:143:12)
+    at async a (C:\dev\hamame1\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:833:24)
+    at async main (C:\dev\hamame1\tmp-resources-sql.ts:15:18) {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+
+command: npx tsx prisma/seed.ts
+Seed complete:
+  User (content author): seed-author@hamame.dz (27f52f12-df6b-43a6-be8a-12c0d4314aec)
+  University: Université d'Alger 1 — Faculté de Médecine (9df398e8-4808-4f13-bcbc-c3ffb92d2a86)
+  University: Université Oran 1 Ahmed Ben Bella (8c214556-c166-439e-8611-bee90f7a1c3e)
+  Faculty: Medicine [live] (b37b039e-2208-4837-b5d5-28b1c338a2cf)
+  Faculty: Dentistry [planned] (74b46ae1-4de8-48df-b188-1a45725f3395)
+  Year: Year 1 (00000000-0000-0000-0000-000000000020)
+  Module: Cardiology (00000000-0000-0000-0000-000000000030)
+  Unit: Cardiac Physiology (00000000-0000-0000-0000-000000000040)
+  Lesson: Introduction to the Cardiac Cycle (00000000-0000-0000-0000-000000000050) — currentVersionId -> 00000000-0000-0000-0000-000000000060
+  LessonVersion: v1 status=approved (00000000-0000-0000-0000-000000000060)
+  Question (QCM): status=approved (00000000-0000-0000-0000-000000000070) — 4 options
+  Question (QCS): status=approved (00000000-0000-0000-0000-000000000080) — 4 options
+  Question (QROC): status=approved (00000000-0000-0000-0000-000000000090) — no options
+  Question (pending): status=pending_review (00000000-0000-0000-0000-000000000095) — should never appear in GET /api/questions
+  Plan: free priceDzd=0 billingPeriod=null (00000000-0000-0000-0000-000000000100)
+  Plan: premium priceDzd=1500 billingPeriod=monthly (00000000-0000-0000-0000-000000000110)
+  Roles: 10 role(s) seeded — guest, student_free, student_premium, instructor, academic_reviewer, moderator, support_agent, institution_admin, admin, super_admin
+  UserRole: seed-author@hamame.dz granted 3 role(s) — instructor, academic_reviewer, admin (testing convenience only, not a realistic role model)
+  UserRole: hamamebouchareb@gmail.com granted 4 role(s) — instructor, academic_reviewer, moderator, admin (testing convenience only, not a realistic role model)
+  Seeded 4 resources.
+
+command: npx tsx tmp-resources-sql.ts count
+sql> SELECT count(*)::int AS resource_count FROM resources
+[
+  {
+    "resource_count": 4
+  }
+]
+
+command: npx tsx tmp-resources-sql.ts select-star
+sql> SELECT * FROM resources LIMIT 5
+[
+  {
+    "id": "00000000-0000-0000-0000-000000000120",
+    "faculty_id": "b37b039e-2208-4837-b5d5-28b1c338a2cf",
+    "year_id": "00000000-0000-0000-0000-000000000020",
+    "title": "Pharmacology Guidelines 2024",
+    "type": "official_drive",
+    "file_url": "/resources/pharmacology-guidelines-2024.pdf",
+    "source_label": "Ministry of Higher Education",
+    "added_by": "27f52f12-df6b-43a6-be8a-12c0d4314aec",
+    "created_at": "2026-09-01T20:50:16.548Z"
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000130",
+    "faculty_id": "b37b039e-2208-4837-b5d5-28b1c338a2cf",
+    "year_id": "00000000-0000-0000-0000-000000000020",
+    "title": "Radiology Image Library",
+    "type": "reference",
+    "file_url": "/resources/radiology-image-library.pdf",
+    "source_label": "University Hospital",
+    "added_by": "27f52f12-df6b-43a6-be8a-12c0d4314aec",
+    "created_at": "2026-09-01T20:50:17.959Z"
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000140",
+    "faculty_id": null,
+    "year_id": "00000000-0000-0000-0000-000000000020",
+    "title": "Past Exam Session 2023 — Year 1",
+    "type": "past_exam",
+    "file_url": "/resources/past-exam-2023-year1.pdf",
+    "source_label": "Faculty of Medicine archive",
+    "added_by": "27f52f12-df6b-43a6-be8a-12c0d4314aec",
+    "created_at": "2026-09-01T20:50:18.871Z"
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000150",
+    "faculty_id": "74b46ae1-4de8-48df-b188-1a45725f3395",
+    "year_id": "00000000-0000-0000-0000-000000000020",
+    "title": "Dental Anatomy Reference",
+    "type": "other",
+    "file_url": "/resources/dental-anatomy-reference.pdf",
+    "source_label": "Dentistry Department",
+    "added_by": "27f52f12-df6b-43a6-be8a-12c0d4314aec",
+    "created_at": "2026-09-01T20:50:19.436Z"
+  }
+]
+
+===== STEP 3: LOGIN as norole@hamame.dz + GET /api/resources (curl -i, unfiltered)
+command: Set-Content login body file:
+{"email":"norole@hamame.dz","password":"testpass123"}
+command: curl.exe -s -i -o norole-login-resp.txt -X POST http://127.0.0.1:3000/api/auth/login -H "Content-Type: application/json" --data-binary "@norole-login-body.json"
+raw login response (unedited):
+HTTP/1.1 200 OK
+X-Powered-By: Express
+Vary: Origin
+Content-Type: application/json; charset=utf-8
+Content-Length: 479
+ETag: W/"1df-/E/s3/dvvzxwhKnZXJ41OfVzjVQ"
+Date: Tue, 01 Sep 2026 20:51:23 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"accessToken":"[REDACTED-JWT]","user":{"id":"05a6f985-9be9-4ee5-ae19-4b96f8d58676","email":"norole@hamame.dz","phone":null,"fullName":"No Role User","facultyId":null,"yearId":null,"university":null,"wilaya":null,"uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-07-16T11:15:52.083Z"}}
+
+command: curl.exe -s -i -H "Authorization: Bearer <token from login>" http://127.0.0.1:3000/api/resources
+HTTP/1.1 200 OK
+X-Powered-By: Express
+Vary: Origin
+Content-Type: application/json; charset=utf-8
+Content-Length: 1511
+ETag: W/"5e7-yZzLPe2EDKsP1n8jBtMCOSc4APU"
+Date: Wed, 02 Sep 2026 10:14:52 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"resources":[{"id":"00000000-0000-0000-0000-000000000150","facultyId":"74b46ae1-4de8-48df-b188-1a45725f3395","yearId":"00000000-0000-0000-0000-000000000020","title":"Dental Anatomy Reference","type":"other","fileUrl":"/resources/dental-anatomy-reference.pdf","sourceLabel":"Dentistry Department","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-09-01T20:50:19.436Z"},{"id":"00000000-0000-0000-0000-000000000140","facultyId":null,"yearId":"00000000-0000-0000-0000-000000000020","title":"Past Exam Session 2023 — Year 1","type":"past_exam","fileUrl":"/resources/past-exam-2023-year1.pdf","sourceLabel":"Faculty of Medicine archive","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-09-01T20:50:18.871Z"},{"id":"00000000-0000-0000-0000-000000000120","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020","title":"Pharmacology Guidelines 2024","type":"official_drive","fileUrl":"/resources/pharmacology-guidelines-2024.pdf","sourceLabel":"Ministry of Higher Education","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-09-01T20:50:16.548Z"},{"id":"00000000-0000-0000-0000-000000000130","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020","title":"Radiology Image Library","type":"reference","fileUrl":"/resources/radiology-image-library.pdf","sourceLabel":"University Hospital","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-09-01T20:50:17.959Z"}]}
+===== STEP 4: FILTER PARAMS - unfiltered vs faculty+year-filtered (both raw)
+command: curl.exe -s -i -H "Authorization: Bearer <token>" "http://127.0.0.1:3000/api/resources"
+HTTP/1.1 200 OK
+X-Powered-By: Express
+Vary: Origin
+Content-Type: application/json; charset=utf-8
+Content-Length: 1511
+ETag: W/"5e7-yZzLPe2EDKsP1n8jBtMCOSc4APU"
+Date: Wed, 02 Sep 2026 10:14:53 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"resources":[{"id":"00000000-0000-0000-0000-000000000150","facultyId":"74b46ae1-4de8-48df-b188-1a45725f3395","yearId":"00000000-0000-0000-0000-000000000020","title":"Dental Anatomy Reference","type":"other","fileUrl":"/resources/dental-anatomy-reference.pdf","sourceLabel":"Dentistry Department","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-09-01T20:50:19.436Z"},{"id":"00000000-0000-0000-0000-000000000140","facultyId":null,"yearId":"00000000-0000-0000-0000-000000000020","title":"Past Exam Session 2023 — Year 1","type":"past_exam","fileUrl":"/resources/past-exam-2023-year1.pdf","sourceLabel":"Faculty of Medicine archive","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-09-01T20:50:18.871Z"},{"id":"00000000-0000-0000-0000-000000000120","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020","title":"Pharmacology Guidelines 2024","type":"official_drive","fileUrl":"/resources/pharmacology-guidelines-2024.pdf","sourceLabel":"Ministry of Higher Education","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-09-01T20:50:16.548Z"},{"id":"00000000-0000-0000-0000-000000000130","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020","title":"Radiology Image Library","type":"reference","fileUrl":"/resources/radiology-image-library.pdf","sourceLabel":"University Hospital","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-09-01T20:50:17.959Z"}]}
+command: curl.exe -s -i -H "Authorization: Bearer <token>" "http://127.0.0.1:3000/api/resources?faculty=b37b039e-2208-4837-b5d5-28b1c338a2cf&year=00000000-0000-0000-0000-000000000020"
+HTTP/1.1 200 OK
+X-Powered-By: Express
+Vary: Origin
+Content-Type: application/json; charset=utf-8
+Content-Length: 785
+ETag: W/"311-qbkfV8tvHBehfykR/b+XA/V/InQ"
+Date: Wed, 02 Sep 2026 10:14:53 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"resources":[{"id":"00000000-0000-0000-0000-000000000120","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020","title":"Pharmacology Guidelines 2024","type":"official_drive","fileUrl":"/resources/pharmacology-guidelines-2024.pdf","sourceLabel":"Ministry of Higher Education","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-09-01T20:50:16.548Z"},{"id":"00000000-0000-0000-0000-000000000130","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020","title":"Radiology Image Library","type":"reference","fileUrl":"/resources/radiology-image-library.pdf","sourceLabel":"University Hospital","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-09-01T20:50:17.959Z"}]}
+===== STEP 5: DETAIL ENDPOINT GET /api/resources/:id (real seeded id)
+command: curl.exe -s -i -H "Authorization: Bearer <token>" http://127.0.0.1:3000/api/resources/00000000-0000-0000-0000-000000000120
+HTTP/1.1 200 OK
+X-Powered-By: Express
+Vary: Origin
+Content-Type: application/json; charset=utf-8
+Content-Length: 409
+ETag: W/"199-nWrlCV2yl3SrMzogv0d6DNo0KXo"
+Date: Wed, 02 Sep 2026 10:14:54 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"resource":{"id":"00000000-0000-0000-0000-000000000120","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020","title":"Pharmacology Guidelines 2024","type":"official_drive","fileUrl":"/resources/pharmacology-guidelines-2024.pdf","sourceLabel":"Ministry of Higher Education","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-09-01T20:50:16.548Z"}}
+===== STEP 6+7+8: LIVE FRONTEND DOM + SCREENSHOTS (puppeteer-core, real Chrome, :3001)
+command: node C:\Users\imad\AppData\Local\Temp\opencode\tmp-dom-capture.mjs  (run from C:\dev\hamame1)
+[capture] POST http://localhost:3000/api/auth/login status=200
+{"accessToken":"[REDACTED-JWT]","user":{"id":"05a6f985-9be9-4ee5-ae19-4b96f8d58676","email":"norole@hamame.dz","phone":null,"fullName":"No Role User","facultyId":null,"yearId":null,"university":null,"wilaya":null,"uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-07-16T11:15:52.083Z"}}
+[capture] GET http://localhost:3000/api/users/me status=200
+{"id":"05a6f985-9be9-4ee5-ae19-4b96f8d58676","email":"norole@hamame.dz","phone":null,"fullName":"No Role User","facultyId":null,"yearId":null,"university":null,"universityId":null,"wilaya":null,"uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-07-16T11:15:52.083Z","roles":["student_free"]}
+
+[capture] navigating to http://localhost:3001/resources
+file:///C:/Users/imad/AppData/Local/Temp/opencode/node_modules/puppeteer-core/lib/puppeteer/util/Deferred.js:57
+            this.#timeoutError = new TimeoutError(opts.message);
+                                 ^
+
+TimeoutError: Navigation timeout of 60000 ms exceeded
+    at new Deferred (file:///C:/Users/imad/AppData/Local/Temp/opencode/node_modules/puppeteer-core/lib/puppeteer/util/Deferred.js:57:34)
+    at Deferred.create (file:///C:/Users/imad/AppData/Local/Temp/opencode/node_modules/puppeteer-core/lib/puppeteer/util/Deferred.js:18:16)
+    at new LifecycleWatcher (file:///C:/Users/imad/AppData/Local/Temp/opencode/node_modules/puppeteer-core/lib/puppeteer/cdp/LifecycleWatcher.js:70:46)
+    at CdpFrame.goto (file:///C:/Users/imad/AppData/Local/Temp/opencode/node_modules/puppeteer-core/lib/puppeteer/cdp/Frame.js:152:29)
+    at CdpFrame.<anonymous> (file:///C:/Users/imad/AppData/Local/Temp/opencode/node_modules/puppeteer-core/lib/puppeteer/util/decorators.js:101:27)
+    at CdpPage.goto (file:///C:/Users/imad/AppData/Local/Temp/opencode/node_modules/puppeteer-core/lib/puppeteer/api/Page.js:582:43)
+    at capture (file:///C:/Users/imad/AppData/Local/Temp/opencode/tmp-dom-capture.mjs:45:27)
+    at file:///C:/Users/imad/AppData/Local/Temp/opencode/tmp-dom-capture.mjs:57:7
+
+Node.js v24.18.0
+
+===== screenshots on disk (docs\verification\opencode-shots):
+resources-live-detail-1788294663309.png  79900 bytes
+resources-live-detail-1788295501004.png  79900 bytes
+resources-live-list-1788294606884.png  89736 bytes
+resources-live-list-1788295468402.png  90780 bytes
+dashboard-live-drive-card-1788294710207.png  220923 bytes
+dashboard-live-drive-card-1788295525812.png  166253 bytes
+
+===== STEP 6+7+8 RETRY (prior attempt failed with raw TimeoutError above; server probed HTTP 200 in 0.58s; nav timeout raised to 180s)
+command: node C:\Users\imad\AppData\Local\Temp\opencode\tmp-dom-capture.mjs  (run from C:\dev\hamame1)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+[TypeError: fetch failed] {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1194:18)
+      at afterConnectMultiple (node:net:1784:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [
+      Error: connect ECONNREFUSED ::1:3000
+          at createConnectionError (node:net:1747:14)
+          at afterConnectMultiple (node:net:1777:16) {
+        errno: -4078,
+        code: 'ECONNREFUSED',
+        syscall: 'connect',
+        address: '::1',
+        port: 3000
+      },
+      Error: connect ECONNREFUSED 127.0.0.1:3000
+          at createConnectionError (node:net:1747:14)
+          at afterConnectMultiple (node:net:1777:16) {
+        errno: -4078,
+        code: 'ECONNREFUSED',
+        syscall: 'connect',
+        address: '127.0.0.1',
+        port: 3000
+      }
+    ]
+  }
+}
+
+Node.js v24.18.0
+
+===== screenshots on disk after retry (docs\verification\opencode-shots):
+dashboard-live-drive-card-1788294710207.png  220923 bytes
+dashboard-live-drive-card-1788295525812.png  166253 bytes
+resources-live-detail-1788294663309.png  79900 bytes
+resources-live-detail-1788295501004.png  79900 bytes
+resources-live-list-1788294606884.png  89736 bytes
+resources-live-list-1788295468402.png  90780 bytes
+
+===== STEP 6+7+8 RETRY 2 (API server found down: ECONNREFUSED above; restarted fresh via npx tsx src/server.ts; noted per handoff silent-death pattern)
+command: curl.exe -s -o NUL -w probe /api/plans --max-time 30 http://127.0.0.1:3000/api/plans
+probe /api/plans: HTTP 200 in 0.621520s
+command: node C:\Users\imad\AppData\Local\Temp\opencode\tmp-dom-capture.mjs  (run from C:\dev\hamame1)
+[capture] POST http://localhost:3000/api/auth/login status=200
+{"accessToken":"[REDACTED-JWT]","user":{"id":"05a6f985-9be9-4ee5-ae19-4b96f8d58676","email":"norole@hamame.dz","phone":null,"fullName":"No Role User","facultyId":null,"yearId":null,"university":null,"wilaya":null,"uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-07-16T11:15:52.083Z"}}
+[capture] GET http://localhost:3000/api/users/me status=200
+{"id":"05a6f985-9be9-4ee5-ae19-4b96f8d58676","email":"norole@hamame.dz","phone":null,"fullName":"No Role User","facultyId":null,"yearId":null,"university":null,"universityId":null,"wilaya":null,"uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-07-16T11:15:52.083Z","roles":["student_free"]}
+
+[capture] navigating to http://localhost:3001/resources
+file:///C:/Users/imad/AppData/Local/Temp/opencode/node_modules/puppeteer-core/lib/puppeteer/cdp/Frame.js:187
+                        ? new Error(`${response.errorText} at ${url}`)
+                          ^
+
+Error: net::ERR_CONNECTION_REFUSED at http://localhost:3001/resources
+    at navigate (file:///C:/Users/imad/AppData/Local/Temp/opencode/node_modules/puppeteer-core/lib/puppeteer/cdp/Frame.js:187:27)
+    at async Deferred.race (file:///C:/Users/imad/AppData/Local/Temp/opencode/node_modules/puppeteer-core/lib/puppeteer/util/Deferred.js:33:20)
+    at async CdpFrame.goto (file:///C:/Users/imad/AppData/Local/Temp/opencode/node_modules/puppeteer-core/lib/puppeteer/cdp/Frame.js:153:25)
+    at async CdpPage.goto (file:///C:/Users/imad/AppData/Local/Temp/opencode/node_modules/puppeteer-core/lib/puppeteer/api/Page.js:582:20)
+    at async capture (file:///C:/Users/imad/AppData/Local/Temp/opencode/tmp-dom-capture.mjs:45:16)
+    at async file:///C:/Users/imad/AppData/Local/Temp/opencode/tmp-dom-capture.mjs:57:1
+
+Node.js v24.18.0
+
+===== screenshots on disk after retry 2 (docs\verification\opencode-shots):
+dashboard-live-drive-card-1788294710207.png  220923 bytes
+dashboard-live-drive-card-1788295525812.png  166253 bytes
+resources-live-detail-1788294663309.png  79900 bytes
+resources-live-detail-1788295501004.png  79900 bytes
+resources-live-list-1788294606884.png  89736 bytes
+resources-live-list-1788295468402.png  90780 bytes
+
+===== STEP 6+7+8 RETRY 3 (frontend :3001 found down: net::ERR_CONNECTION_REFUSED above; restarted fresh via npm run dev; warmup probe below)
+command: curl.exe -s -o NUL -w probe --max-time 120 http://localhost:3001/resources
+probe /resources: HTTP 200 in 78.950315s
+command: node C:\Users\imad\AppData\Local\Temp\opencode\tmp-dom-capture.mjs  (run from C:\dev\hamame1)
+[capture] POST http://localhost:3000/api/auth/login status=200
+{"accessToken":"[REDACTED-JWT]","user":{"id":"05a6f985-9be9-4ee5-ae19-4b96f8d58676","email":"norole@hamame.dz","phone":null,"fullName":"No Role User","facultyId":null,"yearId":null,"university":null,"wilaya":null,"uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-07-16T11:15:52.083Z"}}
+[capture] GET http://localhost:3000/api/users/me status=200
+{"id":"05a6f985-9be9-4ee5-ae19-4b96f8d58676","email":"norole@hamame.dz","phone":null,"fullName":"No Role User","facultyId":null,"yearId":null,"university":null,"universityId":null,"wilaya":null,"uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-07-16T11:15:52.083Z","roles":["student_free"]}
+
+[capture] navigating to http://localhost:3001/resources
+[capture] HTTP status=200 url=http://localhost:3001/resources
+----- live rendered DOM of <main> on http://localhost:3001/resources:
+<main class="mx-auto w-full max-w-6xl flex-1 px-card-padding py-section-gap"><div class="flex flex-col gap-section-gap"><div class="rounded-card border border-border bg-surface-1 p-card-padding shadow-card"><h1 class="font-display text-h2 font-semibold text-text-primary">Hamame Drive</h1><p class="mt-1 text-body text-text-secondary">Ressources officielles et références par faculté et année.</p><div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"><label class="flex flex-col gap-1 text-meta font-medium text-text-secondary">Faculté<select class="rounded-control border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"><option value="">Toutes les facultés</option><option value="b37b039e-2208-4837-b5d5-28b1c338a2cf">Medicine</option></select></label><label class="flex flex-col gap-1 text-meta font-medium text-text-secondary">Année<select class="rounded-control border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"><option value="">Toutes les années</option><option value="00000000-0000-0000-0000-000000000020">Year 1</option></select></label><label class="flex flex-col gap-1 text-meta font-medium text-text-secondary">Type<select class="rounded-control border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"><option value="">Tous types</option><option value="official_drive">Drive officiel</option><option value="reference">Référence</option><option value="past_exam">Ancien examen</option><option value="other">Autre</option></select></label><button type="button" class="self-end rounded-control border border-border bg-surface-2 px-3 py-2 text-meta font-medium text-text-primary transition hover:bg-surface-2">Réinitialiser les filtres</button></div></div><ul class="grid grid-cols-1 gap-card-gap sm:grid-cols-2 lg:grid-cols-3"><li><a class="block min-h-touch-target rounded-card border border-border bg-surface-1 p-card-padding shadow-card transition hover:border-border-strong hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2" href="/resources/00000000-0000-0000-0000-000000000150" style="border-top: 3px solid var(--color-accent-library);"><span class="flex items-center justify-between gap-3"><span class="text-body font-medium text-text-primary">Dental Anatomy Reference</span></span><span class="mt-1 block text-meta text-text-secondary">Dentistry Department · Autre</span></a></li><li><a class="block min-h-touch-target rounded-card border border-border bg-surface-1 p-card-padding shadow-card transition hover:border-border-strong hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2" href="/resources/00000000-0000-0000-0000-000000000140" style="border-top: 3px solid var(--color-accent-library);"><span class="flex items-center justify-between gap-3"><span class="text-body font-medium text-text-primary">Past Exam Session 2023 — Year 1</span></span><span class="mt-1 block text-meta text-text-secondary">Faculty of Medicine archive · Ancien examen</span></a></li><li><a class="block min-h-touch-target rounded-card border border-border bg-surface-1 p-card-padding shadow-card transition hover:border-border-strong hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2" href="/resources/00000000-0000-0000-0000-000000000120" style="border-top: 3px solid var(--color-accent-primary);"><span class="flex items-center justify-between gap-3"><span class="text-body font-medium text-text-primary">Pharmacology Guidelines 2024</span><span class="inline-flex shrink-0 items-center gap-1 rounded-control border px-3 py-1.5 text-caption font-semibold text-accent-primary" style="border-color: var(--color-accent-primary)40; background-color: var(--color-accent-primary)22;">Officiel<span aria-hidden="true" class="transition-transform group-hover:translate-x-0.5">→</span></span></span><span class="mt-1 block text-meta text-text-secondary">Ministry of Higher Education · Drive officiel</span></a></li><li><a class="block min-h-touch-target rounded-card border border-border bg-surface-1 p-card-padding shadow-card transition hover:border-border-strong hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2" href="/resources/00000000-0000-0000-0000-000000000130" style="border-top: 3px solid var(--color-accent-library);"><span class="flex items-center justify-between gap-3"><span class="text-body font-medium text-text-primary">Radiology Image Library</span></span><span class="mt-1 block text-meta text-text-secondary">University Hospital · Référence</span></a></li></ul></div></main>
+[capture] full-page screenshot saved: docs/verification/opencode-shots/resources-live-list-1788358347406.png
+
+[capture] navigating to http://localhost:3001/resources/00000000-0000-0000-0000-000000000120
+[capture] HTTP status=200 url=http://localhost:3001/resources/00000000-0000-0000-0000-000000000120
+----- live rendered DOM of <main> on http://localhost:3001/resources/00000000-0000-0000-0000-000000000120:
+<main class="mx-auto w-full max-w-3xl flex-1 px-card-padding py-section-gap"><a class="inline-flex min-h-touch-target items-center gap-1 text-meta font-medium text-text-secondary transition hover:text-accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" href="/resources"><span aria-hidden="true">←</span> Retour aux ressources</a><header class="mt-2"><p class="text-meta font-medium uppercase tracking-wide text-accent-library">Ressource · Drive officiel</p><h1 class="mt-1 font-display text-h1 font-bold leading-tight text-text-primary">Pharmacology Guidelines 2024</h1></header><article class="mt-section-gap rounded-card-lg border border-border bg-surface-1 p-card-padding shadow-card" data-resource-detail="true" data-file-url="/resources/pharmacology-guidelines-2024.pdf"><dl class="grid grid-cols-1 gap-4 sm:grid-cols-2"><div><dt class="text-meta font-medium uppercase tracking-wide text-text-secondary">Type</dt><dd class="mt-1 text-body text-text-primary">Drive officiel</dd></div><div><dt class="text-meta font-medium uppercase tracking-wide text-text-secondary">Source / attribution</dt><dd class="mt-1 text-body text-text-primary">Ministry of Higher Education</dd></div></dl><div class="mt-section-gap border-t border-border pt-section-gap"><a href="/resources/pharmacology-guidelines-2024.pdf" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-touch-target items-center justify-center gap-2 rounded-control bg-accent-primary px-5 text-body font-medium text-background shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring">Télécharger la ressource</a></div></article></main>
+[capture] full-page screenshot saved: docs/verification/opencode-shots/resources-live-detail-1788358388757.png
+
+[capture] navigating to http://localhost:3001/dashboard
+[capture] HTTP url=http://localhost:3001/dashboard
+----- dashboard: Ressources card live DOM:
+<article class="rounded-card border border-border bg-surface-1 p-card-padding shadow-card"><p class="text-meta font-medium uppercase tracking-wide text-text-secondary">Ressources</p><a class="inline-flex min-h-touch-target items-center text-body font-medium text-accent-suivi transition hover:text-accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" href="/resources">Voir toutes les ressources</a></article>
+----- dashboard: primary nav link texts (live):
+["Tableau de bord","QCM","Bibliothèque","Suivi","Révision"]
+----- dashboard: secondary/avatar menu links after opening (live):
+[
+  {
+    "text": "Notes",
+    "href": "/notes"
+  },
+  {
+    "text": "Abonnement",
+    "href": "/subscription"
+  },
+  {
+    "text": "Ressources",
+    "href": "/resources"
+  },
+  {
+    "text": "Mon profil",
+    "href": "/profile"
+  },
+  {
+    "text": "Paramètres",
+    "href": "/settings"
+  },
+  {
+    "text": "Voir toutes les ressources",
+    "href": "/resources"
+  }
+]
+[capture] full-page screenshot saved: docs/verification/opencode-shots/dashboard-live-drive-card-1788358432340.png
+
+[capture] done
+
+===== screenshots on disk after retry 3 (docs\verification\opencode-shots):
+dashboard-live-drive-card-1788294710207.png  220923 bytes
+dashboard-live-drive-card-1788295525812.png  166253 bytes
+dashboard-live-drive-card-1788358432340.png  166283 bytes
+resources-live-detail-1788294663309.png  79900 bytes
+resources-live-detail-1788295501004.png  79900 bytes
+resources-live-detail-1788358388757.png  79900 bytes
+resources-live-list-1788294606884.png  89736 bytes
+resources-live-list-1788295468402.png  90780 bytes
+resources-live-list-1788358347406.png  89736 bytes

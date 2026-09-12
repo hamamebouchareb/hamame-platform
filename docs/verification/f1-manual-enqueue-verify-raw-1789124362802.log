@@ -1,0 +1,6 @@
+# F1 manual-enqueue verification 2026-09-11T10:59:22.802Z
+# API=http://127.0.0.1:3000/api
+ORPHAN_CLEANED f1verify1789124296973@example.com
+REGISTER 201 {"accessToken":"[REDACTED-JWT]","user":{"id":"cc95b61b-b64c-4847-8362-be225acad101","email":"f1verify1789124362802@example.com","phone":null,"fullName":"F1 Verify","facultyId":null,"yearId":null,"university":null,"wilaya":null,"uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-09-11T10:59:25.617Z"},"verificationToken":"0a4be47ba83a751ea9e64a422855a5be4b20681d9e530654de96ee763767f9b5"}
+LOGIN 200 {"accessToken":"[REDACTED-JWT]","user":{"id":"cc95b61b-b64c-4847-8362-be225acad101","email":"f1verify1789124362802@example.com","phone":null,"fullName":"F1 Verify","facultyId":null,"yearId":null,"university":null,"wilaya":null,"uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-09-11T10:59:25.617Z"}}
+LESSONS 404 {"error":{"code":"NOT_FOUND","message":"Route not found."}}

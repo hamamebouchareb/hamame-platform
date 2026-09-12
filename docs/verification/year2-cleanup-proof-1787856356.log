@@ -1,0 +1,49 @@
+---
+pid: 10064
+cwd: "C:\\dev\\hamame1"
+command: "npx tsx src/scripts/prove-year2-cleanup.ts 2>&1"
+title: "Prove Year 2 cleanup with exact SQL"
+status: succeeded
+started_at: 2026-08-27T18:45:03.336Z
+running_for_ms: 52736    
+---
+===== SELECT count(*) FROM years WHERE label ILIKE '%VERIFY%';
+[
+  {
+    "count": 0
+  }
+]
+===== SELECT count(*) FROM questions WHERE unit_id IN (
+  SELECT u.id FROM units u
+  JOIN modules m ON m.id = u.module_id
+  JOIN years y ON y.id = m.year_id
+  WHERE y.label ILIKE '%VERIFY%'
+);
+[
+  {
+    "count": 0
+  }
+]
+===== fixture-ID integrity (today's by_year harness)
+[
+  {
+    "year_fixture_rows": 0,
+    "module_fixture_rows": 0,
+    "unit_fixture_rows": 0,
+    "question_fixture_rows": 0,
+    "session_questions_fixture_refs": 0,
+    "study_sessions_verify_prefix_case_sensitive": 0
+  }
+]
+===== NOTE — study_sessions WHERE name ILIKE 'VERIFY-%' (case-insensitive; includes older verify-* harness debris, NOT today's fixture)
+[
+  {
+    "count": 12
+  }
+]
+
+---
+exit_code: 0
+elapsed_ms: 52731
+ended_at: 2026-08-27T18:45:56.067Z
+---

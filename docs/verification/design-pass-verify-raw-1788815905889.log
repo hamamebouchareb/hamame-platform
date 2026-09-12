@@ -1,0 +1,137 @@
+Hamame design pass — RAW verification log (observation + checkpoint only)
+Epoch: 1788815905889. No component code changed this session (all edits reverted;
+`git status -- web/src/styles/tokens.css` clean at close). Zero Playwright
+pageerrors on every screen visited (dp-d1-errors, dp-d2-errors, dp-d3-errors all []).
+
+================================================================
+PART 1 — MedSparkDZ live computed styles (HEADED Chrome, real DevTools output)
+Evidence dir (outside repo): %TEMP%\opencode\design-pass\
+================================================================
+--- dp-dash-core.json (dashboard, logged in) ---
+body: bg rgb(9,9,11) (#09090B, no bg image ON BODY — page glow comes from
+  section gradients, not body), color rgb(207,214,222), font Poppins +
+  "Poppins Fallback", 16px/400.
+header: transparent over linear-gradient(#09090Bf2), bottom border
+  rgba(44,44,48,.5), height 64.6667px.
+active tab (QCM): gradient to-right #F59E0B→#F97316, white 14px/600,
+  radius 12px, padding 10px 0, shadow amber .3 (10px15px-3px + 4px6px-4px),
+  transition ALL 0.3s cubic-bezier(0.4,0,0.2,1).
+CTA link (QCM →): gradient to-right #F59E0B→#EA580C, white 16px/600,
+  radius 12px, padding 8px 16px, amber shadow .3,
+  transition COLORS-ONLY 0.15s same ease.
+container: `container mx-auto px-2 sm:px-6 lg:px-8 py-2 sm:py-8`
+  (Tailwind container breakpoints; gutters 8/24/32px).
+h2: Poppins 20px/700 white.
+--- dp-login-styles.json (logged OUT) ---
+submit btn: gradient to-right #2563EB→#4F46E5→#9333EA (3-stop blue→violet),
+  white 14px/500, radius 12px, padding 8px 16px, shadow BLACK .1 (no color
+  glow), transition ALL 0.3s ease.
+--- dp2-qcm-core.json ---
+h1 "Banque de QCM": Poppins 60px/900, color #CFD6DE FLAT (background-image
+  none — PDF's "gradient hero title" claim does NOT match live).
+tiles (Nouvelle Session / ECOS): bg rgba(30,41,59,.6) (slate-800@60%),
+  radius 12px, padding 12px, per-tile border-color emerald .3 / cyan .3,
+  border-width 0.6667px, box-shadow NONE.
+hyperBtn: bg #09090B, text #FB923C, border rgba(249,115,22,.3),
+  radius 18px, padding 0 12px, transition-colors 0.15s ease.
+--- dp2-wizard.json (step-3 dialog) ---
+dialog: bg #0F172A (slate-900), radius 24px, shadow black .25 25px50px-12px,
+  border #334155, padding 24px, OPEN ANIMATION `0.15s both enter`
+  (tw-animate-css keyframes verified in stylesheet dump).
+type pill selected: SOLID #3B82F6 (no gradient), white, radius 12px,
+  blue glow shadow .3, transition ALL 0.2s ease.
+Démarrer: SOLID #10B981 (opacity .5 while disabled), white, radius 18px,
+  padding 0 24px, transition-colors 0.15s ease.
+Période De/À = input[type=number] (year entry, confirmed in DOM).
+--- dp3-skeleton-css.json (stylesheet rules, verbatim) ---
+@keyframes sparkPulse { 0%,100%{opacity:1;} 50%{opacity:0.85;} }
+.animate-pulse { animation: 2s cubic-bezier(0.4,0,0.6,1) 0s infinite pulse; }
+.animate-in { animation-name: enter; animation-duration: 0.15s; ... }
+(plus bounce/ping/spin utilities present but not observed in use on walked screens)
+--- dp-dash rest screenshot (dp-dash-rest.png) ---
+profile banner: orange→pink→purple horizontal gradient (~3 stops,
+  screenshot-estimated hue path amber→magenta→violet; exact stops NOT
+  extracted — gradient strings for banner/KPI/premium pending post-approval
+  measurement). KPI cards: dark navy, big white numerals, thin colored
+  underlines (orange/purple/green). Premium card: dark + amber pill CTA.
+  Spark Drive icon: purple gradient rounded square. Ouvrir: purple→pink pill.
+  QCM panel: brown/orange translucent + glow.
+
+================================================================
+PART 2 — timing/easing inventory (all cubic-bezier(0.4,0,0.2,1), Tailwind default)
+================================================================
+tabs: 0.3s all | CTA/buttons/dropdown-btn/hyperBtn: 0.15s colors |
+pills: 0.2s all | dialog open: 0.15s enter | skeleton: sparkPulse /
+2s pulse. No custom easings found anywhere. PDF §5 "100–300ms" MATCHES
+(measured 150/200/300ms all inside range).
+
+================================================================
+PART 3 — PDF §2 per-value match/drift (only values with live evidence)
+================================================================
+MATCH: dark shell (~#09090B vs "near-black" ✓); Poppins family (PDF guessed
+  Nunito/Poppins ✓ Poppins confirmed); 5-tab segmented nav with filled active
+  pill ✓; glow-not-shadow elevation ✓; pill CTAs ✓; Lucide icons
+  (lucide-brain/bell/book-open class names in DOM ✓); 15 faculties ✓;
+  locked Studio tabs (now 4 incl. Enregistrés ✓ per §26 D10); 100–300ms ✓.
+DRIFT: ALL PDF hexes unreadable (￾ placeholders — no color in PDF is
+  confirmable); hero title is FLAT #CFD6DE 60px/900, not gradient (§2.2 ✗);
+  radii measured 12/18/24px (PDF "8–24 cards / 999 pills" ✓-ish, pills on
+  small buttons are 12–18px not 9999 ✗-partially); container is Tailwind
+  `container` (PDF "~52px gutters" ✗ — real: 8/24/32px responsive);
+  font sizes 14/16/20/60px (PDF ranges overlap, exact wins);
+  Démarrer is SOLID emerald not gradient (§3.1 ✗); selected pills SOLID blue
+  (§3.1 ✗-partially); header 64.67px (no PDF value to compare).
+
+================================================================
+PART 4 — Blue → Violet proposal + WCAG AA proof (node dp-contrast.js, real math)
+================================================================
+MedSpark energy reference (HSL measured): stops sit S 75–95%, L 48–59%,
+3-stop gradients at `to right`, glow shadows at 30% opacity.
+PROPOSED (own hexes, same energy band):
+  from #2563EB (h221 s83 l53) → via #5B54E8 (h243 s76 l62) → to #7C3AED
+  (h262 s83 l58). Angle/stops/opacity mirror live (to-right, 3 stops, .3 glow).
+White-text ratios: 5.17 / 5.41 / 5.70 — ALL PASS AA (>=4.5).
+REJECTED: #8B5CF6 (4.23, FAILS — excluded from ramp).
+For the record MedSpark's own orange CTAs (2.15/2.80/3.56) and emerald
+Démarrer (2.54) do NOT pass AA with white — proposal is strictly compliant
+where the reference is not. Surfaces/text: shell #0A0E17 kept (white 19.30,
+matches structural dark-shell approach); text-secondary #9AA6C3 = 7.92 ✓.
+
+================================================================
+PART 5 — CHECKPOINT: dashboard-only preview (temporary, REVERTED)
+================================================================
+BEFORE: design-pass/hamame/ham-dash-before.png (+ full).
+PREVIEW: design-pass/hamame/ham-dash-preview.png (+ full) —
+  primary #2563EB / secondary #7C3AED / qcm #2563EB / library #5B54E8 /
+  suivi #4F46E5 / revision #7C3AED / focus-ring #A5B4FC, surfaces/text
+  untouched. Probe: CTA computed rgb(37,99,235), root vars confirmed live.
+REVERT: `git checkout -- web/src/styles/tokens.css`, verified volt values
+  back + no TEMP markers; web/ diff vs session start: zero files added by
+  this session (pre-existing web/ modifications untouched).
+KNOWN ISSUES VISIBLE IN PREVIEW (must-fix at rollout, NOT fixed now):
+  1. CTA keeps DARK text (#0A0E17) on blue → ≈3.7:1, FAILS AA. CTA text must
+     flip to white with the new palette (volt lime supported dark text; blue
+     does not). White on #2563EB = 5.17 ✓.
+  2. Accent-colored metric values on dark surfaces are borderline
+     (blue on surface-1 ≈3.3 — passes large-text 3:1 only). Prefer white
+     numerals (as MedSpark does) or lighter tints at rollout.
+  3. Hamame CTA is SOLID + pill(9999px); MedSpark CTAs are GRADIENTS with
+     12–18px radii — gradient-CTA + radius decision still open, flagged for
+     the approval reply.
+
+================================================================
+PART 6 — no-functional-change proof + deliberately skipped
+================================================================
+DOM/data/routes/ARIA/copy: untouched (only token VALUES swapped, then
+reverted). Pageerrors: [] on all four headed runs (login, dash, qcm+wizard,
+player-attempt). web/ tree: no new/modified files by this session.
+SKIPPED (deferred to post-approval, stated openly): player option/QST-rail
+computed styles (dp-03b run interrupted; dp3-player-rest.png shows skeleton
+loading >6s headed — retry with longer wait); header-dropdown panel
+measurement (2 selector misses; dropdowns DO open per §26 screenshots —
+need index-based click + screenshot verification); profile-banner gradient
+stop extraction; hover triplets beyond login-CTA (dp-login-hover.png saved);
+Hamame before/after per-screen pairs beyond dashboard.
+Infra notes: API tsx-child silent death recurred (parent npm alive, :3000
+unbound) — killed + relaunched, login 200 verified. Web slow-compile on
+cold start (11.8s Ready). Test-account note: heavy@hamame.dz login OK.

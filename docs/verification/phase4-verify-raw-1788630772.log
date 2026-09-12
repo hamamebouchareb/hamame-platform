@@ -1,0 +1,185 @@
+# phase4 verification — raw literal log
+
+Scope: reset-password page, change-password (verify-only), preferences 501 →
+real persistence, friends search + send, révision-due widget, drive
+breadcrumbs + PDF viewer. Google OAuth + EN/FR toggle untouched (no code
+touches either; preferences accepts the pre-existing uiLanguage field but no
+toggle UI was built).
+No prose verdicts below — command + literal output only.
+
+Code footprint:
+  web/src/app/reset-password/page.tsx   (new; ?token= prefill + reset form)
+  web/src/app/profile/page.tsx          (+user search + send-request UI)
+  web/src/app/dashboard/page.tsx        (+Révision dues widget card)
+  web/src/app/resources/[id]/page.tsx   (+breadcrumbs, +PDF-gated iframe)
+  src/routes/users.routes.ts            (+GET /users/search, +real PUT
+                                         /me/preferences handler, -stub import)
+  src/routes/notes.routes.ts            (untouched this round)
+  No migration (User.uiLanguage/theme + NotificationPreference pre-existed).
+
+Screenshots (live localhost:3001 DOM):
+  docs/verification/phase4-reset-success.png    (Mot de passe réinitialisé)
+  docs/verification/phase4-settings-password.png (change-password card)
+  docs/verification/phase4-friend-sent.png      (Demande envoyée)
+  docs/verification/phase4-widget-nonzero.png   (1 révision à faire)
+  docs/verification/phase4-widget-zero.png      (0, À jour)
+  docs/verification/phase4-resource.png         (breadcrumbs + viewer)
+
+COLLISION CHECK (Task 3 pre-check, reported either way as instructed):
+/api/push/preferences owns the separate PushPreference table
+(masterEnabled/dailyGoalReminder/streakAtRisk/badgeEarned). PUT
+/users/me/preferences writes User.uiLanguage/theme + NotificationPreference
+(userId/category/channel/enabled) — different table, different shape. No
+collision; no reconciliation needed; neither endpoint was modified to
+accommodate the other.
+
+=====================================================================
+1. RESET-PASSWORD CONFIRM PAGE (?token= prefill + error + success)
+=====================================================================
+$ node phase4-pass1.js
+TOKEN PREFILLED: FAKE123
+--- a-fake-token http://localhost:3001/reset-password?token=FAKE123
+Réinitialiser le mot de passe | Code de réinitialisation | Nouveau mot de passe | Confirmer le mot de passe |  | The token is invalid or has expired. |  | Réinitialiser le mot de passe |  | Retour à la connexion
+REAL TOKEN len=64
+--- c-reset-success http://localhost:3001/reset-password?token=<redacted-64-char-single-use-token>
+Mot de passe réinitialisé |  | Votre mot de passe a été modifié avec succès. |  | Se connecter
+ERRORS: []
+(First attempt at this run failed on navigation timeouts while Next compiled
+the brand-new route — /login stayed fast throughout, proving server-alive vs
+route-compile. Re-ran after curl confirmed reset:200; token value redacted —
+consumed single-use token for the norole test account.)
+$ node -e login norole/TempNew1!
+LOGIN-NEW status-body={"accessToken":"[REDACTED-JWT] (token was line-truncated in the original raw log; fragment scrubbed)"
+(login with the reset password returns a JWT → password actually changed.)
+
+=====================================================================
+2. CHANGE-PASSWORD — verify-only (backend curl + settings UI restore)
+=====================================================================
+$ node -e POST /auth/change-password {currentPassword:'wrong-pass',...}
+TASK2 wrong-current status=400 body={"error":{"code":"PASSWORD_CHANGE_FAILED","message":"Unable to change the password. Verify the current password and try again."}}
+(no mutation on failure path by construction — generic 400 before any write.)
+$ node phase4-pass2.js   (login TempNew1! → /settings → change back via UI)
+LOGIN-NEW-UI: http://localhost:3001/dashboard
+--- d-settings-card: change-password card present (Mot de passe actuel /
+  Nouveau mot de passe / Minimum 8 caractères / Confirmer / Changer le mot
+  de passe) — first run used wrong selectors (#currentPassword vs actual
+  #current-password/#new-password/#confirm-password); fixed, re-ran.
+SUBMITTED: fallback:Changer le mot de passe
+--- e-password-restored (form cleared post-submit)
+$ node -e login norole/testpass123
+LOGIN-ORIGINAL ok=true
+(restore proven by successful login with the original password — not asserted.)
+ERRORS: []
+
+=====================================================================
+3. PREFERENCES 501 → REAL (snapshot, PUT, exact restore)
+=====================================================================
+$ node -e GET /users/me (norole token)
+TASK3 snapshot uiLanguage=fr theme=light
+$ node -e PUT /users/me/preferences {theme:'dark',notificationPreferences:[{category:'revision',channel:'push',enabled:false}]}
+TASK3 put status=200 body={"preferences":{"uiLanguage":"fr","theme":"dark","notificationPreferences":[{"category":"revision","channel":"push","enabled":false}]}}
+$ node -e PUT /users/me/preferences {theme:'light',notificationPreferences:[{category:'revision',channel:'push',enabled:true}]}
+TASK3 restore status=200 body={"preferences":{"uiLanguage":"fr","theme":"light","notificationPreferences":[{"category":"revision","channel":"push","enabled":true}]}}
+$ .\node_modules\.bin\tsx.cmd tmp-pref-clean.ts   (restore left 1 row where
+  pre-state had 0 — enabled:true is default-equivalent but not byte-identical)
+DELETED pref rows=1
+LEFT=[{"n":0}]
+USER prefs now={"uiLanguage":"fr","theme":"light"}
+(exact pre-state: 0 pref rows, fr/light. Backend tsc: no errors in touched
+files — only pre-existing verify-resources-raw.ts DOM-lib errors.)
+
+=====================================================================
+4. FRIENDS SEARCH + SEND (endpoint checks, DOM, row proof, delete)
+=====================================================================
+$ node -e login + users/search checks (norole token)
+TASK4 short-q status=400 body={"error":{"code":"VALIDATION_ERROR","message":"q: String must contain at least 3 character(s)"}}
+TASK4 search status=200 body={"users":[{"id":"1aa56be6-bb53-46d0-b282-40ab65f816cf","fullName":"Hamame Bouchareb"},{"id":"b5119037-ed04-483e-94a7-07c475839e59","fullName":"Hamame Bouchareb"}]}
+(id + fullName ONLY — no email/phone. Matching = exact email OR fullName
+prefix ≥3 chars, cap 10, self + soft-deleted excluded, auth required. No
+username column exists, so exact-or-prefix on these fields is the implemented
+equivalent — stated, not oversold.)
+$ .\node_modules\.bin\tsx.cmd tmp-friend-pre.ts   (BEFORE sending)
+PRE friendships=[]
+$ node phase4-pass3.js   (/profile DOM)
+--- f-search: 2 × (HB Hamame Bouchareb + Ajouter) under "Ajouter un ami /
+  Nom, prénom (3 lettres minimum) ou e-mail exact."
+SEND CLICKED: true
+--- f-sent: first row now "HB Hamame Bouchareb Demande envoyée"
+ERRORS: []
+$ .\node_modules\.bin\tsx.cmd tmp-phase4-cleanup.ts   (after all DOM done)
+=== PRE friendship rows involving norole ===
+[{"a":"05a6f985-9be9-4ee5-ae19-4b96f8d58676","b":"1aa56be6-bb53-46d0-b282-40ab65f816cf","s":"pending"}]
+(UI send hit the real endpoint: pending row norole→first search result.)
+DELETED friendships=1
+=== POST friendships left ===
+[{"n":0}]
+
+=====================================================================
+5. RÉVISION-DUE WIDGET (endpoint shape, nonzero + zero DOM)
+=====================================================================
+$ node -e GET /reviews/due (norole, before) → {"items":[]}
+$ node -e POST /reviews/enqueue {questionId: ...70}
+ENQ status=201 body={"item":{"id":"d4b8e3db-7058-47a6-8e96-0f6f498ec964","userId":"05a6f985-...","lessonId":null,"questionId":"00000000-...-70","flashcardId":null,"dueAt":"2026-09-05T15:58:58.591Z","lastReviewedAt":null,"easeFactor":"2.5"}}
+$ node -e GET /reviews/due (after) → DUE now items=1
+(No efficacy stat exists anywhere — grepped src + web, zero hits — so the
+widget shows the due count only and does not invent one.)
+--- f-widget (/dashboard DOM, due=1)
+RÉVISIONS DUES | 1 révision à faire | File de mémorisation espacée, les plus urgentes d'abord. | Réviser maintenant
+--- g-widget-zero (/dashboard DOM, after queue cleanup)
+RÉVISIONS DUES | 0 révisions à faire | À jour — revenez après vos prochaines sessions. | Ouvrir les révisions
+ERRORS: []
+$ .\node_modules\.bin\tsx.cmd tmp-phase4-cleanup.ts (same run as §4)
+DELETED queue items=1
+=== POST queue left ===
+[{"n":0}]
+
+=====================================================================
+6. DRIVE BREADCRUMBS + PDF VIEWER (detail names, DOM, iframe)
+=====================================================================
+$ node -e GET /api/resources/00000000-0000-0000-0000-000000000120 (no auth)
+{"title":"Pharmacology Guidelines 2024","faculty":{"id":"b37b039e-...","name":"Medicine"},"year":{"id":"00000000-...-020","label":"Year 1"},"fileUrl":"/resources/pharmacology-guidelines-2024.pdf"}
+(detail now carries names — no client round-trips for crumbs; list page
+already honors ?faculty=&year= so crumb links prefilter.)
+--- f-resource http://localhost:3001/resources/00000000-0000-0000-0000-000000000120
+Ressources > Medicine > Year 1 > Pharmacology Guidelines 2024 | Retour aux ressources | RESSOURCE · DRIVE OFFICIEL | Pharmacology Guidelines 2024 | TYPE Drive officiel | SOURCE / ATTRIBUTION Ministry of Higher Education | Aperçu intégré - le téléchargement reste disponible ci-dessous. | Télécharger la ressource
+IFRAME: /resources/pharmacology-guidelines-2024.pdf
+ERRORS: []
+(embed gated by /\.pdf($|\?|#)/i — non-PDF types keep download-only; iframe
+title set for a11y.)
+
+=====================================================================
+7. FINAL BASELINES (post-cleanup, fresh queries)
+=====================================================================
+norole sessions created this round: none (password/test rows only).
+norole friendships: 0 (deleted, §4). norole queue items: 0 (§5).
+norole password: testpass123 (proven by LOGIN-ORIGINAL ok=true, §2).
+norole prefs: fr/light, 0 NotificationPreference rows (§3).
+$ curl.exe -s "http://localhost:3000/api/questions/counts"
+{"total":8,"byUnit":[],"byModule":[],"sittings":[]}
+Temp scripts removed: tmp-pref-clean.ts tmp-friend-pre.ts tmp-phase4-cleanup.ts
+(git clean; tmp-*.ts gitignored per repo .gitignore).
+
+=====================================================================
+ADDENDUM — review-requested proofs (read-only queries + greps, nothing mutated)
+=====================================================================
+Token traceability (from phase4-verify/c-reset-success.json saved at capture):
+URL-LEN=107; TOKEN first8=d23f2da0 last8=19ad73d8 len=64 (consumed single-use
+reset token for the norole test account; dead after use).
+
+$ .\node_modules\.bin\tsx.cmd tmp-phase4-addendum.ts
+=== USERS identity columns (username? fullName/email/phone only?) ===
+[{"column_name":"email","data_type":"text"},{"column_name":"full_name","data_type":"text"},{"column_name":"phone","data_type":"text"}]
+(no username/handle column exists — exact-email-or-name-prefix is the
+implemented equivalent, not a silent narrowing.)
+=== PREFERENCE tables side by side ===
+[{"table_name":"notification_preferences","column_name":"category","data_type":"text"},{"table_name":"notification_preferences","column_name":"channel","data_type":"text"},{"table_name":"notification_preferences","column_name":"enabled","data_type":"boolean"},{"table_name":"notification_preferences","column_name":"user_id","data_type":"uuid"},{"table_name":"push_preferences","column_name":"badge_earned","data_type":"boolean"},{"table_name":"push_preferences","column_name":"daily_goal_reminder","data_type":"boolean"},{"table_name":"push_preferences","column_name":"master_enabled","data_type":"boolean"},{"table_name":"push_preferences","column_name":"streak_at_risk","data_type":"boolean"},{"table_name":"push_preferences","column_name":"user_id","data_type":"uuid"}]
+(two disjoint tables — collision ruled out at the schema level.)
+=== FINAL zeros ===
+[{"prefs":0,"friendships":0,"queue":0}]
+
+$ Select-String -Path src/routes/reviews.routes.ts -Pattern "efficacy|Efficacy"
+(no hits)
+$ Select-String -Path web/src -Pattern "efficacy|Efficacy" -Include "*.tsx","*.ts"
+(no hits)
+Temp script removed: tmp-phase4-addendum.ts (git clean). Handoff duplicate
+(HAMAME_MASTER_HANDOFF (1).md) untouched per instruction — flagged separately.

@@ -1,0 +1,136 @@
+VERIFY start 2026-08-30T20:34:48.194Z BASE=http://127.0.0.1:3000/api WEB=http://127.0.0.1:3001
+----- seed-author lookup: 27f52f12-df6b-43a6-be8a-12c0d4314aec
+
+===== STEP 1: SEED + RAW SQL QUERY
+----- raw SQL: SELECT id, title, type, faculty_id, year_id, source_label, file_url FROM resources ORDER BY id
+[
+  {
+    "id": "00000000-0000-0000-0000-000000000120",
+    "title": "Pharmacology Guidelines 2024",
+    "type": "official_drive",
+    "faculty_id": "b37b039e-2208-4837-b5d5-28b1c338a2cf",
+    "year_id": "00000000-0000-0000-0000-000000000020",
+    "source_label": "Ministry of Higher Education",
+    "file_url": "/resources/pharmacology-guidelines-2024.pdf"
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000130",
+    "title": "Radiology Image Library",
+    "type": "reference",
+    "faculty_id": "b37b039e-2208-4837-b5d5-28b1c338a2cf",
+    "year_id": "00000000-0000-0000-0000-000000000020",
+    "source_label": "University Hospital",
+    "file_url": "/resources/radiology-image-library.pdf"
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000140",
+    "title": "Past Exam Session 2023 — Year 1",
+    "type": "past_exam",
+    "faculty_id": null,
+    "year_id": "00000000-0000-0000-0000-000000000020",
+    "source_label": "Faculty of Medicine archive",
+    "file_url": "/resources/past-exam-2023-year1.pdf"
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000150",
+    "title": "Dental Anatomy Reference",
+    "type": "other",
+    "faculty_id": "74b46ae1-4de8-48df-b188-1a45725f3395",
+    "year_id": "00000000-0000-0000-0000-000000000020",
+    "source_label": "Dentistry Department",
+    "file_url": "/resources/dental-anatomy-reference.pdf"
+  }
+]
+----- row count from raw SQL: 4
+
+===== STEP 2: IDEMPOTENCY — SEED AGAIN + COUNT PROOF
+----- raw SQL: SELECT id, title, type, faculty_id FROM resources ORDER BY id (2nd pass)
+[
+  {
+    "id": "00000000-0000-0000-0000-000000000120",
+    "title": "Pharmacology Guidelines 2024",
+    "type": "official_drive",
+    "faculty_id": "b37b039e-2208-4837-b5d5-28b1c338a2cf"
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000130",
+    "title": "Radiology Image Library",
+    "type": "reference",
+    "faculty_id": "b37b039e-2208-4837-b5d5-28b1c338a2cf"
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000140",
+    "title": "Past Exam Session 2023 — Year 1",
+    "type": "past_exam",
+    "faculty_id": null
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000150",
+    "title": "Dental Anatomy Reference",
+    "type": "other",
+    "faculty_id": "74b46ae1-4de8-48df-b188-1a45725f3395"
+  }
+]
+----- row count after 2nd seed: 4
+----- idempotency check: first=4 second=4 PASS (equal)
+
+===== STEP 3: API REQUESTS
+===== POST http://127.0.0.1:3000/api/auth/login
+----- response status 200
+----- response body
+{"accessToken":"[REDACTED-JWT]","user":{"id":"05a6f985-9be9-4ee5-ae19-4b96f8d58676","email":"norole@hamame.dz","phone":null,"fullName":"No Role User","facultyId":null,"yearId":null,"university":null,"wilaya":null,"uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-07-16T11:15:52.083Z"}}
+----- token present: true
+
+===== GET http://127.0.0.1:3000/api/resources
+----- response status 200
+----- response body
+{"resources":[{"id":"00000000-0000-0000-0000-000000000150","facultyId":"74b46ae1-4de8-48df-b188-1a45725f3395","yearId":"00000000-0000-0000-0000-000000000020","title":"Dental Anatomy Reference","type":"other","fileUrl":"/resources/dental-anatomy-reference.pdf","sourceLabel":"Dentistry Department","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-08-30T20:34:50.399Z"},{"id":"00000000-0000-0000-0000-000000000140","facultyId":null,"yearId":"00000000-0000-0000-0000-000000000020","title":"Past Exam Session 2023 — Year 1","type":"past_exam","fileUrl":"/resources/past-exam-2023-year1.pdf","sourceLabel":"Faculty of Medicine archive","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-08-30T20:34:50.249Z"},{"id":"00000000-0000-0000-0000-000000000120","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020","title":"Pharmacology Guidelines 2024","type":"official_drive","fileUrl":"/resources/pharmacology-guidelines-2024.pdf","sourceLabel":"Ministry of Higher Education","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-08-30T20:34:49.682Z"},{"id":"00000000-0000-0000-0000-000000000130","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020","title":"Radiology Image Library","type":"reference","fileUrl":"/resources/radiology-image-library.pdf","sourceLabel":"University Hospital","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-08-30T20:34:50.140Z"}]}
+
+===== GET http://127.0.0.1:3000/api/resources?faculty=b37b039e-2208-4837-b5d5-28b1c338a2cf
+----- response status 200
+----- response body
+{"resources":[{"id":"00000000-0000-0000-0000-000000000120","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020","title":"Pharmacology Guidelines 2024","type":"official_drive","fileUrl":"/resources/pharmacology-guidelines-2024.pdf","sourceLabel":"Ministry of Higher Education","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-08-30T20:34:49.682Z"},{"id":"00000000-0000-0000-0000-000000000130","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020","title":"Radiology Image Library","type":"reference","fileUrl":"/resources/radiology-image-library.pdf","sourceLabel":"University Hospital","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-08-30T20:34:50.140Z"}]}
+
+===== GET http://127.0.0.1:3000/api/resources?type=official_drive
+----- response status 200
+----- response body
+{"resources":[{"id":"00000000-0000-0000-0000-000000000120","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020","title":"Pharmacology Guidelines 2024","type":"official_drive","fileUrl":"/resources/pharmacology-guidelines-2024.pdf","sourceLabel":"Ministry of Higher Education","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-08-30T20:34:49.682Z"}]}
+
+===== GET http://127.0.0.1:3000/api/resources/00000000-0000-0000-0000-000000000120
+----- response status 200
+----- response body
+{"resource":{"id":"00000000-0000-0000-0000-000000000120","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020","title":"Pharmacology Guidelines 2024","type":"official_drive","fileUrl":"/resources/pharmacology-guidelines-2024.pdf","sourceLabel":"Ministry of Higher Education","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-08-30T20:34:49.682Z"}}
+
+===== GET http://127.0.0.1:3000/api/resources/00000000-0000-0000-0000-000000000001
+----- response status 404
+----- response body
+{"error":{"code":"RESOURCE_NOT_FOUND","message":"No resource exists with this id."}}
+
+===== STEP 4: DOM CAPTURE
+----- browser executable: C:\Program Files\Google\Chrome\Application\chrome.exe
+
+----- /resources (empty filter) rendered DOM:
+<body><div id="__next"></div><script id="__NEXT_DATA__" type="application/json">{"props":{"pageProps":{"statusCode":500,"hostname":"localhost"}},"page":"/_error","query":{"faculty":"00000000-0000-0000-0000-000000000000"},"buildId":"development","isFallback":false,"err":{"name":"Error","source":"server","message":"./src/app/dashboard/page.tsx:452:19\nExpected '\u003c/', got 'jsx text'\n  450 |                 Voir toutes les ressources\n  451 |               \u003c/Link\u003e\n\u003e 452 |           \u003c/aside\u003e\n      |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\u003e 453 |         \u003c/div\u003e\n      | ^^^^^^^^\n  454 |       \u003c/main\u003e\n  455 |\n  456 |       \u003cFooter /\u003e\n\nParsing ecmascript source code failed\n\n","stack":"Error: ./src/app/dashboard/page.tsx:452:19\nExpected '\u003c/', got 'jsx text'\n  \u001b[90m450 |\u001b[0m                 \u001b[33mVoir\u001b[0m toutes les ressources\n  \u001b[90m451 |\u001b[0m               \u003c/\u001b[33mLink\u001b[0m\u003e\n\u001b[31m\u001b[1m\u003e\u001b[0m \u001b[90m452 |\u001b[0m           \u003c/aside\u003e\n  \u001b[90m    |\u001b[0m                   \u001b[31m\u001b[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\u001b[0m\n\u001b[31m\u001b[1m\u003e\u001b[0m \u001b[90m453 |\u001b[0m         \u003c/div\u003e\n  \u001b[90m    |\u001b[0m \u001b[31m\u001b[1m^^^^^^^^\u001b[0m\n  \u001b[90m454 |\u001b[0m       \u003c/main\u003e\n  \u001b[90m455 |\u001b[0m\n  \u001b[90m456 |\u001b[0m       \u003c\u001b[33mFooter\u001b[0m /\u003e\n\nParsing ecmascript source code failed\n\n\n    at Object.getCompilationErrors (C:\\dev\\hamame1\\web\\node_modules\\next\\dist\\server\\dev\\hot-reloader-turbopack.js:1186:59)\n    at DevBundlerService.getCompilationError (C:\\dev\\hamame1\\web\\node_modules\\next\\dist\\server\\lib\\dev-bundler-service.js:44:55)\n    at DevServer.getCompilationError (C:\\dev\\hamame1\\web\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:720:42)\n    at DevServer.findPageComponents (C:\\dev\\hamame1\\web\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:690:43)\n    at async DevServer.renderErrorToResponseImpl (C:\\dev\\hamame1\\web\\node_modules\\next\\dist\\server\\base-server.js:1753:26)"},"gip":true,"scriptLoader":[]}</script><nextjs-portal style="position: absolute; --nextjs-dev-tools-scale: 1;"></nextjs-portal><next-route-announcer><p aria-live="assertive" id="__next-route-announcer__" role="alert" style="border: 0px; clip: rect(0px, 0px, 0px, 0px); height: 1px; margin: -1px; overflow: hidden; padding: 0px; position: absolute; top: 0px; width: 1px; white-space: nowrap; overflow-wrap: normal;"></p></next-route-announcer></body>
+
+----- /resources (unfiltered) list rendered DOM:
+<body><div id="__next"></div><script id="__NEXT_DATA__" type="application/json">{"props":{"pageProps":{"statusCode":500,"hostname":"localhost"}},"page":"/_error","query":{},"buildId":"development","isFallback":false,"err":{"name":"Error","source":"server","message":"./src/app/dashboard/page.tsx:452:19\nExpected '\u003c/', got 'jsx text'\n  450 |                 Voir toutes les ressources\n  451 |               \u003c/Link\u003e\n\u003e 452 |           \u003c/aside\u003e\n      |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\u003e 453 |         \u003c/div\u003e\n      | ^^^^^^^^\n  454 |       \u003c/main\u003e\n  455 |\n  456 |       \u003cFooter /\u003e\n\nParsing ecmascript source code failed\n\n","stack":"Error: ./src/app/dashboard/page.tsx:452:19\nExpected '\u003c/', got 'jsx text'\n  \u001b[90m450 |\u001b[0m                 \u001b[33mVoir\u001b[0m toutes les ressources\n  \u001b[90m451 |\u001b[0m               \u003c/\u001b[33mLink\u001b[0m\u003e\n\u001b[31m\u001b[1m\u003e\u001b[0m \u001b[90m452 |\u001b[0m           \u003c/aside\u003e\n  \u001b[90m    |\u001b[0m                   \u001b[31m\u001b[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\u001b[0m\n\u001b[31m\u001b[1m\u003e\u001b[0m \u001b[90m453 |\u001b[0m         \u003c/div\u003e\n  \u001b[90m    |\u001b[0m \u001b[31m\u001b[1m^^^^^^^^\u001b[0m\n  \u001b[90m454 |\u001b[0m       \u003c/main\u003e\n  \u001b[90m455 |\u001b[0m\n  \u001b[90m456 |\u001b[0m       \u003c\u001b[33mFooter\u001b[0m /\u003e\n\nParsing ecmascript source code failed\n\n\n    at Object.getCompilationErrors (C:\\dev\\hamame1\\web\\node_modules\\next\\dist\\server\\dev\\hot-reloader-turbopack.js:1186:59)\n    at DevBundlerService.getCompilationError (C:\\dev\\hamame1\\web\\node_modules\\next\\dist\\server\\lib\\dev-bundler-service.js:44:55)\n    at DevServer.getCompilationError (C:\\dev\\hamame1\\web\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:720:42)\n    at DevServer.findPageComponents (C:\\dev\\hamame1\\web\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:690:43)\n    at async DevServer.renderErrorToResponseImpl (C:\\dev\\hamame1\\web\\node_modules\\next\\dist\\server\\base-server.js:1753:26)"},"gip":true,"scriptLoader":[]}</script><nextjs-portal style="position: absolute; --nextjs-dev-tools-scale: 1;"></nextjs-portal><next-route-announcer><p aria-live="assertive" id="__next-route-announcer__" role="alert" style="border: 0px; clip: rect(0px, 0px, 0px, 0px); height: 1px; margin: -1px; overflow: hidden; padding: 0px; position: absolute; top: 0px; width: 1px; white-space: nowrap; overflow-wrap: normal;"></p></next-route-announcer></body>
+
+----- first resource link href: null
+
+----- /dashboard Ressources card rendered DOM:
+(Ressources card not found)
+
+----- header nav rendered DOM (link text contents):
+{
+  "navLinkTexts": [],
+  "primaryNavItems": [],
+  "hasRessourcesInSecondary": false
+}
+
+===== STEP 5: CLEANUP
+----- DELETE FROM resources WHERE id = '00000000-0000-0000-0000-000000000120'; rows affected: 1
+----- DELETE FROM resources WHERE id = '00000000-0000-0000-0000-000000000130'; rows affected: 1
+----- DELETE FROM resources WHERE id = '00000000-0000-0000-0000-000000000140'; rows affected: 1
+----- DELETE FROM resources WHERE id = '00000000-0000-0000-0000-000000000150'; rows affected: 1
+----- final SELECT COUNT(*) FROM resources: 0
+----- cleanup result: 0 rows (clean)

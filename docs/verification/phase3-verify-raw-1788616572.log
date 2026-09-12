@@ -1,0 +1,181 @@
+# phase3 verification — raw literal log
+
+Scope: session history page, leaderboard UI + rules, notes tags/favorites/
+search, couverture-par-module ranking. Past-exam/period untouched this round.
+No prose verdicts below — command + literal output only.
+
+Code footprint:
+  src/routes/sessions.routes.ts         (+GET /api/sessions history list)
+  src/routes/notes.routes.ts            (+q/tag/favoritesOnly, +tags/isFavorite
+                                         on create, +PATCH /:id, NOTE_TAGS)
+  src/routes/questions.routes.ts        (+GET /questions/coverage)
+  prisma/schema.prisma                  (+Note.tags TEXT[] default [], +Note.isFavorite)
+  prisma/migrations/20260101000020_add_note_tags_favorite/migration.sql (new)
+  web/src/lib/types.ts                  (+SessionHistoryEntry/Unit, +LeaderboardEntry,
+                                         +Note.tags/isFavorite)
+  web/src/lib/nav.ts                    (+Historique/Classement/Couverture)
+  web/src/app/historique/page.tsx       (new)
+  web/src/app/classement/page.tsx       (new, rules Modal)
+  web/src/app/couverture/page.tsx       (new, honest "bank coverage" copy)
+  web/src/app/notes/page.tsx            (search/tag pills/favorites/tag editor)
+
+Screenshots (live localhost:3001 DOM):
+  docs/verification/phase3-history.png    (grouped sessions, Continuer/Revoir)
+  docs/verification/phase3-board.png      (ranked rows, both tabs in DOM dumps)
+  docs/verification/phase3-rules.png      (rules modal open)
+  docs/verification/phase3-coverage.png   (ranking + honest subtitle)
+  docs/verification/phase3-notes-tags.png (tag pills, star, editor result)
+
+STATEMENTS (design facts the raw output below proves):
+- History needed a new READ endpoint, not schema: no list route existed
+  (routes were create/detail/answers/hints/submit/results only). No columns
+  added anywhere for this item.
+- Cohort scoping is real, not global: pairs derive from User.groupBy
+  (faculty/year), snapshots store facultyId/yearId per pair (SQL proof in
+  section 2), the endpoint requires both params. Cohort = users' profile
+  faculty/year at generation (sessions carry none) — the rules panel says
+  exactly this.
+- Ranking metric honesty: endpoint counts APPROVED QUESTIONS per module
+  (bank coverage). UI titled "Couverture par module" with subtitle
+  disclaiming exam frequency. MedSparkDZ's name/semantic NOT borrowed.
+
+=====================================================================
+1. LEADERBOARD ENGINE — live JSON before any UI
+=====================================================================
+$ curl.exe -X POST .../api/auth/login (norole) → token len=188
+$ curl.exe ".../api/leaderboard?facultyId=b37b039e-2208-4837-b5d5-28b1c338a2cf&yearId=00000000-0000-0000-0000-000000000020"
+{"leaderboard":[{"rank":1,"score":68.3529411764706,"fullName":"Heavy Content QA"},{"rank":2,"score":9.523809523809524,"fullName":"Hamame Bouchareb"}]}
+$ curl.exe "...&type=contributors"
+{"leaderboard":[{"rank":1,"score":17,"fullName":"Heavy Content QA"},{"rank":2,"score":3,"fullName":"Hamame Bouchareb"}]}
+
+$ .\node_modules\.bin\tsx.cmd tmp-snap-pairs.ts
+=== SNAPSHOT pairs (cohort scoping proof) ===
+[{"period":"monthly","faculty":"Medicine","year":"Year 1","rows":2},{"period":"monthly_contributors","faculty":"Medicine","year":"Year 1","rows":2}]
+
+=====================================================================
+2. HISTORY — fixtures, endpoint JSON, DOM
+=====================================================================
+$ node history-fixtures.js   (2 practice sessions as norole: one answered 2/2
+  + submitted → VERIFY-history-done; one answered 1/2 → VERIFY-history-open)
+DONE session id=... submit=200 score=0
+OPEN session id=...
+$ curl.exe ".../api/sessions?limit=10" (norole token; tail of output)
+        "yearLabel": "Year 1",
+        "facultyName": "Medicine",
+        "total": 2,
+        "answered": 1,
+        "correct": 0
+  {
+   "id": "1adc7dcc-68a6-4b23-8fca-cbe046e28016",
+   "name": "VERIFY-history-done",
+   "mode": "practice",
+   "startedAt": "2026-09-05T11:53:47.398Z",
+   "completedAt": "2026-09-05T11:53:52.074Z",
+   "score": 0,
+   "stats": { "total": 2, "answered": 2, "correct": 0 },
+   "units": [ { "unitId": "00000000-0000-0000-0000-000000000040", "unitName": "Cardiac Physiology", "moduleName": "Cardiology", "yearLabel": "Year 1", "facultyName": "Medicine", "total": 2, "answered": 2, "correct": 0 } ]
+  "pagination": { "page": 1, "limit": 10, "total": 2 }
+
+$ node phase3-verify.js   (/historique DOM)
+--- v-historique http://localhost:3001/historique
+Medicine · Year 1 |  | VERIFY-history-open |  | Entraînement · 5 sept. 2026, 12:53 PM |  | 1/2 répondues · Précision 0 % · En cours |  | Cardiac Physiology — Cardiology | 1/2 · 0 % | Continuer |  | VERIFY-history-done |  | Entraînement · 5 sept. 2026, 12:53 PM |  | 2/2 répondues · Précision 0 % · Score 0 % · Terminée |  | Cardiac Physiology — Cardiology | 2/2 · 0 % | Revoir
+ERRORS: []
+
+=====================================================================
+3. LEADERBOARD UI + RULES — DOM
+=====================================================================
+$ node phase3-verify.js   (/classement DOM)
+--- v-classement (no cohort — norole profile has none)
+Choisissez une faculté et une année pour voir le classement.
+--- v-regles (Comment ça marche modal)
+Scores. Chaque étudiant est classé sur la moyenne de ses sessions terminées et notées des 30 derniers jours glissants — pas un mois calendaire, pas un cumul à vie. | Promotion. Le classement est calculé par faculté et année du profil de chaque étudiant (les sessions elles-mêmes ne portent pas de faculté) : vous êtes comparé aux étudiants qui partagent votre faculté et votre année. | Participation. L'autre onglet compte simplement les sessions terminées sur 30 jours — la régularité plutôt que la note. | Actualisation. Le classement est recalculé périodiquement par le serveur et remplace le précédent : il n'y a pas d'historique des anciens classements. | Confidentialité. Seuls le rang, le score et le nom affiché sont visibles — jamais d'email ni de détail de sessions.
+$ node phase3-verify2.js   (cohort picked manually, no DB mutation)
+--- w-board-rows: 1 | Heavy Content QA | 68,4 % | 2 | Hamame Bouchareb | 9,5 %
+--- w-board-participation: 1 | Heavy Content QA | 17 sessions | 2 | Hamame Bouchareb | 3 sessions
+ERRORS: []
+
+=====================================================================
+4. NOTES — migration, backend, DOM
+=====================================================================
+$ npx prisma migrate deploy
+Applying migration `20260101000020_add_note_tags_favorite`
+All migrations have been successfully applied.
+$ .\node_modules\.bin\tsx.cmd tmp-phase3-cleanup.ts pre
+=== PRE-CLEANUP VERIFY artifacts ===
+[{"sessions":2,"notes":2}]
+
+$ node notes-check.js
+login ok
+CREATE status=201 {"id":"af14fcc6-c0dd-470c-bb29-7e9af37385f5","userId":"05a6f985-9be9-4ee5-ae19-4b96f8d58676","questionId":"00000000-0000-0000-0000-000000000070","lessonId":null,"bodyText":"VERIFY note importante cardio","tags":["important","a_reviser"],"isFavorite":true,"createdAt":"2026-09-05T12:20:10.958Z"}
+FILTER tag=important status=200 total=1 tags=["important","a_reviser"] fav=true
+SEARCH q=cardio fav status=200 total=1
+BAD TAG status=400 {"error":{"code":"VALIDATION_ERROR","message":"tags.0: Invalid enum value. Expected 'difficile' | 'facile' | 'important' | 'a_reviser' | 'compris' | 'piege', received 'nope'"}}
+PATCH status=200 tags=["compris"] fav=false
+NOTE_ID=af14fcc6-c0dd-470c-bb29-7e9af37385f5
+(prisma/migrations/20260101000020_add_note_tags_favorite/migration.sql =
+ALTER TABLE "notes" ADD COLUMN "is_favorite" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "tags" TEXT[] DEFAULT ARRAY[]::TEXT[]; — extracted verbatim from
+migrate diff; unrelated drift excluded as in prior rounds. `npx prisma
+generate` needed an API restart for the DLL lock, then reported success.)
+
+$ node phase3-verify.js + phase3-verify2.js   (/notes DOM)
+--- v-notes: search input + 6 pills (🔴🟢⚡📚✅⚠️) + ★ Favoris + 2 VERIFY notes
+  with ✅ Compris chips, star, Tags buttons
+--- v-notes-search (q=cardio): 2 matching notes + Effacer les filtres
+--- v-notes-fav (★ Favoris filter, none favorited): Aucune note ne correspond
+--- w-notes-tageditor: pill group rendered under note (Modifier les tags)
+--- w-notes-tagged: first note now ✅ Compris 🔴 Difficile (Difficile added via UI)
+$ node -e favoritesOnly check (after UI star toggle on note 1)
+FAV-ONLY total=1 tags=[["compris","difficile"]]
+(star click proven via API: the earlier FOCUS-NOT-FOUND was the checker's fault —
+aria-label text is not innerText. Tag editor + star both work.)
+ERRORS: []
+
+=====================================================================
+5. COUVERTURE — backend + DOM
+=====================================================================
+$ curl.exe ".../api/questions/coverage" (norole token)
+{"total":8,"modules":[{"moduleId":"00000000-0000-0000-0000-000000000030","moduleName":"Cardiology","yearLabel":"Year 1","facultyName":"Medicine","questions":8}]}
+$ node phase3-verify.js   (/couverture DOM)
+--- v-couverture http://localhost:3001/couverture
+Couverture par module |  | Nombre de questions validées par module — la couverture de la banque Hamame, pas la fréquence d'apparition aux examens. |  | 8 questions validées au total |  | 1 |  | Cardiology |  | Medicine · Year 1 |  | 8
+ERRORS: []
+
+=====================================================================
+6. CLEANUP — fixtures removed, baselines restored
+=====================================================================
+$ .\node_modules\.bin\tsx.cmd tmp-phase3-cleanup.ts clean
+=== POST-CLEANUP sessions left ===
+[{"n":0}]
+=== POST-CLEANUP notes left ===
+[{"n":0}]
+=== POST-CLEANUP norole sessions ===
+[{"n":0}]
+=== POST-CLEANUP norole notes ===
+[{"n":0}]
+=== BASELINE approved ===
+[{"n":8}]
+$ node -e login+counts (fresh, post-cleanup)
+HISTORY post-cleanup total=0
+NOTES post-cleanup total=0
+$ curl.exe -s "http://localhost:3000/api/questions/counts"
+{"total":8,"byUnit":[],"byModule":[],"sittings":[]}
+(No question/unit/fixture rows were created or mutated this round — only
+sessions, attempts (cascaded), and notes, all deleted. Real-row mutation: none.)
+Temp scripts removed: tmp-phase3-cleanup.ts tmp-snap-pairs.ts (git clean).
+
+=====================================================================
+ADDENDUM — column types + cohort derivation (gathered after the log was
+written, in response to review; read-only queries, nothing mutated)
+=====================================================================
+$ .\node_modules\.bin\tsx.cmd tmp-phase3-addendum.ts
+=== COLUMNS notes.tags/is_favorite ===
+[{"column_name":"is_favorite","data_type":"boolean","is_nullable":"NO","column_default":"false"},{"column_name":"tags","data_type":"ARRAY","is_nullable":"YES","column_default":"ARRAY[]::text[]"}]
+=== COHORT derivation live (users with scored sessions in 30d, by profile faculty/year) ===
+[{"faculty":"Medicine","year":"Year 1","users":2}]
+(TRACE: 2 qualifying users → 2 snapshot rows per board (section 1 SQL) → 2
+leaderboard rows (section 1 JSON). Cohort chain closed without running the
+regenerating job itself.)
+Temp script removed: tmp-phase3-addendum.ts (git clean).
+Backend tsc: no errors in touched files (only pre-existing
+src/scripts/verify-resources-raw.ts DOM-lib errors). All browser runs: ERRORS: [].

@@ -1,0 +1,12 @@
+VERIFY start 2026-08-30T15:26:06.280Z BASE=http://127.0.0.1:3000/api WEB=http://127.0.0.1:3001
+
+===== STEP 1: SEED + RAW SQL QUERY
+PrismaClientKnownRequestError: 
+Invalid `prisma.resource.upsert()` invocation in
+C:\dev\hamame1\src\scripts\verify-resources-raw.ts:117:27
+
+  114 // ---- Step 1: SEED + RAW SQL ----
+  115 L("\n===== STEP 1: SEED + RAW SQL QUERY");
+  116 for (const d of seedData) {
+→ 117   await prisma.resource.upsert(
+Inconsistent column data: Error creating UUID, invalid character: expected an optional prefix of `urn:uuid:` followed by [0-9a-fA-F-], found `s` at 1

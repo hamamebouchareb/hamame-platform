@@ -1,0 +1,101 @@
+VERIFY start 2026-08-31T13:03:49.738Z BASE=http://127.0.0.1:3000/api WEB=http://127.0.0.1:3001
+----- seed-author lookup: 27f52f12-df6b-43a6-be8a-12c0d4314aec
+
+===== STEP 1: SEED + RAW SQL QUERY
+----- raw SQL: SELECT id, title, type, faculty_id, year_id, source_label, file_url FROM resources ORDER BY id
+[
+  {
+    "id": "00000000-0000-0000-0000-000000000120",
+    "title": "Pharmacology Guidelines 2024",
+    "type": "official_drive",
+    "faculty_id": "b37b039e-2208-4837-b5d5-28b1c338a2cf",
+    "year_id": "00000000-0000-0000-0000-000000000020",
+    "source_label": "Ministry of Higher Education",
+    "file_url": "/resources/pharmacology-guidelines-2024.pdf"
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000130",
+    "title": "Radiology Image Library",
+    "type": "reference",
+    "faculty_id": "b37b039e-2208-4837-b5d5-28b1c338a2cf",
+    "year_id": "00000000-0000-0000-0000-000000000020",
+    "source_label": "University Hospital",
+    "file_url": "/resources/radiology-image-library.pdf"
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000140",
+    "title": "Past Exam Session 2023 — Year 1",
+    "type": "past_exam",
+    "faculty_id": null,
+    "year_id": "00000000-0000-0000-0000-000000000020",
+    "source_label": "Faculty of Medicine archive",
+    "file_url": "/resources/past-exam-2023-year1.pdf"
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000150",
+    "title": "Dental Anatomy Reference",
+    "type": "other",
+    "faculty_id": "74b46ae1-4de8-48df-b188-1a45725f3395",
+    "year_id": "00000000-0000-0000-0000-000000000020",
+    "source_label": "Dentistry Department",
+    "file_url": "/resources/dental-anatomy-reference.pdf"
+  }
+]
+----- row count from raw SQL: 4
+
+===== STEP 2: IDEMPOTENCY — SEED AGAIN + COUNT PROOF
+----- raw SQL: SELECT id, title, type, faculty_id FROM resources ORDER BY id (2nd pass)
+[
+  {
+    "id": "00000000-0000-0000-0000-000000000120",
+    "title": "Pharmacology Guidelines 2024",
+    "type": "official_drive",
+    "faculty_id": "b37b039e-2208-4837-b5d5-28b1c338a2cf"
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000130",
+    "title": "Radiology Image Library",
+    "type": "reference",
+    "faculty_id": "b37b039e-2208-4837-b5d5-28b1c338a2cf"
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000140",
+    "title": "Past Exam Session 2023 — Year 1",
+    "type": "past_exam",
+    "faculty_id": null
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000150",
+    "title": "Dental Anatomy Reference",
+    "type": "other",
+    "faculty_id": "74b46ae1-4de8-48df-b188-1a45725f3395"
+  }
+]
+----- row count after 2nd seed: 4
+----- idempotency check: first=4 second=4 PASS (equal)
+
+===== STEP 3: API REQUESTS
+----- login attempt 1 threw: fetch failed
+----- login attempt 2 threw: fetch failed
+----- login attempt 3 threw: fetch failed
+----- token present: false
+----- FAIL: no token returned from login — cannot run API step
+
+===== STEP 4: DOM CAPTURE
+----- browser executable: C:\Program Files\Google\Chrome\Application\chrome.exe
+
+----- DOM step error: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3001/dashboard
+Error: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3001/dashboard
+    at navigate (C:\dev\hamame1\node_modules\puppeteer-core\src\cdp\Frame.ts:226:13)
+    at async Deferred.race (C:\dev\hamame1\node_modules\puppeteer-core\src\util\Deferred.ts:49:14)
+    at async CdpFrame.goto (C:\dev\hamame1\node_modules\puppeteer-core\src\cdp\Frame.ts:179:17)
+    at async CdpPage.goto (C:\dev\hamame1\node_modules\puppeteer-core\src\api\Page.ts:1845:12)
+    at async main (C:\dev\hamame1\src\scripts\verify-resources-raw.ts:250:5)
+
+===== STEP 5: CLEANUP
+----- DELETE FROM resources WHERE id = '00000000-0000-0000-0000-000000000120'; rows affected: 1
+----- DELETE FROM resources WHERE id = '00000000-0000-0000-0000-000000000130'; rows affected: 1
+----- DELETE FROM resources WHERE id = '00000000-0000-0000-0000-000000000140'; rows affected: 1
+----- DELETE FROM resources WHERE id = '00000000-0000-0000-0000-000000000150'; rows affected: 1
+----- final SELECT COUNT(*) FROM resources: 0
+----- cleanup result: 0 rows (clean)

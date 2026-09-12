@@ -1,0 +1,111 @@
+Hamame design pass — ROLLOUT raw verification log (checkpoint approved 2026-09-08)
+Epoch: 1788868536097. Scope: approved palette (a) #2563EB→#5B54E8→#7C3AED,
+(b) white CTA text + white KPI numerals, (c) keep solid+full-pill CTAs.
+Live reference values: docs/verification/design-pass-verify-raw-1788815905889.log
+Hamame captures: %TEMP%\opencode\design-pass\hamame\ (ham-*-before/after pairs).
+
+================================================================
+1. TOKEN CHANGES (web/src/styles/tokens.css — single source, no second system)
+================================================================
+accent-primary #AAFF00 → #2563EB | accent-secondary #FFE000 → #7C3AED |
+accent-qcm #AAFF00 → #2563EB | accent-library #35E0B8 → #5B54E8 |
+accent-suivi #5CB8FF → #4F46E5 | accent-revision #A78BFA → #7C3AED |
+focus-ring #CCFF66 → #A5B4FC.
+NEW: --color-on-accent #FFFFFF (white text on accent fills) |
+--color-accent-soft #8FB0FF (small accent text on dark).
+NEW motion set: --ease-standard cubic-bezier(0.4,0,0.2,1) (→ ease-standard
+utility); --duration-fast 150ms / base 200ms / slow 300ms / enter 150ms
+(var() refs; classes use bare-number duration-150/200/300).
+Surfaces/text/semantic tokens UNCHANGED. Shadow-glow-* + body radial glows
+follow the new accents automatically (color-mix/var references, verified in
+ham-dash-after.png: blue ambient glow top-left).
+globals.css: skeleton hamame-pulse → 2s cubic-bezier(0.4,0,0.6,1) opacity
+1↔0.85 (was 1.4s ease-in-out 0.45↔1); NEW hamame-enter 150ms opacity-only +
+.hamame-dialog-enter class, wired into Modal dialog panel (matches live
+`0.15s both enter`).
+
+================================================================
+2. COMPONENT EDITS (className strings ONLY — enumerated)
+================================================================
+text-background → text-on-accent on accent fills: ConfirmDialog primary/
+secondary (danger keeps dark text: dark-on-#F87171 ≈7.3 PASS), ResumeBar,
+ReviewCard primary, ProfileHero ×3, PremiumCard ×3, EmptyState action,
+ActivationCodeCard, StudyTimer CTA, SessionBuilder submit, QuestionCard
+submit, sessions player Réessayer/Terminer/Envoyer, results Réessayer/
+Refaire, settings ×3, resources download, revision ×2, login/register/
+reset×2/forgot×3 CTAs, profile avatar + Chercher, AppHeader/UserMenu avatar
+dots, AnswerOption selected badge + inner dot (bg-on-accent), sessions QST
+current, PrimaryTabs active (+duration-300 per live 0.3s tabs).
+MetricCard accent tones → text-text-primary (white numerals per approval b;
+success/warning/danger/neutral untouched). suivi display % → text-primary.
+text-accent-{saturated} → text-accent-soft (small text/links/pills/icons/
+kickers on dark; saturated #2563EB text ≈3.7 FAIL → soft #8FB0FF 8–9 PASS):
+Toast info, FriendsPanel, StudyTimer phase+presets, PremiumCard title,
+accentText() central mapping (FeatureCard icon + CourseCard pill + qcm badge
++ h2 tone), BadgeShelf, AppHeader nav (×2), EmptyState icon, QuestionCard
+sitting-chip + retry link, qcm kicker, dashboard resources link,
+QcmBuilderClient backlink, classement vous-pill, units backlink/kicker/
+exam-ghost/pill, notes ×3, suivi kicker/readiness-pill, profile pills ×4,
+revision kicker, results links ×2, sessions mark-for-review, resources
+breadcrumbs ×4 + kicker, login/register/reset/forgot links, years/modules/
+lessons/faculties-years backlinks + kickers + pills, Footer, BackLink.
+Motion: AnswerOption base +duration-300 (live options 0.3s); SessionBuilder
+toggles ×3 + StudyTimer presets + RevisionCard quality +duration-200 (live
+pills 0.2s). QST rail: h-9 w-9 rounded-full → h-12 w-12 rounded-[20px]
+(live 48px/20px) + ring-2 ring-accent-soft on current (live rose ring;
+NO scale-110 — deliberate deviation to avoid strip jitter, disclosed).
+KEPT (approval c + safety): solid fills, full-pill radii everywhere;
+danger fills keep dark text; faculties:88 ghost-CTA span untouched
+(pre-existing, pixel-identical); scaffold app/page.tsx untouched.
+
+================================================================
+3. COMPUTED PROOF (real DevTools output, Hamame after)
+================================================================
+ham-after-probe.json (dashboard CTA "Reprendre l'étude"): bg
+rgb(37,99,235) + color rgb(255,255,255) + radius 9999px → white-on-blue
+5.17 PASS (was dark-on-blue 3.73 FAIL at checkpoint).
+ham-rail-probe.json (player QST): 48px×48px, radius 20px, current fill
+rgb(37,99,235) — matches live geometry.
+Contrast math (dp-contrast.js re-run values): gradient stops white-text
+5.17/5.41/5.70 PASS; soft #8FB0FF on bg/s1/s2 = 9.03/8.12/7.09 PASS;
+rejected #8B5CF6 (4.23) excluded.
+tsc: `npx tsc --noEmit -p web/tsconfig.json --incremental false` → exit 0,
+zero errors (before AND after edits).
+
+================================================================
+4. BEFORE/AFTER PAIRS (all in design-pass/hamame/, heavy@hamame.dz)
+================================================================
+dash, qcm, builder, historique, player (c8100462…), results (same session,
+unsubmitted-error state both runs — consistent pair), profile, settings,
+notes, suivi, revision, classement, couverture, resources, login.
+Spot-verified: profile-after (white HQ avatar, white numerals 1/82%/69%/
+53/#1, soft pills, blue/white CTAs), qcm-after (blue Configurer, violet
+Lancer un examen, soft kicker), player-after2 (blue rail-1, blue Terminer,
+readable chips), results-after ("Retour à la session" soft link readable).
+Pageerrors: [] on before run, [] on after run, [] on recap run, [] on rail
+run (ham-errors-before/after.json + dp-d1/d2/d3/d9 error files).
+
+================================================================
+5. NO-FUNCTIONAL-CHANGE STATEMENT (with honest tree-dirt disclosure)
+================================================================
+Every edit in §2 is a className string, token value/comment, or CSS
+keyframes — no handler, route, fetch, ARIA, role, or copy change by this
+session. tsc 0; pageerrors []; before/after pairs show identical data/copy.
+DISCLOSED: the tree had pre-existing uncommitted work predating this
+session (untracked Phase dirs classement/couverture/historique/
+reset-password/resources + BackLink/StudyTimer/nav.ts; modifications in
+dashboard, review, components/index, lib/types, web.pid; structural hunks
+e.g. HEADER_NAV removal, RankMetricCard, FormEvent import) — none of it
+touched by this session; my hunks are single-line class swaps alongside it.
+Residuals (unchanged, pixel-identical): faculties:88 ghost CTA (dark text,
+no bg — pre-existing), danger fills (compliant), scaffold page.
+Deferred (not in approved scope): per-hue pill text (single soft tint
+used), light-mode theme (Hamame dark-only; MedSpark light values measured:
+bg rgb(247,247,248) — recorded, not applied).
+MedSpark leftover measurements completed this round: player wrong-option
+(dp9-player: red gradient + #DC2626 2px border + 0.3s), QST current
+(rose→pink gradient, ring + scale 1.1, 0.15s) + answered (emerald, 0.15s),
+profile cover (linear-gradient(to right, #F97316, #EC4899, #7C3AED), 96px),
+Radix menu panel (#121216, 18px radius, 4px padding, 0.15s enter).
+Bell-dropdown open still uncooperative headless (evaluate-click no-ops;
+§26 screenshots remain its evidence) — panel pattern proven via theme menu.

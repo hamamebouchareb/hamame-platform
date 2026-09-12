@@ -1,0 +1,254 @@
+# phase6 verification — raw literal log
+
+Scope: Task 0 docs hygiene, Task 1 toolchain, Task 2 P17 presets, Task 3 LOW
+bundle, Task 4 mobile pass (+1 genuine fix), Task 5 observations (no builds),
+Task 6 gate inputs (reports only), Task 7a lowBalance.
+No prose verdicts below — command + literal output only.
+
+Code footprint:
+  docs/HAMAME_MASTER_HANDOFF.md            (rename (1).md → canonical, §24 ticks,
+                                            §9 Phase 6 entry)
+  docs/MEDSPARKDZ_COMPLETE_GAP_ANALYSIS.md (§24 ticks, new §25 appendix)
+  web/src/components/SessionBuilder.tsx    (+P17 preset, +titles, +trust copy)
+  web/src/components/BackLink.tsx          (new) + index.ts export
+  web/src/app/historique|classement|couverture|notes/page.tsx (+BackLink)
+  web/src/components/QuestionCard.tsx      (+Valider title)
+  web/src/app/sessions/[id]/page.tsx      (+elapsed pill, +pb-60 fix, +Prev/Suivant titles)
+  web/src/app/dashboard/page.tsx           (-isCreditsLow, +lowBalance)
+  web/src/lib/types.ts                     (+AiCredits.lowBalance)
+  src/routes/ai.routes.ts                  (+lowBalance server flag)
+  No migration (standing rule: none needed, none added).
+
+Screenshots:
+  docs/verification/phase6-preset-proposal.png (sitting → 10 min + basis line)
+  docs/verification/phase6-timer-t1.png / phase6-timer-t2.png (1:25 → 1:41)
+  docs/verification/phase6-backlink.png        (← Retour au tableau de bord)
+  docs/verification/phase6-rail-strike.png     (rail + chips + struck option)
+  docs/verification/phase6-mobile-verify.png   (mobile verified state)
+  docs/verification/phase6-indice-ia.png       (Indice IA modal, medspark.online)
+
+=====================================================================
+0. TASK 0 + TOOLCHAIN
+=====================================================================
+$ Test-Path canonical → False; Test-Path "(1).md" → True (mix-up recurred).
+$ header diff, punctuation-insensitive: HEAD 41 headers vs CUR 46; sole
+HEAD-only header = §2 "16 total…" (same section, renumbered to 18 in CUR);
+CUR adds 2A/2B/2C/2D + §9.0 + close-outs → strict superset continuation.
+→ Move-Item + git add (git mv refuses untracked sources). Result staged:
+M docs/HAMAME_MASTER_HANDOFF.md, dup gone. (Repair note: two edits briefly
+misordered the Phase 5/6 sections; fixed by line-number splice, order
+verified: Phase 5 header @993, Phase 6 @1064.)
+$ web/AGENTS.md + Next 16.2.10 bundled docs: only relevant breaking-change
+class (v15 async request APIs) is server-side; all touched files are
+"use client" components. No doc-driven changes — stated, not assumed.
+$ npx tsc --noEmit -p web/tsconfig.json --incremental false
+WALL=97.7669802s BYTES=0 (0 errors)
+$ npm run build --prefix web
+WALL=176.2452477s, route table through /years/[id]/modules, exit 0.
+$ (post-edit re-runs) tsc WALL=44.6587377s BYTES=0; build WALL=140.6706562s exit 0.
+$ backend tsc (final, captured): exit=2, erroring files =
+src/scripts/verify-resources-raw.ts ONLY (pre-existing DOM-lib errors).
+
+=====================================================================
+1. TASK 2 — P17 (live: no per-paper time → presets-by-count fallback)
+=====================================================================
+Live basis: wizard step-3 screenshot shows course radios + counts, Types/
+Source pills, Période De/À, Ordre, Mode Examen switch, live counter,
+Statistiques toggle — NO time/duration control anywhere on MedSparkDZ.
+$ .\node_modules\.bin\tsx.cmd tmp-p17-fixture.ts tag
+=== TAGGED ===
+[{"id":"...70","type":"QCM","exam_year":1900,...},{"id":"...80","type":"QCS","exam_year":1900,...}]
+(2 questions tagged 1900/VERIFY-PRESET — deliberately fake year.)
+$ node phase6-verifyA.js (exam mode + sitting 1900 in builder)
+TIME-SELECT: value=10 opts=Sans limite/10 minutes/...
+--- t2-proposed: ... | Proposé d'après 2 questions × 90 s — modifiable. | | 2 questions disponibles | Commencer l'examen
+(2 × 90s = 180s → smallest preset ≥ 3 min = 10 minutes. EXAM_SECONDS_PER_QUESTION
+= 90 is Hamame's own documented constant.)
+AFTER SUBMIT: .../sessions/1e2374f7-38e5-44f8-8ed9-8c3f74550e57
+$ node -e GET rows:
+PROPOSED-SESSION timeLimitSeconds=600 mode=exam
+OVERRIDE-ROW timeLimitSeconds=1800 (explicit 1800 wins over proposal path)
+ERRORS: [] (browser runs)
+Exam neutrality: no answer key/percentages code touched (Phase 2 gating intact).
+
+=====================================================================
+2. TASK 3 — LOW BUNDLE
+=====================================================================
+(a) elapsed pill (practice session 4342aa5b):
+PILL t1: Question 1/2 ~ 0 répondues ~ 1:25
+PILL t2: Question 1/2 ~ 0 répondues ~ 1:41
+(monotonic +16s; exam countdown is a separate branch, unchanged;
+aria-live="off" vs countdown's polite.)
+(b) BackLinks (second run; first attempt queried pre-hydration DOM and
+recorded back=undefined — checker artifact, screenshot in the same run
+already showed the link):
+/historique back=← Retour au tableau de bord|/dashboard
+/classement back=← Retour au tableau de bord|/dashboard
+/couverture back=← Retour à la bibliothèque|/faculties
+/notes back=← Retour au tableau de bord|/dashboard
+(c) titles (disabled= enumeration: builder 17 sites (cascade/loading/
+starting/empty), player Prev/Suivant/Terminer/report-send, QuestionCard
+Valider/textarea — titles added ONLY where state-driven, not transient):
+TITLE year: Sélectionnez d'abord une faculté
+TITLE valider: Sélectionnez une réponse pour valider
+TITLE prev: Première question
+(limitation stated: native title does not fire on disabled elements in most
+browsers — pattern matches the reference literally; adjacent UI text already
+states the same reasons.)
+(d) trust notice (exam mode on):
+... | En mode examen, la correction, les explications et les statistiques de réponses sont retenues jusqu'à la remise de la session — seul le score final est affiché. | ...
+(worded from Phase 2 mechanics exactly: correctness + explanationRichtext +
+community stats all practice-gated server-side.)
+
+=====================================================================
+3. TASK 4 — MOBILE 390x844 HEADED (one genuine fix)
+=====================================================================
+$ node phase6-mobile.js (drawer/builder/history/classement/notes):
+DRAWER BTN: true
+METRICS drawer-open: {"scrollW":375,"clientW":375,"hScroll":false,"smallTargets":0}
+FOCUS AFTER ESC: BUTTON#
+METRICS builder: {"scrollW":375,"clientW":375,"hScroll":false,"smallTargets":10}
+METRICS historique/classement/notes: hScroll=false, smallTargets=0
+ERRORS: []
+(small-target triage: 2× switch tracks 44×24 — passes WCAG 24px AA, below the
+repo 44px token height, reported not fixed; 8× 16px native checkbox/radio
+inputs inside full-width min-height labels — effective target is the label
+row, standard pattern, not broken. Focus returns to A button on Esc —
+tag-only evidence, stated as consistent-not-proven.)
+$ node phase6-mobile2.js — GENUINE BREAKAGE:
+MOBILE FAIL locator.click: ... "Valider la réponse" ... study-timer-closed button intercepts pointer events ... Navigation de session subtree intercepts pointer events
+(measurement run: navH=181 mainPB=112px — 69px of content slides under the
+fixed stacked nav on mobile. Fix: player main pb-28 → pb-60 sm:pb-28.)
+$ node phase6-mobile3.js (after fix):
+VALIDER CLICK: ok
+METRICS: {"hScroll":false}
+ERRORS: []
+(mm-verified/mm-comment/mm-railjump/mm-report captured; strike shown in
+phase6-rail-strike.png from the desktop re-proof.)
+
+=====================================================================
+4. TASK 5/6 LIVE EVIDENCE (medspark.online, test account, no codes consumed,
+   no accounts created)
+=====================================================================
+SIGNUP LINKS: ["Créer un compte -> /signup"]
+/signup (logged out): Créer un compte | Nom complet | Faculté select (15:
+Alger..Tlemcen) | Adresse email | Mot de passe | Confirmer | Créer mon compte
+| OU CONTINUER AVEC (no provider buttons) | Se connecter. No Google button on
+/login either (OAUTH: []) — drift vs gap analysis; Task 6 OAuth notes this.
+OUTILS rail: wand → "Indice IA" modal (Compris!/Regenerate) = AI, out of
+scope; bottom doc → "Mes notes | Question:" panel = non-AI; green book →
+course notes panel ("0 question avec notes / Générez des notes IA") =
+AI-fed, out of scope; pencil arms highlight (icon active, no persistent mark
+observed); bookmark/chart/book/bulb/chat: clicks, no observable change =
+UNCONFIRMED, not guessed.
+RESULTS (completed practice session 151569d9): Session Terminée | Examen
+Terminé! | Votre performance | 0 Correctes | 5 Incorrectes | 0% Score |
+Note sur 20 | 0/20 | Tout ou rien | Partiel | Amélioré (+rule text + 0/2/2
+counts) | Temps total 01:13 | Moyenne par question 15s | Détails par cours |
+Progression 0/5 | Recommencer | Quitter la session. Deltas vs Hamame results:
+per-mode scoring, /20 note, time stats — decision needed, nothing built.
+XMODULE: 5 Anatomie buttons; click sets aria-checked/data-state with NO class
+change; Retour → other module → check → checked count stays 1, counter shows
+only the new course (5 → 21, not 5+21). Cross-module combining impossible —
+CLOSED permanently; single-module scope matches.
+SIMHISTORY: year picker only, R click → no content change (no history on
+account). Phase 3's scheduled example gone again — live drift noted.
+EXAM CONFIG: Nouvel-examen card visible text, zero clickable ancestors;
+wizard Démarrer disabled until a course radio is picked; no duration control
+anywhere → P17 presets-by-count fallback confirmed correct.
+
+=====================================================================
+5. TASK 6 REPORT INPUTS (evidence, decisions left to user)
+=====================================================================
+OAuth live: no Google entry on /login or /signup today (gap analysis showed
+one — drift). Biggest risk if built: consent-screen + app-verification
+calendar time, not code.
+EN/FR sizing: FILES=43 ACCENTED-CHARS=868 (essentially the whole UI;
+recommendation in handoff entry: hand table (a) now, framework (b) later —
+stated with the ongoing-cost reasoning, no code).
+Scheduled sims: last live fields (Phase 3 log): 4 sept. 2026, 20:30, 180
+min, 150 Q, Affichage registration; needs simulations table + job at
+minimum → Phase 7 candidate, not Phase 6.
+Cross-module: closed per XMODULE above (frontend-only change IF it ever
+reopens — it won't on current evidence).
+
+=====================================================================
+6. TASK 7a + CLEANUP + BASELINES
+=====================================================================
+lowBalance server flag + AiCredits.lowBalance type + dashboard wiring;
+isCreditsLow deleted (grep: zero matches in web/src).
+DOM proof (honest scope): norole holds 30/30 credits so lowBalance=false —
+dashboard renders the normal branch from the server flag (see mobile +
+desktop dashboard captures). The true/warning branch is untested live
+(spending credits to force it was not justified); the boolean flows through
+the identical code path. Stated, not oversold.
+$ .\node_modules\.bin\tsx.cmd tmp-p17-fixture.ts down
+=== REVERTED left ===
+[{"n":0}]
+=== SESSIONS left ===
+[{"n":0}]
+=== BASELINE ===
+[{"approved":8,"tagged":0}]
+$ tmp-p6-final sweep (auto-named UI sessions 1e2374f7/4342aa5b/b38bf9ff/7df73935):
+DELETED sessions=4
+NOROLE SESSIONS LEFT: [{"n":0}]
+=== BASELINE ===
+[{"a":8,"t":0}]
+$ node -e login norole/testpass123 → counts (fresh, post-cleanup):
+FINAL counts={"total":8,"byUnit":[],"byModule":[],"sittings":[]}
+(No question/unit/fixture rows were created or mutated this round — only
+sessions/attempts (cascaded) and 1900-tags (reverted). Real-row mutation: tags
+only, reverted. hamamebouchareb@gmail.com password untouched — read-only
+profile view.)
+Temp scripts removed (git clean).
+Backend tsc this round: full run completed; grep for ai.routes|dashboard
+(the only backend file touched is ai.routes.ts) showed zero matches -
+pre-existing verify-resources-raw.ts errors aside (captured in full in the
+Phase 5 log), nothing new. Web tsc + build greens above post-date ALL edits.
+
+=====================================================================
+ADDENDUM - review-requested proofs (gathered after the log was written)
+=====================================================================
+A. STRAY-CHARACTER CHECK (the "two_han" glitch in the round summary):
+node scan for non-ASCII CJK block: phase6 log = 0 hits;
+HAMAME_MASTER_HANDOFF.md = 0 hits. Verdict: chat-output-layer glitch on the
+author's end, present in neither file. NOT the repo encoding bug (that one
+lives in old binary PDF filenames / legacy logs and was never in these UTF-8
+deliverables).
+
+B. TASK 6 FULL REPORT TEXTS (verbatim from the handoff Phase 6 entry, which
+is where the brief put them - quoted here so the log is self-contained):
+- Google OAuth - ONLY if signed off. Biggest risk: consent-screen + app
+  verification calendar time, not code. Needs: provider setup,
+  account-linking rule for existing email users, soft-delete interaction
+  review. Live today: no Google entry on /login or /signup (drifted away).
+- EN/FR toggle UI - ONLY if signed off. Sizing: 43 files, 868 accented
+  chars (essentially the whole UI). Recommendation: hand-maintained lookup
+  table (a) now - bounded, reviewable, no dependency; framework (b)
+  only when string count or pluralization needs outgrow it. They differ in
+  ongoing maintenance cost, not just setup.
+- Scheduled simulations - ONLY if signed off. Last live fields: 4 sept.
+  2026, 20:30, 180 min, 150 Q, Affichage registration. Needs simulations
+  table + scheduling job at minimum. Phase 7 candidate, not Phase 6.
+- Cross-module multi-select - CLOSED, do not queue (checkbox state resets
+  on module switch; counter 5 -> 21 not 5+21).
+
+C. DEDUP PROOF (two Phase 6 entries briefly existed - author error during
+handoff repair, caught before close-out):
+current headers: ## 9 @729, Phase 5 @993, Phase 6 @1064 - single copies each,
+correct chronological order. The duplicate (identical save one word,
+"presets" vs "time presets") was deleted by line-number splice; total went
+1245 -> 1244 lines (trailing-newline accounting), order re-verified by header
+scan. No content was merged by hand.
+
+D. MOBILE BEFORE-EVIDENCE (transcribed from the live tool result - the
+failing run's console file holds only the 281-byte stub because Playwright
+writes the intercept trace to stderr, not the redirected stdout):
+failing action: getByRole('button', {name: /Valider la réponse/i }).click()
+  -> TimeoutError 15000ms: "...button[data-testid=study-timer-closed]...
+  intercepts pointer events ... <nav aria-label='Navigation de session'...>
+  subtree intercepts pointer events" (repeated across retries).
+measurement run: navH=181 mainPB=112px (69px of content under fixed chrome).
+fix: player pb-28 -> pb-60 sm:pb-28. after: VALIDER CLICK: ok, hScroll=false,
+ERRORS: []. Before-shot missing (failing run died pre-screenshot);
+phase6-mobile-verify.png shows the post-fix verified state.

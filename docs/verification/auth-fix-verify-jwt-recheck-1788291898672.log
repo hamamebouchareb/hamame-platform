@@ -1,0 +1,76 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20260901204502
+Username: DESKTOP-TARE05B\imad
+RunAs User: DESKTOP-TARE05B\imad
+Configuration Name: 
+Machine: DESKTOP-TARE05B (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\Users\imad\AppData\Local\Temp\opencode\jwt-recheck.ps1
+Process ID: 7808
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+===== 1. Confirm API server on port 3000
+
+Port 3000 LISTENING, PID=2728 - probing GET /api/plans ...
+PROBE 200 - server already running on :3000; not restarted.
+
+===== setup: request body written to file (handoff: PowerShell curl -d gotcha)
+body file content:
+{"email":"hamamebouchareb@gmail.com","password":"NewTestPass123!"}
+
+===== 2. LOGIN CALL 1
+command: curl.exe -s -i -o login-resp-1.txt -X POST http://127.0.0.1:3000/api/auth/login -H "Content-Type: application/json" --data-binary "@login-body.json"
+local time before call 1: 2026-09-01 20:45:22.041
+
+raw response 1 (status line + headers + body, unedited):
+HTTP/1.1 200 OK
+X-Powered-By: Express
+Vary: Origin
+Content-Type: application/json; charset=utf-8
+Content-Length: 563
+ETag: W/"233-wMpgvKD3UkOMq4SwlLtvyVreMAY"
+Date: Tue, 01 Sep 2026 19:45:25 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"accessToken":"[REDACTED-JWT]","user":{"id":"b5119037-ed04-483e-94a7-07c475839e59","email":"hamamebouchareb@gmail.com","phone":null,"fullName":"Hamame Bouchareb","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020","university":null,"wilaya":"Alger","uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-07-13T20:35:36.663Z"}}
+
+===== 3. sleep 3 seconds
+local time sleep start: 2026-09-01 20:45:25.393
+local time sleep end:   2026-09-01 20:45:28.409
+
+===== 4. LOGIN CALL 2 (separate process, separate network request, identical body)
+command: curl.exe -s -i -o login-resp-2.txt -X POST http://127.0.0.1:3000/api/auth/login -H "Content-Type: application/json" --data-binary "@login-body.json"
+local time before call 2: 2026-09-01 20:45:28.409
+
+raw response 2 (status line + headers + body, unedited):
+HTTP/1.1 200 OK
+X-Powered-By: Express
+Vary: Origin
+Content-Type: application/json; charset=utf-8
+Content-Length: 563
+ETag: W/"233-2QXbbyJ6VeFT+hGceDDToAyUPRk"
+Date: Tue, 01 Sep 2026 19:45:29 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"accessToken":"[REDACTED-JWT]","user":{"id":"b5119037-ed04-483e-94a7-07c475839e59","email":"hamamebouchareb@gmail.com","phone":null,"fullName":"Hamame Bouchareb","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020","university":null,"wilaya":"Alger","uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-07-13T20:35:36.663Z"}}
+
+===== 5. Decoded JWT payloads (base64url middle segment), full plaintext for both calls
+----- decoded payload, login call 1 :
+{"iat":1788291925,"exp":1788896725,"sub":"b5119037-ed04-483e-94a7-07c475839e59"}
+----- decoded payload, login call 2 :
+{"iat":1788291929,"exp":1788896729,"sub":"b5119037-ed04-483e-94a7-07c475839e59"}
+
+===== end of recheck
+**********************
+Windows PowerShell transcript end
+End time: 20260901204532
+**********************

@@ -1,0 +1,89 @@
+Final exhaustive parity sweep — RAW verification log (Part A + Part B + builds)
+Epoch: 1788967807435. Evidence: %TEMP%\opencode\final-sweep\ (audit\, audit\mobile\,
+hamame\) + live API outputs below. No MedSparkDZ side effects (no codes, no
+accounts, no sessions created, no forms submitted — modal opens closed via Escape).
+
+================================================================
+PART A — LOOSE ENDS
+================================================================
+A1 bell dropdown (HEADED real click, header button idx 2): panel bg
+rgb(18,18,22) flat, radius 18px, padding 4px, 1px #2C2C30 border, black .1
+shadow, `0.15s both enter`, z-50, Poppins 16px. Content: Notifications |
+Tout | Social | Prix | Système | Aucune notification. (a1-bell-panel.json,
+a1-bell-open.png, pageerrors [].) Confirms the theme-menu inference —
+now direct evidence. Hamame equivalent: NONE (settings push section +
+toasts only) → cataloged as FUNCTIONAL gap (notification center), not built
+in the A1 step per approval.
+A2 applied + verified: AnswerOption wrong-selected =
+"border-2 border-danger bg-danger/10 text-danger shadow-glow-danger"
+(Sharon/9-token translation of live red-gradient/2px-#DC2626/glow/0.3s);
+QST-current = Blue→Violet gradient class (white-safe 5.17–5.70 across ramp),
+geometry 48px/20px + ring re-proven live (ham-rail-probe.json).
+Correct/answered already success-token equivalent — untouched.
+A3 redo: band moved to profile-page hero (avatar HQ + name + pills overlap
+it in one card — ham-profile-coverband.png / preview-a3redo-coverband.png);
+dashboard stripe reverted (ProfileHero byte-identical to pre-A3); tsc 0;
+zero pageerrors.
+
+================================================================
+PART B — EXHAUSTIVE CHECKLIST (checked even when already covered)
+================================================================
+Desktop headed: dashboard 5 tabs + recharge modal (POINTS-XXXX-XXXXXXXX,
+Annuler/Recharger) + avatar menu (name/email/Mon Profil/Paramètres/
+Déconnexion) + friends modal (@nom_utilisateur search) + footer socials
+(fb/tg/ig) ✓covered; /qcm tiles/wizard/picker/points/notes-modal/history/
+hyper(→/qcm/hypertombables live) ✓; player icons inventoried live —
+pause, "Signaler une erreur" (Hamame P7 match), "Couper le son", "Plein
+écran", menu, chevron-down, AI wand/book/bulb, OUTILS
+highlighter/book-open/book-marked/chart/sticky-note, chat bubble, X ✓;
+suivi modal ✓; profile ✓; settings (15 faculties, 7 years, save/password/
+delete) ✓; activate ✓; notifications page ✓; drive 8 folders ✓; notes
+6-tag filters ✓; studio 4 tabs (locked ×3) ✓; exam E2E state unchanged §26.
+Mobile 390×844 (9 routes): hscroll 0px everywhere; no bottom tab bar.
+Quitter dialog + voir-le-commentaire clicks missed in review-mode state
+(review shows stats inline instead) — no side effects made; states already
+documented in §25.3/§26.
+
+================================================================
+NEW FINDINGS (genuinely uncovered — checked vs handoff §9.0 + §§24-26 + logs)
+================================================================
+F1 FUNCTIONAL (built this task): notification center. Model+table pre-existed
+— added GET /api/notifications (category/unreadOnly/pagination + unreadCount),
+GET /unread-count, PATCH /:id/read (indistinguishable 404), POST /read-all,
+POST /admin/notifications (admin-gated). Hooks: friend-accept→social,
+activation-redeem→prix (best-effort). Live proof: LIST 200 total=2 unread=2;
+ADMIN-CREATE 201; UNREAD-ONLY 3; READ-ONE isRead=true; READ-ALL updated=2;
+404 NOTIFICATION_NOT_FOUND; 400 category enum. Fixture deleted; heavy's 2
+pre-existing rows restored unread (twice — backend test + UI test).
+F2 FUNCTIONAL (built): player fullscreen toggle ("Plein écran" title,
+aria-pressed, Esc-sync). Live: granted fs:true. Sound toggle SKIPPED
+honestly: Hamame plays zero audio (grep: no Audio API anywhere) — a mute
+button would be dead chrome. Deferred until real audio exists.
+F3 VISUAL (built): history group header "20 sessions · 58 % global" (read-only
+aggregate, N9 remainder). Dates/Continuer/Revoir pre-existed. Live screenshot.
+F4 VISUAL (built): header NotificationsBell (badge, Tout/Social/Prix/Système
+tabs, mark-read, mark-all, page link) + /notifications page (tabs,
+pagination, retry, empty state) + SECONDARY_NAV link. Live: badge "2 non
+lues", dropdown rows with unread dots + dates, tab switch ok, page renders,
+row-click 2→1 non lues, zero pageerrors (notif-bell-open.png, notif-page.png).
+DEFERRED (flagged, not built): per-question "Mes notes" panel + highlighter/
+bookmark/chart tools (§25.2 candidates — need product spec); per-module
+performance block (needs new accuracy aggregation); chat bubble
+(UNCONFIRMED, likely AI-gated); shared sessions/Study With Me (intentional
+N/A); EN/FR + OAuth + scheduled sims (decision gates); "Modifier"-after-lock
+(model DIFFERENCE: Hamame submits immediately — validated choice, not a gap).
+
+================================================================
+VERIFY
+================================================================
+Frontend tsc exit 0 (before + after). Backend tsc: only known
+verify-resources-raw.ts errors (untracked scratch, unchanged). Web build
+exit 0 (24/24). Playwright pageerrors [] on every run (b1/b2/b4/mobile/
+notif/sweep). Before/after: bell (absent→present), notifications page
+(404→rendered), history header (absent→"20 sessions · 58 % global"),
+fullscreen (absent→granted), QST/answer/profile-cover (prior pairs stand).
+No backend-route/data/ARIA/copy changes except additive notification
+endpoints + additive bell/page/fullscreen UI + read-only history header.
+SUMMARY: screens/interactions checked ≈ 60 | new findings 4 (F1 MEDIUM,
+F2/F3/F4 LOW) | visual fixes 3 (F2/F3/F4) | functional built 1 (F1 backend
++ UI) | deferred 7 (listed above).

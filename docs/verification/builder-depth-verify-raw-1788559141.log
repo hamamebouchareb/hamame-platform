@@ -1,0 +1,152 @@
+# builder-depth verification — raw literal log
+
+Scope: Phase 1 builder depth (counts endpoint + unit multi-select + live counter +
+source filter). Past-exam picker and period filter intentionally untouched.
+No prose verdicts below — command + literal output only.
+
+Code footprint (git diff --stat):
+  src/routes/questions.routes.ts               | 128 +++++++++
+  web/src/app/qcm/builder/QcmBuilderClient.tsx |  18 +-
+  web/src/components/SessionBuilder.tsx        | 394 ++++++++++++++++++++++++---
+  web/src/lib/types.ts                         |  19 ++
+Backend POST /api/sessions needed NO change: createSessionSchema already accepts
+moduleIds[]/unitIds[] (src/routes/sessions.routes.ts:204-205); only the UI spoke
+singular. Confirmed by code read, not re-done.
+
+Screenshots (live localhost:3001 DOM):
+  docs/verification/builder-depth-multiselect.png   (2 checkboxes + badges + counter)
+  docs/verification/builder-depth-session-created.png (player after UI submit)
+  docs/verification/builder-depth-zero-state.png    (0-result state, start disabled)
+
+=====================================================================
+1. RAW SQL — DISTINCT source check (pre-build ground truth)
+=====================================================================
+$ .\node_modules\.bin\tsx.cmd tmp-builder-depth-check.ts
+[script ran: SELECT DISTINCT source FROM questions ORDER BY 1; plus context queries]
+
+=== Q1: SELECT DISTINCT source FROM questions ===
+[
+  {
+    "source": "hamame_authored"
+  }
+]
+=== Q2: counts by source x status ===
+[
+  {
+    "source": "hamame_authored",
+    "status": "approved",
+    "n": 8
+  },
+  {
+    "source": "hamame_authored",
+    "status": "pending_review",
+    "n": 1
+  }
+]
+=== Q3: approved counts by type ===
+[
+  {
+    "type": "QCM",
+    "n": 4
+  },
+  {
+    "type": "QCS",
+    "n": 3
+  },
+  {
+    "type": "QROC",
+    "n": 1
+  }
+]
+=== Q8: total approved ===
+[
+  {
+    "n": 8
+  }
+]
+NOTE: exactly one distinct source value exists (hamame_authored). The builder
+source control therefore uses the raw DB enum values with the pre-existing
+formatSource French labels (Toutes sources / Examen officiel / Hamame / IA) —
+no Externat/Residanat relabeling was invented.
+
+=====================================================================
+2. COUNT ENDPOINT — 4 real filter combinations, clean baseline (8 approved)
+=====================================================================
+$ curl.exe -s "http://localhost:3000/api/questions/counts"
+=== COMBO A: no filters ===
+{"total":8,"byUnit":[],"byModule":[]}
+
+$ curl.exe -s "http://localhost:3000/api/questions/counts?facultyId=b37b039e-2208-4837-b5d5-28b1c338a2cf&yearId=00000000-0000-0000-0000-000000000020"
+=== COMBO B: faculty+year ===
+{"total":8,"byUnit":[],"byModule":[{"moduleId":"00000000-0000-0000-0000-000000000030","count":8}]}
+
+$ curl.exe -s "http://localhost:3000/api/questions/counts?moduleId=00000000-0000-0000-0000-000000000030&types=QCM&types=QCS&source=hamame_authored"
+=== COMBO C: module+types+source ===
+{"total":7,"byUnit":[{"unitId":"00000000-0000-0000-0000-000000000040","count":7}],"byModule":[]}
+
+$ curl.exe -s "http://localhost:3000/api/questions/counts?unitIds=00000000-0000-0000-0000-000000000040&source=official_exam"
+=== COMBO D: unitIds array + empty source ===
+{"total":0,"byUnit":[],"byModule":[]}
+
+=====================================================================
+3. MULTI-COURSE SESSION — fixtures, UI submit, raw DB rows
+=====================================================================
+Pre-state: the whole DB held exactly ONE unit (Cardiac Physiology, 8 approved),
+so a 2-distinct-unit proof required temporary fixtures, removed afterwards:
+  units: [{"id":"00000000-0000-0000-0000-000000000040","unit":"Cardiac Physiology","module":"Cardiology","faculty":"Medicine","rollout":"live","approved":8}]
+
+$ .\node_modules\.bin\tsx.cmd tmp-builder-fixture.ts up
+=== FIXTURE unit+question ===
+[{"unit":"VERIFY Secondary Unit","qid":"00000000-0000-0000-0000-0000000000a2","type":"QCM","source":"hamame_authored","status":"approved"}]
+=== COUNTS with both units ===
+[{"approved_in_both":9}]
+
+$ node builder-walk2.js   (login norole@hamame.dz → /qcm/builder → Medicine →
+  Year 1 → Cardiology → tick BOTH units → size 5 → submit THROUGH THE UI)
+--- c0-two-units http://localhost:3001/qcm/builder
+Domaine (optionnel) | Faculté | Toutes les facultés | Medicine | Année | Toutes les années | Year 1 | Module | Tous les modules | Cardiology (8) | Unités (cours) | Toutes | Aucune (= tout le module) | Cardiac Physiology | 7 | VERIFY Secondary Unit | 1 | Types de questions | QCM — choix multiples | QCS — choix simple | QROC — réponse ouverte courte | Cas clinique | Source | Toutes sources | Examen officiel | Hamame | IA | Nombre de questions | 5 | 10 | 20 | 30 | 50 | Ordre des résultats | Aléatoire | Par année | Par cours | 8 questions disponibles | Commencer l'entraînement
+UNIT ROWS: ["Cardiac Physiology 7","VERIFY Secondary Unit 1"]
+--- c1-both-ticked http://localhost:3001/qcm/builder
+Unités (cours) — 2 sélectionnées | Toutes | Aucune (= tout le module) | Cardiac Physiology | 7 | VERIFY Secondary Unit | 1 | Types de questions | QCM — choix multiples | QCS — choix simple | QROC — réponse ouverte courte | Cas clinique | Source | Toutes sources | Examen officiel | Hamame | IA | Nombre de questions | 5 | 10 | 20 | 30 | 50 | Ordre des résultats | Aléatoire | Par année | Par cours | 8 questions disponibles | Commencer l'entraînement
+AFTER SUBMIT URL: http://localhost:3001/sessions/625478a4-8cca-4c29-b1bb-62c5d8158a8a
+--- c2-session-created http://localhost:3001/sessions/625478a4-8cca-4c29-b1bb-62c5d8158a8a
+Session QCM | Question 1/5 | 0 répondues | Quitter | QCS·HAMAME·EASY | Un patient présente un souffle systolique maximal au foyer mitral, irradiant vers l'aisselle. Quel diagnostic évoquez-vous en premier ? | Rétrécissement aortique | Insuffisance aortique | Rétrécissement mitral | Insuffisance mitrale | Valider la réponse | Précédent | Suivant | Marquer pour revoir | Terminer la session | Minuteur d'étude
+ERRORS: []
+
+$ .\node_modules\.bin\tsx.cmd tmp-builder-rows.ts
+=== UI-created session row ===
+[{"id":"625478a4-8cca-4c29-b1bb-62c5d8158a8a","name":"Entraînement — Cardiology · 2 unités","mode":"practice","sort":"random"}]
+=== UI-created session questions by unit ===
+[{"ord":0,"unit":"Cardiac Physiology","type":"QCS","source":"hamame_authored"},{"ord":1,"unit":"VERIFY Secondary Unit","type":"QCM","source":"hamame_authored"},{"ord":2,"unit":"Cardiac Physiology","type":"QCM","source":"hamame_authored"},{"ord":3,"unit":"Cardiac Physiology","type":"QCM","source":"hamame_authored"},{"ord":4,"unit":"Cardiac Physiology","type":"QCS","source":"hamame_authored"}]
+=== distinct units in UI session ===
+[{"distinct_units":2}]
+
+=====================================================================
+4. ZERO-RESULT STATE — source=Examen officiel (single-unit run)
+=====================================================================
+$ node builder-walk.js   (b5 step: source radio → Examen officiel)
+--- b5-source-official http://localhost:3001/qcm/builder
+Module | Tous les modules | Cardiology (0) | Unités (cours) — 1 sélectionnée | Toutes | Aucune (= tout le module) | Cardiac Physiology | 0 | Types de questions | QCM — choix multiples | QCS — choix simple | QROC — réponse ouverte courte | Cas clinique | Source | Toutes sources | Examen officiel | Hamame | IA | Nombre de questions | 5 | 10 | 20 | 30 | 50 | Ordre des résultats | Aléatoire | Par année | Par cours | 0 questions disponibles | Élargissez les filtres pour lancer. | Commencer l'entraînement
+SUBMIT DISABLED WITH 0 RESULTS: true
+--- b6-source-hamame (radio back to Hamame)
+Module | Tous les modules | Cardiology (7) | Unités (cours) — 1 sélectionnée | Toutes | Aucune (= tout le module) | Cardiac Physiology | 7 | 7 questions disponibles | Commencer l'entraînement
+(single-unit run counter reads 7 because default types QCM+QCS exclude the 1 QROC.)
+
+=====================================================================
+5. CLEANUP — fixtures + test session removed, baseline restored
+=====================================================================
+First `down` run hit the FK guard (UI session name does not start with VERIFY):
+FAILED: PrismaClientKnownRequestError ... Code: `23503` ... violates foreign key
+constraint "session_questions_question_id_fkey" on table "session_questions"
+$ .\node_modules\.bin\tsx.cmd tmp-builder-fixture.ts down   (after adding the
+   known session id to the delete list)
+=== CLEANUP sessions left ===
+[{"n":0}]
+=== CLEANUP fixture left ===
+[{"n":0}]
+=== COUNTS back to baseline ===
+[{"approved":8}]
+$ curl.exe -s "http://localhost:3000/api/questions/counts"
+{"total":8,"byUnit":[],"byModule":[]}
+Temp scripts removed: tmp-builder-depth-check.ts tmp-builder-ids.ts
+tmp-builder-units.ts tmp-builder-fixture.ts tmp-builder-rows.ts (git clean).

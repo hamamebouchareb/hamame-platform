@@ -1,0 +1,80 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20260901212559
+Username: DESKTOP-TARE05B\imad
+RunAs User: DESKTOP-TARE05B\imad
+Configuration Name: 
+Machine: DESKTOP-TARE05B (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\Users\imad\AppData\Local\Temp\opencode\resources-verify.ps1
+Process ID: 3940
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+===== STEP 1: PRISMA MIGRATION STATUS + RAW SQL (resources rows, current state)
+command: npx prisma migrate status
+
+
+command: npx tsx C:\Users\imad\AppData\Local\Temp\opencode\tmp-resources-sql.ts select-star
+
+
+===== STEP 2: SEED SCRIPT + COUNT BEFORE/AFTER + SEEDED ROWS
+command: npx tsx C:\Users\imad\AppData\Local\Temp\opencode\tmp-resources-sql.ts count
+
+
+command: npx tsx prisma/seed.ts
+
+
+command: npx tsx C:\Users\imad\AppData\Local\Temp\opencode\tmp-resources-sql.ts count
+
+
+command: npx tsx C:\Users\imad\AppData\Local\Temp\opencode\tmp-resources-sql.ts select-star
+
+
+===== STEP 3: LOGIN as norole@hamame.dz + GET /api/resources (curl -i, unfiltered)
+command: Set-Content login body file:
+{"email":"norole@hamame.dz","password":"testpass123"}
+command: curl.exe -s -i -X POST http://127.0.0.1:3000/api/auth/login -H "Content-Type: application/json" --data-binary "@norole-login-body.json"
+
+raw login response (unedited):
+HTTP/1.1 200 OK
+X-Powered-By: Express
+Vary: Origin
+Content-Type: application/json; charset=utf-8
+Content-Length: 479
+ETag: W/"1df-EzErUPm2lpakss64cLgt/TVwY7w"
+Date: Tue, 01 Sep 2026 20:29:20 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"accessToken":"[REDACTED-JWT]","user":{"id":"05a6f985-9be9-4ee5-ae19-4b96f8d58676","email":"norole@hamame.dz","phone":null,"fullName":"No Role User","facultyId":null,"yearId":null,"university":null,"wilaya":null,"uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-07-16T11:15:52.083Z"}}
+
+command: curl.exe -s -i -H "Authorization: Bearer <token from login>" http://127.0.0.1:3000/api/resources
+
+
+===== STEP 4: FILTER PARAMS - unfiltered vs faculty+year-filtered (both raw)
+command: curl.exe -s -i -H "Authorization: Bearer <token>" "http://127.0.0.1:3000/api/resources"
+
+
+command: curl.exe -s -i -H "Authorization: Bearer <token>" "http://127.0.0.1:3000/api/resources?faculty=b37b039e-2208-4837-b5d5-28b1c338a2cf&year=00000000-0000-0000-0000-000000000020"
+
+
+===== STEP 5: DETAIL ENDPOINT GET /api/resources/:id (real seeded id)
+command: curl.exe -s -i -H "Authorization: Bearer <token>" http://127.0.0.1:3000/api/resources/00000000-0000-0000-0000-000000000120
+
+
+===== STEP 6+7+8: LIVE FRONTEND DOM + SCREENSHOTS (puppeteer-core, real Chrome, :3001)
+command: node C:\Users\imad\AppData\Local\Temp\opencode\tmp-dom-capture.mjs  (run from C:\dev\hamame1)
+
+
+===== screenshots written to docs\verification\opencode-shots:
+
+**********************
+Windows PowerShell transcript end
+End time: 20260901213157
+**********************

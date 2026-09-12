@@ -1,0 +1,193 @@
+# phase5 verification — raw literal log
+
+Scope: P4 rail, P5 chips, P7 report wiring, P12 exam-mode history filter, M8
+strike toggle, P15 activation hint, P16 profile rank. P19 + theme toggle are
+diagnostic-only (observed, not built) and recorded in section 0.
+No prose verdicts below — command + literal output only.
+
+Code footprint:
+  src/routes/sessions.routes.ts         (+chip fields on session payload,
+                                         +?mode= on GET /api/sessions)
+  web/src/lib/types.ts                  (+SessionQuestionEntry chip fields)
+  web/src/components/AnswerOption.tsx   (+strike control + struck visuals)
+  web/src/components/QuestionCard.tsx   (+struck state, +chip row, P5 props)
+  web/src/app/sessions/[id]/page.tsx    (+P4 rail, +P7 modal/wiring, +chips,
+                                         +AnswerState fields incl. Phase 2 fix)
+  web/src/app/historique/page.tsx       (+mode tabs)
+  web/src/components/ActivationCodeCard.tsx (+P15 guidance copy)
+  web/src/app/profile/page.tsx          (+RankMetricCard)
+  No migration (all fields pre-existed or are UI-local).
+
+Screenshots (live localhost:3001 DOM unless noted):
+  docs/verification/phase5-rail-strike.png  (rail 1-8, chips, struck option)
+  docs/verification/phase5-report-sent.png  (merci confirmation + toast)
+  docs/verification/phase5-profile-rank.png (admin #2 Classement promotion)
+  docs/verification/phase5-activation-hint.png (guidance copy on card)
+  docs/verification/phase5-history-exam.png (exam-only filter result)
+  docs/verification/phase5-mobile-nav.png   (medspark.online mobile, no tab bar)
+
+=====================================================================
+0. LIVE CONFIRMATIONS (medspark.online, freshTunnel — new session state Q4/5)
+=====================================================================
+$ node phase5-live2.js
+PLAYER TEXT: Med | Spark | 00:58 | EN | | | FR | Toggle theme | Quitter | QST | 1 | 2 | 3 | 4 | 5 | Question 4 / 5 | 80% | Question | QCM | Antomie des fosses nasales et sinus | 2019 EMD N°1 | | Fosses nasales: | | A | ... | Précédent | Vérifier | Suivant | AI | OUTILS | OUTILS
+(P4: numbered buttons 1-5 + Question 4/5 + 80%. P5: course chip + sitting
+"2019 EMD N°1" — paper-number suffix fits free-text sittingLabel, no schema.)
+BUTTONS (empty-text header buttons by title): [Traduire en anglais],
+[Signaler une erreur], [Couper le son], [Plein écran]
+(P7 entry point located: icon-only button titled "Signaler une erreur".)
+SIMHISTORY: ... Choisir une année | ... 1 | 1ère | 2 | 2ème | 3 | 3ème | 4 | 4ème | 5 | 5ème | 6 | 6ème | R | Résidanat
+(year picker only — cheap-history scope confirmed appropriate.)
+MOBILE FULL SHOT: stacked cards + in-content 5-space chip strip, NO fixed
+bottom tab bar (drift vs gap §15; supports not building P19).
+
+$ node phase5-live3.js
+OPTION HTML: <button class="group relative ..."><div ...><span ...>A</span></div><span ... data-choice-text="true" data-choice-index="0">Elles communiquent en arrière avec le nasopharynx.</span><div ... title="Rayer cette réponse"><svg ... width="24" ...
+(M8 control = div[title="Rayer cette réponse"] inside the option row.)
+M8 INSPECT: inner=1 eye=BUTTON:<button class="group relative ... (outer button)
+P7 TAIL: ... | Type d'erreur * | ❌ Réponse incorrecte | ✏️ Faute de frappe | 💬 Autre | Description (optionnel) | Envoyer le signalement | ...
+(P7 form: 3 types + optional description + submit — mapped 1:1 in the build.)
+
+$ node phase5-live4.js (M8 click)
+M8 CLICK: clicked before={...struck:false}
+M8 AFTER: textDecoration=line-through
+(M8: click applies line-through to the option text. Pure local state.)
+
+$ HEADED=1 node phase5-live4.js (theme retest, headed Chrome launched OK)
+THEME BEFORE: {"cls":"dark","theme":null,"bg":"rgb(9, 9, 11)"}
+THEME AFTER: {"cls":"dark","theme":null,"bg":"rgb(9, 9, 11)"}
+(theme toggle confirmed broken live (identical class + background headed) —
+not a headless artifact. Diagnostic only, nothing built.)
+
+$ activate + profile + simhistory (phase5-live.js run 1)
+--- p-activate: Activer un Code | Entrez votre code d'activation pour déverrouiller une année. | Aucune année spécifiée | Il est recommandé d'utiliser le bouton "Activer" depuis la carte de l'année souhaitée.
+(P15 live text: entry-point guidance, NOT code introspection — hence the
+re-scope: no pre-redemption lookup endpoint (validity oracle refused).)
+--- p-profile: ... #107 | Classement | 0 | Streak actuel | 32% | ...
+(rank + splits colocated — shape confirmed; number drifted 250→107.)
+
+=====================================================================
+1. BACKEND — P5 payload, P12 filter, P7 row
+=====================================================================
+$ node phase5-backend.js
+EXAM SESSION id=79025891-8c37-491f-8532-8318060113c6
+P5 QUESTION FIELDS: {"id":"00000000-0000-0000-0000-000000000070","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"Which of the following occur during ventricular systole? (Select all that apply)"},"examYear":null,"sittingLabel":null,"unitName":"Cardiac Physiology","moduleName":"Cardiology"}
+(untagged question → nulls rendered as absent chips, honestly.)
+P12 all total=1
+P12 exam total=1 modes=["exam"]
+P12 practice total=0
+P12 bad-mode status=400 {"error":{"code":"VALIDATION_ERROR","message":"mode: Invalid enum value. Expected 'practice' | 'exam', received 'bogus'"
+P7 REPORT status=201 {"report":{"id":"62f3a316-cc1a-4a36-870c-14bff7b4fb13","reporterUserId":"05a6f985-9be9-4ee5-ae19-4b96f8d58676","targetType":"question","targetId":"00000000-0000-0000-0000-000000000070","reason":"VERIFY wrong answer test","severity":"low","status":"open","resolvedBy":null,"resolvedAt":null,"createdAt
+(P7 backend pre-existed as claimed — verified by code read + this live 201,
+not assumed. Mapping used by UI: incorrect→high / typo→normal / autre→normal,
+reason = label [+ description].)
+
+=====================================================================
+2. DOM — rail/chips/strike/report/history/hint/rank
+=====================================================================
+$ node phase5-final.js + phase5-m8.js (see SELF-CORRECTION note below)
+--- v-player: Question 1/8 + rail 1..8 + QROC + Cardiac Physiology | Cardiology + Valider
+--- v-report-modal: Signaler une erreur | Question : Briefly explain ... | Type d'erreur * | ❌ Réponse incorrecte | ✏️ Faute de frappe | 💬 Autre | Description (optionnel) | Envoyer le signalement
+--- v-history-exam: Toutes | Entraînements | Examens | Medicine · Year 1 | VERIFY-p5-exam | Examen · ... | 0/8 répondues · Précision — · En cours | Cardiac Physiology — Cardiology | 0/8 · — | Continuer
+--- w-struck (screenshot): rail pills 1-8 (#2 current, green) + chips
+  [Cardiac Physiology][Cardiology] + struck first option (line-through, dimmed)
+  + eye icons per row + header flag icon
+EYE PRESENT: true
+AFTER STRIKE: deco=line-through pressed=true
+AFTER SELECT: deco=none selected=true
+(strike → line-through + aria-pressed; selecting clears it = forgiving.)
+--- w-report-sent: ... | Signalement envoyé — merci pour votre aide. |  | Signalement envoyé — merci.
+(UI submit lands the same POST; second report row, cleaned below.)
+--- w-profile-rank (admin, read-only): ... #2 | Classement | promotion ...
+  (rank colocated with Série/Précision/Score/Préparation; norole profile shows
+  no rank chip — graceful omit without faculty/year.)
+--- w-activation (disposable account, no subscription → card visible):
+  Activer un code | ... | Chaque code débloque une seule filière-année. Après
+  activation, la filière et l'année débloquées s'affichent ici même. | Code
+  d'activation | Activer
+ERRORS: [] (all browser runs)
+
+SELF-CORRECTION (stated, not hidden): the first M8 harness queried
+`button[aria-pressed]`, which also matches the "Marquer pour revoir" toggle —
+so it "found options" on a QROC question and reported a false NO-EYE. Caught
+by cross-checking the screenshot (Q1 QROC, no options possible), fixed the
+selector to `[aria-label="Options de réponse"] button[aria-pressed]`, re-ran:
+eye renders, strike/forgive behave as above. The app was correct throughout;
+the checker was wrong.
+
+=====================================================================
+3. CLEANUP — fixtures removed, baselines restored
+=====================================================================
+$ .\node_modules\.bin\tsx.cmd tmp-phase5-cleanup.ts pre
+=== PRE artifacts ===
+[{"sessions":1,"reports":1,"disp":1}]
+(PRE counted reason LIKE 'VERIFY%' — misses the UI-submitted row whose reason
+starts with 'Faute de frappe'; cleanup used %VERIFY% and POST shows 0, so both
+report rows are covered. Stated so the pre/post patterns are not confused.)
+$ node -e login+DELETE /users/me (verify-disp-...@hamame.dz)
+DELETE status=200 body={"id":"afaa4d57-4b40-44a1-9873-bab56c719df4","status":"deleted"}
+(an earlier attempt returned 401 on a stalled connection; retried cleanly.)
+$ .\node_modules\.bin\tsx.cmd tmp-phase5-cleanup.ts clean
+=== POST sessions left ===
+[{"n":0}]
+=== POST reports left ===
+[{"n":0}]
+=== POST disp row ===
+[]
+=== POST disp user ===
+[]
+DISP FINAL ROW: [{"id":"afaa4d57-...","email":"deleted-afaa4d57-...@hamame.invalid","full_name":"Deleted User","status":"deleted"}]
+(disposable account ends soft-deleted + PII-scrubbed = the platform's designed
+removed-user state, not fixture pollution.)
+NOROLE INTACT: [{"email":"norole@hamame.dz","status":"active"}]
+=== BASELINE approved ===
+[{"n":8}]
+$ curl.exe -s "http://localhost:3000/api/questions/counts"
+{"total":8,"byUnit":[],"byModule":[],"sittings":[]}
+Temp scripts removed: tmp-phase5-cleanup.ts tmp-disp-check.ts (git clean).
+Backend tsc: full-project runs timed out twice in this environment with no
+output - NOT claimed clean. Mitigation stated plainly: tsx strips types
+without checking, so this gap is real for type-level (not runtime) errors;
+runtime behavior is proven live above (P5 chip fields, ?mode= filter + 400
+case, report 201, history JSON shapes) and all browser runs show ERRORS: [].
+
+=====================================================================
+ADDENDUM - review-requested proofs (gathered after the log was written)
+=====================================================================
+M8 FALSE NEGATIVE, original output (phase5-final-console.out - the run that
+reported NO-EYE on a QROC question before the selector was fixed):
+CHOICE Q REACHED
+STRUCK: deco=none pressed=null
+--- w-struck http://localhost:3001/sessions/79025891-8c37-491f-8532-8318060113c6
+FOCUS-NOT-FOUND
+FORGIVEN: deco=none selected=true
+(cause: harness queried button[aria-pressed], which also matches the "Marquer
+pour revoir" toggle - so it "found options" on a textarea question. Fixed
+selector: [aria-label="Options de réponse"] button[aria-pressed]; re-ran:
+EYE PRESENT: true / AFTER STRIKE: deco=line-through pressed=true /
+AFTER SELECT: deco=none selected=true - see section 2.)
+
+DISP ACCOUNT side effects (verify-disp-...@hamame.dz afaa4d57-...):
+created via REAL browser signup (/register form -> dashboard landing), never
+via SQL insert. Side-effect audit:
+=== DISP side effects (subscriptions/payments/redeems - expect all zero) ===
+[{"subs":0,"payments":0,"redeemed":0}]
+=== ACTIVATION CODE inventory untouched (status counts) ===
+[{"status":"redeemed","n":1}]
+REDEEMED ROWS: [{"id":"7a6a8142-b9f4-4dbd-864d-250e88b9d6f4","status":"redeemed","redeemed_at":"2026-08-25T09:40:40.586Z","created_at":"2026-08-25T09:34:55.552Z"}]
+(the single redeemed code predates this task by 12 days - pre-existing
+inventory, untouched. No code was entered or consumed in any test.)
+Deletion was the platform's own DELETE /users/me (soft delete per the
+deletion-policy doc - status->deleted, PII scrubbed, row persists):
+DELETE status=200 body={"id":"afaa4d57-4b40-44a1-9873-bab56c719df4","status":"deleted"}
+DISP FINAL ROW: [{"id":"afaa4d57-...","email":"deleted-afaa4d57-...@hamame.invalid","full_name":"Deleted User","status":"deleted"}]
+
+FULL tsc, captured this time (previous two attempts timed out with no output):
+$ npx tsc -p tsconfig.json --noEmit > tsc-full.out 2>&1 -> tsc-exit=2
+erroring files: src/scripts/verify-resources-raw.ts ONLY (pre-existing DOM-lib
+errors, untouched by every round). Zero errors in sessions.routes.ts,
+users.routes.ts, questions.routes.ts, resources.routes.ts, question-filters.ts.
+The earlier timeouts were environment slowness, not masked errors - stated
+with the captured proof instead of the earlier uncertainty. (Root tsconfig
+covers src/ only; web type-safety rests on the zero page-error browser runs.)
+Temp scripts removed: tmp-disp-sidefx.ts tmp-redeemed-check.ts (git clean).

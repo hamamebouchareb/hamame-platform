@@ -1,0 +1,27 @@
+# F1 manual-enqueue verification 2026-09-11T11:03:10.014Z
+# API=http://127.0.0.1:3000/api
+ORPHAN_CLEANED f1verify1789124394561@example.com
+REGISTER 201 {"accessToken":"[REDACTED-JWT]","user":{"id":"516edc17-5832-418e-bb51-8d65dc3ff922","email":"f1verify1789124590014@example.com","phone":null,"fullName":"F1 Verify","facultyId":null,"yearId":null,"university":null,"wilaya":null,"uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-09-11T11:03:11.545Z"},"verificationToken":"ab8febd0a378c50ef587d8a8a1bcbbe699b4466f1888c1f98c77d51f763459df"}
+LOGIN 200 {"accessToken":"[REDACTED-JWT]","user":{"id":"516edc17-5832-418e-bb51-8d65dc3ff922","email":"f1verify1789124590014@example.com","phone":null,"fullName":"F1 Verify","facultyId":null,"yearId":null,"university":null,"wilaya":null,"uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-09-11T11:03:11.545Z"}}
+LESSON_PROBE found=true id=00000000-0000-0000-0000-000000000050
+QUESTIONS 200 {"questions":[{"id":"ffffffff-0000-0000-0000-0000000000a4","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Quelles anomalies électrocardiographiques évoquent une hyperkaliémie sévère ?"},"createdAt":"2026-08-11T21:31:21.418Z","options":[{"id":"6e180f6e-8a66-4e14-90af-a7c921ffb20a","bodyText":"Ondes T amples et pointues","orderIndex":0},{"id":"0fc9ace6-0d03-4826-ab59-9b37b54eacf1","bodyText":"Élargissement progressif du QRS","orderIndex":1},{"id":"102853a7-9941-4711-b0d6-9273a85a3641","bodyText":"Allongement isolé de l'intervalle QT","orderIndex":2},{"id":"d09ba0cf-92cb-436c-9e03-7d31968ffe33","bodyText":"Apparition d'ondes U proéminentes","orderIndex":3}],"clinicalCaseParts":[]}],"pagination":{"page":1,"limit":1,"total":8}}
+FIXTURE lessonId=00000000-0000-0000-0000-000000000050 questionId=ffffffff-0000-0000-0000-0000000000a4
+ME 200 {"id":"516edc17-5832-418e-bb51-8d65dc3ff922"}
+ENQUEUE_LESSON_1 201 {"item":{"id":"ac6e4b98-673a-4ecc-9931-fd90313cbc63","userId":"516edc17-5832-418e-bb51-8d65dc3ff922","lessonId":"00000000-0000-0000-0000-000000000050","questionId":null,"flashcardId":null,"dueAt":"2026-09-11T11:03:13.334Z","lastReviewedAt":null,"easeFactor":"2.5"}}
+ENQUEUE_LESSON_2 200 {"item":{"id":"ac6e4b98-673a-4ecc-9931-fd90313cbc63","userId":"516edc17-5832-418e-bb51-8d65dc3ff922","lessonId":"00000000-0000-0000-0000-000000000050","questionId":null,"flashcardId":null,"dueAt":"2026-09-11T11:03:13.334Z","lastReviewedAt":null,"easeFactor":"2.5"}}
+LESSON_SAME_ROW=true (ac6e4b98-673a-4ecc-9931-fd90313cbc63 vs ac6e4b98-673a-4ecc-9931-fd90313cbc63)
+ENQUEUE_QUESTION_1 201 {"item":{"id":"ca6f7deb-c19d-4d13-a663-987bb3ad78bb","userId":"516edc17-5832-418e-bb51-8d65dc3ff922","lessonId":null,"questionId":"ffffffff-0000-0000-0000-0000000000a4","flashcardId":null,"dueAt":"2026-09-11T11:03:14.682Z","lastReviewedAt":null,"easeFactor":"2.5"}}
+ENQUEUE_QUESTION_2 200 {"item":{"id":"ca6f7deb-c19d-4d13-a663-987bb3ad78bb","userId":"516edc17-5832-418e-bb51-8d65dc3ff922","lessonId":null,"questionId":"ffffffff-0000-0000-0000-0000000000a4","flashcardId":null,"dueAt":"2026-09-11T11:03:14.682Z","lastReviewedAt":null,"easeFactor":"2.5"}}
+QUESTION_SAME_ROW=true (ca6f7deb-c19d-4d13-a663-987bb3ad78bb vs ca6f7deb-c19d-4d13-a663-987bb3ad78bb)
+DB_COUNT lesson=1 question=1 (expect 1/1)
+DUE 200 {"items":[{"id":"ac6e4b98-673a-4ecc-9931-fd90313cbc63","userId":"516edc17-5832-418e-bb51-8d65dc3ff922","lessonId":"00000000-0000-0000-0000-000000000050","questionId":null,"flashcardId":null,"dueAt":"2026-09-11T11:03:13.334Z","lastReviewedAt":null,"easeFactor":"2.5","lesson":{"title":"Introduction to the Cardiac Cycle"},"question":null,"flashcard":null},{"id":"ca6f7deb-c19d-4d13-a663-987bb3ad78bb","userId":"516edc17-5832-418e-bb51-8d65dc3ff922","lessonId":null,"questionId":"ffffffff-0000-0000-0000-0000000000a4","flashcardId":null,"dueAt":"2026-09-11T11:03:14.682Z","lastReviewedAt":null,"easeFactor":"2.5","lesson":null,"question":{"type":"QCM","source":"hamame_authored"},"flashcard":null}]}
+DUE_HAS_LESSON=true DUE_HAS_QUESTION=true
+ENQUEUE_BOTH_IDS 400 {"error":{"code":"VALIDATION_ERROR","message":"questionId: Exactly one of lessonId or questionId is required."}}
+ENQUEUE_NEITHER_ID 400 {"error":{"code":"VALIDATION_ERROR","message":"questionId: Exactly one of lessonId or questionId is required."}}
+ENQUEUE_UNKNOWN_LESSON 404 {"error":{"code":"LESSON_NOT_FOUND","message":"No lesson exists with this id."}}
+ENQUEUE_UNKNOWN_QUESTION 404 {"error":{"code":"QUESTION_NOT_FOUND","message":"No question exists with this id."}}
+ENQUEUE_NO_AUTH 401 {"error":{"code":"UNAUTHENTICATED","message":"A Bearer token is required for this endpoint."}}
+CLEANUP_QUEUE_DELETED=2
+CLEANUP_QUEUE_LEFT=0
+CLEANUP_USER_LEFT=0 (expect 0)
+RESULT=PASS

@@ -1,0 +1,75 @@
+VERIFY start 2026-09-01T13:36:44.196Z BASE=http://127.0.0.1:3000/api
+
+===== STEP 1: BEFORE — current DB row + session count
+----- raw SQL: SELECT id, email, status, left(password_hash,29), reset-token flags FROM users WHERE email=hamamebouchareb@gmail.com
+[
+  {
+    "id": "b5119037-ed04-483e-94a7-07c475839e59",
+    "email": "hamamebouchareb@gmail.com",
+    "status": "active",
+    "hash_prefix": "$2a$10$dMKJDGa6XWh5r/5yNhLaOe",
+    "has_reset_hash": false,
+    "has_reset_expiry": false
+  }
+]
+----- raw SQL: SELECT count(*) FROM study_sessions WHERE user_id = (user's id)
+----- study_sessions count (before): [{"session_count":9}]
+----- raw SQL: accuracy/stats snapshot (before)
+[
+  {
+    "total": 9,
+    "completed": 8,
+    "avg_score": "22.32"
+  }
+]
+
+===== STEP 2: forgot-password -> reset-password (dev-mode token leak path)
+
+----- REQUEST POST http://127.0.0.1:3000/api/auth/forgot-password
+{"email":"hamamebouchareb@gmail.com"}
+
+----- RESPONSE status=200
+{"message":"If an account exists for that email or phone, a password reset token has been issued.","resetToken":"08325d62ea4d5f841aee257bbb7f540251117da9ece3d690fac48c6f3dcc9040"}
+
+----- resetToken used: 08325d62ea4d5f841aee257bbb7f540251117da9ece3d690fac48c6f3dcc9040
+
+----- REQUEST POST http://127.0.0.1:3000/api/auth/reset-password
+{"token":"[REDACTED-JWT]","newPassword":"NewTestPass123!"}
+
+----- RESPONSE status=200
+{"user":{"id":"b5119037-ed04-483e-94a7-07c475839e59","email":"hamamebouchareb@gmail.com","phone":null,"fullName":"Hamame Bouchareb","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020","university":null,"wilaya":"Alger","uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-07-13T20:35:36.663Z"}}
+
+===== STEP 3: POST /api/auth/login attempt 1
+
+----- REQUEST POST http://127.0.0.1:3000/api/auth/login
+{"email":"hamamebouchareb@gmail.com","password":"NewTestPass123!"}
+
+----- RESPONSE status=200
+{"accessToken":"[REDACTED-JWT]","user":{"id":"b5119037-ed04-483e-94a7-07c475839e59","email":"hamamebouchareb@gmail.com","phone":null,"fullName":"Hamame Bouchareb","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020","university":null,"wilaya":"Alger","uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-07-13T20:35:36.663Z"}}
+
+===== STEP 4: POST /api/auth/login attempt 2 (same password)
+
+----- REQUEST POST http://127.0.0.1:3000/api/auth/login
+{"email":"hamamebouchareb@gmail.com","password":"NewTestPass123!"}
+
+----- RESPONSE status=200
+{"accessToken":"[REDACTED-JWT]","user":{"id":"b5119037-ed04-483e-94a7-07c475839e59","email":"hamamebouchareb@gmail.com","phone":null,"fullName":"Hamame Bouchareb","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020","university":null,"wilaya":"Alger","uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-07-13T20:35:36.663Z"}}
+
+===== STEP 5: AFTER — session count + stats must match BEFORE
+----- study_sessions count (after): [{"session_count":9}]
+[
+  {
+    "total": 9,
+    "completed": 8,
+    "avg_score": "22.32"
+  }
+]
+[
+  {
+    "status": "active",
+    "hash_prefix": "$2a$10$UTXP3BWGChdWQ1BoT0CKr.",
+    "reset_token_cleared": true
+  }
+]
+
+VERIFY end (all steps completed — see raw output above)

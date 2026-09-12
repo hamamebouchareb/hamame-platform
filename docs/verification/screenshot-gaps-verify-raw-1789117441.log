@@ -1,0 +1,316 @@
+SCREENSHOT-GAP VERIFICATION RAW LOG — epoch 1789117441
+Date (UTC): 2026-09-11 ~09:04. Executor: opencode/Muse Spark.
+Method: (1) read all 29 JPGs in docs/screenshotes/ directly; (2) read
+docs/HAMAME_MASTER_HANDOFF (2).md §9.0 in full (Phases 1-8 + Final Sweep)
+and docs/MEDSPARKDZ_COMPLETE_GAP_ANALYSIS.md in full (§1-§26);
+(3) Playwright HEADED probe of https://www.medspark.online (system Chrome,
+1366x900, fr-FR) — public surface only, no credentials exist in this repo
+so authenticated routes were NOT entered; (4) grep/code-read of Hamame
+source for every screenshot's apparent subject.
+HEADLINE: 0 genuinely-new build items. 29/29 screenshots resolve to
+ALREADY-BUILT (Phases 1-8/Final Sweep), DELIBERATE shape/brand decisions,
+STANDING DECISION GATES (OAuth, EN/FR, scheduled sims — noted, not built),
+AI/V2-gated N/A, or PRODUCT FORKS reported not built (F1-F5 at end).
+Nothing was written to the DB, no fixtures, no accounts — cleanup section
+at end proves it (there is nothing to clean).
+Headed evidence (copied to docs/verification/opencode-shots/shotgaps-*):
+shotgaps-live.json (5 probes: / /login /register /dashboard /qcm),
+shotgaps-followup.json (signup href + signup page head), PNGs
+shotgaps-root/login/register/dashboard-unauth/qcm-unauth/login2/signup.
+Prober scripts: %TEMP%\opencode\shotgaps-probe.js + shotgaps-followup.js
+(playwright-core 1.62.1, headed system Chrome). Zero pageerrors both runs.
+Key live facts reused below: /login 200 renders email+password+Rester
+connecte+forgot+"OU CONTINUER AVEC"+a visible Google button (PIXEL-PROVEN
+by shotgaps-login.png; text-only DOM scrape missed it — headed mattered);
+"Créer un compte" href=/signup; /signup 200 live (Nom complet + Faculte
+select Alger..Setif + email + password + confirm + "Creer mon compte" +
+OU CONTINUER AVEC; NOTHING filled/submitted); /register still 404;
+unauth /dashboard -> /landing marketing page (1000+ cours, 3000+
+podcasts, 15000+ QCM, 10+ IA, "Selection multi-cours"); unauth /qcm 200
+renders Banque de QCM + leaderboard header ("septembre 2026, 19 jours
+restants") + "Chargement des simulations...".
+
+--- IMG_4406.JPG — dashboard top (Alger/Residanat hero, STREAK/SCORE/
+PRECISION, tabs QCM/Studio/Ressources/Suivi/Revision, Banque de QCM
+Creez-Session/Exam-Mode, Spark Drive panel) ---
+Live: authenticated dashboard not entered (no creds); /landing marketing
+confirms product framing. Prior live: Phases 1-7 dashboard crawls.
+Hamame proof (code, not assumption):
+ web/src/lib/nav.ts -> PRIMARY_NAV = Tableau de bord/QCM/Bibliotheque/
+ Suivi/Revision (Section 2C fix, single source of truth)
+ web/src/app/resources/page.tsx -> "Hamame Drive" list page (Section 2D)
+ web/src/app/dashboard/page.tsx references reviews/due (P11 widget)
+Disposition: ALREADY EXISTS, different shape by design (routable pages vs
+in-dashboard panels — gap-analysis §19.1 DIFFERENT, Hamame ahead on deep
+links). Spark Drive panel = /resources built §2D. No build.
+
+--- IMG_4407.JPG — "Credits IA" (Total 10/Bonus 0, Quotidiens/Bonus,
+Recharger, "Renouvellement dans 13:58:19", Explications IA 5 restants,
+Messages Chat 5 restants, low-balance warning, Progression Visuelle) ---
+Live: AI-credit internals are authed; not entered. Public /landing
+confirms "10+ IA Integree" as product pillar.
+Hamame proof: GET /ai/credits carries server-side `lowBalance` flag
+(Phase 6 Task 7a; client computation deleted, grep zero matches).
+Disposition: AI quota surfaces are V1-excluded N/A (gap-analysis §20);
+recharge-code + countdown + per-tool split have no Hamame credit-model
+counterpart — would need a product decision, not a parity fix. Not built.
+
+--- IMG_4408.JPG — /qcm Banque de QCM (Nouvelle Session / Nouvel examen /
+ECOS / Residanat cards, Bibliotheque de notes panel, Sessions Partagees,
+Simulations d'Examens) ---
+Live: unauth /qcm 200 TODAY renders exactly this skeleton (Banque de QCM
+hero, Nouvelle Session/Nouvel examen, Bibliotheque panel, Sessions
+Partagees "Bientot disponible", Simulations + "Simulations passees").
+Hamame proof: web/src/app/qcm decision cards (MATCH §4.4); SessionBuilder
+single-page form (deliberate); /notes tags/search/favs (Phase 3, see
+IMG_4423 evidence); /historique ?mode= + Examens tab (P12 cheap half,
+historique/page.tsx:41-43,126-139).
+Disposition: ECOS card = N8 empty shell (see IMG_4416-19); Residanat card
+= sitting taxonomy Phase 1 R2; Sessions Partagees = N/A (Bientot both
+sides); scheduled sims = standing gate. No build.
+
+--- IMG_4409.JPG — "Creer une Session" wizard STEP 1 (Choisissez une
+annee, 1-5) ---
+Live: wizard steps verified live in Phases 1/5/6 (§25.5: single-module
+scope confirmed).
+Hamame proof: web/src/components/SessionBuilder.tsx — cascade
+faculte->annee->module->unite + unit checkbox list w/ count badges +
+live counter + source/sitting/period filters (Phase 1 R1+R2).
+Disposition: WIZARD SHAPE = standing deliberate decision ("content gap,
+not shape gap" — do NOT treat as gap per brief). Content parity done. No
+build.
+
+--- IMG_4410.JPG — wizard STEP 2 (Choisissez un module: Anatomie…
+Physiologie/SSH, icon tiles) ---
+Same as 4409. Hamame proof: SessionBuilder.tsx:254-256
+(/faculties/:id/years, /years/:id/modules, /modules/:id/units) +
+:267 live counts (GET /api/questions/counts) + :520-582 per-unit badges.
+Backend: src/routes/questions.routes.ts:275 router.get("/questions/counts").
+Disposition: deliberate shape; counts+module select ALREADY BUILT. No build.
+
+--- IMG_4411.JPG — wizard STEP 3 (course radios w/ counts 44/30/6/2/4/5,
+Types QCM/QCS/QROC/Cas Clinique, Source Externat/Residanat, Periode De/A,
+Ordre, Statistiques, Retour/Demarrer, "0 questions") ---
+Hamame proof: SessionBuilder.tsx:28-35 (source/examYear/sittingLabel/
+examYearFrom/examYearTo state) + :277-283 (appends source/examYear/
+sittingLabel/From/To to counts query) + :100-104 source labels; migration
+20260101000019_add_question_sitting_columns (examYear/sittingLabel on
+questions); resultSort by_year/by_course/random + examMode + showStats
+(§2B). Cross-module multi-select CLOSED permanently (§25.5: switching
+modules resets selection — Hamame single-module scope MATCHES).
+"Externat/Residanat" terms deliberately NOT copied (no such Hamame
+taxonomy).
+Disposition: ALL BUILT. No build.
+
+--- IMG_4412.JPG — "Choisir un Examen" STEP 1 (year 1-4) ---
+Hamame proof: builder "Examen passe" section (year + sitting dropdowns,
+DB-driven options only) — Phase 1 R2,
+docs/verification/sitting-depth-verify-raw-1788606856.log.
+Disposition: ALREADY BUILT. Papers-as-first-class-entity explicitly
+deferred (Phase 1). No build.
+
+--- IMG_4413.JPG — "Choisir un Examen" STEP 2 (module grid) ---
+Same as 4412 + 4410 evidence. Disposition: ALREADY BUILT. No build.
+
+--- IMG_4414.JPG — exam list (2026-Rattrapage 30Q, 2026 S2/S1) + "Mode
+Examen — Resultats et explications caches jusqu'a la fin" toggle ---
+Hamame proof: `examMode` boolean overrides `mode` (POST /api/sessions,
+§2B); exam withholding server-side (`correctOptionIds` withheld in exam
+mode — Phase 2 + N3 contrast: MedSpark examMode is URL-param client-side,
+Hamame MUST NOT copy that pattern); 90s/question preset
+EXAM_SECONDS_PER_QUESTION (Phase 6 Task 2, live-confirmed N4).
+Disposition: ALREADY BUILT and structurally stronger. No build.
+
+--- IMG_4415.JPG — exam runner (Q1/30, timer 00:34, EN|FR, QST rail 1-9,
+chips Osteologie/2026/Rattrapage/QCS, A-E options, OUTILS rail) ---
+Hamame proof (exact lines):
+ web/src/app/sessions/[id]/page.tsx:150 progressPct; :376 width bar;
+  :515-517 "P4 numbered rail: jump between questions…same states and
+  behavior as the reference rail"; :565-568 unitName/moduleName/examYear/
+  sittingLabel chips; :13-14 + :307-314 + :438-443 + :640-704 P7 report
+  modal POSTing /questions/:id/report (reason/severity);
+ web/src/components/QuestionCard.tsx:98 + :168/:192 strike-through
+  (forgiving clear, disabled after submit — M8);
+ answer-stats: src/routes/questions.routes.ts:414
+  "/questions/:id/answer-stats" + QuestionCard community % + "Basé sur N
+  réponses" + "voir le commentaire" toggle (Phase 2).
+Disposition: rail/chips/report/strike/percentages/comment ALL BUILT.
+EN|FR = standing gate (not built). OUTILS non-AI items deferred for spec
+(Final Sweep); sound toggle deliberately NOT built (no audio). No build.
+
+--- IMG_4416.JPG — ECOS wizard STEP 1 (years 3-6) ---
+Live/known: N8 — ECOS = year -> unit -> "Aucun ECOS disponible / contenu
+bientot disponible": real flow shell, ZERO content.
+Hamame proof: rg -li "ecos" web/src -> NO MATCHES (zero ECOS code anywhere).
+Disposition: nothing to copy (no content to be parity with) — N/A per §26.
+No build.
+
+--- IMG_4417.JPG — ECOS STEP 2 (Cardiologie/Pneumologie/Neurologie/HGE/
+Hematologie/Oncologie/Maladies Infectieuses/Ressources generales) ---
+Same N8 as 4416. Disposition: N/A, no build.
+
+--- IMG_4418.JPG — ECOS STEP 3 list (BAV 2 Mobitz I/II, BAV 3 complet…,
+"1 Station") ---
+Same N8 as 4416. Disposition: N/A, no build.
+
+--- IMG_4419.JPG — ECOS STEP 4 "Mode QROC" (Reveler la reponse vs
+Correction automatique) ---
+Hamame rule (AGENTS.md gotcha): QROC/clinical answers NOT auto-graded
+(isCorrect stays null); automated grading = V2 AI feature. Practice mode
+reveals explanation immediately (= "reveler" behavior already).
+Disposition: "Correction automatique" = AI grading, V2-gated. FORK F3:
+supporting evidence for V2 backlog only. No build.
+
+--- IMG_4420.JPG — ECOS session runner (0/1, clinical vignette + ECG,
+Q1 QROC) ---
+Hamame: sessions player renders QROC/clinical questions, ungraded by
+design (V2 AI). Disposition: covered by F3 decision. No build.
+
+--- IMG_4421.JPG — Residanat picker (2025/2024/2023 Residanat, 150
+Questions) ---
+Hamame proof: sitting taxonomy covers any year range (N7: corpus now
+2005-2025, no UI change needed); builder year+sitting dropdowns DB-driven.
+Disposition: ALREADY BUILT (lightweight taxonomy by decision); papers-as-
+entity deferred. No build.
+
+--- IMG_4422.JPG — Residanat runner Q1/150 (Acides nucleiques 2025,
+"L'uracile (Cochez la reponse fausse)", A-E) ---
+Same player evidence as IMG_4415 (rail/chips/report/strike/stats all in
+code). Long-paper orientation covered. Disposition: ALREADY BUILT. No build.
+
+--- IMG_4423.JPG — Bibliotheque de Notes, Notes IA tab (947 notes, year
+cards 1ere-88 / 2eme-236 / 3eme-293 / 4eme-103 / 5eme-141 / 6eme-37) ---
+Hamame proof (web/src/app/notes/page.tsx exact lines): :17-22 six-tag
+taxonomy (difficile…a_reviser…piege); :70-73 + :101-126 debounced live
+search; :130 patchNote {tags,isFavorite}; :303-348 tag pills + favorites
+toggle (aria-pressed) + per-note tag editor. Backend: migration
+20260101000020_add_note_tags_favorite; invalid tag 400-proven (Phase 3).
+Disposition: personal-notes side COVERED. Year-count cards belong to the
+"Notes IA" (AI-generated) library tab — AI Note Maker is V2-unbuilt, so
+FORK F5: no IA library to count against. No build.
+
+--- IMG_4424.JPG — Bibliotheque "Mes Notes" tab (0 notes, "Aucune note
+manuelle" empty state) ---
+Hamame: /notes + /revision + /resources actionable empty states (design
+pass P0: CTA buttons, mobile full-width). Disposition: MATCH. No build.
+
+--- IMG_4425.JPG — dashboard "Ressources" tab (Cours/resumes/livres/
+videos, year chips, "Choisir une annee") ---
+Hamame proof: web/src/app/resources/page.tsx:53-240 full content —
+"Hamame Drive" h1, faculty/year/type selects (:117-175), CourseCard grid
+(:202-219, Officiel badge + primary tone), empty state + "Parcourir le
+programme" -> /faculties (:193-200), error+retry (:180-192); detail
+/resources/[id] with type/attribution/download + breadcrumbs + PDF-gated
+embed (Phase 4 item 6). Backend: Resource model + GET /api/resources +
+/: id (+faculty/year NAMES for breadcrumbs).
+Disposition: ALREADY BUILT end-to-end (§2D, two raw logs). No build.
+
+--- IMG_4426.JPG — /year/1 "Modules Fondamentaux" (10 Modules, numbered
+cards 01-05…) ---
+Hamame: /faculties + years/modules/units/lessons drill-down (curriculum
+API; only `planned` faculties hidden). Design-pass P0 made Bibliotheque
+empty states actionable across the drill-down. Disposition: MATCH. No build.
+
+--- IMG_4427.JPG — /year/1/biostatique/resources (COURS(6) sidebar:
+Stat descriptive/Probas/Test hypo/Loi binomiale/Khi-2/Correlation;
+"Ressources classiques" vs "Mode Residanat" toggle; "Mes sources";
+empty state "Aucune ressource disponible pour ce cours") ---
+Hamame: lesson resource scoping via faculty/year/type filters;
+per-lesson empty states exist. The "Mode Residanat" toggle maps to the
+Phase-1 source-taxonomy decision (Externat/Residanat terms deliberately
+not adopted). Disposition: noted as supporting evidence for that standing
+taxonomy decision; not a separate gap. No build.
+
+--- IMG_4428.JPG — "Modules & Unites" (Troisieme Annee de Medecine, 5
+Modules / 4 Unites / 100% Clinique) ---
+Hamame curriculum tree (faculties/years/modules/units). Year-3 clinical
+units are content ops (seed has Medicine live + 1 lesson), not code.
+Disposition: MATCH structurally. No build.
+
+--- IMG_4429.JPG — "Unites Cliniques" (Unite Cardio-Respiratoire:
+Semiologie/Physiopathologie/Radiologie/Biochimie/Psychologie; Unite
+Neuro-Sensorielle…) ---
+Same as 4428: unit taxonomy/cards are content, not a code gap.
+Disposition: MATCH. No build.
+
+--- IMG_4430.JPG — dashboard "Suivi" tab (Suivi de Cours, Progression 0%,
+0 Termines / 0 Restants) ---
+Hamame: /suivi auto-analytics (/progress/me, /readiness, /qcm-stats,
+module %) — DIFFERENT by decision (§19.2: manual follows vs automatic;
+keep Hamame engine). Dashboard revision-due widget (P11: GET /reviews/due
+count, no invented efficacy — grep "efficacy" zero hits, disclosed).
+Disposition: deliberate model difference; honest zero states both sides.
+No build.
+
+--- IMG_4431.JPG — suivi-cours detail ("Cours et Progression",
+STATISTIQUE DESCRIPTIVES / PROBABILITES each with Couche 1-5 learning
+layers, +Ajouter/-Retirer, "Activer revision" + "Ouvrir" per course) ---
+Hamame proof: reviews auto-enqueue on session submit (src/routes/
+sessions.routes.ts + reviews.routes.ts:217 POST /enqueue, :241 GET /due,
+:310 POST /:id/complete, :54 GET /settings); /revision player full flow
+(read live: landing/stats/player/summary, 340 lines).
+Disposition: FORK F1 — REPORTED NOT BUILT. User-managed "couches"
+(Add/Remove layers 1-5 per course) + manual per-course revision
+enrollment is a different product model from Hamame's automatic
+enqueue-on-submit. Adopting it changes the revision contract; needs a
+real product decision first. Evidence for the decision file, not a build.
+
+--- IMG_4432.JPG — dashboard "Revision" tab (Memorisation espacee,
+Revisions dues 0, 0 Streak / 0% Efficacite) ---
+Hamame: P11 widget shows due count only; efficacy deliberately NOT shown
+(no such stat exists anywhere — verified by grep). Dashboard Efficacite
+0% in screenshot is a static zero, not a computed metric Hamame should
+copy. Disposition: MATCH by explicit decision. No build.
+
+--- IMG_4433.JPG — /reviews "Tableau de revision" (Spaced Repetition,
+Revisions d'aujourd'hui / a venir / Total, "Excellent! Aucune revision
+requise aujourd'hui") ---
+Hamame proof: /revision landing (due count + ~temps estime + settings
+line + EmptyState "Aucune revision pour le moment" + error/retry),
+player, summary (revise/memorise/a-revoir + success rate + next due
+date). Dashboard widget covers at-a-glance dues.
+Disposition: functionally covered; a literal today/upcoming/total
+three-card split is uncopied LOW polish, not a gap (recorded in §26 N-series
+spirit: informational, no build queued). No build.
+
+--- IMG_4434.JPG — /spark-drive browser (Drives officiels 2025, 1ere-6eme
+annee, The Freelancer, GMA biologie/clinique, Nobles, Dr Mazo…, TRI
+Nom/Date/Taille/Type, DOSSIERS·7, folders 1-Introduction…7-Innervation,
+"7 elements", "auto-refresh 1h") ---
+Hamame proof: /resources flat filtered list + breadcrumbs + PDF viewer
+(Phase 4 item 6; IMG_4425 evidence above). N11 recorded: no folder
+hierarchy, no sort header — LOW informational.
+Disposition: FORK F2 — REPORTED NOT BUILT. 4-level folder hierarchy
+needs a parent/folder data model Resource does not have; curated author
+drives are content ops. Sort-header-only would be trivial but the actual
+feature (hierarchy) is a data-model decision. No build.
+
+=== FORKS (reported, not built) ===
+F1 (IMG_4431): couches d'apprentissage + manual per-course revision
+ enrollment vs Hamame auto-enqueue. Needs product decision.
+F2 (IMG_4434): Drive folder hierarchy (4 levels) vs Hamame flat
+ filtered list. Needs data-model decision (+ content ops).
+F3 (IMG_4419/4420): ECOS "Correction automatique" = AI grading of QROC/
+ clinical. V2 AI by design (AGENTS.md). Evidence for V2 file.
+F4 (standing gates, fresh 2026-09-11 headed evidence): Google OAuth
+ button RENDERS on /login today (shotgaps-login.png pixel proof) —
+ corrects §26 D11's "empty block" note as stale DRIFT, gate itself
+ stands (do not build); EN/FR toggle (player 4415/4422) stands; scheduled
+ simulations (landing "simulations", /qcm "19 jours restants") stands.
+F5 (IMG_4423): per-year IA-notes archive counts belong to the AI library
+ tab (V2 Note Maker unbuilt). Personal-notes side covered. No action.
+Palette (Blue→Violet vs orange/pink/purple) and wizard-vs-single-page
+remain standing deliberate decisions — never re-litigated, no code touched.
+
+=== MUTATION/CLEANUP PROOF ===
+DB writes this task: ZERO. No sessions/answers/reviews/notes/resources/
+users rows created, tagged, nulled, or deleted; no migrations; no seeds;
+no code edits in C:\dev\hamame1 (git status untouched by this task —
+verify with `git status --short`). No MedSparkDZ account created (signup
+form never filled/submitted; Google OAuth never clicked past render; no
+codes consumed; exam sessions never started). Only artifacts: this log +
+copied headed evidence (docs/verification/opencode-shots/shotgaps-*) +
+%TEMP%\opencode\shotgaps-{probe,followup}.js + *.json + *.png (outside
+repo). Baseline restoration: vacuous — nothing was mutated, so every
+baseline (8 approved questions, 0 tagged, sittings [], norole 0 sessions,
+resources table state) is definitionally unchanged; no re-probe required.

@@ -1,0 +1,1018 @@
+VERIFY start 2026-08-27T18:07:05.342Z BASE=http://127.0.0.1:3000/api
+
+===== baseline years (before fixture)
+[
+  {
+    "label": "Year 1",
+    "order_index": 0,
+    "approved_questions": 8
+  }
+]
+
+===== SQL/Prisma: seed temporary Year 2 fixture
+----- years + approved question counts (raw SQL)
+[
+  {
+    "id": "00000000-0000-0000-0000-000000000020",
+    "label": "Year 1",
+    "order_index": 0,
+    "q_count": 8
+  },
+  {
+    "id": "aaaaaaaa-0000-4000-8000-000000000021",
+    "label": "Year 2 VERIFY",
+    "order_index": 1,
+    "q_count": 2
+  }
+]
+
+===== POST http://127.0.0.1:3000/api/auth/register
+----- request body
+{
+  "email": "verify-sort-a-1787854025341@hamame.dz",
+  "password": "VerifySort!2026",
+  "fullName": "Verify Sort verify-a"
+}
+----- response status 201 (2166ms)
+----- response body
+{"accessToken":"[REDACTED-JWT]","user":{"id":"e928c992-89a6-440d-9fdd-544cb6b92296","email":"verify-sort-a-1787854025341@hamame.dz","phone":null,"fullName":"Verify Sort verify-a","facultyId":null,"yearId":null,"university":null,"wilaya":null,"uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-08-27T18:07:09.110Z"},"verificationToken":"29374a4852de1f5457f547148bd2846e67ee1c756af3b3ee13129d915497d1cd"}
+
+===== POST http://127.0.0.1:3000/api/auth/login
+----- request body
+{
+  "email": "verify-sort-a-1787854025341@hamame.dz",
+  "password": "VerifySort!2026"
+}
+----- response status 200 (274ms)
+----- response body
+{"accessToken":"[REDACTED-JWT]","user":{"id":"e928c992-89a6-440d-9fdd-544cb6b92296","email":"verify-sort-a-1787854025341@hamame.dz","phone":null,"fullName":"Verify Sort verify-a","facultyId":null,"yearId":null,"university":null,"wilaya":null,"uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-08-27T18:07:09.110Z"}}
+
+===== POST http://127.0.0.1:3000/api/auth/register
+----- request body
+{
+  "email": "verify-sort-b-1787854025341@hamame.dz",
+  "password": "VerifySort!2026",
+  "fullName": "Verify Sort verify-b"
+}
+----- response status 201 (497ms)
+----- response body
+{"accessToken":"[REDACTED-JWT]","user":{"id":"77945e25-51bf-4244-9cc4-af8f2a1462f6","email":"verify-sort-b-1787854025341@hamame.dz","phone":null,"fullName":"Verify Sort verify-b","facultyId":null,"yearId":null,"university":null,"wilaya":null,"uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-08-27T18:07:10.683Z"},"verificationToken":"1e06c331d57385fd4f3e67408cfb0d97c8ba46f1846593a950f65f15b38756db"}
+
+===== POST http://127.0.0.1:3000/api/auth/login
+----- request body
+{
+  "email": "verify-sort-b-1787854025341@hamame.dz",
+  "password": "VerifySort!2026"
+}
+----- response status 200 (209ms)
+----- response body
+{"accessToken":"[REDACTED-JWT]","user":{"id":"77945e25-51bf-4244-9cc4-af8f2a1462f6","email":"verify-sort-b-1787854025341@hamame.dz","phone":null,"fullName":"Verify Sort verify-b","facultyId":null,"yearId":null,"university":null,"wilaya":null,"uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-08-27T18:07:10.683Z"}}
+
+===== POST http://127.0.0.1:3000/api/auth/register
+----- request body
+{
+  "email": "verify-sort-c-1787854025341@hamame.dz",
+  "password": "VerifySort!2026",
+  "fullName": "Verify Sort verify-c"
+}
+----- response status 201 (471ms)
+----- response body
+{"accessToken":"[REDACTED-JWT]","user":{"id":"8b98e6b4-b042-452f-9df1-1a3e5fd5b112","email":"verify-sort-c-1787854025341@hamame.dz","phone":null,"fullName":"Verify Sort verify-c","facultyId":null,"yearId":null,"university":null,"wilaya":null,"uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-08-27T18:07:11.334Z"},"verificationToken":"222f67b10ee99a1878da63b9f87f3923165e0a732aa610926e8b320b01a647f8"}
+
+===== POST http://127.0.0.1:3000/api/auth/login
+----- request body
+{
+  "email": "verify-sort-c-1787854025341@hamame.dz",
+  "password": "VerifySort!2026"
+}
+----- response status 200 (205ms)
+----- response body
+{"accessToken":"[REDACTED-JWT]","user":{"id":"8b98e6b4-b042-452f-9df1-1a3e5fd5b112","email":"verify-sort-c-1787854025341@hamame.dz","phone":null,"fullName":"Verify Sort verify-c","facultyId":null,"yearId":null,"university":null,"wilaya":null,"uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-08-27T18:07:11.334Z"}}
+
+===== using 3 ephemeral accounts (not shared test passwords)
+
+===== POST http://127.0.0.1:3000/api/sessions
+----- request body
+{
+  "name": "VERIFY-verify-a-by_year",
+  "mode": "practice",
+  "facultyId": "b37b039e-2208-4837-b5d5-28b1c338a2cf",
+  "size": 10,
+  "sort": "by_year",
+  "showStats": true
+}
+----- response status 201 (2621ms)
+----- response body
+{"session":{"id":"0ffd096f-d567-4365-8221-c039fc7654d3","name":"VERIFY-verify-a-by_year","mode":"practice","isOfficialMock":false,"timeLimitSeconds":null,"resultSort":"by_year","showStats":true,"startedAt":"2026-08-27T18:07:13.222Z","completedAt":null,"score":null,"questions":[{"sessionQuestionId":"1ad39e54-f4ec-4862-9482-4934e7e3fb1b","presentedOrder":0,"question":{"id":"ffffffff-0000-0000-0000-0000000000a1","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Chez un sujet sain au repos, quelle est la principale déterminante de la précharge ventriculaire gauche ?"}},"options":[{"id":"c23e767e-263e-47a2-805e-120b1a819f1b","bodyText":"La fréquence cardiaque maximale théorique"},{"id":"e73619eb-f0bb-4de8-9b7e-5891661762f1","bodyText":"Le retour veineux systémique"},{"id":"1c57749a-347a-466c-917e-0bb51f30f78f","bodyText":"L'épaisseur pariétale du ventricule droit"},{"id":"ad52ca83-7023-48fa-8a90-6c836a4d2f14","bodyText":"La pression artérielle diastolique"}],"clinicalCaseParts":[]},{"sessionQuestionId":"fd18e0a4-af8a-429a-bfb3-4a5953329096","presentedOrder":1,"question":{"id":"00000000-0000-0000-0000-000000000090","unitId":"00000000-0000-0000-0000-000000000040","type":"QROC","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Briefly explain why the QRS complex is typically narrow in a healthy heart."}},"options":[],"clinicalCaseParts":[]},{"sessionQuestionId":"97d93330-2b8b-4540-ba94-e4a5dd8238af","presentedOrder":2,"question":{"id":"ffffffff-0000-0000-0000-0000000000a2","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"hard","bodyRichtext":{"text":"Concernant le potentiel d'action des cellules du nœud sinusal, quelles propositions sont exactes ?"}},"options":[{"id":"aa18c7da-9dbb-4015-99ab-d49d31520514","bodyText":"Le potentiel de membrane de repos est stable à -90 mV"},{"id":"d3c7eccd-af25-4a40-b7b1-f9dbfc53161c","bodyText":"Le courant entrant If participe à l'automatisme"},{"id":"ffaae465-72dc-435e-a6d4-fd2ddd5457ac","bodyText":"Il existe une dépolarisation diastolique lente spontanée"},{"id":"61a30dd9-be70-47cb-89ba-a9cdba9224f9","bodyText":"La phase de plateau dépend surtout des canaux sodiques rapides"}],"clinicalCaseParts":[]},{"sessionQuestionId":"5df65778-2637-4085-a9bd-267dcb7503bd","presentedOrder":3,"question":{"id":"62a15bd9-1d10-4640-9509-c63182bfd675","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"messi is the compinne"}},"options":[{"id":"c16b10f3-9422-470d-b546-09a24632e23b","bodyText":"ldvmvlrmv"},{"id":"c874fd85-63ec-4fcf-8ab6-6d21a511bcab","bodyText":"mlvmlvlvm"}],"clinicalCaseParts":[]},{"sessionQuestionId":"06470f1f-43e4-4384-b32f-7ee633198a5b","presentedOrder":4,"question":{"id":"00000000-0000-0000-0000-000000000070","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"Which of the following occur during ventricular systole? (Select all that apply)"}},"options":[{"id":"00000000-0000-0000-0000-000000000074","bodyText":"Atria contract"},{"id":"00000000-0000-0000-0000-000000000071","bodyText":"AV valves close"},{"id":"00000000-0000-0000-0000-000000000072","bodyText":"Semilunar valves open"},{"id":"00000000-0000-0000-0000-000000000073","bodyText":"Ventricles are relaxed"}],"clinicalCaseParts":[]},{"sessionQuestionId":"1247c066-efec-48f8-a8fe-70f9bb7660e5","presentedOrder":5,"question":{"id":"ffffffff-0000-0000-0000-0000000000a3","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"Un patient présente un souffle systolique maximal au foyer mitral, irradiant vers l'aisselle. Quel diagnostic évoquez-vous en premier ?"}},"options":[{"id":"ad14f962-144c-4312-a77b-c20029aadff3","bodyText":"Insuffisance mitrale"},{"id":"b569ad65-1aae-493c-968f-344cb6af046e","bodyText":"Rétrécissement aortique"},{"id":"ae367db8-e57c-4b29-8554-edea7e31ae1a","bodyText":"Insuffisance aortique"},{"id":"7b21c7ba-f62d-494e-a57f-0879b10aef9f","bodyText":"Rétrécissement mitral"}],"clinicalCaseParts":[]},{"sessionQuestionId":"e197b011-0148-4686-9d66-b56bfdd60881","presentedOrder":6,"question":{"id":"00000000-0000-0000-0000-000000000080","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"What triggers the closure of the mitral valve?"}},"options":[{"id":"00000000-0000-0000-0000-000000000083","bodyText":"Atrial contraction"},{"id":"00000000-0000-0000-0000-000000000084","bodyText":"SA node depolarization"},{"id":"00000000-0000-0000-0000-000000000081","bodyText":"Rising ventricular pressure exceeding atrial pressure"},{"id":"00000000-0000-0000-0000-000000000082","bodyText":"Falling ventricular pressure"}],"clinicalCaseParts":[]},{"sessionQuestionId":"c8eefecf-4587-452f-aab6-f4bef9ee75d8","presentedOrder":7,"question":{"id":"ffffffff-0000-0000-0000-0000000000a4","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Quelles anomalies électrocardiographiques évoquent une hyperkaliémie sévère ?"}},"options":[{"id":"102853a7-9941-4711-b0d6-9273a85a3641","bodyText":"Allongement isolé de l'intervalle QT"},{"id":"6e180f6e-8a66-4e14-90af-a7c921ffb20a","bodyText":"Ondes T amples et pointues"},{"id":"d09ba0cf-92cb-436c-9e03-7d31968ffe33","bodyText":"Apparition d'ondes U proéminentes"},{"id":"0fc9ace6-0d03-4826-ab59-9b37b54eacf1","bodyText":"Élargissement progressif du QRS"}],"clinicalCaseParts":[]},{"sessionQuestionId":"88189e36-e4d4-4eb0-b4a1-7e17d51ae78f","presentedOrder":8,"question":{"id":"aaaaaaaa-0000-4000-8000-000000000071","unitId":"aaaaaaaa-0000-4000-8000-000000000041","type":"QCS","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"VERIFY Y2 question 1"}},"options":[{"id":"aaaaaaaa-0000-4000-8000-000000000081","bodyText":"A"},{"id":"aaaaaaaa-0000-4000-8000-000000000082","bodyText":"B"}],"clinicalCaseParts":[]},{"sessionQuestionId":"67b60589-1087-4f3e-acc7-2fec058215d4","presentedOrder":9,"question":{"id":"aaaaaaaa-0000-4000-8000-000000000072","unitId":"aaaaaaaa-0000-4000-8000-000000000041","type":"QCS","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"VERIFY Y2 question 2"}},"options":[{"id":"aaaaaaaa-0000-4000-8000-000000000083","bodyText":"A"},{"id":"aaaaaaaa-0000-4000-8000-000000000084","bodyText":"B"}],"clinicalCaseParts":[]}]}}
+----- echo check account=verify-a sort=by_year => resultSort=by_year mode=practice showStats=true
+----- SQL presented_order for session 0ffd096f-d567-4365-8221-c039fc7654d3 (by_year)
+[
+  {
+    "presented_order": 0,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a1",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 1,
+    "question_id": "00000000-0000-0000-0000-000000000090",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 2,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a2",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 3,
+    "question_id": "62a15bd9-1d10-4640-9509-c63182bfd675",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 4,
+    "question_id": "00000000-0000-0000-0000-000000000070",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 5,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a3",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 6,
+    "question_id": "00000000-0000-0000-0000-000000000080",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 7,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a4",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 8,
+    "question_id": "aaaaaaaa-0000-4000-8000-000000000071",
+    "year_label": "Year 2 VERIFY",
+    "year_order_index": 1,
+    "module_name": "VERIFY Module Y2",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 9,
+    "question_id": "aaaaaaaa-0000-4000-8000-000000000072",
+    "year_label": "Year 2 VERIFY",
+    "year_order_index": 1,
+    "module_name": "VERIFY Module Y2",
+    "module_order_index": 0
+  }
+]
+----- by_year distinct year_order_index values: 0,1
+----- PASS by_year: first year0 at presented_order=0, first year1 at presented_order=8
+
+===== POST http://127.0.0.1:3000/api/sessions
+----- request body
+{
+  "name": "VERIFY-verify-a-by_course",
+  "mode": "practice",
+  "facultyId": "b37b039e-2208-4837-b5d5-28b1c338a2cf",
+  "size": 10,
+  "sort": "by_course",
+  "showStats": true
+}
+----- response status 201 (1175ms)
+----- response body
+{"session":{"id":"f3bfa7b8-9ccd-465b-82cb-6bf7b1c0b401","name":"VERIFY-verify-a-by_course","mode":"practice","isOfficialMock":false,"timeLimitSeconds":null,"resultSort":"by_course","showStats":true,"startedAt":"2026-08-27T18:07:15.127Z","completedAt":null,"score":null,"questions":[{"sessionQuestionId":"6df083e1-c273-4a01-a274-aad9c2bacce7","presentedOrder":0,"question":{"id":"00000000-0000-0000-0000-000000000080","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"What triggers the closure of the mitral valve?"}},"options":[{"id":"00000000-0000-0000-0000-000000000083","bodyText":"Atrial contraction"},{"id":"00000000-0000-0000-0000-000000000081","bodyText":"Rising ventricular pressure exceeding atrial pressure"},{"id":"00000000-0000-0000-0000-000000000084","bodyText":"SA node depolarization"},{"id":"00000000-0000-0000-0000-000000000082","bodyText":"Falling ventricular pressure"}],"clinicalCaseParts":[]},{"sessionQuestionId":"36592bf8-e6a9-46e2-ad89-55d9b104ff17","presentedOrder":1,"question":{"id":"ffffffff-0000-0000-0000-0000000000a2","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"hard","bodyRichtext":{"text":"Concernant le potentiel d'action des cellules du nœud sinusal, quelles propositions sont exactes ?"}},"options":[{"id":"61a30dd9-be70-47cb-89ba-a9cdba9224f9","bodyText":"La phase de plateau dépend surtout des canaux sodiques rapides"},{"id":"ffaae465-72dc-435e-a6d4-fd2ddd5457ac","bodyText":"Il existe une dépolarisation diastolique lente spontanée"},{"id":"d3c7eccd-af25-4a40-b7b1-f9dbfc53161c","bodyText":"Le courant entrant If participe à l'automatisme"},{"id":"aa18c7da-9dbb-4015-99ab-d49d31520514","bodyText":"Le potentiel de membrane de repos est stable à -90 mV"}],"clinicalCaseParts":[]},{"sessionQuestionId":"1ea8d165-6094-4a3b-a7d2-e38f4498041d","presentedOrder":2,"question":{"id":"ffffffff-0000-0000-0000-0000000000a1","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Chez un sujet sain au repos, quelle est la principale déterminante de la précharge ventriculaire gauche ?"}},"options":[{"id":"1c57749a-347a-466c-917e-0bb51f30f78f","bodyText":"L'épaisseur pariétale du ventricule droit"},{"id":"c23e767e-263e-47a2-805e-120b1a819f1b","bodyText":"La fréquence cardiaque maximale théorique"},{"id":"e73619eb-f0bb-4de8-9b7e-5891661762f1","bodyText":"Le retour veineux systémique"},{"id":"ad52ca83-7023-48fa-8a90-6c836a4d2f14","bodyText":"La pression artérielle diastolique"}],"clinicalCaseParts":[]},{"sessionQuestionId":"4532e73b-dd34-4fd3-bc7e-3fc9e3797979","presentedOrder":3,"question":{"id":"00000000-0000-0000-0000-000000000090","unitId":"00000000-0000-0000-0000-000000000040","type":"QROC","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Briefly explain why the QRS complex is typically narrow in a healthy heart."}},"options":[],"clinicalCaseParts":[]},{"sessionQuestionId":"f4b301ce-e84a-4a88-a616-2557213098c9","presentedOrder":4,"question":{"id":"00000000-0000-0000-0000-000000000070","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"Which of the following occur during ventricular systole? (Select all that apply)"}},"options":[{"id":"00000000-0000-0000-0000-000000000071","bodyText":"AV valves close"},{"id":"00000000-0000-0000-0000-000000000074","bodyText":"Atria contract"},{"id":"00000000-0000-0000-0000-000000000073","bodyText":"Ventricles are relaxed"},{"id":"00000000-0000-0000-0000-000000000072","bodyText":"Semilunar valves open"}],"clinicalCaseParts":[]},{"sessionQuestionId":"9afc5a39-97c6-4e79-8db7-b9ec34aacbbf","presentedOrder":5,"question":{"id":"62a15bd9-1d10-4640-9509-c63182bfd675","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"messi is the compinne"}},"options":[{"id":"c874fd85-63ec-4fcf-8ab6-6d21a511bcab","bodyText":"mlvmlvlvm"},{"id":"c16b10f3-9422-470d-b546-09a24632e23b","bodyText":"ldvmvlrmv"}],"clinicalCaseParts":[]},{"sessionQuestionId":"fe93dba4-7993-437c-a0ad-25204be63929","presentedOrder":6,"question":{"id":"ffffffff-0000-0000-0000-0000000000a4","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Quelles anomalies électrocardiographiques évoquent une hyperkaliémie sévère ?"}},"options":[{"id":"102853a7-9941-4711-b0d6-9273a85a3641","bodyText":"Allongement isolé de l'intervalle QT"},{"id":"d09ba0cf-92cb-436c-9e03-7d31968ffe33","bodyText":"Apparition d'ondes U proéminentes"},{"id":"6e180f6e-8a66-4e14-90af-a7c921ffb20a","bodyText":"Ondes T amples et pointues"},{"id":"0fc9ace6-0d03-4826-ab59-9b37b54eacf1","bodyText":"Élargissement progressif du QRS"}],"clinicalCaseParts":[]},{"sessionQuestionId":"f09c222b-f44b-46eb-8ce6-f2abcfc0c9eb","presentedOrder":7,"question":{"id":"ffffffff-0000-0000-0000-0000000000a3","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"Un patient présente un souffle systolique maximal au foyer mitral, irradiant vers l'aisselle. Quel diagnostic évoquez-vous en premier ?"}},"options":[{"id":"ad14f962-144c-4312-a77b-c20029aadff3","bodyText":"Insuffisance mitrale"},{"id":"b569ad65-1aae-493c-968f-344cb6af046e","bodyText":"Rétrécissement aortique"},{"id":"7b21c7ba-f62d-494e-a57f-0879b10aef9f","bodyText":"Rétrécissement mitral"},{"id":"ae367db8-e57c-4b29-8554-edea7e31ae1a","bodyText":"Insuffisance aortique"}],"clinicalCaseParts":[]},{"sessionQuestionId":"bc3dc398-dccd-480b-ab53-f9762764c499","presentedOrder":8,"question":{"id":"aaaaaaaa-0000-4000-8000-000000000071","unitId":"aaaaaaaa-0000-4000-8000-000000000041","type":"QCS","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"VERIFY Y2 question 1"}},"options":[{"id":"aaaaaaaa-0000-4000-8000-000000000082","bodyText":"B"},{"id":"aaaaaaaa-0000-4000-8000-000000000081","bodyText":"A"}],"clinicalCaseParts":[]},{"sessionQuestionId":"3c11b354-8d36-407c-a48a-850e9036df1b","presentedOrder":9,"question":{"id":"aaaaaaaa-0000-4000-8000-000000000072","unitId":"aaaaaaaa-0000-4000-8000-000000000041","type":"QCS","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"VERIFY Y2 question 2"}},"options":[{"id":"aaaaaaaa-0000-4000-8000-000000000083","bodyText":"A"},{"id":"aaaaaaaa-0000-4000-8000-000000000084","bodyText":"B"}],"clinicalCaseParts":[]}]}}
+----- echo check account=verify-a sort=by_course => resultSort=by_course mode=practice showStats=true
+----- SQL presented_order for session f3bfa7b8-9ccd-465b-82cb-6bf7b1c0b401 (by_course)
+[
+  {
+    "presented_order": 0,
+    "question_id": "00000000-0000-0000-0000-000000000080",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 1,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a2",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 2,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a1",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 3,
+    "question_id": "00000000-0000-0000-0000-000000000090",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 4,
+    "question_id": "00000000-0000-0000-0000-000000000070",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 5,
+    "question_id": "62a15bd9-1d10-4640-9509-c63182bfd675",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 6,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a4",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 7,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a3",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 8,
+    "question_id": "aaaaaaaa-0000-4000-8000-000000000071",
+    "year_label": "Year 2 VERIFY",
+    "year_order_index": 1,
+    "module_name": "VERIFY Module Y2",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 9,
+    "question_id": "aaaaaaaa-0000-4000-8000-000000000072",
+    "year_label": "Year 2 VERIFY",
+    "year_order_index": 1,
+    "module_name": "VERIFY Module Y2",
+    "module_order_index": 0
+  }
+]
+----- PASS by_course: module_order non-decreasing within each year
+
+===== POST http://127.0.0.1:3000/api/sessions
+----- request body
+{
+  "name": "VERIFY-verify-a-random",
+  "mode": "practice",
+  "facultyId": "b37b039e-2208-4837-b5d5-28b1c338a2cf",
+  "size": 10,
+  "sort": "random",
+  "showStats": true
+}
+----- response status 201 (962ms)
+----- response body
+{"session":{"id":"5f516c5a-74c1-4199-a1ba-18503808550a","name":"VERIFY-verify-a-random","mode":"practice","isOfficialMock":false,"timeLimitSeconds":null,"resultSort":"random","showStats":true,"startedAt":"2026-08-27T18:07:16.164Z","completedAt":null,"score":null,"questions":[{"sessionQuestionId":"bd8a8ae0-97f4-4dc6-bf67-3013a9336689","presentedOrder":0,"question":{"id":"ffffffff-0000-0000-0000-0000000000a1","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Chez un sujet sain au repos, quelle est la principale déterminante de la précharge ventriculaire gauche ?"}},"options":[{"id":"ad52ca83-7023-48fa-8a90-6c836a4d2f14","bodyText":"La pression artérielle diastolique"},{"id":"c23e767e-263e-47a2-805e-120b1a819f1b","bodyText":"La fréquence cardiaque maximale théorique"},{"id":"1c57749a-347a-466c-917e-0bb51f30f78f","bodyText":"L'épaisseur pariétale du ventricule droit"},{"id":"e73619eb-f0bb-4de8-9b7e-5891661762f1","bodyText":"Le retour veineux systémique"}],"clinicalCaseParts":[]},{"sessionQuestionId":"ef2b191d-b838-4982-ac2f-d9580064ca7d","presentedOrder":1,"question":{"id":"aaaaaaaa-0000-4000-8000-000000000072","unitId":"aaaaaaaa-0000-4000-8000-000000000041","type":"QCS","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"VERIFY Y2 question 2"}},"options":[{"id":"aaaaaaaa-0000-4000-8000-000000000084","bodyText":"B"},{"id":"aaaaaaaa-0000-4000-8000-000000000083","bodyText":"A"}],"clinicalCaseParts":[]},{"sessionQuestionId":"f5ecd3c8-66b5-4d7f-9c19-7dd025c9ae6c","presentedOrder":2,"question":{"id":"ffffffff-0000-0000-0000-0000000000a4","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Quelles anomalies électrocardiographiques évoquent une hyperkaliémie sévère ?"}},"options":[{"id":"6e180f6e-8a66-4e14-90af-a7c921ffb20a","bodyText":"Ondes T amples et pointues"},{"id":"0fc9ace6-0d03-4826-ab59-9b37b54eacf1","bodyText":"Élargissement progressif du QRS"},{"id":"d09ba0cf-92cb-436c-9e03-7d31968ffe33","bodyText":"Apparition d'ondes U proéminentes"},{"id":"102853a7-9941-4711-b0d6-9273a85a3641","bodyText":"Allongement isolé de l'intervalle QT"}],"clinicalCaseParts":[]},{"sessionQuestionId":"ce81102f-300e-4df2-a51f-7850caa8b3d1","presentedOrder":3,"question":{"id":"00000000-0000-0000-0000-000000000080","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"What triggers the closure of the mitral valve?"}},"options":[{"id":"00000000-0000-0000-0000-000000000083","bodyText":"Atrial contraction"},{"id":"00000000-0000-0000-0000-000000000084","bodyText":"SA node depolarization"},{"id":"00000000-0000-0000-0000-000000000081","bodyText":"Rising ventricular pressure exceeding atrial pressure"},{"id":"00000000-0000-0000-0000-000000000082","bodyText":"Falling ventricular pressure"}],"clinicalCaseParts":[]},{"sessionQuestionId":"a4c65445-46be-41c8-964b-5dcc43ec8e37","presentedOrder":4,"question":{"id":"ffffffff-0000-0000-0000-0000000000a2","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"hard","bodyRichtext":{"text":"Concernant le potentiel d'action des cellules du nœud sinusal, quelles propositions sont exactes ?"}},"options":[{"id":"61a30dd9-be70-47cb-89ba-a9cdba9224f9","bodyText":"La phase de plateau dépend surtout des canaux sodiques rapides"},{"id":"aa18c7da-9dbb-4015-99ab-d49d31520514","bodyText":"Le potentiel de membrane de repos est stable à -90 mV"},{"id":"ffaae465-72dc-435e-a6d4-fd2ddd5457ac","bodyText":"Il existe une dépolarisation diastolique lente spontanée"},{"id":"d3c7eccd-af25-4a40-b7b1-f9dbfc53161c","bodyText":"Le courant entrant If participe à l'automatisme"}],"clinicalCaseParts":[]},{"sessionQuestionId":"96674d2b-099b-471f-a09b-8ce2bcf1727a","presentedOrder":5,"question":{"id":"aaaaaaaa-0000-4000-8000-000000000071","unitId":"aaaaaaaa-0000-4000-8000-000000000041","type":"QCS","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"VERIFY Y2 question 1"}},"options":[{"id":"aaaaaaaa-0000-4000-8000-000000000081","bodyText":"A"},{"id":"aaaaaaaa-0000-4000-8000-000000000082","bodyText":"B"}],"clinicalCaseParts":[]},{"sessionQuestionId":"f11c08d4-5e1e-480a-b64a-75f09847ddc4","presentedOrder":6,"question":{"id":"00000000-0000-0000-0000-000000000090","unitId":"00000000-0000-0000-0000-000000000040","type":"QROC","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Briefly explain why the QRS complex is typically narrow in a healthy heart."}},"options":[],"clinicalCaseParts":[]},{"sessionQuestionId":"93a732f1-1a97-44af-b03b-898105ab3c74","presentedOrder":7,"question":{"id":"ffffffff-0000-0000-0000-0000000000a3","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"Un patient présente un souffle systolique maximal au foyer mitral, irradiant vers l'aisselle. Quel diagnostic évoquez-vous en premier ?"}},"options":[{"id":"ae367db8-e57c-4b29-8554-edea7e31ae1a","bodyText":"Insuffisance aortique"},{"id":"ad14f962-144c-4312-a77b-c20029aadff3","bodyText":"Insuffisance mitrale"},{"id":"7b21c7ba-f62d-494e-a57f-0879b10aef9f","bodyText":"Rétrécissement mitral"},{"id":"b569ad65-1aae-493c-968f-344cb6af046e","bodyText":"Rétrécissement aortique"}],"clinicalCaseParts":[]},{"sessionQuestionId":"56790b5c-8392-40a3-973b-edf680e98207","presentedOrder":8,"question":{"id":"00000000-0000-0000-0000-000000000070","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"Which of the following occur during ventricular systole? (Select all that apply)"}},"options":[{"id":"00000000-0000-0000-0000-000000000072","bodyText":"Semilunar valves open"},{"id":"00000000-0000-0000-0000-000000000071","bodyText":"AV valves close"},{"id":"00000000-0000-0000-0000-000000000073","bodyText":"Ventricles are relaxed"},{"id":"00000000-0000-0000-0000-000000000074","bodyText":"Atria contract"}],"clinicalCaseParts":[]},{"sessionQuestionId":"d34920b4-b13e-43f6-a7e1-2780e5d8f202","presentedOrder":9,"question":{"id":"62a15bd9-1d10-4640-9509-c63182bfd675","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"messi is the compinne"}},"options":[{"id":"c874fd85-63ec-4fcf-8ab6-6d21a511bcab","bodyText":"mlvmlvlvm"},{"id":"c16b10f3-9422-470d-b546-09a24632e23b","bodyText":"ldvmvlrmv"}],"clinicalCaseParts":[]}]}}
+----- echo check account=verify-a sort=random => resultSort=random mode=practice showStats=true
+----- SQL presented_order for session 5f516c5a-74c1-4199-a1ba-18503808550a (random)
+[
+  {
+    "presented_order": 0,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a1",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 1,
+    "question_id": "aaaaaaaa-0000-4000-8000-000000000072",
+    "year_label": "Year 2 VERIFY",
+    "year_order_index": 1,
+    "module_name": "VERIFY Module Y2",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 2,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a4",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 3,
+    "question_id": "00000000-0000-0000-0000-000000000080",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 4,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a2",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 5,
+    "question_id": "aaaaaaaa-0000-4000-8000-000000000071",
+    "year_label": "Year 2 VERIFY",
+    "year_order_index": 1,
+    "module_name": "VERIFY Module Y2",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 6,
+    "question_id": "00000000-0000-0000-0000-000000000090",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 7,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a3",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 8,
+    "question_id": "00000000-0000-0000-0000-000000000070",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 9,
+    "question_id": "62a15bd9-1d10-4640-9509-c63182bfd675",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  }
+]
+
+===== POST http://127.0.0.1:3000/api/sessions
+----- request body
+{
+  "name": "VERIFY-verify-b-by_year",
+  "mode": "practice",
+  "facultyId": "b37b039e-2208-4837-b5d5-28b1c338a2cf",
+  "size": 10,
+  "sort": "by_year",
+  "showStats": true
+}
+----- response status 201 (1261ms)
+----- response body
+{"session":{"id":"ed291b4f-2f7d-4422-8d93-7dfa61f8104a","name":"VERIFY-verify-b-by_year","mode":"practice","isOfficialMock":false,"timeLimitSeconds":null,"resultSort":"by_year","showStats":true,"startedAt":"2026-08-27T18:07:17.487Z","completedAt":null,"score":null,"questions":[{"sessionQuestionId":"e998036c-5897-4cb0-a041-b3d7665bdcd4","presentedOrder":0,"question":{"id":"62a15bd9-1d10-4640-9509-c63182bfd675","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"messi is the compinne"}},"options":[{"id":"c16b10f3-9422-470d-b546-09a24632e23b","bodyText":"ldvmvlrmv"},{"id":"c874fd85-63ec-4fcf-8ab6-6d21a511bcab","bodyText":"mlvmlvlvm"}],"clinicalCaseParts":[]},{"sessionQuestionId":"68371c42-daf1-4919-9f22-14d05498d9c4","presentedOrder":1,"question":{"id":"ffffffff-0000-0000-0000-0000000000a1","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Chez un sujet sain au repos, quelle est la principale déterminante de la précharge ventriculaire gauche ?"}},"options":[{"id":"e73619eb-f0bb-4de8-9b7e-5891661762f1","bodyText":"Le retour veineux systémique"},{"id":"c23e767e-263e-47a2-805e-120b1a819f1b","bodyText":"La fréquence cardiaque maximale théorique"},{"id":"1c57749a-347a-466c-917e-0bb51f30f78f","bodyText":"L'épaisseur pariétale du ventricule droit"},{"id":"ad52ca83-7023-48fa-8a90-6c836a4d2f14","bodyText":"La pression artérielle diastolique"}],"clinicalCaseParts":[]},{"sessionQuestionId":"34e4ba17-2e92-4293-812b-c2b4d63c6a9c","presentedOrder":2,"question":{"id":"ffffffff-0000-0000-0000-0000000000a3","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"Un patient présente un souffle systolique maximal au foyer mitral, irradiant vers l'aisselle. Quel diagnostic évoquez-vous en premier ?"}},"options":[{"id":"ad14f962-144c-4312-a77b-c20029aadff3","bodyText":"Insuffisance mitrale"},{"id":"ae367db8-e57c-4b29-8554-edea7e31ae1a","bodyText":"Insuffisance aortique"},{"id":"b569ad65-1aae-493c-968f-344cb6af046e","bodyText":"Rétrécissement aortique"},{"id":"7b21c7ba-f62d-494e-a57f-0879b10aef9f","bodyText":"Rétrécissement mitral"}],"clinicalCaseParts":[]},{"sessionQuestionId":"840b8833-f1e2-4c55-bf19-41a04c33bbd8","presentedOrder":3,"question":{"id":"ffffffff-0000-0000-0000-0000000000a4","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Quelles anomalies électrocardiographiques évoquent une hyperkaliémie sévère ?"}},"options":[{"id":"d09ba0cf-92cb-436c-9e03-7d31968ffe33","bodyText":"Apparition d'ondes U proéminentes"},{"id":"102853a7-9941-4711-b0d6-9273a85a3641","bodyText":"Allongement isolé de l'intervalle QT"},{"id":"6e180f6e-8a66-4e14-90af-a7c921ffb20a","bodyText":"Ondes T amples et pointues"},{"id":"0fc9ace6-0d03-4826-ab59-9b37b54eacf1","bodyText":"Élargissement progressif du QRS"}],"clinicalCaseParts":[]},{"sessionQuestionId":"3c32fb3e-73e5-4a31-9998-a488d634e62b","presentedOrder":4,"question":{"id":"00000000-0000-0000-0000-000000000090","unitId":"00000000-0000-0000-0000-000000000040","type":"QROC","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Briefly explain why the QRS complex is typically narrow in a healthy heart."}},"options":[],"clinicalCaseParts":[]},{"sessionQuestionId":"99dcb854-31be-4e11-b931-3a738c02b6cd","presentedOrder":5,"question":{"id":"ffffffff-0000-0000-0000-0000000000a2","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"hard","bodyRichtext":{"text":"Concernant le potentiel d'action des cellules du nœud sinusal, quelles propositions sont exactes ?"}},"options":[{"id":"aa18c7da-9dbb-4015-99ab-d49d31520514","bodyText":"Le potentiel de membrane de repos est stable à -90 mV"},{"id":"61a30dd9-be70-47cb-89ba-a9cdba9224f9","bodyText":"La phase de plateau dépend surtout des canaux sodiques rapides"},{"id":"ffaae465-72dc-435e-a6d4-fd2ddd5457ac","bodyText":"Il existe une dépolarisation diastolique lente spontanée"},{"id":"d3c7eccd-af25-4a40-b7b1-f9dbfc53161c","bodyText":"Le courant entrant If participe à l'automatisme"}],"clinicalCaseParts":[]},{"sessionQuestionId":"5dfd40d4-aee0-4fbc-a2ff-b5e20f985e33","presentedOrder":6,"question":{"id":"00000000-0000-0000-0000-000000000080","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"What triggers the closure of the mitral valve?"}},"options":[{"id":"00000000-0000-0000-0000-000000000082","bodyText":"Falling ventricular pressure"},{"id":"00000000-0000-0000-0000-000000000084","bodyText":"SA node depolarization"},{"id":"00000000-0000-0000-0000-000000000083","bodyText":"Atrial contraction"},{"id":"00000000-0000-0000-0000-000000000081","bodyText":"Rising ventricular pressure exceeding atrial pressure"}],"clinicalCaseParts":[]},{"sessionQuestionId":"7e75f76d-84db-4b1a-92f4-ff36d1dff2d5","presentedOrder":7,"question":{"id":"00000000-0000-0000-0000-000000000070","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"Which of the following occur during ventricular systole? (Select all that apply)"}},"options":[{"id":"00000000-0000-0000-0000-000000000074","bodyText":"Atria contract"},{"id":"00000000-0000-0000-0000-000000000072","bodyText":"Semilunar valves open"},{"id":"00000000-0000-0000-0000-000000000073","bodyText":"Ventricles are relaxed"},{"id":"00000000-0000-0000-0000-000000000071","bodyText":"AV valves close"}],"clinicalCaseParts":[]},{"sessionQuestionId":"41502513-dd3e-4445-af2a-14ce96d0b323","presentedOrder":8,"question":{"id":"aaaaaaaa-0000-4000-8000-000000000072","unitId":"aaaaaaaa-0000-4000-8000-000000000041","type":"QCS","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"VERIFY Y2 question 2"}},"options":[{"id":"aaaaaaaa-0000-4000-8000-000000000083","bodyText":"A"},{"id":"aaaaaaaa-0000-4000-8000-000000000084","bodyText":"B"}],"clinicalCaseParts":[]},{"sessionQuestionId":"da7dc3ac-2d61-4822-a330-53de7a651c40","presentedOrder":9,"question":{"id":"aaaaaaaa-0000-4000-8000-000000000071","unitId":"aaaaaaaa-0000-4000-8000-000000000041","type":"QCS","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"VERIFY Y2 question 1"}},"options":[{"id":"aaaaaaaa-0000-4000-8000-000000000081","bodyText":"A"},{"id":"aaaaaaaa-0000-4000-8000-000000000082","bodyText":"B"}],"clinicalCaseParts":[]}]}}
+----- echo check account=verify-b sort=by_year => resultSort=by_year mode=practice showStats=true
+----- SQL presented_order for session ed291b4f-2f7d-4422-8d93-7dfa61f8104a (by_year)
+[
+  {
+    "presented_order": 0,
+    "question_id": "62a15bd9-1d10-4640-9509-c63182bfd675",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 1,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a1",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 2,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a3",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 3,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a4",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 4,
+    "question_id": "00000000-0000-0000-0000-000000000090",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 5,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a2",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 6,
+    "question_id": "00000000-0000-0000-0000-000000000080",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 7,
+    "question_id": "00000000-0000-0000-0000-000000000070",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 8,
+    "question_id": "aaaaaaaa-0000-4000-8000-000000000072",
+    "year_label": "Year 2 VERIFY",
+    "year_order_index": 1,
+    "module_name": "VERIFY Module Y2",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 9,
+    "question_id": "aaaaaaaa-0000-4000-8000-000000000071",
+    "year_label": "Year 2 VERIFY",
+    "year_order_index": 1,
+    "module_name": "VERIFY Module Y2",
+    "module_order_index": 0
+  }
+]
+----- by_year distinct year_order_index values: 0,1
+----- PASS by_year: first year0 at presented_order=0, first year1 at presented_order=8
+
+===== POST http://127.0.0.1:3000/api/sessions
+----- request body
+{
+  "name": "VERIFY-verify-b-by_course",
+  "mode": "practice",
+  "facultyId": "b37b039e-2208-4837-b5d5-28b1c338a2cf",
+  "size": 10,
+  "sort": "by_course",
+  "showStats": true
+}
+----- response status 201 (1134ms)
+----- response body
+{"session":{"id":"3c1e4c7f-54db-48cd-a779-244923058a0a","name":"VERIFY-verify-b-by_course","mode":"practice","isOfficialMock":false,"timeLimitSeconds":null,"resultSort":"by_course","showStats":true,"startedAt":"2026-08-27T18:07:18.726Z","completedAt":null,"score":null,"questions":[{"sessionQuestionId":"0adc2e1a-414d-40ef-a28b-f45f1c641e1f","presentedOrder":0,"question":{"id":"00000000-0000-0000-0000-000000000070","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"Which of the following occur during ventricular systole? (Select all that apply)"}},"options":[{"id":"00000000-0000-0000-0000-000000000071","bodyText":"AV valves close"},{"id":"00000000-0000-0000-0000-000000000073","bodyText":"Ventricles are relaxed"},{"id":"00000000-0000-0000-0000-000000000072","bodyText":"Semilunar valves open"},{"id":"00000000-0000-0000-0000-000000000074","bodyText":"Atria contract"}],"clinicalCaseParts":[]},{"sessionQuestionId":"ca08cc5d-5e53-455a-8565-55b79c7a741b","presentedOrder":1,"question":{"id":"ffffffff-0000-0000-0000-0000000000a2","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"hard","bodyRichtext":{"text":"Concernant le potentiel d'action des cellules du nœud sinusal, quelles propositions sont exactes ?"}},"options":[{"id":"61a30dd9-be70-47cb-89ba-a9cdba9224f9","bodyText":"La phase de plateau dépend surtout des canaux sodiques rapides"},{"id":"aa18c7da-9dbb-4015-99ab-d49d31520514","bodyText":"Le potentiel de membrane de repos est stable à -90 mV"},{"id":"ffaae465-72dc-435e-a6d4-fd2ddd5457ac","bodyText":"Il existe une dépolarisation diastolique lente spontanée"},{"id":"d3c7eccd-af25-4a40-b7b1-f9dbfc53161c","bodyText":"Le courant entrant If participe à l'automatisme"}],"clinicalCaseParts":[]},{"sessionQuestionId":"c65491ce-ea2b-4c19-9ff2-1663932720f2","presentedOrder":2,"question":{"id":"00000000-0000-0000-0000-000000000090","unitId":"00000000-0000-0000-0000-000000000040","type":"QROC","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Briefly explain why the QRS complex is typically narrow in a healthy heart."}},"options":[],"clinicalCaseParts":[]},{"sessionQuestionId":"8a78d9cc-1255-469c-9df0-102a9bddcba7","presentedOrder":3,"question":{"id":"62a15bd9-1d10-4640-9509-c63182bfd675","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"messi is the compinne"}},"options":[{"id":"c874fd85-63ec-4fcf-8ab6-6d21a511bcab","bodyText":"mlvmlvlvm"},{"id":"c16b10f3-9422-470d-b546-09a24632e23b","bodyText":"ldvmvlrmv"}],"clinicalCaseParts":[]},{"sessionQuestionId":"cb428056-4afb-425e-b63d-abc7d75a7c91","presentedOrder":4,"question":{"id":"ffffffff-0000-0000-0000-0000000000a4","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Quelles anomalies électrocardiographiques évoquent une hyperkaliémie sévère ?"}},"options":[{"id":"6e180f6e-8a66-4e14-90af-a7c921ffb20a","bodyText":"Ondes T amples et pointues"},{"id":"102853a7-9941-4711-b0d6-9273a85a3641","bodyText":"Allongement isolé de l'intervalle QT"},{"id":"d09ba0cf-92cb-436c-9e03-7d31968ffe33","bodyText":"Apparition d'ondes U proéminentes"},{"id":"0fc9ace6-0d03-4826-ab59-9b37b54eacf1","bodyText":"Élargissement progressif du QRS"}],"clinicalCaseParts":[]},{"sessionQuestionId":"3ce1b9a9-8763-4a93-8987-84566d2dabc3","presentedOrder":5,"question":{"id":"ffffffff-0000-0000-0000-0000000000a1","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Chez un sujet sain au repos, quelle est la principale déterminante de la précharge ventriculaire gauche ?"}},"options":[{"id":"1c57749a-347a-466c-917e-0bb51f30f78f","bodyText":"L'épaisseur pariétale du ventricule droit"},{"id":"e73619eb-f0bb-4de8-9b7e-5891661762f1","bodyText":"Le retour veineux systémique"},{"id":"c23e767e-263e-47a2-805e-120b1a819f1b","bodyText":"La fréquence cardiaque maximale théorique"},{"id":"ad52ca83-7023-48fa-8a90-6c836a4d2f14","bodyText":"La pression artérielle diastolique"}],"clinicalCaseParts":[]},{"sessionQuestionId":"2e36bea8-3a5e-4f78-bf42-efced613036f","presentedOrder":6,"question":{"id":"ffffffff-0000-0000-0000-0000000000a3","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"Un patient présente un souffle systolique maximal au foyer mitral, irradiant vers l'aisselle. Quel diagnostic évoquez-vous en premier ?"}},"options":[{"id":"b569ad65-1aae-493c-968f-344cb6af046e","bodyText":"Rétrécissement aortique"},{"id":"ad14f962-144c-4312-a77b-c20029aadff3","bodyText":"Insuffisance mitrale"},{"id":"7b21c7ba-f62d-494e-a57f-0879b10aef9f","bodyText":"Rétrécissement mitral"},{"id":"ae367db8-e57c-4b29-8554-edea7e31ae1a","bodyText":"Insuffisance aortique"}],"clinicalCaseParts":[]},{"sessionQuestionId":"35798aaa-ca23-4b62-ac78-3fda6eab0874","presentedOrder":7,"question":{"id":"00000000-0000-0000-0000-000000000080","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"What triggers the closure of the mitral valve?"}},"options":[{"id":"00000000-0000-0000-0000-000000000084","bodyText":"SA node depolarization"},{"id":"00000000-0000-0000-0000-000000000082","bodyText":"Falling ventricular pressure"},{"id":"00000000-0000-0000-0000-000000000081","bodyText":"Rising ventricular pressure exceeding atrial pressure"},{"id":"00000000-0000-0000-0000-000000000083","bodyText":"Atrial contraction"}],"clinicalCaseParts":[]},{"sessionQuestionId":"0e61ecf5-1b91-4965-8eac-f7f4dd1c046f","presentedOrder":8,"question":{"id":"aaaaaaaa-0000-4000-8000-000000000071","unitId":"aaaaaaaa-0000-4000-8000-000000000041","type":"QCS","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"VERIFY Y2 question 1"}},"options":[{"id":"aaaaaaaa-0000-4000-8000-000000000082","bodyText":"B"},{"id":"aaaaaaaa-0000-4000-8000-000000000081","bodyText":"A"}],"clinicalCaseParts":[]},{"sessionQuestionId":"6b206824-c88b-4936-b532-c8d1997a3b2d","presentedOrder":9,"question":{"id":"aaaaaaaa-0000-4000-8000-000000000072","unitId":"aaaaaaaa-0000-4000-8000-000000000041","type":"QCS","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"VERIFY Y2 question 2"}},"options":[{"id":"aaaaaaaa-0000-4000-8000-000000000084","bodyText":"B"},{"id":"aaaaaaaa-0000-4000-8000-000000000083","bodyText":"A"}],"clinicalCaseParts":[]}]}}
+----- echo check account=verify-b sort=by_course => resultSort=by_course mode=practice showStats=true
+----- SQL presented_order for session 3c1e4c7f-54db-48cd-a779-244923058a0a (by_course)
+[
+  {
+    "presented_order": 0,
+    "question_id": "00000000-0000-0000-0000-000000000070",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 1,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a2",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 2,
+    "question_id": "00000000-0000-0000-0000-000000000090",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 3,
+    "question_id": "62a15bd9-1d10-4640-9509-c63182bfd675",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 4,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a4",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 5,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a1",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 6,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a3",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 7,
+    "question_id": "00000000-0000-0000-0000-000000000080",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 8,
+    "question_id": "aaaaaaaa-0000-4000-8000-000000000071",
+    "year_label": "Year 2 VERIFY",
+    "year_order_index": 1,
+    "module_name": "VERIFY Module Y2",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 9,
+    "question_id": "aaaaaaaa-0000-4000-8000-000000000072",
+    "year_label": "Year 2 VERIFY",
+    "year_order_index": 1,
+    "module_name": "VERIFY Module Y2",
+    "module_order_index": 0
+  }
+]
+----- PASS by_course: module_order non-decreasing within each year
+
+===== POST http://127.0.0.1:3000/api/sessions
+----- request body
+{
+  "name": "VERIFY-verify-b-random",
+  "mode": "practice",
+  "facultyId": "b37b039e-2208-4837-b5d5-28b1c338a2cf",
+  "size": 10,
+  "sort": "random",
+  "showStats": true
+}
+----- response status 201 (809ms)
+----- response body
+{"session":{"id":"d0a5e405-998b-4817-a825-9d25614c45c8","name":"VERIFY-verify-b-random","mode":"practice","isOfficialMock":false,"timeLimitSeconds":null,"resultSort":"random","showStats":true,"startedAt":"2026-08-27T18:07:19.676Z","completedAt":null,"score":null,"questions":[{"sessionQuestionId":"439154cf-e23e-465b-8139-f9323ae46ec2","presentedOrder":0,"question":{"id":"ffffffff-0000-0000-0000-0000000000a4","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Quelles anomalies électrocardiographiques évoquent une hyperkaliémie sévère ?"}},"options":[{"id":"d09ba0cf-92cb-436c-9e03-7d31968ffe33","bodyText":"Apparition d'ondes U proéminentes"},{"id":"0fc9ace6-0d03-4826-ab59-9b37b54eacf1","bodyText":"Élargissement progressif du QRS"},{"id":"6e180f6e-8a66-4e14-90af-a7c921ffb20a","bodyText":"Ondes T amples et pointues"},{"id":"102853a7-9941-4711-b0d6-9273a85a3641","bodyText":"Allongement isolé de l'intervalle QT"}],"clinicalCaseParts":[]},{"sessionQuestionId":"f2fd5cc3-01d4-44f8-818d-8834007b82e4","presentedOrder":1,"question":{"id":"00000000-0000-0000-0000-000000000090","unitId":"00000000-0000-0000-0000-000000000040","type":"QROC","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Briefly explain why the QRS complex is typically narrow in a healthy heart."}},"options":[],"clinicalCaseParts":[]},{"sessionQuestionId":"55c547f0-ba77-428a-a15f-ddd82ce7c0fd","presentedOrder":2,"question":{"id":"ffffffff-0000-0000-0000-0000000000a1","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Chez un sujet sain au repos, quelle est la principale déterminante de la précharge ventriculaire gauche ?"}},"options":[{"id":"1c57749a-347a-466c-917e-0bb51f30f78f","bodyText":"L'épaisseur pariétale du ventricule droit"},{"id":"ad52ca83-7023-48fa-8a90-6c836a4d2f14","bodyText":"La pression artérielle diastolique"},{"id":"c23e767e-263e-47a2-805e-120b1a819f1b","bodyText":"La fréquence cardiaque maximale théorique"},{"id":"e73619eb-f0bb-4de8-9b7e-5891661762f1","bodyText":"Le retour veineux systémique"}],"clinicalCaseParts":[]},{"sessionQuestionId":"eae19a1c-52be-4aca-bfbd-e7a5a2e667bb","presentedOrder":3,"question":{"id":"ffffffff-0000-0000-0000-0000000000a3","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"Un patient présente un souffle systolique maximal au foyer mitral, irradiant vers l'aisselle. Quel diagnostic évoquez-vous en premier ?"}},"options":[{"id":"7b21c7ba-f62d-494e-a57f-0879b10aef9f","bodyText":"Rétrécissement mitral"},{"id":"ae367db8-e57c-4b29-8554-edea7e31ae1a","bodyText":"Insuffisance aortique"},{"id":"ad14f962-144c-4312-a77b-c20029aadff3","bodyText":"Insuffisance mitrale"},{"id":"b569ad65-1aae-493c-968f-344cb6af046e","bodyText":"Rétrécissement aortique"}],"clinicalCaseParts":[]},{"sessionQuestionId":"8361966c-70b7-40ad-999b-a286dff8f73b","presentedOrder":4,"question":{"id":"ffffffff-0000-0000-0000-0000000000a2","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"hard","bodyRichtext":{"text":"Concernant le potentiel d'action des cellules du nœud sinusal, quelles propositions sont exactes ?"}},"options":[{"id":"aa18c7da-9dbb-4015-99ab-d49d31520514","bodyText":"Le potentiel de membrane de repos est stable à -90 mV"},{"id":"d3c7eccd-af25-4a40-b7b1-f9dbfc53161c","bodyText":"Le courant entrant If participe à l'automatisme"},{"id":"ffaae465-72dc-435e-a6d4-fd2ddd5457ac","bodyText":"Il existe une dépolarisation diastolique lente spontanée"},{"id":"61a30dd9-be70-47cb-89ba-a9cdba9224f9","bodyText":"La phase de plateau dépend surtout des canaux sodiques rapides"}],"clinicalCaseParts":[]},{"sessionQuestionId":"3f6de1dc-d611-4f62-b5dc-9515c0e0a363","presentedOrder":5,"question":{"id":"aaaaaaaa-0000-4000-8000-000000000071","unitId":"aaaaaaaa-0000-4000-8000-000000000041","type":"QCS","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"VERIFY Y2 question 1"}},"options":[{"id":"aaaaaaaa-0000-4000-8000-000000000081","bodyText":"A"},{"id":"aaaaaaaa-0000-4000-8000-000000000082","bodyText":"B"}],"clinicalCaseParts":[]},{"sessionQuestionId":"b6ea6792-345b-4519-aba2-9c2bb31c9405","presentedOrder":6,"question":{"id":"62a15bd9-1d10-4640-9509-c63182bfd675","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"messi is the compinne"}},"options":[{"id":"c16b10f3-9422-470d-b546-09a24632e23b","bodyText":"ldvmvlrmv"},{"id":"c874fd85-63ec-4fcf-8ab6-6d21a511bcab","bodyText":"mlvmlvlvm"}],"clinicalCaseParts":[]},{"sessionQuestionId":"45545ab8-fca1-4ca9-b0b5-dc0861caf3f9","presentedOrder":7,"question":{"id":"00000000-0000-0000-0000-000000000070","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"Which of the following occur during ventricular systole? (Select all that apply)"}},"options":[{"id":"00000000-0000-0000-0000-000000000072","bodyText":"Semilunar valves open"},{"id":"00000000-0000-0000-0000-000000000074","bodyText":"Atria contract"},{"id":"00000000-0000-0000-0000-000000000073","bodyText":"Ventricles are relaxed"},{"id":"00000000-0000-0000-0000-000000000071","bodyText":"AV valves close"}],"clinicalCaseParts":[]},{"sessionQuestionId":"5d859608-f9f2-406c-aef8-d063ce7623cb","presentedOrder":8,"question":{"id":"00000000-0000-0000-0000-000000000080","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"What triggers the closure of the mitral valve?"}},"options":[{"id":"00000000-0000-0000-0000-000000000083","bodyText":"Atrial contraction"},{"id":"00000000-0000-0000-0000-000000000081","bodyText":"Rising ventricular pressure exceeding atrial pressure"},{"id":"00000000-0000-0000-0000-000000000084","bodyText":"SA node depolarization"},{"id":"00000000-0000-0000-0000-000000000082","bodyText":"Falling ventricular pressure"}],"clinicalCaseParts":[]},{"sessionQuestionId":"c102c231-c372-4d5a-bed5-96c898482185","presentedOrder":9,"question":{"id":"aaaaaaaa-0000-4000-8000-000000000072","unitId":"aaaaaaaa-0000-4000-8000-000000000041","type":"QCS","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"VERIFY Y2 question 2"}},"options":[{"id":"aaaaaaaa-0000-4000-8000-000000000083","bodyText":"A"},{"id":"aaaaaaaa-0000-4000-8000-000000000084","bodyText":"B"}],"clinicalCaseParts":[]}]}}
+----- echo check account=verify-b sort=random => resultSort=random mode=practice showStats=true
+----- SQL presented_order for session d0a5e405-998b-4817-a825-9d25614c45c8 (random)
+[
+  {
+    "presented_order": 0,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a4",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 1,
+    "question_id": "00000000-0000-0000-0000-000000000090",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 2,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a1",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 3,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a3",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 4,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a2",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 5,
+    "question_id": "aaaaaaaa-0000-4000-8000-000000000071",
+    "year_label": "Year 2 VERIFY",
+    "year_order_index": 1,
+    "module_name": "VERIFY Module Y2",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 6,
+    "question_id": "62a15bd9-1d10-4640-9509-c63182bfd675",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 7,
+    "question_id": "00000000-0000-0000-0000-000000000070",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 8,
+    "question_id": "00000000-0000-0000-0000-000000000080",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 9,
+    "question_id": "aaaaaaaa-0000-4000-8000-000000000072",
+    "year_label": "Year 2 VERIFY",
+    "year_order_index": 1,
+    "module_name": "VERIFY Module Y2",
+    "module_order_index": 0
+  }
+]
+
+===== POST http://127.0.0.1:3000/api/sessions
+----- request body
+{
+  "name": "VERIFY-verify-c-by_year",
+  "mode": "practice",
+  "facultyId": "b37b039e-2208-4837-b5d5-28b1c338a2cf",
+  "size": 10,
+  "sort": "by_year",
+  "showStats": true
+}
+----- response status 201 (1072ms)
+----- response body
+{"session":{"id":"57b9b013-d3de-4d4f-b5eb-2bc177a58fa6","name":"VERIFY-verify-c-by_year","mode":"practice","isOfficialMock":false,"timeLimitSeconds":null,"resultSort":"by_year","showStats":true,"startedAt":"2026-08-27T18:07:20.799Z","completedAt":null,"score":null,"questions":[{"sessionQuestionId":"a2076411-7094-4e00-acd3-f4d06b571833","presentedOrder":0,"question":{"id":"00000000-0000-0000-0000-000000000080","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"What triggers the closure of the mitral valve?"}},"options":[{"id":"00000000-0000-0000-0000-000000000082","bodyText":"Falling ventricular pressure"},{"id":"00000000-0000-0000-0000-000000000081","bodyText":"Rising ventricular pressure exceeding atrial pressure"},{"id":"00000000-0000-0000-0000-000000000083","bodyText":"Atrial contraction"},{"id":"00000000-0000-0000-0000-000000000084","bodyText":"SA node depolarization"}],"clinicalCaseParts":[]},{"sessionQuestionId":"25676d1d-72db-4e50-917f-b404145df74b","presentedOrder":1,"question":{"id":"62a15bd9-1d10-4640-9509-c63182bfd675","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"messi is the compinne"}},"options":[{"id":"c874fd85-63ec-4fcf-8ab6-6d21a511bcab","bodyText":"mlvmlvlvm"},{"id":"c16b10f3-9422-470d-b546-09a24632e23b","bodyText":"ldvmvlrmv"}],"clinicalCaseParts":[]},{"sessionQuestionId":"7619d647-186a-4587-a9fe-82e90a129721","presentedOrder":2,"question":{"id":"ffffffff-0000-0000-0000-0000000000a4","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Quelles anomalies électrocardiographiques évoquent une hyperkaliémie sévère ?"}},"options":[{"id":"102853a7-9941-4711-b0d6-9273a85a3641","bodyText":"Allongement isolé de l'intervalle QT"},{"id":"6e180f6e-8a66-4e14-90af-a7c921ffb20a","bodyText":"Ondes T amples et pointues"},{"id":"0fc9ace6-0d03-4826-ab59-9b37b54eacf1","bodyText":"Élargissement progressif du QRS"},{"id":"d09ba0cf-92cb-436c-9e03-7d31968ffe33","bodyText":"Apparition d'ondes U proéminentes"}],"clinicalCaseParts":[]},{"sessionQuestionId":"0ae233ac-8a0b-48b5-9ed9-72dd0177d291","presentedOrder":3,"question":{"id":"00000000-0000-0000-0000-000000000090","unitId":"00000000-0000-0000-0000-000000000040","type":"QROC","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Briefly explain why the QRS complex is typically narrow in a healthy heart."}},"options":[],"clinicalCaseParts":[]},{"sessionQuestionId":"e7c30fbd-b60e-4f97-bd22-1d6351976485","presentedOrder":4,"question":{"id":"ffffffff-0000-0000-0000-0000000000a1","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Chez un sujet sain au repos, quelle est la principale déterminante de la précharge ventriculaire gauche ?"}},"options":[{"id":"ad52ca83-7023-48fa-8a90-6c836a4d2f14","bodyText":"La pression artérielle diastolique"},{"id":"e73619eb-f0bb-4de8-9b7e-5891661762f1","bodyText":"Le retour veineux systémique"},{"id":"c23e767e-263e-47a2-805e-120b1a819f1b","bodyText":"La fréquence cardiaque maximale théorique"},{"id":"1c57749a-347a-466c-917e-0bb51f30f78f","bodyText":"L'épaisseur pariétale du ventricule droit"}],"clinicalCaseParts":[]},{"sessionQuestionId":"6c4c3989-f3b9-4433-9c78-0de6401b0ed0","presentedOrder":5,"question":{"id":"ffffffff-0000-0000-0000-0000000000a3","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"Un patient présente un souffle systolique maximal au foyer mitral, irradiant vers l'aisselle. Quel diagnostic évoquez-vous en premier ?"}},"options":[{"id":"7b21c7ba-f62d-494e-a57f-0879b10aef9f","bodyText":"Rétrécissement mitral"},{"id":"ae367db8-e57c-4b29-8554-edea7e31ae1a","bodyText":"Insuffisance aortique"},{"id":"b569ad65-1aae-493c-968f-344cb6af046e","bodyText":"Rétrécissement aortique"},{"id":"ad14f962-144c-4312-a77b-c20029aadff3","bodyText":"Insuffisance mitrale"}],"clinicalCaseParts":[]},{"sessionQuestionId":"26aabe73-3388-460b-b0bd-5c60fc64d896","presentedOrder":6,"question":{"id":"00000000-0000-0000-0000-000000000070","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"Which of the following occur during ventricular systole? (Select all that apply)"}},"options":[{"id":"00000000-0000-0000-0000-000000000074","bodyText":"Atria contract"},{"id":"00000000-0000-0000-0000-000000000071","bodyText":"AV valves close"},{"id":"00000000-0000-0000-0000-000000000073","bodyText":"Ventricles are relaxed"},{"id":"00000000-0000-0000-0000-000000000072","bodyText":"Semilunar valves open"}],"clinicalCaseParts":[]},{"sessionQuestionId":"2761db1c-581b-409d-928b-74394994cc37","presentedOrder":7,"question":{"id":"ffffffff-0000-0000-0000-0000000000a2","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"hard","bodyRichtext":{"text":"Concernant le potentiel d'action des cellules du nœud sinusal, quelles propositions sont exactes ?"}},"options":[{"id":"d3c7eccd-af25-4a40-b7b1-f9dbfc53161c","bodyText":"Le courant entrant If participe à l'automatisme"},{"id":"aa18c7da-9dbb-4015-99ab-d49d31520514","bodyText":"Le potentiel de membrane de repos est stable à -90 mV"},{"id":"ffaae465-72dc-435e-a6d4-fd2ddd5457ac","bodyText":"Il existe une dépolarisation diastolique lente spontanée"},{"id":"61a30dd9-be70-47cb-89ba-a9cdba9224f9","bodyText":"La phase de plateau dépend surtout des canaux sodiques rapides"}],"clinicalCaseParts":[]},{"sessionQuestionId":"2cac4b5d-13cd-46a0-b58c-e0157d0703db","presentedOrder":8,"question":{"id":"aaaaaaaa-0000-4000-8000-000000000071","unitId":"aaaaaaaa-0000-4000-8000-000000000041","type":"QCS","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"VERIFY Y2 question 1"}},"options":[{"id":"aaaaaaaa-0000-4000-8000-000000000082","bodyText":"B"},{"id":"aaaaaaaa-0000-4000-8000-000000000081","bodyText":"A"}],"clinicalCaseParts":[]},{"sessionQuestionId":"c8d5e7f1-70b7-4102-9a77-4b41fafa9a70","presentedOrder":9,"question":{"id":"aaaaaaaa-0000-4000-8000-000000000072","unitId":"aaaaaaaa-0000-4000-8000-000000000041","type":"QCS","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"VERIFY Y2 question 2"}},"options":[{"id":"aaaaaaaa-0000-4000-8000-000000000083","bodyText":"A"},{"id":"aaaaaaaa-0000-4000-8000-000000000084","bodyText":"B"}],"clinicalCaseParts":[]}]}}
+----- echo check account=verify-c sort=by_year => resultSort=by_year mode=practice showStats=true
+----- SQL presented_order for session 57b9b013-d3de-4d4f-b5eb-2bc177a58fa6 (by_year)
+[
+  {
+    "presented_order": 0,
+    "question_id": "00000000-0000-0000-0000-000000000080",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 1,
+    "question_id": "62a15bd9-1d10-4640-9509-c63182bfd675",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 2,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a4",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 3,
+    "question_id": "00000000-0000-0000-0000-000000000090",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 4,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a1",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 5,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a3",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 6,
+    "question_id": "00000000-0000-0000-0000-000000000070",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 7,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a2",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 8,
+    "question_id": "aaaaaaaa-0000-4000-8000-000000000071",
+    "year_label": "Year 2 VERIFY",
+    "year_order_index": 1,
+    "module_name": "VERIFY Module Y2",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 9,
+    "question_id": "aaaaaaaa-0000-4000-8000-000000000072",
+    "year_label": "Year 2 VERIFY",
+    "year_order_index": 1,
+    "module_name": "VERIFY Module Y2",
+    "module_order_index": 0
+  }
+]
+----- by_year distinct year_order_index values: 0,1
+----- PASS by_year: first year0 at presented_order=0, first year1 at presented_order=8
+
+===== POST http://127.0.0.1:3000/api/sessions
+----- request body
+{
+  "name": "VERIFY-verify-c-by_course",
+  "mode": "practice",
+  "facultyId": "b37b039e-2208-4837-b5d5-28b1c338a2cf",
+  "size": 10,
+  "sort": "by_course",
+  "showStats": true
+}
+----- response status 201 (1091ms)
+----- response body
+{"session":{"id":"dc32f1f0-bcb1-48ce-ab15-41fa04940ee8","name":"VERIFY-verify-c-by_course","mode":"practice","isOfficialMock":false,"timeLimitSeconds":null,"resultSort":"by_course","showStats":true,"startedAt":"2026-08-27T18:07:22.023Z","completedAt":null,"score":null,"questions":[{"sessionQuestionId":"53be7262-8367-41e6-b62e-a6d07903fca8","presentedOrder":0,"question":{"id":"ffffffff-0000-0000-0000-0000000000a2","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"hard","bodyRichtext":{"text":"Concernant le potentiel d'action des cellules du nœud sinusal, quelles propositions sont exactes ?"}},"options":[{"id":"aa18c7da-9dbb-4015-99ab-d49d31520514","bodyText":"Le potentiel de membrane de repos est stable à -90 mV"},{"id":"d3c7eccd-af25-4a40-b7b1-f9dbfc53161c","bodyText":"Le courant entrant If participe à l'automatisme"},{"id":"ffaae465-72dc-435e-a6d4-fd2ddd5457ac","bodyText":"Il existe une dépolarisation diastolique lente spontanée"},{"id":"61a30dd9-be70-47cb-89ba-a9cdba9224f9","bodyText":"La phase de plateau dépend surtout des canaux sodiques rapides"}],"clinicalCaseParts":[]},{"sessionQuestionId":"78a29795-996d-4118-b5e4-7d7ebed8ce2c","presentedOrder":1,"question":{"id":"00000000-0000-0000-0000-000000000070","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"Which of the following occur during ventricular systole? (Select all that apply)"}},"options":[{"id":"00000000-0000-0000-0000-000000000072","bodyText":"Semilunar valves open"},{"id":"00000000-0000-0000-0000-000000000074","bodyText":"Atria contract"},{"id":"00000000-0000-0000-0000-000000000073","bodyText":"Ventricles are relaxed"},{"id":"00000000-0000-0000-0000-000000000071","bodyText":"AV valves close"}],"clinicalCaseParts":[]},{"sessionQuestionId":"528b6bca-13f2-4a53-83fa-4baddc176884","presentedOrder":2,"question":{"id":"ffffffff-0000-0000-0000-0000000000a4","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Quelles anomalies électrocardiographiques évoquent une hyperkaliémie sévère ?"}},"options":[{"id":"0fc9ace6-0d03-4826-ab59-9b37b54eacf1","bodyText":"Élargissement progressif du QRS"},{"id":"102853a7-9941-4711-b0d6-9273a85a3641","bodyText":"Allongement isolé de l'intervalle QT"},{"id":"d09ba0cf-92cb-436c-9e03-7d31968ffe33","bodyText":"Apparition d'ondes U proéminentes"},{"id":"6e180f6e-8a66-4e14-90af-a7c921ffb20a","bodyText":"Ondes T amples et pointues"}],"clinicalCaseParts":[]},{"sessionQuestionId":"3258704a-1f49-4a14-a79e-2b76c28fa95c","presentedOrder":3,"question":{"id":"ffffffff-0000-0000-0000-0000000000a3","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"Un patient présente un souffle systolique maximal au foyer mitral, irradiant vers l'aisselle. Quel diagnostic évoquez-vous en premier ?"}},"options":[{"id":"ae367db8-e57c-4b29-8554-edea7e31ae1a","bodyText":"Insuffisance aortique"},{"id":"b569ad65-1aae-493c-968f-344cb6af046e","bodyText":"Rétrécissement aortique"},{"id":"ad14f962-144c-4312-a77b-c20029aadff3","bodyText":"Insuffisance mitrale"},{"id":"7b21c7ba-f62d-494e-a57f-0879b10aef9f","bodyText":"Rétrécissement mitral"}],"clinicalCaseParts":[]},{"sessionQuestionId":"be3e9130-2375-4a1d-be4a-e34b6f1f7a33","presentedOrder":4,"question":{"id":"00000000-0000-0000-0000-000000000090","unitId":"00000000-0000-0000-0000-000000000040","type":"QROC","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Briefly explain why the QRS complex is typically narrow in a healthy heart."}},"options":[],"clinicalCaseParts":[]},{"sessionQuestionId":"21efe514-ba10-49cd-8328-4bd9cafd3971","presentedOrder":5,"question":{"id":"ffffffff-0000-0000-0000-0000000000a1","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Chez un sujet sain au repos, quelle est la principale déterminante de la précharge ventriculaire gauche ?"}},"options":[{"id":"ad52ca83-7023-48fa-8a90-6c836a4d2f14","bodyText":"La pression artérielle diastolique"},{"id":"e73619eb-f0bb-4de8-9b7e-5891661762f1","bodyText":"Le retour veineux systémique"},{"id":"c23e767e-263e-47a2-805e-120b1a819f1b","bodyText":"La fréquence cardiaque maximale théorique"},{"id":"1c57749a-347a-466c-917e-0bb51f30f78f","bodyText":"L'épaisseur pariétale du ventricule droit"}],"clinicalCaseParts":[]},{"sessionQuestionId":"d4c2fdd6-37fe-493a-844a-d0ef077733c5","presentedOrder":6,"question":{"id":"62a15bd9-1d10-4640-9509-c63182bfd675","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"messi is the compinne"}},"options":[{"id":"c874fd85-63ec-4fcf-8ab6-6d21a511bcab","bodyText":"mlvmlvlvm"},{"id":"c16b10f3-9422-470d-b546-09a24632e23b","bodyText":"ldvmvlrmv"}],"clinicalCaseParts":[]},{"sessionQuestionId":"2a59b6be-4c39-49d8-b685-da98009c97f0","presentedOrder":7,"question":{"id":"00000000-0000-0000-0000-000000000080","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"What triggers the closure of the mitral valve?"}},"options":[{"id":"00000000-0000-0000-0000-000000000081","bodyText":"Rising ventricular pressure exceeding atrial pressure"},{"id":"00000000-0000-0000-0000-000000000083","bodyText":"Atrial contraction"},{"id":"00000000-0000-0000-0000-000000000084","bodyText":"SA node depolarization"},{"id":"00000000-0000-0000-0000-000000000082","bodyText":"Falling ventricular pressure"}],"clinicalCaseParts":[]},{"sessionQuestionId":"b7366b4a-4aa0-49d7-a8dc-3c6e09f0e08d","presentedOrder":8,"question":{"id":"aaaaaaaa-0000-4000-8000-000000000072","unitId":"aaaaaaaa-0000-4000-8000-000000000041","type":"QCS","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"VERIFY Y2 question 2"}},"options":[{"id":"aaaaaaaa-0000-4000-8000-000000000084","bodyText":"B"},{"id":"aaaaaaaa-0000-4000-8000-000000000083","bodyText":"A"}],"clinicalCaseParts":[]},{"sessionQuestionId":"5a88adc6-3119-436a-a4ac-124d473e8ce8","presentedOrder":9,"question":{"id":"aaaaaaaa-0000-4000-8000-000000000071","unitId":"aaaaaaaa-0000-4000-8000-000000000041","type":"QCS","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"VERIFY Y2 question 1"}},"options":[{"id":"aaaaaaaa-0000-4000-8000-000000000082","bodyText":"B"},{"id":"aaaaaaaa-0000-4000-8000-000000000081","bodyText":"A"}],"clinicalCaseParts":[]}]}}
+----- echo check account=verify-c sort=by_course => resultSort=by_course mode=practice showStats=true
+----- SQL presented_order for session dc32f1f0-bcb1-48ce-ab15-41fa04940ee8 (by_course)
+[
+  {
+    "presented_order": 0,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a2",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 1,
+    "question_id": "00000000-0000-0000-0000-000000000070",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 2,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a4",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 3,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a3",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 4,
+    "question_id": "00000000-0000-0000-0000-000000000090",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 5,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a1",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 6,
+    "question_id": "62a15bd9-1d10-4640-9509-c63182bfd675",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 7,
+    "question_id": "00000000-0000-0000-0000-000000000080",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 8,
+    "question_id": "aaaaaaaa-0000-4000-8000-000000000072",
+    "year_label": "Year 2 VERIFY",
+    "year_order_index": 1,
+    "module_name": "VERIFY Module Y2",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 9,
+    "question_id": "aaaaaaaa-0000-4000-8000-000000000071",
+    "year_label": "Year 2 VERIFY",
+    "year_order_index": 1,
+    "module_name": "VERIFY Module Y2",
+    "module_order_index": 0
+  }
+]
+----- PASS by_course: module_order non-decreasing within each year
+
+===== POST http://127.0.0.1:3000/api/sessions
+----- request body
+{
+  "name": "VERIFY-verify-c-random",
+  "mode": "practice",
+  "facultyId": "b37b039e-2208-4837-b5d5-28b1c338a2cf",
+  "size": 10,
+  "sort": "random",
+  "showStats": true
+}
+----- response status 201 (806ms)
+----- response body
+{"session":{"id":"bc893864-4a3c-41d0-9aab-579907df70cf","name":"VERIFY-verify-c-random","mode":"practice","isOfficialMock":false,"timeLimitSeconds":null,"resultSort":"random","showStats":true,"startedAt":"2026-08-27T18:07:22.919Z","completedAt":null,"score":null,"questions":[{"sessionQuestionId":"46e6ea13-287d-4e6e-88ca-7e8143596de0","presentedOrder":0,"question":{"id":"00000000-0000-0000-0000-000000000080","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"What triggers the closure of the mitral valve?"}},"options":[{"id":"00000000-0000-0000-0000-000000000082","bodyText":"Falling ventricular pressure"},{"id":"00000000-0000-0000-0000-000000000083","bodyText":"Atrial contraction"},{"id":"00000000-0000-0000-0000-000000000081","bodyText":"Rising ventricular pressure exceeding atrial pressure"},{"id":"00000000-0000-0000-0000-000000000084","bodyText":"SA node depolarization"}],"clinicalCaseParts":[]},{"sessionQuestionId":"69551c00-534d-4a40-8331-1def21a781cf","presentedOrder":1,"question":{"id":"62a15bd9-1d10-4640-9509-c63182bfd675","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"messi is the compinne"}},"options":[{"id":"c16b10f3-9422-470d-b546-09a24632e23b","bodyText":"ldvmvlrmv"},{"id":"c874fd85-63ec-4fcf-8ab6-6d21a511bcab","bodyText":"mlvmlvlvm"}],"clinicalCaseParts":[]},{"sessionQuestionId":"a1a1d630-06ca-45bf-93f9-c18e5d0a8086","presentedOrder":2,"question":{"id":"00000000-0000-0000-0000-000000000070","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"Which of the following occur during ventricular systole? (Select all that apply)"}},"options":[{"id":"00000000-0000-0000-0000-000000000071","bodyText":"AV valves close"},{"id":"00000000-0000-0000-0000-000000000073","bodyText":"Ventricles are relaxed"},{"id":"00000000-0000-0000-0000-000000000074","bodyText":"Atria contract"},{"id":"00000000-0000-0000-0000-000000000072","bodyText":"Semilunar valves open"}],"clinicalCaseParts":[]},{"sessionQuestionId":"012586ea-3c60-46be-929e-9ca4cbf494ee","presentedOrder":3,"question":{"id":"ffffffff-0000-0000-0000-0000000000a1","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Chez un sujet sain au repos, quelle est la principale déterminante de la précharge ventriculaire gauche ?"}},"options":[{"id":"ad52ca83-7023-48fa-8a90-6c836a4d2f14","bodyText":"La pression artérielle diastolique"},{"id":"e73619eb-f0bb-4de8-9b7e-5891661762f1","bodyText":"Le retour veineux systémique"},{"id":"1c57749a-347a-466c-917e-0bb51f30f78f","bodyText":"L'épaisseur pariétale du ventricule droit"},{"id":"c23e767e-263e-47a2-805e-120b1a819f1b","bodyText":"La fréquence cardiaque maximale théorique"}],"clinicalCaseParts":[]},{"sessionQuestionId":"aedfe64e-b8c5-48ce-bf96-b17a5beff890","presentedOrder":4,"question":{"id":"ffffffff-0000-0000-0000-0000000000a4","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Quelles anomalies électrocardiographiques évoquent une hyperkaliémie sévère ?"}},"options":[{"id":"0fc9ace6-0d03-4826-ab59-9b37b54eacf1","bodyText":"Élargissement progressif du QRS"},{"id":"6e180f6e-8a66-4e14-90af-a7c921ffb20a","bodyText":"Ondes T amples et pointues"},{"id":"102853a7-9941-4711-b0d6-9273a85a3641","bodyText":"Allongement isolé de l'intervalle QT"},{"id":"d09ba0cf-92cb-436c-9e03-7d31968ffe33","bodyText":"Apparition d'ondes U proéminentes"}],"clinicalCaseParts":[]},{"sessionQuestionId":"cb515ab4-5980-48ee-a726-dd0312b9e375","presentedOrder":5,"question":{"id":"ffffffff-0000-0000-0000-0000000000a3","unitId":"00000000-0000-0000-0000-000000000040","type":"QCS","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"Un patient présente un souffle systolique maximal au foyer mitral, irradiant vers l'aisselle. Quel diagnostic évoquez-vous en premier ?"}},"options":[{"id":"7b21c7ba-f62d-494e-a57f-0879b10aef9f","bodyText":"Rétrécissement mitral"},{"id":"ad14f962-144c-4312-a77b-c20029aadff3","bodyText":"Insuffisance mitrale"},{"id":"b569ad65-1aae-493c-968f-344cb6af046e","bodyText":"Rétrécissement aortique"},{"id":"ae367db8-e57c-4b29-8554-edea7e31ae1a","bodyText":"Insuffisance aortique"}],"clinicalCaseParts":[]},{"sessionQuestionId":"a35071cd-b6da-4382-9fa3-1ab4a83b160c","presentedOrder":6,"question":{"id":"00000000-0000-0000-0000-000000000090","unitId":"00000000-0000-0000-0000-000000000040","type":"QROC","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Briefly explain why the QRS complex is typically narrow in a healthy heart."}},"options":[],"clinicalCaseParts":[]},{"sessionQuestionId":"3797754d-ad85-4740-b0a4-b1a6acd7924e","presentedOrder":7,"question":{"id":"aaaaaaaa-0000-4000-8000-000000000072","unitId":"aaaaaaaa-0000-4000-8000-000000000041","type":"QCS","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"VERIFY Y2 question 2"}},"options":[{"id":"aaaaaaaa-0000-4000-8000-000000000084","bodyText":"B"},{"id":"aaaaaaaa-0000-4000-8000-000000000083","bodyText":"A"}],"clinicalCaseParts":[]},{"sessionQuestionId":"744ac9fd-0245-4f31-8993-966ece91c577","presentedOrder":8,"question":{"id":"aaaaaaaa-0000-4000-8000-000000000071","unitId":"aaaaaaaa-0000-4000-8000-000000000041","type":"QCS","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"VERIFY Y2 question 1"}},"options":[{"id":"aaaaaaaa-0000-4000-8000-000000000082","bodyText":"B"},{"id":"aaaaaaaa-0000-4000-8000-000000000081","bodyText":"A"}],"clinicalCaseParts":[]},{"sessionQuestionId":"e2c469bb-04ef-4da8-8fa4-8dd14736aab8","presentedOrder":9,"question":{"id":"ffffffff-0000-0000-0000-0000000000a2","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"hard","bodyRichtext":{"text":"Concernant le potentiel d'action des cellules du nœud sinusal, quelles propositions sont exactes ?"}},"options":[{"id":"61a30dd9-be70-47cb-89ba-a9cdba9224f9","bodyText":"La phase de plateau dépend surtout des canaux sodiques rapides"},{"id":"d3c7eccd-af25-4a40-b7b1-f9dbfc53161c","bodyText":"Le courant entrant If participe à l'automatisme"},{"id":"aa18c7da-9dbb-4015-99ab-d49d31520514","bodyText":"Le potentiel de membrane de repos est stable à -90 mV"},{"id":"ffaae465-72dc-435e-a6d4-fd2ddd5457ac","bodyText":"Il existe une dépolarisation diastolique lente spontanée"}],"clinicalCaseParts":[]}]}}
+----- echo check account=verify-c sort=random => resultSort=random mode=practice showStats=true
+----- SQL presented_order for session bc893864-4a3c-41d0-9aab-579907df70cf (random)
+[
+  {
+    "presented_order": 0,
+    "question_id": "00000000-0000-0000-0000-000000000080",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 1,
+    "question_id": "62a15bd9-1d10-4640-9509-c63182bfd675",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 2,
+    "question_id": "00000000-0000-0000-0000-000000000070",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 3,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a1",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 4,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a4",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 5,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a3",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 6,
+    "question_id": "00000000-0000-0000-0000-000000000090",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 7,
+    "question_id": "aaaaaaaa-0000-4000-8000-000000000072",
+    "year_label": "Year 2 VERIFY",
+    "year_order_index": 1,
+    "module_name": "VERIFY Module Y2",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 8,
+    "question_id": "aaaaaaaa-0000-4000-8000-000000000071",
+    "year_label": "Year 2 VERIFY",
+    "year_order_index": 1,
+    "module_name": "VERIFY Module Y2",
+    "module_order_index": 0
+  },
+  {
+    "presented_order": 9,
+    "question_id": "ffffffff-0000-0000-0000-0000000000a2",
+    "year_label": "Year 1",
+    "year_order_index": 0,
+    "module_name": "Cardiology",
+    "module_order_index": 0
+  }
+]
+
+===== examMode precedence
+
+===== POST http://127.0.0.1:3000/api/sessions
+----- request body
+{
+  "name": "VERIFY-examMode-override",
+  "mode": "practice",
+  "examMode": true,
+  "facultyId": "b37b039e-2208-4837-b5d5-28b1c338a2cf",
+  "size": 2,
+  "sort": "random"
+}
+----- response status 201 (1180ms)
+----- response body
+{"session":{"id":"6c20ccb2-1bfa-423b-a969-aad0b02941df","name":"VERIFY-examMode-override","mode":"exam","isOfficialMock":false,"timeLimitSeconds":null,"resultSort":"random","showStats":true,"startedAt":"2026-08-27T18:07:23.936Z","completedAt":null,"score":null,"questions":[{"sessionQuestionId":"6b818d7a-1207-4a52-aea5-5ae03f3a49af","presentedOrder":0,"question":{"id":"aaaaaaaa-0000-4000-8000-000000000071","unitId":"aaaaaaaa-0000-4000-8000-000000000041","type":"QCS","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"VERIFY Y2 question 1"}},"options":[{"id":"aaaaaaaa-0000-4000-8000-000000000081","bodyText":"A"},{"id":"aaaaaaaa-0000-4000-8000-000000000082","bodyText":"B"}],"clinicalCaseParts":[]},{"sessionQuestionId":"4a308013-e561-4ffd-b6b7-391dce808be8","presentedOrder":1,"question":{"id":"62a15bd9-1d10-4640-9509-c63182bfd675","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":null,"bodyRichtext":{"text":"messi is the compinne"}},"options":[{"id":"c874fd85-63ec-4fcf-8ab6-6d21a511bcab","bodyText":"mlvmlvlvm"},{"id":"c16b10f3-9422-470d-b546-09a24632e23b","bodyText":"ldvmvlrmv"}],"clinicalCaseParts":[]}]}}
+----- expected mode=exam, got mode=exam
+
+===== POST http://127.0.0.1:3000/api/sessions
+----- request body
+{
+  "name": "VERIFY-examMode-false",
+  "mode": "exam",
+  "examMode": false,
+  "facultyId": "b37b039e-2208-4837-b5d5-28b1c338a2cf",
+  "size": 2,
+  "sort": "random"
+}
+----- response status 201 (945ms)
+----- response body
+{"session":{"id":"c38b6378-977a-4304-9c92-55be1d4d6c6b","name":"VERIFY-examMode-false","mode":"practice","isOfficialMock":false,"timeLimitSeconds":null,"resultSort":"random","showStats":true,"startedAt":"2026-08-27T18:07:24.982Z","completedAt":null,"score":null,"questions":[{"sessionQuestionId":"396200c8-fc98-485e-832d-d9db41d00e78","presentedOrder":0,"question":{"id":"00000000-0000-0000-0000-000000000090","unitId":"00000000-0000-0000-0000-000000000040","type":"QROC","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Briefly explain why the QRS complex is typically narrow in a healthy heart."}},"options":[],"clinicalCaseParts":[]},{"sessionQuestionId":"583baa28-a890-405f-b5b1-19efed0fc49f","presentedOrder":1,"question":{"id":"00000000-0000-0000-0000-000000000070","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"easy","bodyRichtext":{"text":"Which of the following occur during ventricular systole? (Select all that apply)"}},"options":[{"id":"00000000-0000-0000-0000-000000000071","bodyText":"AV valves close"},{"id":"00000000-0000-0000-0000-000000000073","bodyText":"Ventricles are relaxed"},{"id":"00000000-0000-0000-0000-000000000074","bodyText":"Atria contract"},{"id":"00000000-0000-0000-0000-000000000072","bodyText":"Semilunar valves open"}],"clinicalCaseParts":[]}]}}
+----- expected mode=practice (examMode:false beats mode:exam), got mode=practice
+
+===== cleanup temporary Year 2 fixture
+deleted sessions=11 year2 fixture rows

@@ -1,0 +1,20 @@
+VERIFY start 2026-09-01T09:16:17.990Z BASE=http://127.0.0.1:3000/api
+
+===== STEP 1: BEFORE — current DB row + session count
+----- raw SQL: SELECT id, email, status, left(password_hash,29), reset-token flags FROM users WHERE email=...
+[
+  {
+    "id": "b5119037-ed04-483e-94a7-07c475839e59",
+    "email": "hamamebouchareb@gmail.com",
+    "status": "active",
+    "hash_prefix": "$2a$10$dMKJDGa6XWh5r/5yNhLaOe",
+    "has_reset_hash": false,
+    "has_reset_expiry": false
+  }
+]
+----- study_sessions count (before): 9
+
+===== STEP 2: forgot-password -> reset-password (dev-mode token leak path)
+
+*** VERIFY FAILED: fetch failed
+TypeError: fetch failed

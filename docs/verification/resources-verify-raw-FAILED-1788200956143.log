@@ -1,0 +1,29 @@
+VERIFY start 2026-08-31T18:29:10.019Z BASE=http://127.0.0.1:3000/api WEB=http://127.0.0.1:3001
+
+*** VERIFY FAILED: 
+Invalid `prisma.user.findUnique()` invocation in
+C:\dev\hamame1\src\scripts\verify-resources-raw.ts:125:40
+
+  122 L(`VERIFY start ${new Date().toISOString()} BASE=${BASE} WEB=${WEB}`);
+  123 
+  124 // Resolve seed-author id (nullable field; look up by email)
+→ 125 const seedAuthor = await prisma.user.findUnique(
+Can't reach database server at `aws-0-eu-west-1.pooler.supabase.com:5432`
+
+Please make sure your database server is running at `aws-0-eu-west-1.pooler.supabase.com:5432`.
+PrismaClientInitializationError: 
+Invalid `prisma.user.findUnique()` invocation in
+C:\dev\hamame1\src\scripts\verify-resources-raw.ts:125:40
+
+  122 L(`VERIFY start ${new Date().toISOString()} BASE=${BASE} WEB=${WEB}`);
+  123 
+  124 // Resolve seed-author id (nullable field; look up by email)
+→ 125 const seedAuthor = await prisma.user.findUnique(
+Can't reach database server at `aws-0-eu-west-1.pooler.supabase.com:5432`
+
+Please make sure your database server is running at `aws-0-eu-west-1.pooler.supabase.com:5432`.
+    at ei.handleRequestError (C:\dev\hamame1\node_modules\@prisma\client\src\runtime\RequestHandler.ts:242:13)
+    at ei.handleAndLogRequestError (C:\dev\hamame1\node_modules\@prisma\client\src\runtime\RequestHandler.ts:174:12)
+    at ei.request (C:\dev\hamame1\node_modules\@prisma\client\src\runtime\RequestHandler.ts:143:12)
+    at async a (C:\dev\hamame1\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:833:24)
+    at async main (C:\dev\hamame1\src\scripts\verify-resources-raw.ts:125:22)

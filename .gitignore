@@ -16,6 +16,11 @@ out/
 # logs
 *.log
 
+# ...except the scrubbed verification audit trail (committed redacted — Task 2).
+# JWTs/bearer tokens are stripped by the redaction script before anything lands here.
+!docs/verification/
+!docs/verification/**
+
 # session scratch — OpenCode/Cursor debug & verification scripts
 web/tmp-*.mjs
 tmp-*.ts

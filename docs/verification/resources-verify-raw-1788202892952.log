@@ -1,0 +1,152 @@
+VERIFY start 2026-08-31T19:00:08.273Z BASE=http://localhost:3000/api WEB=http://localhost:3001
+----- seed-author lookup: 27f52f12-df6b-43a6-be8a-12c0d4314aec
+
+===== STEP 1: SEED + RAW SQL QUERY
+----- raw SQL: SELECT id, title, type, faculty_id, year_id, source_label, file_url FROM resources ORDER BY id
+[
+  {
+    "id": "00000000-0000-0000-0000-000000000120",
+    "title": "Pharmacology Guidelines 2024",
+    "type": "official_drive",
+    "faculty_id": "b37b039e-2208-4837-b5d5-28b1c338a2cf",
+    "year_id": "00000000-0000-0000-0000-000000000020",
+    "source_label": "Ministry of Higher Education",
+    "file_url": "/resources/pharmacology-guidelines-2024.pdf"
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000130",
+    "title": "Radiology Image Library",
+    "type": "reference",
+    "faculty_id": "b37b039e-2208-4837-b5d5-28b1c338a2cf",
+    "year_id": "00000000-0000-0000-0000-000000000020",
+    "source_label": "University Hospital",
+    "file_url": "/resources/radiology-image-library.pdf"
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000140",
+    "title": "Past Exam Session 2023 — Year 1",
+    "type": "past_exam",
+    "faculty_id": null,
+    "year_id": "00000000-0000-0000-0000-000000000020",
+    "source_label": "Faculty of Medicine archive",
+    "file_url": "/resources/past-exam-2023-year1.pdf"
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000150",
+    "title": "Dental Anatomy Reference",
+    "type": "other",
+    "faculty_id": "74b46ae1-4de8-48df-b188-1a45725f3395",
+    "year_id": "00000000-0000-0000-0000-000000000020",
+    "source_label": "Dentistry Department",
+    "file_url": "/resources/dental-anatomy-reference.pdf"
+  }
+]
+----- row count from raw SQL: 4
+
+===== STEP 2: IDEMPOTENCY — SEED AGAIN + COUNT PROOF
+----- raw SQL: SELECT id, title, type, faculty_id FROM resources ORDER BY id (2nd pass)
+[
+  {
+    "id": "00000000-0000-0000-0000-000000000120",
+    "title": "Pharmacology Guidelines 2024",
+    "type": "official_drive",
+    "faculty_id": "b37b039e-2208-4837-b5d5-28b1c338a2cf"
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000130",
+    "title": "Radiology Image Library",
+    "type": "reference",
+    "faculty_id": "b37b039e-2208-4837-b5d5-28b1c338a2cf"
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000140",
+    "title": "Past Exam Session 2023 — Year 1",
+    "type": "past_exam",
+    "faculty_id": null
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000150",
+    "title": "Dental Anatomy Reference",
+    "type": "other",
+    "faculty_id": "74b46ae1-4de8-48df-b188-1a45725f3395"
+  }
+]
+----- row count after 2nd seed: 4
+----- idempotency check: first=4 second=4 PASS (equal)
+
+===== STEP 3: API REQUESTS
+===== POST http://localhost:3000/api/auth/login (attempt 1)
+----- response status 200
+----- response body
+{"accessToken":"[REDACTED-JWT]","user":{"id":"05a6f985-9be9-4ee5-ae19-4b96f8d58676","email":"norole@hamame.dz","phone":null,"fullName":"No Role User","facultyId":null,"yearId":null,"university":null,"wilaya":null,"uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-07-16T11:15:52.083Z"}}
+----- token present: true
+----- loginUser present: true
+
+===== GET http://localhost:3000/api/resources
+----- response status 200
+----- response body
+{"resources":[{"id":"00000000-0000-0000-0000-000000000150","facultyId":"74b46ae1-4de8-48df-b188-1a45725f3395","yearId":"00000000-0000-0000-0000-000000000020","title":"Dental Anatomy Reference","type":"other","fileUrl":"/resources/dental-anatomy-reference.pdf","sourceLabel":"Dentistry Department","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-08-31T18:51:55.437Z"},{"id":"00000000-0000-0000-0000-000000000140","facultyId":null,"yearId":"00000000-0000-0000-0000-000000000020","title":"Past Exam Session 2023 — Year 1","type":"past_exam","fileUrl":"/resources/past-exam-2023-year1.pdf","sourceLabel":"Faculty of Medicine archive","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-08-31T18:51:55.370Z"},{"id":"00000000-0000-0000-0000-000000000120","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020","title":"Pharmacology Guidelines 2024","type":"official_drive","fileUrl":"/resources/pharmacology-guidelines-2024.pdf","sourceLabel":"Ministry of Higher Education","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-08-31T18:51:55.169Z"},{"id":"00000000-0000-0000-0000-000000000130","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020","title":"Radiology Image Library","type":"reference","fileUrl":"/resources/radiology-image-library.pdf","sourceLabel":"University Hospital","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-08-31T18:51:55.306Z"}]}
+
+===== GET http://localhost:3000/api/resources?faculty=b37b039e-2208-4837-b5d5-28b1c338a2cf
+----- response status 200
+----- response body
+{"resources":[{"id":"00000000-0000-0000-0000-000000000120","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020","title":"Pharmacology Guidelines 2024","type":"official_drive","fileUrl":"/resources/pharmacology-guidelines-2024.pdf","sourceLabel":"Ministry of Higher Education","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-08-31T18:51:55.169Z"},{"id":"00000000-0000-0000-0000-000000000130","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020","title":"Radiology Image Library","type":"reference","fileUrl":"/resources/radiology-image-library.pdf","sourceLabel":"University Hospital","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-08-31T18:51:55.306Z"}]}
+
+===== GET http://localhost:3000/api/resources?type=official_drive
+----- response status 200
+----- response body
+{"resources":[{"id":"00000000-0000-0000-0000-000000000120","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020","title":"Pharmacology Guidelines 2024","type":"official_drive","fileUrl":"/resources/pharmacology-guidelines-2024.pdf","sourceLabel":"Ministry of Higher Education","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-08-31T18:51:55.169Z"}]}
+
+===== GET http://localhost:3000/api/resources/00000000-0000-0000-0000-000000000120
+----- response status 200
+----- response body
+{"resource":{"id":"00000000-0000-0000-0000-000000000120","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020","title":"Pharmacology Guidelines 2024","type":"official_drive","fileUrl":"/resources/pharmacology-guidelines-2024.pdf","sourceLabel":"Ministry of Higher Education","addedBy":"27f52f12-df6b-43a6-be8a-12c0d4314aec","createdAt":"2026-08-31T18:51:55.169Z"}}
+
+===== GET http://localhost:3000/api/resources/00000000-0000-0000-0000-000000000001
+----- response status 404
+----- response body
+{"error":{"code":"RESOURCE_NOT_FOUND","message":"No resource exists with this id."}}
+
+===== STEP 4: DOM CAPTURE
+----- browser executable: C:\Program Files\Google\Chrome\Application\chrome.exe
+
+----- /resources (empty filter) rendered DOM:
+<div data-empty-state="true"><div class="flex flex-col items-center gap-3 rounded-panel border border-border bg-surface-1 p-card-padding text-center shadow-card"><div><p class="font-display text-h3 font-semibold text-text-primary">Aucune ressource</p><p class="mt-1 text-body text-text-secondary">Aucune ressource ne correspond aux filtres sélectionnés, ou le hub de ressources est encore vide.</p></div><a class="inline-flex min-h-touch-target w-full items-center justify-center gap-2 rounded-control bg-accent-primary px-5 text-body font-medium text-background shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none sm:w-auto" href="/faculties">Parcourir le programme</a></div></div>
+
+----- /resources (unfiltered) list rendered DOM:
+<ul class="grid grid-cols-1 gap-card-gap sm:grid-cols-2 lg:grid-cols-3"><li><a class="block min-h-touch-target rounded-card border border-border bg-surface-1 p-card-padding shadow-card transition hover:border-border-strong hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2" href="/resources/00000000-0000-0000-0000-000000000150" style="border-top: 3px solid var(--color-accent-library);"><span class="flex items-center justify-between gap-3"><span class="text-body font-medium text-text-primary">Dental Anatomy Reference</span></span><span class="mt-1 block text-meta text-text-secondary">Dentistry Department · Autre</span></a></li><li><a class="block min-h-touch-target rounded-card border border-border bg-surface-1 p-card-padding shadow-card transition hover:border-border-strong hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2" href="/resources/00000000-0000-0000-0000-000000000140" style="border-top: 3px solid var(--color-accent-library);"><span class="flex items-center justify-between gap-3"><span class="text-body font-medium text-text-primary">Past Exam Session 2023 — Year 1</span></span><span class="mt-1 block text-meta text-text-secondary">Faculty of Medicine archive · Ancien examen</span></a></li><li><a class="block min-h-touch-target rounded-card border border-border bg-surface-1 p-card-padding shadow-card transition hover:border-border-strong hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2" href="/resources/00000000-0000-0000-0000-000000000120" style="border-top: 3px solid var(--color-accent-primary);"><span class="flex items-center justify-between gap-3"><span class="text-body font-medium text-text-primary">Pharmacology Guidelines 2024</span><span class="inline-flex shrink-0 items-center gap-1 rounded-control border px-3 py-1.5 text-caption font-semibold text-accent-primary" style="border-color: var(--color-accent-primary)40; background-color: var(--color-accent-primary)22;">Officiel<span aria-hidden="true" class="transition-transform group-hover:translate-x-0.5">→</span></span></span><span class="mt-1 block text-meta text-text-secondary">Ministry of Higher Education · Drive officiel</span></a></li><li><a class="block min-h-touch-target rounded-card border border-border bg-surface-1 p-card-padding shadow-card transition hover:border-border-strong hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2" href="/resources/00000000-0000-0000-0000-000000000130" style="border-top: 3px solid var(--color-accent-library);"><span class="flex items-center justify-between gap-3"><span class="text-body font-medium text-text-primary">Radiology Image Library</span></span><span class="mt-1 block text-meta text-text-secondary">University Hospital · Référence</span></a></li></ul>
+
+----- first resource link href: /resources/00000000-0000-0000-0000-000000000120 (seeded Medicine resource)
+
+----- /resources/<id> detail rendered DOM:
+<main class="mx-auto w-full max-w-3xl flex-1 px-card-padding py-section-gap"><a class="inline-flex min-h-touch-target items-center gap-1 text-meta font-medium text-text-secondary transition hover:text-accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" href="/resources"><span aria-hidden="true">←</span> Retour aux ressources</a><header class="mt-2"><p class="text-meta font-medium uppercase tracking-wide text-accent-library">Ressource · </p><h1 class="mt-1 font-display text-h1 font-bold leading-tight text-text-primary"></h1></header><article class="mt-section-gap rounded-card-lg border border-border bg-surface-1 p-card-padding shadow-card" data-resource-detail="true"><dl class="grid grid-cols-1 gap-4 sm:grid-cols-2"><div><dt class="text-meta font-medium uppercase tracking-wide text-text-secondary">Type</dt><dd class="mt-1 text-body text-text-primary"></dd></div></dl><div class="mt-section-gap border-t border-border pt-section-gap"><a target="_blank" rel="noopener noreferrer" class="inline-flex min-h-touch-target items-center justify-center gap-2 rounded-control bg-accent-primary px-5 text-body font-medium text-background shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring">Télécharger la ressource</a></div></article></main>
+
+----- /dashboard Ressources card rendered DOM:
+<article class="rounded-card border border-border bg-surface-1 p-card-padding shadow-card"><p class="text-meta font-medium uppercase tracking-wide text-text-secondary">Ressources</p><a class="inline-flex min-h-touch-target items-center text-body font-medium text-accent-suivi transition hover:text-accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" href="/resources">Voir toutes les ressources</a></article>
+
+----- header nav rendered DOM (link text contents):
+{
+  "navLinkTexts": [
+    "Tableau de bord",
+    "QCM",
+    "Bibliothèque",
+    "Suivi",
+    "Révision"
+  ],
+  "primaryNavItems": [
+    "Tableau de bord",
+    "QCM",
+    "Bibliothèque",
+    "Suivi",
+    "Révision"
+  ],
+  "hasRessourcesInSecondary": true
+}
+
+===== STEP 5: CLEANUP
+----- DELETE FROM resources WHERE id = '00000000-0000-0000-0000-000000000120'; rows affected: 1
+----- DELETE FROM resources WHERE id = '00000000-0000-0000-0000-000000000130'; rows affected: 1
+----- DELETE FROM resources WHERE id = '00000000-0000-0000-0000-000000000140'; rows affected: 1
+----- DELETE FROM resources WHERE id = '00000000-0000-0000-0000-000000000150'; rows affected: 1
+----- final SELECT COUNT(*) FROM resources: 0
+----- cleanup result: 0 rows (clean)

@@ -1,0 +1,25 @@
+# F1 manual-enqueue verification 2026-09-11T10:59:54.561Z
+# API=http://127.0.0.1:3000/api
+ORPHAN_CLEANED f1verify1789124362802@example.com
+REGISTER 201 {"accessToken":"[REDACTED-JWT]","user":{"id":"50f82907-b696-4e86-8645-692efb1e3627","email":"f1verify1789124394561@example.com","phone":null,"fullName":"F1 Verify","facultyId":null,"yearId":null,"university":null,"wilaya":null,"uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-09-11T10:59:56.753Z"},"verificationToken":"2a1f2e33c0404668ed7439f0a5c47525d4d99bc5a93fcdb0d94b944a6c4237f7"}
+LOGIN 200 {"accessToken":"[REDACTED-JWT]","user":{"id":"50f82907-b696-4e86-8645-692efb1e3627","email":"f1verify1789124394561@example.com","phone":null,"fullName":"F1 Verify","facultyId":null,"yearId":null,"university":null,"wilaya":null,"uiLanguage":"fr","theme":"light","status":"active","createdAt":"2026-09-11T10:59:56.753Z"}}
+LESSON_PROBE found=true id=00000000-0000-0000-0000-000000000050
+QUESTIONS 200 {"questions":[{"id":"ffffffff-0000-0000-0000-0000000000a4","unitId":"00000000-0000-0000-0000-000000000040","type":"QCM","source":"hamame_authored","difficulty":"medium","bodyRichtext":{"text":"Quelles anomalies électrocardiographiques évoquent une hyperkaliémie sévère ?"},"createdAt":"2026-08-11T21:31:21.418Z","options":[{"id":"6e180f6e-8a66-4e14-90af-a7c921ffb20a","bodyText":"Ondes T amples et pointues","orderIndex":0},{"id":"0fc9ace6-0d03-4826-ab59-9b37b54eacf1","bodyText":"Élargissement progressif du QRS","orderIndex":1},{"id":"102853a7-9941-4711-b0d6-9273a85a3641","bodyText":"Allongement isolé de l'intervalle QT","orderIndex":2},{"id":"d09ba0cf-92cb-436c-9e03-7d31968ffe33","bodyText":"Apparition d'ondes U proéminentes","orderIndex":3}],"clinicalCaseParts":[]}],"pagination":{"page":1,"limit":1,"total":8}}
+FIXTURE lessonId=00000000-0000-0000-0000-000000000050 questionId=ffffffff-0000-0000-0000-0000000000a4
+ME 401 {}
+ENQUEUE_LESSON_1 401 {"error":{"code":"UNAUTHENTICATED","message":"The provided token is invalid or expired."}}
+ENQUEUE_LESSON_2 401 {"error":{"code":"UNAUTHENTICATED","message":"The provided token is invalid or expired."}}
+LESSON_SAME_ROW=true (undefined vs undefined)
+ENQUEUE_QUESTION_1 401 {"error":{"code":"UNAUTHENTICATED","message":"The provided token is invalid or expired."}}
+ENQUEUE_QUESTION_2 401 {"error":{"code":"UNAUTHENTICATED","message":"The provided token is invalid or expired."}}
+QUESTION_SAME_ROW=true (undefined vs undefined)
+DB_COUNT lesson=0 question=0 (expect 1/1)
+DUE 401 {"error":{"code":"UNAUTHENTICATED","message":"The provided token is invalid or expired."}}
+DUE_HAS_LESSON=false DUE_HAS_QUESTION=false
+ENQUEUE_BOTH_IDS 401 {"error":{"code":"UNAUTHENTICATED","message":"The provided token is invalid or expired."}}
+ENQUEUE_NEITHER_ID 401 {"error":{"code":"UNAUTHENTICATED","message":"The provided token is invalid or expired."}}
+ENQUEUE_UNKNOWN_LESSON 401 {"error":{"code":"UNAUTHENTICATED","message":"The provided token is invalid or expired."}}
+ENQUEUE_UNKNOWN_QUESTION 401 {"error":{"code":"UNAUTHENTICATED","message":"The provided token is invalid or expired."}}
+ENQUEUE_NO_AUTH 401 {"error":{"code":"UNAUTHENTICATED","message":"A Bearer token is required for this endpoint."}}
+CLEANUP_QUEUE_DELETED=5
+CLEANUP_QUEUE_LEFT=0

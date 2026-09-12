@@ -1,0 +1,185 @@
+{
+  "startedAt": "2026-09-11T08:55:49.727Z",
+  "steps": [
+    {
+      "name": "root",
+      "url": "https://www.medspark.online/",
+      "finalUrl": "https://www.medspark.online/",
+      "status": 200,
+      "title": "MedSpark",
+      "error": null,
+      "facts": {
+        "bodyTextHead": "Med\nSpark\nToggle theme\nConnexion\nCommencer\nPlateforme d'Apprentissage Médical Révolutionnaire\nMedSpark\n\nExcellence en Médecine\n\nPlateforme complète avec cours officiels, contenus Spark Choice, banque de QCM, et outils IA pour votre excellence médicale.\n\nCommencer Maintenant\nDéjà inscrit ?\n1000+\nCours Officiels\n3000+\nPodcasts\n15000+\nQCM\n10+\nIA Intégrée\nQCM Interactifs Pro\n\n7 fonctionnalités puissantes pour maîtriser vos examens\n\nSessions Personnalisées\n\nCréez vos sessions QCM sur mesure en sélectionnant les cours spécifiques et types de questions qui vous intéressent.\n\nSélection multi-cours\nTyp",
+        "hasEmail": false,
+        "hasPassword": false,
+        "buttons": [
+          "Toggle theme",
+          "Connexion",
+          "Commencer",
+          "",
+          "Commencer Maintenant",
+          "Déjà inscrit ?",
+          "",
+          "",
+          "Préc.",
+          "Suiv.",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "links": [
+          "Med\nSpark",
+          "Connexion",
+          "Commencer",
+          "Commencer Maintenant",
+          "Déjà inscrit ?",
+          "Commencer Maintenant",
+          "Se Connecter",
+          "Facebook",
+          "Telegram",
+          "Instagram"
+        ],
+        "googleBtn": "no-google-mention",
+        "htmlClass": "dark",
+        "url": "https://www.medspark.online/"
+      }
+    },
+    {
+      "name": "login",
+      "url": "https://www.medspark.online/login",
+      "finalUrl": "https://www.medspark.online/login",
+      "status": 200,
+      "title": "MedSpark",
+      "error": null,
+      "facts": {
+        "bodyTextHead": "Med\nSpark\nConnexion\n\nConnectez-vous à votre compte MedSpark\n\nAdresse email\nMot de passe\nRester connecté\nMot de passe oublié?\nSe connecter\nOU CONTINUER AVEC\n\nPas encore de compte? Créer un compte\n\nMed\nSpark\n\n© 2026 MedSpark\n\nTous droits réservés\nFacebook\nTelegram\nInstagram",
+        "hasEmail": true,
+        "hasPassword": true,
+        "buttons": [
+          "",
+          "",
+          "Se connecter",
+          ""
+        ],
+        "links": [
+          "Mot de passe oublié?",
+          "Créer un compte",
+          "Facebook",
+          "Telegram",
+          "Instagram"
+        ],
+        "googleBtn": "no-google-mention",
+        "htmlClass": "dark",
+        "url": "https://www.medspark.online/login"
+      }
+    },
+    {
+      "name": "register",
+      "url": "https://www.medspark.online/register",
+      "finalUrl": "https://www.medspark.online/register",
+      "status": 404,
+      "title": "MedSpark",
+      "error": null,
+      "facts": {
+        "bodyTextHead": "404\nThis page could not be found.\nMed\nSpark\n\n© 2026 MedSpark\n\nTous droits réservés\nFacebook\nTelegram\nInstagram",
+        "hasEmail": false,
+        "hasPassword": false,
+        "buttons": [],
+        "links": [
+          "Facebook",
+          "Telegram",
+          "Instagram"
+        ],
+        "googleBtn": "no-google-mention",
+        "htmlClass": "dark",
+        "url": "https://www.medspark.online/register"
+      }
+    },
+    {
+      "name": "dashboard-unauth",
+      "url": "https://www.medspark.online/dashboard",
+      "finalUrl": "https://www.medspark.online/landing",
+      "status": 200,
+      "title": "MedSpark",
+      "error": null,
+      "facts": {
+        "bodyTextHead": "Med\nSpark\nToggle theme\nConnexion\nCommencer\nPlateforme d'Apprentissage Médical Révolutionnaire\nMedSpark\n\nExcellence en Médecine\n\nPlateforme complète avec cours officiels, contenus Spark Choice, banque de QCM, et outils IA pour votre excellence médicale.\n\nCommencer Maintenant\nDéjà inscrit ?\n1000+\nCours Officiels\n3000+\nPodcasts\n15000+\nQCM\n10+\nIA Intégrée\nQCM Interactifs Pro\n\n7 fonctionnalités puissantes pour maîtriser vos examens\n\nSessions Personnalisées\n\nCréez vos sessions QCM sur mesure en sélectionnant les cours spécifiques et types de questions qui vous intéressent.\n\nSélection multi-cours\nTyp",
+        "hasEmail": false,
+        "hasPassword": false,
+        "buttons": [
+          "Toggle theme",
+          "Connexion",
+          "Commencer",
+          "",
+          "Commencer Maintenant",
+          "Déjà inscrit ?",
+          "",
+          "",
+          "Préc.",
+          "Suiv.",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "links": [
+          "Med\nSpark",
+          "Connexion",
+          "Commencer",
+          "Commencer Maintenant",
+          "Déjà inscrit ?",
+          "Commencer Maintenant",
+          "Se Connecter",
+          "Facebook",
+          "Telegram",
+          "Instagram"
+        ],
+        "googleBtn": "no-google-mention",
+        "htmlClass": "dark",
+        "url": "https://www.medspark.online/landing"
+      }
+    },
+    {
+      "name": "qcm-unauth",
+      "url": "https://www.medspark.online/qcm",
+      "finalUrl": "https://www.medspark.online/qcm",
+      "status": 200,
+      "title": "MedSpark",
+      "error": null,
+      "facts": {
+        "bodyTextHead": "Med\nSpark\nToggle theme\nCentre d'Entraînement Premium\nBanque de QCM\n\nEntraînez-vous avec des milliers de questions, participez aux simulations d'examens et suivez votre progression en temps réel.\n\nNouvelle Session\nNouvel examen\nBibliothèque de notes QCM\nDes milliers de notes QCM\nPour chaque cours\nExplorez vos notes créées\nExportez en PDF\nOuvrir la Bibliothèque\nSessions Partagées\nBientôt disponible !\n\nLes sessions partagées seront disponibles prochainement.\n\nSimulations d'Examens\nSimulations passées\nChargement des simulations...\nClassement\nCalcul des points\nseptembre 2026\n19 jours restants\nA\nAb\n",
+        "hasEmail": false,
+        "hasPassword": false,
+        "buttons": [
+          "Toggle theme",
+          "",
+          "Ouvrir la Bibliothèque",
+          "Calcul des points",
+          "A",
+          "A",
+          "I",
+          "L",
+          "",
+          "",
+          "A",
+          "N",
+          "",
+          "N"
+        ],
+        "links": [
+          "Med\nSpark",
+          "Simulations passées",
+          "Simulations passées"
+        ],
+        "googleBtn": "no-google-mention",
+        "htmlClass": "dark",
+        "url": "https://www.medspark.online/qcm"
+      }
+    }
+  ],
+  "pageerrors": [],
+  "finishedAt": "2026-09-11T08:57:04.294Z"
+}
