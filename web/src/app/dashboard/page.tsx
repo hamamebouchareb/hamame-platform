@@ -17,6 +17,7 @@ import {
   PrimaryTabs,
   ProfileHero,
   ResumeBar,
+  VerifyEmailBanner,
   WeeklyActivity,
 } from "@/components";
 import type {
@@ -223,6 +224,9 @@ export default function DashboardPage() {
       <main className="mx-auto w-full max-w-6xl flex-1 px-card-padding py-section-gap">
         <div className="grid gap-section-gap lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
           <div className="flex min-w-0 flex-col gap-section-gap">
+            {/* 0. Email-verification nudge (warn-only: renders nothing when verified) */}
+            <VerifyEmailBanner />
+
             {/* 1. Resume bar — top, before everything else */}
             <ResumeBar
               title={resumeBar.title}

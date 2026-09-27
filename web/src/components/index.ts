@@ -27,3 +27,4 @@ export { BackLink } from "@/components/BackLink";
 export { Footer } from "@/components/Footer";
 export { StudyTimer } from "@/components/StudyTimer";
 export { EnqueueReviewButton } from "@/components/EnqueueReviewButton";
+export { VerifyEmailBanner } from "@/components/VerifyEmailBanner";

@@ -25,6 +25,8 @@ const safeUserSelect = {
   uiLanguage: true,
   theme: true,
   status: true,
+  emailVerifiedAt: true,
+  phoneVerifiedAt: true,
   createdAt: true,
 } as const;
 

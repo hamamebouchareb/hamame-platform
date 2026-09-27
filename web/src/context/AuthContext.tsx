@@ -26,6 +26,11 @@ export interface AuthUser {
   theme: string;
   status: string;
   createdAt: string;
+  // ISO timestamps from GET /api/users/me (null until verified). Backend added
+  // these to the auth/profile payloads with the email-verification build; sessions
+  // stored before that have neither key, so every reader must normalize with ?? null.
+  emailVerifiedAt: string | null;
+  phoneVerifiedAt: string | null;
   // Role names from GET /api/users/me. Login/register don't return roles, so after
   // auth we always follow up with /users/me to populate this (and on hydrate when
   // a stored session is missing it, e.g. sessions saved before roles existed).
@@ -78,10 +83,16 @@ function readStoredAuth(): StoredAuth | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as StoredAuth;
     if (!parsed.token || !parsed.user) return null;
-    // Older sessions may lack `roles` — normalize so callers can always read an array.
+    // Older sessions may lack `roles` or the verification timestamps — normalize
+    // so callers can always read an array / null respectively.
     return {
       token: parsed.token,
-      user: { ...parsed.user, roles: Array.isArray(parsed.user.roles) ? parsed.user.roles : [] },
+      user: {
+        ...parsed.user,
+        roles: Array.isArray(parsed.user.roles) ? parsed.user.roles : [],
+        emailVerifiedAt: parsed.user.emailVerifiedAt ?? null,
+        phoneVerifiedAt: parsed.user.phoneVerifiedAt ?? null,
+      },
     };
   } catch {
     return null;
@@ -159,14 +170,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const applyAuthResponse = useCallback(async (data: AuthResponse) => {
+    // Normalize in case the backend predates the verification fields.
+    const normalizedUser = {
+      ...data.user,
+      emailVerifiedAt: data.user.emailVerifiedAt ?? null,
+      phoneVerifiedAt: data.user.phoneVerifiedAt ?? null,
+    };
     // Persist the token first so the follow-up GET /users/me can authenticate.
     writeStoredAuth({
       token: data.accessToken,
-      user: { ...data.user, roles: Array.isArray(data.user.roles) ? data.user.roles : [] },
+      user: { ...normalizedUser, roles: Array.isArray(normalizedUser.roles) ? normalizedUser.roles : [] },
     });
     setToken(data.accessToken);
 
-    const profile = await fetchProfileWithRoles(data.user);
+    const profile = await fetchProfileWithRoles(normalizedUser);
     setUser(profile);
     writeStoredAuth({ token: data.accessToken, user: profile });
   }, []);

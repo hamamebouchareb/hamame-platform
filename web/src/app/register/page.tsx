@@ -103,6 +103,9 @@ export default function RegisterPage() {
           >
             {isSubmitting ? "Création..." : "Créer mon compte"}
           </button>
+          <p className="text-center text-caption text-text-tertiary">
+            Un email de vérification vous sera envoyé à cette adresse.
+          </p>
         </form>
 
         <p className="mt-6 text-center text-sm text-text-secondary">

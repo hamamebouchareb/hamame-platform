@@ -7,6 +7,7 @@ import { requireAuth } from "../middleware/auth";
 import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
 import { signAccessToken } from "../lib/jwt";
+import { sendVerificationEmail } from "../lib/email";
 
 const BCRYPT_SALT_ROUNDS = 10;
 
@@ -39,6 +40,8 @@ const safeUserSelect = {
   uiLanguage: true,
   theme: true,
   status: true,
+  emailVerifiedAt: true,
+  phoneVerifiedAt: true,
   createdAt: true,
 } as const;
 
@@ -54,6 +57,8 @@ function toUserResponse(user: {
   uiLanguage: string;
   theme: string;
   status: string;
+  emailVerifiedAt: Date | null;
+  phoneVerifiedAt: Date | null;
   createdAt: Date;
 }) {
   return {
@@ -68,6 +73,8 @@ function toUserResponse(user: {
     uiLanguage: user.uiLanguage,
     theme: user.theme,
     status: user.status,
+    emailVerifiedAt: user.emailVerifiedAt,
+    phoneVerifiedAt: user.phoneVerifiedAt,
     createdAt: user.createdAt,
   };
 }
@@ -154,11 +161,25 @@ async function register(req: Request, res: Response, next: NextFunction) {
 
     const accessToken = signAccessToken({ userId: user.id });
 
+    // Warn-only verification: the email send is best-effort and never fails
+    // registration. Phone-only accounts have no address to send to — skipped.
+    // The dev fallback (raw token in log + non-production response) stays intact
+    // so the flow remains testable without a RESEND_API_KEY.
+    let verificationEmailSent = false;
+    if (user.email) {
+      verificationEmailSent = await sendVerificationEmail({
+        to: user.email,
+        token: rawVerificationToken,
+        fullName: user.fullName,
+      });
+    }
+
     const responseBody: {
       accessToken: string;
       user: ReturnType<typeof toUserResponse>;
+      verificationEmailSent: boolean;
       verificationToken?: string;
-    } = { accessToken, user: toUserResponse(user) };
+    } = { accessToken, user: toUserResponse(user), verificationEmailSent };
     if (process.env.NODE_ENV !== "production") {
       responseBody.verificationToken = rawVerificationToken;
     }
@@ -396,6 +417,66 @@ async function verify(req: Request, res: Response, next: NextFunction) {
 }
 
 router.post("/verify", validateBody(verifySchema), verify);
+
+// POST /api/auth/resend-verification — re-issue a verification email to the
+// caller's own address. Warn-only policy companion to /verify: authenticated
+// (no enumeration risk), idempotent when already verified, mints a fresh 24h
+// token since only the hash of the previous one is stored. The send itself is
+// best-effort — the endpoint reports whether the email went out.
+async function resendVerification(req: Request, res: Response, next: NextFunction) {
+  try {
+    const caller = await prisma.user.findUnique({
+      where: { id: req.auth!.userId },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        status: true,
+        emailVerifiedAt: true,
+      },
+    });
+
+    if (!caller || caller.status === "deleted") {
+      throw new ApiError(404, "USER_NOT_FOUND", "User not found.");
+    }
+
+    if (caller.emailVerifiedAt) {
+      res.status(200).json({ alreadyVerified: true, message: "This email address is already verified." });
+      return;
+    }
+
+    if (!caller.email) {
+      throw new ApiError(400, "NO_EMAIL_ON_ACCOUNT", "This account has no email address to verify.");
+    }
+
+    const rawToken = randomBytes(32).toString("hex");
+    await prisma.user.update({
+      where: { id: caller.id },
+      data: {
+        verificationTokenHash: sha256(rawToken),
+        verificationTokenExpiresAt: new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS),
+      },
+    });
+
+    const verificationEmailSent = await sendVerificationEmail({
+      to: caller.email,
+      token: rawToken,
+      fullName: caller.fullName,
+    });
+
+    res.status(200).json({
+      alreadyVerified: false,
+      verificationEmailSent,
+      message: verificationEmailSent
+        ? "A new verification email has been sent."
+        : "A new verification token was issued, but the email could not be sent yet.",
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+router.post("/resend-verification", requireAuth, resendVerification);
 
 // POST /api/auth/change-password — authenticated self-service password change (settings
 // page). The caller proves knowledge of the CURRENT password, so unlike reset-password
