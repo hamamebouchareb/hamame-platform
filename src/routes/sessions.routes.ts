@@ -232,142 +232,194 @@ const createSessionSchema = z.object({
   showStats: z.boolean().optional().default(true),
 });
 
+// Session-construction parameters shared by POST /api/sessions and the
+// simulation start endpoint (POST /api/simulations/:id/start). The route
+// handler below only validates + normalizes; every DB behavior lives in
+// buildSessionForUser so the two entry points cannot drift (same faculty and
+// university gates, same BR-4 shuffle, same transaction shape).
+export interface BuildSessionParams {
+  name: string;
+  mode: "practice" | "exam";
+  facultyId?: string;
+  yearId?: string;
+  moduleIds?: string[];
+  unitIds?: string[];
+  questionTypes?: ("QCM" | "QCS" | "QROC" | "CLINICAL_CASE")[];
+  source?: "official_exam" | "hamame_authored" | "ai_generated";
+  dateFrom?: Date;
+  dateTo?: Date;
+  examYear?: number;
+  examYearFrom?: number;
+  examYearTo?: number;
+  sittingLabel?: string;
+  size: number;
+  isOfficialMock?: boolean;
+  timeLimitSeconds?: number;
+  sort?: "by_year" | "by_course" | "random";
+  showStats?: boolean;
+}
+
+export async function buildSessionForUser(userId: string, params: BuildSessionParams) {
+  const {
+    name,
+    mode,
+    facultyId,
+    yearId,
+    moduleIds,
+    unitIds,
+    questionTypes,
+    source,
+    dateFrom,
+    dateTo,
+    examYear,
+    examYearFrom,
+    examYearTo,
+    sittingLabel,
+    size,
+    isOfficialMock = false,
+    timeLimitSeconds,
+    sort = "random",
+    showStats = true,
+  } = params;
+
+  if (unitIds && unitIds.length > 0) {
+    // Same faculty-visibility gate as buildQuestionWhere below: a unit under a hidden
+    // ('planned') faculty is indistinguishable from a missing one, so the requested
+    // scope must resolve through the same unit -> module -> year -> faculty traversal
+    // before the session is allowed to reference it.
+    const existingUnits = await prisma.unit.findMany({
+      where: {
+        id: { in: unitIds },
+        module: { year: { faculty: { rolloutStatus: { in: ["beta", "live"] } } } },
+      },
+      select: { id: true },
+    });
+    if (existingUnits.length !== unitIds.length) {
+      throw new ApiError(404, "UNIT_NOT_FOUND", "One or more requested unitIds do not exist.");
+    }
+  }
+
+  // FR-10a: a session must never be built from another university's scoped questions.
+  // Sequential await rather than folding into a Promise.all, per the pooler guidance.
+  const viewerUniversityId = await resolveViewerUniversityId(prisma, userId);
+
+  const where = buildQuestionWhere({
+    unitIds,
+    moduleIds,
+    yearId,
+    facultyId,
+    types: questionTypes,
+    source,
+    dateFrom,
+    dateTo,
+    examYear,
+    examYearFrom,
+    examYearTo,
+    sittingLabel,
+    viewerUniversityId,
+  });
+
+  // BR-4: question order is shuffled per attempt. Fetch every matching candidate id
+  // (+ its option ids, needed for the option-order snapshot below), then shuffle and
+  // cap at `size` in application code rather than relying on DB-level randomness.
+  const candidates = await prisma.question.findMany({
+    where,
+    select: { id: true, options: { select: { id: true } } },
+  });
+  let selected = shuffle(candidates).slice(0, size);
+
+  // FR-15 result ordering — see createSessionSchema docs. Shuffle first (BR-4), then a
+  // stable group-sort by curriculum key; ties keep their shuffled order so randomness
+  // is preserved inside every group. 'random' skips this entirely.
+  if (sort !== "random" && selected.length > 1) {
+    const keyRows = await prisma.question.findMany({
+      where: { id: { in: selected.map((question) => question.id) } },
+      select: {
+        id: true,
+        unit: { select: { module: { select: { orderIndex: true, year: { select: { orderIndex: true } } } } } },
+      },
+    });
+    const shuffledIndexById = new Map(selected.map((question, index) => [question.id, index]));
+    const keyById = new Map(keyRows.map((row) => [row.id, row]));
+    selected = [...selected].sort((a, b) => {
+      const keyA = keyById.get(a.id)!;
+      const keyB = keyById.get(b.id)!;
+      const yearDiff = keyA.unit.module.year.orderIndex - keyB.unit.module.year.orderIndex;
+      if (yearDiff !== 0) return yearDiff;
+      if (sort === "by_course") {
+        const moduleDiff = keyA.unit.module.orderIndex - keyB.unit.module.orderIndex;
+        if (moduleDiff !== 0) return moduleDiff;
+      }
+      return shuffledIndexById.get(a.id)! - shuffledIndexById.get(b.id)!;
+    });
+  }
+
+  const session = await prisma.$transaction(async (tx) => {
+    const createdSession = await tx.studySession.create({
+      data: {
+        userId,
+        name,
+        mode,
+        isOfficialMock,
+        timeLimitSeconds,
+        resultSort: sort,
+        showStats,
+        startedAt: new Date(),
+      },
+    });
+
+    if (selected.length > 0) {
+      await tx.sessionQuestion.createMany({
+        data: selected.map((question, index) => ({
+          sessionId: createdSession.id,
+          questionId: question.id,
+          presentedOrder: index,
+          // BR-4: option order is also shuffled per attempt, then snapshotted so it
+          // stays stable for the lifetime of this session.
+          optionOrder:
+            question.options.length > 0
+              ? shuffle(question.options.map((option) => option.id))
+              : undefined,
+        })),
+      });
+    }
+
+    return createdSession;
+  });
+
+  const fullSession = await loadSessionWithQuestions(session.id);
+  return formatSessionForResponse(fullSession!);
+}
+
 async function createSession(req: Request, res: Response, next: NextFunction) {
   try {
-    const userId = req.auth!.userId;
-    const {
-      name,
-      mode,
-      facultyId,
-      yearId,
-      moduleIds,
-      unitIds,
-      questionTypes,
-      source,
-      dateFrom,
-      dateTo,
-      examYear,
-      examYearFrom,
-      examYearTo,
-      sittingLabel,
-      size,
-      isOfficialMock,
-      timeLimitSeconds,
-      sort,
-      examMode,
-      showStats,
-    } = req.body as z.infer<typeof createSessionSchema>;
+    const body = req.body as z.infer<typeof createSessionSchema>;
 
     // examMode is the contract's boolean-switch spelling of mode; explicit beats enum.
-    const effectiveMode = examMode === undefined ? mode : examMode ? "exam" : "practice";
+    const effectiveMode = body.examMode === undefined ? body.mode : body.examMode ? "exam" : "practice";
 
-    if (unitIds && unitIds.length > 0) {
-      // Same faculty-visibility gate as buildQuestionWhere below: a unit under a hidden
-      // ('planned') faculty is indistinguishable from a missing one, so the requested
-      // scope must resolve through the same unit -> module -> year -> faculty traversal
-      // before the session is allowed to reference it.
-      const existingUnits = await prisma.unit.findMany({
-        where: {
-          id: { in: unitIds },
-          module: { year: { faculty: { rolloutStatus: { in: ["beta", "live"] } } } },
-        },
-        select: { id: true },
-      });
-      if (existingUnits.length !== unitIds.length) {
-        throw new ApiError(404, "UNIT_NOT_FOUND", "One or more requested unitIds do not exist.");
-      }
-    }
-
-    // FR-10a: a session must never be built from another university's scoped questions.
-    // Sequential await rather than folding into a Promise.all, per the pooler guidance.
-    const viewerUniversityId = await resolveViewerUniversityId(prisma, userId);
-
-    const where = buildQuestionWhere({
-      unitIds,
-      moduleIds,
-      yearId,
-      facultyId,
-      types: questionTypes,
-      source: source && source !== "mixed" ? source : undefined,
-      dateFrom,
-      dateTo,
-      examYear,
-      examYearFrom,
-      examYearTo,
-      sittingLabel,
-      viewerUniversityId,
+    const session = await buildSessionForUser(req.auth!.userId, {
+      name: body.name,
+      mode: effectiveMode,
+      facultyId: body.facultyId,
+      yearId: body.yearId,
+      moduleIds: body.moduleIds,
+      unitIds: body.unitIds,
+      questionTypes: body.questionTypes,
+      source: body.source && body.source !== "mixed" ? body.source : undefined,
+      dateFrom: body.dateFrom,
+      dateTo: body.dateTo,
+      examYear: body.examYear,
+      examYearFrom: body.examYearFrom,
+      examYearTo: body.examYearTo,
+      sittingLabel: body.sittingLabel,
+      size: body.size,
+      isOfficialMock: body.isOfficialMock,
+      timeLimitSeconds: body.timeLimitSeconds,
+      sort: body.sort,
+      showStats: body.showStats,
     });
-
-    // BR-4: question order is shuffled per attempt. Fetch every matching candidate id
-    // (+ its option ids, needed for the option-order snapshot below), then shuffle and
-    // cap at `size` in application code rather than relying on DB-level randomness.
-    const candidates = await prisma.question.findMany({
-      where,
-      select: { id: true, options: { select: { id: true } } },
-    });
-    let selected = shuffle(candidates).slice(0, size);
-
-    // FR-15 result ordering — see createSessionSchema docs. Shuffle first (BR-4), then a
-    // stable group-sort by curriculum key; ties keep their shuffled order so randomness
-    // is preserved inside every group. 'random' skips this entirely.
-    if (sort !== "random" && selected.length > 1) {
-      const keyRows = await prisma.question.findMany({
-        where: { id: { in: selected.map((question) => question.id) } },
-        select: {
-          id: true,
-          unit: { select: { module: { select: { orderIndex: true, year: { select: { orderIndex: true } } } } } },
-        },
-      });
-      const shuffledIndexById = new Map(selected.map((question, index) => [question.id, index]));
-      const keyById = new Map(keyRows.map((row) => [row.id, row]));
-      selected = [...selected].sort((a, b) => {
-        const keyA = keyById.get(a.id)!;
-        const keyB = keyById.get(b.id)!;
-        const yearDiff = keyA.unit.module.year.orderIndex - keyB.unit.module.year.orderIndex;
-        if (yearDiff !== 0) return yearDiff;
-        if (sort === "by_course") {
-          const moduleDiff = keyA.unit.module.orderIndex - keyB.unit.module.orderIndex;
-          if (moduleDiff !== 0) return moduleDiff;
-        }
-        return shuffledIndexById.get(a.id)! - shuffledIndexById.get(b.id)!;
-      });
-    }
-
-    const session = await prisma.$transaction(async (tx) => {
-      const createdSession = await tx.studySession.create({
-        data: {
-          userId,
-          name,
-          mode: effectiveMode,
-          isOfficialMock,
-          timeLimitSeconds,
-          resultSort: sort,
-          showStats,
-          startedAt: new Date(),
-        },
-      });
-
-      if (selected.length > 0) {
-        await tx.sessionQuestion.createMany({
-          data: selected.map((question, index) => ({
-            sessionId: createdSession.id,
-            questionId: question.id,
-            presentedOrder: index,
-            // BR-4: option order is also shuffled per attempt, then snapshotted so it
-            // stays stable for the lifetime of this session.
-            optionOrder:
-              question.options.length > 0
-                ? shuffle(question.options.map((option) => option.id))
-                : undefined,
-          })),
-        });
-      }
-
-      return createdSession;
-    });
-
-    const fullSession = await loadSessionWithQuestions(session.id);
-    res.status(201).json({ session: formatSessionForResponse(fullSession!) });
+    res.status(201).json({ session });
   } catch (err) {
     next(err);
   }

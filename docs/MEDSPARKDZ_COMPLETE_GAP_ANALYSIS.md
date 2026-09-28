@@ -566,10 +566,10 @@ Status as of Phase 6 kickoff (all Phases 1–5 verified; see handoff §9.0).
 - [ ] Capture MedSparkDZ results screen after finishing a session (UNCLEAR resolution) — Phase 6 Task 5
 - [ ] Capture `/simulations/history` per-year content with data (UNCLEAR resolution) — Phase 6 Task 5
 - [x] P14 language toggle UI (MEDIUM) — gate lifted 2026-09-28, built + verified (handoff §14; FR+EN, persisted preference)
-- [ ] Scheduled simulations system (MEDIUM) — DECISION GATE, Phase 6 Task 6 (live example exists; only cheap history built)
+- [x] Scheduled simulations system (MEDIUM) — built 2026-09-28 (handoff §15; derived status, register/start, official-mock sessions)
 - [ ] Cross-module unit multi-select — DECISION GATE, Phase 6 Task 6 (only if live reference proves it)
 
-*Counts: 37 ranked gaps — 25 closed (CRITICAL 3/3, HIGH 8/8, MEDIUM 10/14, LOW 4/8); 6 open build/verify items in Phase 6 Tasks 2–4; 3 decision-gated (P14 closed 2026-09-28); 1 skipped (P18); 1 closed-as-N/A (P19); 4 UNCLEAR follow-ups (1 resolved, 3 in Task 5). N/A items (§20) intentionally unlisted as work.*
+*Counts: 37 ranked gaps — 26 closed (CRITICAL 3/3, HIGH 8/8, MEDIUM 11/14, LOW 4/8); 6 open build/verify items in Phase 6 Tasks 2–4; 2 decision-gated (P14 + scheduled sims closed 2026-09-28); 1 skipped (P18); 1 closed-as-N/A (P19); 4 UNCLEAR follow-ups (1 resolved, 3 in Task 5). N/A items (§20) intentionally unlisted as work.*
 
 ---
 

@@ -130,6 +130,7 @@ model User {
   pushPreference                 PushPreference?
   activationCodesIssued          ActivationCode[]         @relation("ActivationCodeIssuer")
   activationCodesRedeemed        ActivationCode[]         @relation("ActivationCodeRedeemer")
+  simulationRegistrations       SimulationRegistration[]
 
   @@map("users")
 }
@@ -217,6 +218,7 @@ model Faculty {
   leaderboardSnapshots LeaderboardSnapshot[]
   activationCodes      ActivationCode[]
   resources            Resource[]
+  simulations          Simulation[]
 
   @@map("faculties")
 }
@@ -234,6 +236,7 @@ model Year {
   leaderboardSnapshots LeaderboardSnapshot[]
   activationCodes      ActivationCode[]
   resources            Resource[]
+  simulations          Simulation[]
 
   @@map("years")
 }
@@ -854,6 +857,55 @@ model Resource {
   year    Year?    @relation(fields: [yearId], references: [id])
 
   @@map("resources")
+}
+
+// ---------------------------------------------------------------------------
+// 10b. Scheduled simulations (P12 big half — MedSparkDZ "Simulation Résidanat"
+// class of feature). A scheduled exam event students register for, then take
+// as an official-mock exam session while it is live.
+//
+// Status is DERIVED, never stored (no cron/job needed): cancelled when
+// cancelledAt is set, completed past the end, live inside the window,
+// scheduled before it. Deleting a simulation cascades registrations but
+// leaves already-created StudySessions intact (they are independent rows).
+// ---------------------------------------------------------------------------
+model Simulation {
+  id              String    @id @default(uuid()) @db.Uuid
+  title           String
+  description     String?
+  facultyId       String    @map("faculty_id") @db.Uuid
+  // Null = all years of the faculty (e.g. a Résidanat-wide simulation).
+  yearId          String?   @map("year_id") @db.Uuid
+  scheduledAt     DateTime  @map("scheduled_at") @db.Timestamptz
+  durationMinutes Int       @map("duration_minutes")
+  questionCount   Int       @map("question_count")
+  cancelledAt     DateTime? @map("cancelled_at") @db.Timestamptz
+  // Plain id, no FK: the issuer display name is resolved at read time, and a
+  // hard FK would couple sim lifetime to admin accounts.
+  createdBy       String?   @map("created_by") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  faculty       Faculty                 @relation(fields: [facultyId], references: [id], onDelete: Restrict)
+  year          Year?                   @relation(fields: [yearId], references: [id], onDelete: Restrict)
+  registrations SimulationRegistration[]
+
+  @@index([facultyId])
+  @@index([scheduledAt])
+  @@map("simulations")
+}
+
+model SimulationRegistration {
+  id           String   @id @default(uuid()) @db.Uuid
+  simulationId String   @map("simulation_id") @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  simulation Simulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([simulationId, userId])
+  @@map("simulation_registrations")
 }
 
 // ---------------------------------------------------------------------------

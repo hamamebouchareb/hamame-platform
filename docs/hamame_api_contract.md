@@ -85,6 +85,17 @@ Grounded in the PRD's FRs and the database schema (v0.1). Auth via Bearer JWT un
 | GET | /api/resources | List curated official resources/references, filterable by faculty/year/type — supports the dashboard resource hub (PRD 10.2) |
 | GET | /api/resources/:id | Resource detail / download link |
 
+## Scheduled simulations
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | /api/simulations | List simulations (live/scheduled/completed/cancelled, derived status), filterable by faculty/year/status; authed callers also get registration flags |
+| POST | /api/simulations/:id/register | Register for a simulation (idempotent; 409 on cancelled/ended) |
+| DELETE | /api/simulations/:id/register | Unregister (idempotent) |
+| POST | /api/simulations/:id/start | Start the sim as an official-mock exam session (registered + live only; 403/409 otherwise) |
+| POST | /api/admin/simulations | Schedule a simulation (Admin only) |
+| PATCH | /api/admin/simulations/:id | Reschedule/retitle/cancel (Admin only) |
+| DELETE | /api/admin/simulations/:id | Delete a simulation + registrations, sessions stay (Admin only) |
+
 ## Content Authoring & Validation (Instructor/Reviewer)
 | Method | Endpoint | Description |
 |---|---|---|

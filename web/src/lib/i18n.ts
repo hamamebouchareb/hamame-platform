@@ -51,6 +51,7 @@ const fr = {
   "nav.resources": "Ressources",
   "nav.profile": "Mon profil",
   "nav.notifications": "Notifications",
+  "nav.simulations": "Simulations",
   "nav.settings": "Paramètres",
   "nav.mainAria": "Navigation principale",
   "nav.mobileAria": "Navigation mobile",
@@ -984,6 +985,27 @@ const fr = {
   "coverage.empty": "Aucune question validée ici",
   "coverage.emptyDesc": "Aucune question validée ne correspond à ces filtres pour le moment.",
   "coverage.total": "{count} questions validées au total",
+  // ── Simulations ──
+  "sims.subtitle":
+    "Des examens blancs à date fixe : inscrivez-vous, puis passez l'épreuve en mode examen quand elle est en cours.",
+  "sims.live": "En cours",
+  "sims.upcoming": "À venir",
+  "sims.past": "Passées",
+  "sims.registered": "Inscrit",
+  "sims.register": "S'inscrire",
+  "sims.unregister": "Se désinscrire",
+  "sims.start": "Commencer l'épreuve",
+  "sims.meta": "{q} questions · {d} min",
+  "sims.seatsOne": "{count} inscrit",
+  "sims.seatsMany": "{count} inscrits",
+  "sims.startsAt": "Début : {date}",
+  "sims.endsAt": "Fin : {date}",
+  "sims.cancelled": "Annulée",
+  "sims.completed": "Terminée",
+  "sims.emptyLive": "Aucune épreuve en cours",
+  "sims.emptyUpcoming": "Aucune simulation planifiée",
+  "sims.emptyPast": "Aucune épreuve passée",
+  "sims.loadError": "Impossible de charger les simulations. Réessayez.",
 } as const;
 
 export type I18nKey = keyof typeof fr;
@@ -1009,6 +1031,7 @@ const en: Record<I18nKey, string> = {
   "nav.resources": "Resources",
   "nav.profile": "My profile",
   "nav.notifications": "Notifications",
+  "nav.simulations": "Simulations",
   "nav.settings": "Settings",
   "nav.mainAria": "Primary navigation",
   "nav.mobileAria": "Mobile navigation",
@@ -1942,6 +1965,27 @@ const en: Record<I18nKey, string> = {
   "coverage.empty": "No approved questions here",
   "coverage.emptyDesc": "No approved questions match these filters right now.",
   "coverage.total": "{count} approved questions total",
+  // ── Simulations ──
+  "sims.subtitle":
+    "Fixed-date mock exams: register, then take the exam-mode paper while it's live.",
+  "sims.live": "Live now",
+  "sims.upcoming": "Upcoming",
+  "sims.past": "Past",
+  "sims.registered": "Registered",
+  "sims.register": "Register",
+  "sims.unregister": "Unregister",
+  "sims.start": "Start the exam",
+  "sims.meta": "{q} questions · {d} min",
+  "sims.seatsOne": "{count} registered",
+  "sims.seatsMany": "{count} registered",
+  "sims.startsAt": "Starts: {date}",
+  "sims.endsAt": "Ends: {date}",
+  "sims.cancelled": "Cancelled",
+  "sims.completed": "Finished",
+  "sims.emptyLive": "No live exams",
+  "sims.emptyUpcoming": "No scheduled simulations",
+  "sims.emptyPast": "No past exams",
+  "sims.loadError": "Could not load simulations. Try again.",
 };
 
 export function translate(

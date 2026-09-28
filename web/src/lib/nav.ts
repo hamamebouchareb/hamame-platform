@@ -38,6 +38,7 @@ export const SECONDARY_NAV: NavKeyEntry[] = [
   { href: "/resources", labelKey: "nav.resources" },
   { href: "/profile", labelKey: "nav.profile" },
   { href: "/notifications", labelKey: "nav.notifications" },
+  { href: "/simulations", labelKey: "nav.simulations" },
   { href: "/settings", labelKey: "nav.settings" },
 ];
 

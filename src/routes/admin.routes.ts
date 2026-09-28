@@ -836,4 +836,150 @@ router.post(
   awardBadge
 );
 
+// ---------------------------------------------------------------------------
+// Scheduled simulations (P12 big half) — admin management. Students interact
+// through /api/simulations (list/register/start); everything here is
+// Admin/Super Admin only via requireAdmin.
+// ---------------------------------------------------------------------------
+
+const simulationWriteSchema = z.object({
+  title: z.string().min(1).max(120),
+  description: z.string().max(1000).nullable().optional(),
+  facultyId: z.string().uuid(),
+  yearId: z.string().uuid().nullable().optional(),
+  scheduledAt: z.coerce.date(),
+  durationMinutes: z.number().int().min(1).max(600),
+  questionCount: z.number().int().min(1).max(200),
+});
+
+// Shared existence check: the faculty must exist; a given year must exist AND
+// belong to that faculty (same YEAR_FACULTY_MISMATCH convention as the
+// activation-code issuance path).
+async function assertSimulationScope(facultyId: string, yearId: string | null | undefined) {
+  const faculty = await prisma.faculty.findUnique({ where: { id: facultyId }, select: { id: true } });
+  if (!faculty) {
+    throw new ApiError(404, "FACULTY_NOT_FOUND", "No faculty exists with this id.");
+  }
+  if (yearId) {
+    const year = await prisma.year.findUnique({ where: { id: yearId }, select: { id: true, facultyId: true } });
+    if (!year) {
+      throw new ApiError(404, "YEAR_NOT_FOUND", "No year exists with this id.");
+    }
+    if (year.facultyId !== facultyId) {
+      throw new ApiError(400, "YEAR_FACULTY_MISMATCH", "The year does not belong to the given faculty.");
+    }
+  }
+}
+
+function formatSimulationResponse(sim: {
+  id: string;
+  title: string;
+  description: string | null;
+  facultyId: string;
+  yearId: string | null;
+  scheduledAt: Date;
+  durationMinutes: number;
+  questionCount: number;
+  cancelledAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}) {
+  return { simulation: sim };
+}
+
+// POST /api/admin/simulations — schedule a new simulation. Past datetimes are
+// allowed deliberately (backfills, and the verify harness builds live/past
+// fixtures through this same endpoint rather than raw SQL).
+async function createSimulation(req: Request, res: Response, next: NextFunction) {
+  try {
+    const body = req.body as z.infer<typeof simulationWriteSchema>;
+    await assertSimulationScope(body.facultyId, body.yearId);
+    const sim = await prisma.simulation.create({
+      data: {
+        title: body.title,
+        description: body.description ?? null,
+        facultyId: body.facultyId,
+        yearId: body.yearId ?? null,
+        scheduledAt: body.scheduledAt,
+        durationMinutes: body.durationMinutes,
+        questionCount: body.questionCount,
+        createdBy: req.auth!.userId,
+      },
+    });
+    res.status(201).json(formatSimulationResponse(sim));
+  } catch (err) {
+    next(err);
+  }
+}
+
+router.post("/simulations", requireAdmin, validateBody(simulationWriteSchema), createSimulation);
+
+const simulationPatchSchema = simulationWriteSchema.partial().extend({
+  cancelledAt: z.coerce.date().nullable().optional(),
+});
+
+// PATCH /api/admin/simulations/:id — partial update (reschedule, retitle,
+// cancel via {"cancelledAt": "<iso>"} or un-cancel via {"cancelledAt": null}).
+async function updateSimulation(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params as { id: string };
+    const body = req.body as z.infer<typeof simulationPatchSchema>;
+
+    const existing = await prisma.simulation.findUnique({
+      where: { id },
+      select: { id: true, facultyId: true, yearId: true },
+    });
+    if (!existing) {
+      throw new ApiError(404, "SIMULATION_NOT_FOUND", "No simulation exists with this id.");
+    }
+
+    const nextFacultyId = body.facultyId ?? existing.facultyId;
+    const nextYearId = body.yearId !== undefined ? body.yearId : existing.yearId;
+    await assertSimulationScope(nextFacultyId, nextYearId);
+
+    const sim = await prisma.simulation.update({
+      where: { id },
+      data: {
+        ...(body.title !== undefined ? { title: body.title } : {}),
+        ...(body.description !== undefined ? { description: body.description } : {}),
+        ...(body.facultyId !== undefined ? { facultyId: body.facultyId } : {}),
+        ...(body.yearId !== undefined ? { yearId: body.yearId } : {}),
+        ...(body.scheduledAt !== undefined ? { scheduledAt: body.scheduledAt } : {}),
+        ...(body.durationMinutes !== undefined ? { durationMinutes: body.durationMinutes } : {}),
+        ...(body.questionCount !== undefined ? { questionCount: body.questionCount } : {}),
+        ...(body.cancelledAt !== undefined ? { cancelledAt: body.cancelledAt } : {}),
+      },
+    });
+    res.status(200).json(formatSimulationResponse(sim));
+  } catch (err) {
+    next(err);
+  }
+}
+
+router.patch(
+  "/simulations/:id",
+  requireAdmin,
+  validateParams(uuidParam("id")),
+  validateBody(simulationPatchSchema),
+  updateSimulation
+);
+
+// DELETE /api/admin/simulations/:id — removes the sim and its registrations
+// (FK cascade). Already-created StudySessions stay — they are independent rows.
+async function deleteSimulation(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params as { id: string };
+    const existing = await prisma.simulation.findUnique({ where: { id }, select: { id: true } });
+    if (!existing) {
+      throw new ApiError(404, "SIMULATION_NOT_FOUND", "No simulation exists with this id.");
+    }
+    await prisma.simulation.delete({ where: { id } });
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
+
+router.delete("/simulations/:id", requireAdmin, validateParams(uuidParam("id")), deleteSimulation);
+
 export default router;

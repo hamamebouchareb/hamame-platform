@@ -1596,9 +1596,7 @@ buckets already cap SMS sends). Real-SMS delivery itself is NOT yet proven
   (43/868). The all-or-nothing rule held: every one of the 51 files plus the
   two pre-existing English-only pages (subscription, authoring) now render in
   both languages.
-- **Scheduled simulations system** — needs a simulations table + migration +
-  scheduling job at minimum; MedSparkDZ's live example (4 sept. 2026 fields)
-  is the reference. Nothing started.
+- **Scheduled simulations system** — ✅ BUILT 2026-09-28 (see §15 below).
 - **Google OAuth** — blocked on Google Cloud console setup + account-linking
   product rule (external actions first; code after). Nothing started.
 
@@ -1663,3 +1661,62 @@ handshake fails with `ERR_INVALID_HTTP_RESPONSE`). It is a dev-server
 transport issue, not app code — the identical build under `next start`
 hydrates and passes the full walk. If `next dev` interactivity ever goes dead
 again, re-verify under `next start` before blaming the code.
+
+---
+
+## 15. Scheduled simulations — BUILT and verified (2026-09-28)
+
+Closes P12's big half (the MedSparkDZ "Simulation Résidanat" class of
+feature; the cheap history half shipped in Phase 5).
+
+**Schema** (migration `20260101000021_add_simulations`, pooler-safe
+`migrate diff` + `deploy`): `simulations` (title, description?,
+facultyId + nullable yearId — null = all years, e.g. Résidanat-wide;
+scheduledAt, durationMinutes, questionCount, cancelledAt, createdBy as a
+plain id with no FK, timestamps) + `simulation_registrations`
+(unique `[simulationId, userId]`, both FKs Cascade). Content FKs are
+`Restrict`, matching the curriculum convention.
+
+**Status is derived, never stored** — cancelled/completed/live/scheduled
+from `cancelledAt` + the `[start, end]` window. Deliberate deviation from
+the "scheduling job at minimum" sizing: no cron job exists because no
+transition needs one; statuses compute at read time.
+
+**API:**
+- `GET /api/simulations` (optionalAuth; `?facultyId&yearId&status=`) —
+  beta/live-faculty gate with indistinguishable 404 semantics; guests get
+  `registered: false`; ordered live → scheduled → completed → cancelled.
+- `POST` + `DELETE /api/simulations/:id/register` (auth, both idempotent).
+- `POST /api/simulations/:id/start` (auth) — requires registration (403
+  `SIMULATION_NOT_REGISTERED`) + live window (409 `SIMULATION_NOT_LIVE` /
+  `SIMULATION_ENDED` / `SIMULATION_CANCELLED`); builds an **official-mock
+  exam** session (`isOfficialMock: true`, timer = sim duration) through a
+  shared core.
+- Admin (`requireAdmin`): `POST /api/admin/simulations` (past datetimes
+  allowed — backfills + fixture creation go through the endpoint, not SQL),
+  `PATCH` (reschedule/retitle/cancel via nullable `cancelledAt`),
+  `DELETE` (registrations cascade; created sessions stay independent).
+- **Refactor this required:** `createSession`'s body is now the exported
+  `buildSessionForUser(userId, params)` — the route handler only validates +
+  normalizes, so sim sessions and ordinary sessions cannot drift (same
+  faculty/university gates, same BR-4 shuffle, same transaction).
+
+**Frontend:** `/simulations` (live/upcoming/past sections, register /
+unregister / start flows, full FR/EN via `sims.*` keys) + `SECONDARY_NAV`
+entry. No dashboard widget (scope discipline) and no admin UI (consistent
+with every other admin surface, which is API-only).
+
+**Verified live** (disposable phone-only accounts — zero Resend sends;
+`tmp-` harnesses since removed): ordinary `POST /api/sessions` still 201s
+(extraction regression-proof); guest list shows all four fixture statuses
+with correct derivation; register idempotent 200×2; authed
+`registered: true` + seat count; scheduled start → 409
+`SIMULATION_NOT_LIVE`; live start → 201 exam + `isOfficialMock: true` +
+`timeLimitSeconds = 180×60`; completed/cancelled register → 409
+`SIMULATION_ENDED`/`SIMULATION_CANCELLED`; unregistered start → 403;
+non-admin admin-create → 403 (gate proven; create/PATCH/DELETE bodies
+reviewed + `tsc`-clean — no admin credentials exist for a live authed-admin
+pass, stated openly). Cleanup confirmed by counts (2 sessions + 2
+registrations + 4 sims → 0/0/0); accounts left via the platform's own
+soft-delete. Backend `tsc` exit 0, frontend `tsc` exit 0. Contract + schema
+docs record the endpoints/tables.

@@ -392,6 +392,37 @@ resources (
 )
 ```
 
+## 9b. Scheduled simulations (P12 big half — MedSparkDZ-confirmed)
+
+```sql
+simulations (
+  id UUID PK,
+  title TEXT,
+  description TEXT NULL,
+  faculty_id UUID FK -> faculties.id,  -- Restrict
+  year_id UUID FK -> years.id NULL,    -- NULL = all years of the faculty
+  scheduled_at TIMESTAMPTZ,
+  duration_minutes INT,
+  question_count INT,
+  cancelled_at TIMESTAMPTZ NULL,
+  created_by UUID NULL,                -- plain id, no FK (decoupled from admin accounts)
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ
+)
+
+simulation_registrations (
+  id UUID PK,
+  simulation_id UUID FK -> simulations.id (Cascade),
+  user_id UUID FK -> users.id (Cascade),
+  created_at TIMESTAMPTZ,
+  UNIQUE(simulation_id, user_id)
+)
+```
+
+Status (`scheduled`/`live`/`completed`/`cancelled`) is derived from
+`scheduled_at`/`duration_minutes`/`cancelledAt` at read time — never stored,
+so no cron job is needed for transitions.
+
 ## 10. Notifications (FR-41 to FR-43)
 
 ```sql
