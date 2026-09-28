@@ -14,6 +14,10 @@ const inputClass =
 // pre-fills it. Same backend, same validation rules, no new API.
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
+  // When the email link carried the token, it stays hidden: users only ever see
+  // the two password fields. The paste field remains as a fallback for the manual
+  // (dev/token-only) case where no ?token= is present.
+  const hasUrlToken = (searchParams.get("token") ?? "").trim().length > 0;
   const [token, setToken] = useState(searchParams.get("token") ?? "");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -81,22 +85,24 @@ function ResetPasswordForm() {
         </h1>
 
         <form onSubmit={handleReset} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="token" className="text-sm font-medium text-text-secondary">
-              Code de réinitialisation
-            </label>
-            <input
-              id="token"
-              name="token"
-              type="text"
-              required
-              autoComplete="one-time-code"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              className={inputClass}
-              placeholder="Collez le code reçu"
-            />
-          </div>
+          {!hasUrlToken && (
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="token" className="text-sm font-medium text-text-secondary">
+                Code de réinitialisation
+              </label>
+              <input
+                id="token"
+                name="token"
+                type="text"
+                required
+                autoComplete="one-time-code"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                className={inputClass}
+                placeholder="Collez le code reçu"
+              />
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5">
             <label htmlFor="newPassword" className="text-sm font-medium text-text-secondary">
