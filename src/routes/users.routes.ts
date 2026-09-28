@@ -328,7 +328,7 @@ async function exportCurrentUserData(req: Request, res: Response, next: NextFunc
       throw new ApiError(404, "USER_NOT_FOUND", "User not found.");
     }
 
-    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
     res.setHeader("Content-Disposition", `attachment; filename="hamame-data-export-${userId}.json"`);
     res.status(200).json({
       exportedAt: new Date().toISOString(),

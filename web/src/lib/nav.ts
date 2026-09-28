@@ -31,6 +31,7 @@ export const SECONDARY_NAV: UserMenuLink[] = [
   { href: "/subscription", label: "Abonnement" },
   { href: "/resources", label: "Ressources" },
   { href: "/profile", label: "Mon profil" },
+  { href: "/notifications", label: "Notifications" },
   { href: "/settings", label: "Paramètres" },
 ];
 

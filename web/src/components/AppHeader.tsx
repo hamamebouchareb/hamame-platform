@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { cx } from "@/lib/cx";
 import type { AuthUser } from "@/context/AuthContext";
 import { UserMenu } from "@/components/UserMenu";
+import { NotificationsBell } from "@/components/NotificationsBell";
 import { PRIMARY_NAV, SECONDARY_NAV, isNavActive } from "@/lib/nav";
 
 export interface AppHeaderNavItem {
@@ -142,7 +143,8 @@ export function AppHeader({
           </button>
         ) : null}
 
-        <div className="shrink-0">
+        <div className="flex shrink-0 items-center gap-1">
+          <NotificationsBell />
           <UserMenu user={user} onLogout={onLogout} links={menuLinks} />
         </div>
       </div>

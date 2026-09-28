@@ -186,9 +186,18 @@ export default function HistoryPage() {
           </div>
         ) : null}
 
-        {groups.map(([groupLabel, groupSessions]) => (
+        {groups.map(([groupLabel, groupSessions]) => {
+          const groupAnswered = groupSessions.reduce((sum, s) => sum + s.stats.answered, 0);
+          const groupCorrect = groupSessions.reduce((sum, s) => sum + s.stats.correct, 0);
+          return (
           <section key={groupLabel} aria-label={groupLabel} className="mt-section-gap first:mt-4">
-            <h2 className="font-display text-h3 font-semibold text-text-primary">{groupLabel}</h2>
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="font-display text-h3 font-semibold text-text-primary">{groupLabel}</h2>
+              <p className="text-meta tabular-nums text-text-tertiary">
+                {groupSessions.length} session{groupSessions.length === 1 ? "" : "s"} ·{" "}
+                {accuracy(groupAnswered, groupCorrect)} global
+              </p>
+            </div>
             <ul className="mt-3 flex flex-col gap-3">
               {groupSessions.map((session) => {
                 const completed = session.completedAt !== null;
@@ -233,12 +242,13 @@ export default function HistoryPage() {
                     >
                       {completed ? "Revoir" : "Continuer"}
                     </Link>
-                  </li>
-                );
-              })}
-            </ul>
+                    </li>
+                  );
+                })}
+              </ul>
           </section>
-        ))}
+          );
+        })}
 
         {hasMore ? (
           <button

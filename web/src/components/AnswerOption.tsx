@@ -73,7 +73,7 @@ export function AnswerOption({
   if (revealed && isCorrectOption) {
     stateClass = "border-success bg-success/10 text-success";
   } else if (revealed && selected && isCorrect === false) {
-    stateClass = "border-danger bg-surface-2 text-danger";
+    stateClass = "border-2 border-danger bg-danger/10 text-danger shadow-glow-danger";
   } else if (selected) {
     stateClass = "border-accent-qcm bg-accent-qcm/15 text-text-primary shadow-glow-qcm";
   } else if (revealed) {

@@ -285,6 +285,25 @@ export default function SessionQuestionPage() {
     router.push("/dashboard");
   }
 
+  // Fullscreen toggle state (mirrors the reference "Plein écran" control).
+  // Synced from the fullscreenchange event so Esc-exits update the icon too.
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  useEffect(() => {
+    function onFullscreenChange() {
+      setIsFullscreen(document.fullscreenElement != null);
+    }
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, []);
+
+  function toggleFullscreen() {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => undefined);
+    } else {
+      void document.documentElement.requestFullscreen().catch(() => undefined);
+    }
+  }
+
   // P7 report flow: icon button in the header opens a small modal (type +
   // optional description) that POSTs to the existing FR-17 report endpoint.
   const [reportOpen, setReportOpen] = useState(false);
@@ -388,6 +407,34 @@ export default function SessionQuestionPage() {
           >
             Quitter
           </button>
+          {/* Fullscreen toggle (mirrors the reference "Plein écran" control).
+              Pure local UI state — no data or session behavior involved. */}
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            title={isFullscreen ? "Quitter le plein écran" : "Plein écran"}
+            aria-label={isFullscreen ? "Quitter le plein écran" : "Passer en plein écran"}
+            aria-pressed={isFullscreen}
+            className="inline-flex min-h-touch-target w-11 shrink-0 items-center justify-center rounded-control border border-border text-text-secondary transition hover:bg-surface-2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              {isFullscreen ? (
+                <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+              ) : (
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+              )}
+            </svg>
+          </button>
           {/* P7 report/flag: icon-only like the reference (title mirrors it). */}
           <button
             type="button"
@@ -490,7 +537,7 @@ export default function SessionQuestionPage() {
                       className={[
                         "flex h-12 w-12 shrink-0 items-center justify-center rounded-[20px] border text-meta font-semibold tabular-nums transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
                         isCurrent
-                          ? "border-accent-qcm bg-accent-qcm text-on-accent ring-2 ring-accent-soft"
+                          ? "border-accent-qcm bg-[linear-gradient(to_bottom_right,var(--color-accent-primary),var(--color-accent-secondary))] text-on-accent ring-2 ring-accent-soft"
                           : isAnswered
                             ? "border-success/60 bg-success/10 text-success"
                             : "border-border bg-surface-1 text-text-secondary hover:bg-surface-2",

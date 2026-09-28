@@ -56,6 +56,10 @@ opencode.json
 # large binaries that don't belong in the code baseline
 /docs/Hermes-Setup.exe
 
+# phone-camera audit dumps (2026-09: ~100MB across 29 files) — kept on disk
+# untracked on purpose; never commit raw dumps, transcribe findings into docs/
+docs/screenshotes/
+
 # prisma
 prisma/*.db
 

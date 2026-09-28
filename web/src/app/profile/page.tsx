@@ -177,10 +177,22 @@ export default function ProfilePage() {
       <AppHeader user={user} onLogout={handleLogout} />
 
       <main className="mx-auto w-full max-w-4xl flex-1 px-card-padding py-section-gap">
-        {/* Hero */}
-        <section aria-label="Profil" className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
-          {/* Avatar + identity */}
-          <div className="flex flex-col items-center gap-3 sm:items-start">
+        {/* Hero — one card: cover band + overlapping avatar + identity.
+            A3-REDO preview (profile hero only): band mirrors MedSparkDZ's
+            measured 96px cover using the approved Blue→Violet stops; avatar
+            pulled up to overlap it. Decorative band is aria-hidden. */}
+        <section aria-label="Profil" className="overflow-hidden rounded-card-lg bg-surface-1 shadow-card">
+          <div
+            aria-hidden
+            className="h-24"
+            style={{
+              backgroundImage:
+                "linear-gradient(to right, var(--color-accent-primary), var(--color-accent-library), var(--color-accent-secondary))",
+            }}
+          />
+          <div className="flex flex-col items-center gap-6 p-card-padding sm:flex-row sm:items-start">
+          {/* Avatar + identity (avatar overlaps the band above) */}
+          <div className="-mt-14 flex flex-col items-center gap-3 sm:items-start">
             <span className="flex h-20 w-20 items-center justify-center rounded-pill bg-accent-primary font-display text-h1 font-bold text-on-accent">
               {initials(user.fullName)}
             </span>
@@ -251,6 +263,7 @@ export default function ProfilePage() {
             {user.facultyId && user.yearId ? (
               <RankMetricCard facultyId={user.facultyId} yearId={user.yearId} fullName={user.fullName} />
             ) : null}
+          </div>
           </div>
         </section>
 
