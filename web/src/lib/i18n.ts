@@ -134,6 +134,9 @@ const fr = {
     "Vous n'avez pas encore de progression. Lancez votre première session QCM ou explorez les cours disponibles.",
   "suivi.getStartedDescTrack":
     "Choisissez votre filière et votre année pour accéder au programme, puis lancez votre première session QCM.",
+  "suivi.perfTitle": "Précision par module",
+  "suivi.perfDetail": "{acc}% · {c}/{a}",
+  "suivi.perfNone": "Aucune réponse notée",
   "readiness.examReady": "Prêt pour l'examen",
   "readiness.onTrack": "Sur la bonne voie",
   "readiness.needsWork": "À travailler",
@@ -1116,6 +1119,9 @@ const en: Record<I18nKey, string> = {
     "You have no progress yet. Launch your first QCM session or explore the available courses.",
   "suivi.getStartedDescTrack":
     "Choose your track and year to access the curriculum, then launch your first QCM session.",
+  "suivi.perfTitle": "Accuracy by module",
+  "suivi.perfDetail": "{acc}% · {c}/{a}",
+  "suivi.perfNone": "No graded answers",
   "readiness.examReady": "Exam ready",
   "readiness.onTrack": "On track",
   "readiness.needsWork": "Needs work",

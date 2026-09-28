@@ -48,6 +48,25 @@ export default function SuiviPage() {
   const progress = useApiResource<ProgressSummary>(canFetch ? "/progress/me" : null);
   const readiness = useApiResource<ExamReadiness>(canFetch ? "/progress/readiness" : null);
 
+  interface ModulePerformance {
+    moduleId: string;
+    moduleName: string;
+    yearId: string;
+    yearLabel: string;
+    totalLessons: number;
+    completedLessons: number;
+    completionPercentage: number;
+    answered: number;
+    correct: number;
+    incorrect: number;
+    accuracy: number | null;
+  }
+
+  const performance = useApiResource<{ modules: ModulePerformance[] }>(
+    canFetch ? "/progress/by-module" : null
+  );
+  const perfModules = useMemo(() => performance.data?.modules ?? [], [performance.data]);
+
   const yearsData = useApiResource<{ years: Year[] }>(
     canFetch && user?.facultyId ? `/faculties/${user.facultyId}/years` : null
   );
@@ -305,6 +324,48 @@ export default function SuiviPage() {
             </ol>
           </section>
         )}
+
+        {/* 3b. Per-module performance (accuracy on graded attempts) */}
+        <section aria-label={t("suivi.perfTitle")} className="mx-auto mt-section-gap max-w-4xl">
+          <h2 className="font-display text-h2 font-semibold text-text-primary">{t("suivi.perfTitle")}</h2>
+          {performance.isLoading ? (
+            <div className="mt-4 flex flex-col gap-4">
+              {[0, 1].map((i) => (
+                <div key={i} className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
+                  <LoadingSkeleton className="h-4 w-40" ariaLabel={t("common.loading")} />
+                </div>
+              ))}
+            </div>
+          ) : performance.error ? (
+            <p role="alert" className="mt-4 text-body text-danger">
+              {performance.error}
+            </p>
+          ) : (
+            <ol className="mt-4 flex flex-col gap-card-gap">
+              {perfModules.map((mod) => (
+                <li
+                  key={mod.moduleId}
+                  className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card"
+                >
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="truncate text-body font-medium text-text-primary">{mod.moduleName}</p>
+                    <span className="shrink-0 text-meta tabular-nums text-text-secondary">
+                      {mod.accuracy !== null
+                        ? t("suivi.perfDetail", { acc: mod.accuracy, c: mod.correct, a: mod.answered })
+                        : t("suivi.perfNone")}
+                    </span>
+                  </div>
+                  <ProgressBar
+                    className="mt-2"
+                    value={mod.accuracy ?? 0}
+                    tone={mod.accuracy !== null && mod.accuracy >= 70 ? "success" : "primary"}
+                    label={`${mod.moduleName} — ${t("suivi.perfTitle")}`}
+                  />
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
 
         {/* 4. Readiness breakdown */}
         <section aria-label={t("suivi.examPrep")} className="mx-auto mt-section-gap max-w-4xl">

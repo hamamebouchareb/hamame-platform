@@ -369,4 +369,103 @@ async function getModuleProgress(req: Request, res: Response, next: NextFunction
 
 router.get("/modules/:id", validateParams(uuidParam("id")), getModuleProgress);
 
+// GET /api/progress/by-module — per-module PERFORMANCE breakdown (accuracy),
+// the companion to /modules/:id's COMPLETION tracking (lessons viewed).
+// One row per module in the student's own faculty+year (no faculty/year on
+// the profile → empty list, not an error — same convention as /readiness's
+// coverage). aggregation rules, shared with the other accuracy surfaces:
+//   - gradable types only (QCM/QCS — QROC/clinical never enter either side),
+//   - completed sessions only (same gate as /readiness recentAccuracy),
+//   - newest attempt per session_question (same dedup rule the scorer uses),
+//   - denominator = answered attempts only (unanswered questions excluded,
+//     same convention as /qcm-stats and /readiness).
+// Completion columns reuse /modules/:id's exact semantics (all lessons under
+// the module count toward the total, Progress rows mark viewed) so the two
+// endpoints can never disagree. Everything aggregates in one SQL statement —
+// no application-layer loops, no N+1 — with sequential-await discipline kept
+// trivially (single query).
+async function getPerformanceByModule(req: Request, res: Response, next: NextFunction) {
+  try {
+    const userId = req.auth!.userId;
+
+    const viewer = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { facultyId: true, yearId: true },
+    });
+    if (!viewer?.facultyId || !viewer?.yearId) {
+      res.status(200).json({ modules: [] });
+      return;
+    }
+
+    const rows = await prisma.$queryRaw<
+      {
+        module_id: string;
+        module_name: string;
+        year_id: string;
+        year_label: string;
+        total_lessons: number;
+        completed_lessons: number;
+        answered: number;
+        correct: number;
+      }[]
+    >`
+      WITH latest AS (
+        SELECT DISTINCT ON (sq.id)
+          sq.id AS sq_id,
+          sq.question_id AS question_id,
+          a.is_correct AS is_correct
+        FROM session_questions sq
+        JOIN study_sessions s ON s.id = sq.session_id
+        LEFT JOIN attempts a ON a.session_question_id = sq.id
+        WHERE s.user_id = ${userId}::uuid
+          AND s.completed_at IS NOT NULL
+        ORDER BY sq.id, a.answered_at DESC NULLS LAST
+      )
+      SELECT
+        m.id AS module_id,
+        m.name AS module_name,
+        y.id AS year_id,
+        y.label AS year_label,
+        COUNT(DISTINCT les.id)::int AS total_lessons,
+        COUNT(DISTINCT pr.lesson_id)::int AS completed_lessons,
+        COUNT(DISTINCT l.sq_id) FILTER (WHERE l.is_correct IS NOT NULL)::int AS answered,
+        COUNT(DISTINCT l.sq_id) FILTER (WHERE l.is_correct IS TRUE)::int AS correct
+      FROM modules m
+      JOIN years y ON y.id = m.year_id
+      LEFT JOIN units u ON u.module_id = m.id
+      LEFT JOIN lessons les ON les.unit_id = u.id
+      LEFT JOIN progress pr ON pr.lesson_id = les.id AND pr.user_id = ${userId}::uuid
+      LEFT JOIN questions q ON q.unit_id = u.id AND q.type IN ('QCM', 'QCS')
+      LEFT JOIN latest l ON l.question_id = q.id
+      WHERE y.faculty_id = ${viewer.facultyId}::uuid
+        AND y.id = ${viewer.yearId}::uuid
+      GROUP BY m.id, m.name, y.id, y.label, y.order_index, m.order_index
+      ORDER BY y.order_index ASC, m.order_index ASC`;
+
+    res.status(200).json({
+      modules: rows.map((row) => {
+        const incorrect = row.answered - row.correct;
+        return {
+          moduleId: row.module_id,
+          moduleName: row.module_name,
+          yearId: row.year_id,
+          yearLabel: row.year_label,
+          totalLessons: row.total_lessons,
+          completedLessons: row.completed_lessons,
+          completionPercentage:
+            row.total_lessons > 0 ? Math.round((row.completed_lessons / row.total_lessons) * 100) : 0,
+          answered: row.answered,
+          correct: row.correct,
+          incorrect,
+          accuracy: row.answered > 0 ? Math.round((row.correct / row.answered) * 100) : null,
+        };
+      }),
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+router.get("/by-module", getPerformanceByModule);
+
 export default router;

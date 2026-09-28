@@ -1301,11 +1301,11 @@ something high-stakes; re-request the raw log
   implementation (integrated overlap, not the rejected disconnected-band
   version from the earlier checkpoint).
 - **Deferred, with stated reasons:** per-question notes panel + highlighter/
-  bookmark/chart icons (need a product spec first), per-module performance
-  breakdown (needs new aggregation logic), an unconfirmed chat-bubble
-  sighting, plus the standing decision gates (OAuth, scheduled
-  sims — EN/FR has since been signed off and built, §14) and shared sessions
-  (N/A, out of V1 scope by original design).
+  bookmark/chart icons (need a product spec first), an unconfirmed chat-bubble
+  sighting, plus the standing decision gates (OAuth — code complete §16, live
+  test blocked on credentials; scheduled sims — built §15) and shared
+  sessions (N/A, out of V1 scope by original design). (Per-module
+  performance breakdown closed 2026-09-28 — §17.)
 - **Reported verification:** `tsc` exit 0, `next build` exit 0, zero
   Playwright page errors across all runs — but this comes from the
   executor's summary, not a raw log this session independently checked
@@ -1788,3 +1788,37 @@ with 2` on code that builds green locally (27/27 routes, clean 79-file
 import/case audit, all files committed) — root cause was the missing Node
 version pin. Fixed by `engines: { node: ">=20.9.0" }` in `web/package.json`;
 the next deploy went green with no code changes. Do not remove the pin.
+
+---
+
+## 17. Per-module performance breakdown — BUILT and verified (2026-09-28)
+
+Closes the last code-only gap from the deferred list (was: "needs new
+aggregation logic").
+
+**API:** `GET /api/progress/by-module` — one row per module in the
+student's own faculty+year (no scope → `[]`, same convention as
+`/readiness` coverage), each with completion columns (identical semantics
+to `/modules/:id`, so the two can never disagree) plus performance:
+answered/correct/incorrect/accuracy. Aggregation rules shared with the
+other accuracy surfaces: gradable types only (QCM/QCS), completed sessions
+only (same gate as `/readiness`), newest attempt per session_question
+(same dedup the scorer uses), answered-only denominator (same as
+`/qcm-stats` and `/readiness`). Single SQL statement (DISTINCT ON +
+GROUP BY) — no loops, no N+1, pooler-safe.
+
+**Frontend:** "Précision par module" section on `/suivi` (after the
+weak-modules ranking): per-module accuracy bar (success ≥ 70, same
+threshold as the profile hero) with `{acc}% · {correct}/{answered}`,
+`—` for untouched modules; full FR/EN via three new `suivi.*` keys.
+
+**Verified live** (disposable phone-only accounts — zero Resend sends;
+`tmp-` harnesses since removed): scoped account answered 4 / correct 0
+across real bank questions → submit 200 → breakdown totals matched exactly
+(4/0) with all per-row math consistent (incorrect, accuracy, completion%);
+unscoped account → 200 `[]`; accounts removed via the platform's own
+soft-delete. Fixture footprint fully hard-removed with count proofs
+(session + 5 questions + 4 attempts + streak + earned badge + badge
+notification → all 0; the stray badge earned mid-test also caught its
+notification row). Backend `tsc` + frontend `tsc` exit 0. Contract doc
+records the endpoint.

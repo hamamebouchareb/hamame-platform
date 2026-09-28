@@ -45,6 +45,7 @@ Grounded in the PRD's FRs and the database schema (v0.1). Auth via Bearer JWT un
 |---|---|---|
 | GET | /api/progress/me | Streak, score, accuracy, activity history |
 | GET | /api/progress/modules/:id | Per-module tracking (FR-23) |
+| GET | /api/progress/by-module | Per-module performance breakdown (accuracy on graded attempts, completed sessions only) |
 | GET | /api/reviews/settings `[V2]` | Spaced repetition config |
 | PUT | /api/reviews/settings `[V2]` | Update config |
 | GET | /api/reviews/due `[V2]` | Due queue |
