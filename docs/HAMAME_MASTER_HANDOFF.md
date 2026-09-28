@@ -947,6 +947,7 @@ query).
 verified 2026-09-05.** OAuth and EN/FR remain deliberately untouched
 (making the pre-existing `uiLanguage` field settable via preferences is not
 toggle UI — no sign-off needed for that, but no toggle UI was built either).
+(✅ Update 2026-09-28: EN/FR sign-off granted and the full toggle built — §14.)
 
 1. **Reset-password confirm page** (`/reset-password?token=`): new frontend
    page, backend already existed. Verified with a real single-use 64-char
@@ -1063,7 +1064,8 @@ untouched.
 Full evidence in `docs/verification/phase5-verify-raw-1788701549.log`.
 **All CRITICAL, HIGH, MEDIUM, and LOW items from the original gap analysis
 are now closed.** What remains is explicitly gated on product decisions, not
-default build work: Google OAuth (M9), an EN/FR UI toggle (P14), a real
+default build work: Google OAuth (M9), an EN/FR UI toggle (P14 — ✅ signed off
+and built 2026-09-28, see §14), a real
 scheduled-simulations system (P12, upgraded from "deferred" to "worth
 deciding" now that MedSparkDZ has a live example), and whether Hamame's
 session builder should support cross-module unit selection (only if a fresh
@@ -1148,11 +1150,11 @@ real Phase 7 entry below, which is a different, already-completed pass):**
   verification calendar time, not code. Needs: provider setup,
   account-linking rule for existing email users, soft-delete interaction
   review. Live today: no Google entry on /login or /signup (drifted away).
-- EN/FR toggle UI — ONLY if signed off. Sizing: 43 files, 868 accented
-  chars (essentially the whole UI). Recommendation: hand-maintained lookup
-  table (a) now — bounded, reviewable, no dependency; framework (b)
-  only when string count or pluralization needs outgrow it. They differ in
-  ongoing maintenance cost, not just setup.
+- EN/FR toggle UI — ✅ SIGNED OFF and BUILT 2026-09-28 (see §14; supersedes
+  the "ONLY if signed off" gate below). Original sizing was 43 files / 868
+  accented chars; measured going in at 51 files / 926 chars; executed as
+  recommended — hand-maintained lookup table (a), `en` typed so `tsc` enforces
+  completeness.
 - Scheduled simulations — ONLY if signed off. Last live fields: 4 sept.
   2026, 20:30, 180 min, 150 Q, Affichage registration. Needs simulations
   table + scheduling job at minimum.
@@ -1301,8 +1303,9 @@ something high-stakes; re-request the raw log
 - **Deferred, with stated reasons:** per-question notes panel + highlighter/
   bookmark/chart icons (need a product spec first), per-module performance
   breakdown (needs new aggregation logic), an unconfirmed chat-bubble
-  sighting, plus the standing decision gates (EN/FR, OAuth, scheduled
-  sims) and shared sessions (N/A, out of V1 scope by original design).
+  sighting, plus the standing decision gates (OAuth, scheduled
+  sims — EN/FR has since been signed off and built, §14) and shared sessions
+  (N/A, out of V1 scope by original design).
 - **Reported verification:** `tsc` exit 0, `next build` exit 0, zero
   Playwright page errors across all runs — but this comes from the
   executor's summary, not a raw log this session independently checked
