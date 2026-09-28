@@ -1,6 +1,7 @@
 "use client";
 
 import { cx } from "@/lib/cx";
+import { useLanguage } from "@/context/LanguageContext";
 
 export interface SortOption {
   value: string;
@@ -47,6 +48,7 @@ export function CurriculumToolbar({
   filterOptions,
   className,
 }: CurriculumToolbarProps) {
+  const { t } = useLanguage();
   return (
     <div
       className={cx(
@@ -55,12 +57,12 @@ export function CurriculumToolbar({
       )}
     >
       <label className="relative block min-w-0 flex-1">
-        <span className="sr-only">{searchPlaceholder ?? "Rechercher"}</span>
+        <span className="sr-only">{searchPlaceholder ?? t("toolbar.search")}</span>
         <input
           type="search"
           value={searchValue}
           onChange={(event) => onSearchChange(event.target.value)}
-          placeholder={searchPlaceholder ?? "Rechercher…"}
+          placeholder={searchPlaceholder ?? t("toolbar.searchEllipsis")}
           className={cx(controlClass, "w-full pl-10")}
         />
         <svg
@@ -81,7 +83,7 @@ export function CurriculumToolbar({
       <div className="flex flex-wrap items-center gap-3">
         {filterValue !== undefined && onFilterChange && filterOptions && filterOptions.length > 0 ? (
           <label>
-            <span className="sr-only">Filtrer</span>
+            <span className="sr-only">{t("toolbar.filter")}</span>
             <select
               value={filterValue}
               onChange={(event) => onFilterChange(event.target.value)}
@@ -97,7 +99,7 @@ export function CurriculumToolbar({
         ) : null}
 
         <label>
-          <span className="sr-only">Trier</span>
+          <span className="sr-only">{t("toolbar.sort")}</span>
           <select
             value={sortValue}
             onChange={(event) => onSortChange(event.target.value)}
@@ -114,7 +116,7 @@ export function CurriculumToolbar({
         <p className="text-meta tabular-nums text-text-tertiary">
           {totalCount !== undefined && totalCount !== resultCount
             ? `${resultCount} / ${totalCount}`
-            : `${resultCount} ${resultCount === 1 ? "élément" : "éléments"}`}
+            : t(resultCount === 1 ? "toolbar.itemOne" : "toolbar.itemMany", { count: resultCount })}
         </p>
       </div>
     </div>

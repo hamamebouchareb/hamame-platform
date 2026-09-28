@@ -5,9 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cx } from "@/lib/cx";
 import type { AuthUser } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { UserMenu } from "@/components/UserMenu";
 import { NotificationsBell } from "@/components/NotificationsBell";
-import { PRIMARY_NAV, SECONDARY_NAV, isNavActive } from "@/lib/nav";
+import { PRIMARY_NAV, SECONDARY_NAV, isNavActive, type NavKeyEntry } from "@/lib/nav";
 
 export interface AppHeaderNavItem {
   href: string;
@@ -18,9 +19,11 @@ export interface AppHeaderNavItem {
 export interface AppHeaderProps {
   user: AuthUser;
   onLogout: () => void;
-  nav?: AppHeaderNavItem[];
+  // Custom nav overrides (plain labels, never translated). When omitted, the
+  // dictionary-keyed PRIMARY_NAV / SECONDARY_NAV are resolved via useLanguage.
+  nav?: AppHeaderNavItem[] | NavKeyEntry[];
   brandHref?: string;
-  menuLinks?: { href: string; label: string }[];
+  menuLinks?: { href: string; label: string }[] | NavKeyEntry[];
 }
 
 /**
@@ -35,9 +38,19 @@ export function AppHeader({
   menuLinks = SECONDARY_NAV,
 }: AppHeaderProps) {
   const pathname = usePathname();
+  const { t } = useLanguage();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+
+  // Resolve dictionary-keyed entries to display labels; plain-label overrides
+  // pass through untouched.
+  const resolvedNav: AppHeaderNavItem[] = nav.map((item) =>
+    "labelKey" in item ? { href: item.href, label: t(item.labelKey) } : item
+  );
+  const resolvedMenuLinks: { href: string; label: string }[] = menuLinks.map((link) =>
+    "labelKey" in link ? { href: link.href, label: t(link.labelKey) } : link
+  );
 
   // While the drawer is open it behaves modally: Escape closes and returns focus to
   // the hamburger trigger, and Tab/Shift+Tab wrap within the drawer's own links so
@@ -95,9 +108,9 @@ export function AppHeader({
           <span className="font-display text-h3 font-bold tracking-tight text-text-primary">Hamame</span>
         </Link>
 
-        {nav.length > 0 ? (
-          <nav aria-label="Navigation principale" className="hidden min-w-0 flex-1 gap-1 overflow-x-auto md:flex">
-            {nav.map((item) => {
+        {resolvedNav.length > 0 ? (
+          <nav aria-label={t("nav.mainAria")} className="hidden min-w-0 flex-1 gap-1 overflow-x-auto md:flex">
+            {resolvedNav.map((item) => {
               const active = isNavActive(pathname, item.href);
               return (
                 <Link
@@ -121,11 +134,11 @@ export function AppHeader({
         )}
 
         {/* Hamburger — visible only on mobile */}
-        {nav.length > 0 ? (
+        {resolvedNav.length > 0 ? (
           <button
             ref={triggerRef}
             type="button"
-            aria-label={drawerOpen ? "Fermer le menu" : "Ouvrir le menu"}
+            aria-label={drawerOpen ? t("nav.closeMenu") : t("nav.openMenu")}
             aria-expanded={drawerOpen}
             aria-controls="mobile-nav-drawer"
             onClick={() => setDrawerOpen((prev) => !prev)}
@@ -145,24 +158,24 @@ export function AppHeader({
 
         <div className="flex shrink-0 items-center gap-1">
           <NotificationsBell />
-          <UserMenu user={user} onLogout={onLogout} links={menuLinks} />
+          <UserMenu user={user} onLogout={onLogout} links={resolvedMenuLinks} />
         </div>
       </div>
 
       {/* Mobile nav drawer */}
-      {nav.length > 0 ? (
+      {resolvedNav.length > 0 ? (
         <div
           id="mobile-nav-drawer"
           ref={drawerRef}
           role="navigation"
-          aria-label="Navigation mobile"
+          aria-label={t("nav.mobileAria")}
           className={cx(
             "border-t border-border bg-surface-1 px-card-padding md:hidden",
             drawerOpen ? "block pb-4" : "hidden"
           )}
         >
           <nav className="flex flex-col gap-1 pt-2">
-            {nav.map((item) => {
+            {resolvedNav.map((item) => {
               const active = isNavActive(pathname, item.href);
               return (
                 <Link

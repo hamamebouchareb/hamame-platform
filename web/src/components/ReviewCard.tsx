@@ -1,6 +1,8 @@
 "use client";
 
 import { cx } from "@/lib/cx";
+import { useLanguage } from "@/context/LanguageContext";
+import { localeFor, type UiLanguage } from "@/lib/i18n";
 import type { ReviewQueueItem } from "@/lib/types";
 
 export interface ReviewCardProps {
@@ -40,6 +42,7 @@ export function ReviewCard({
   rejectComment,
   onRejectCommentChange,
 }: ReviewCardProps) {
+  const { lang, t } = useLanguage();
   const textareaId = `reject-comment-${item.id}`;
 
   return (
@@ -48,22 +51,22 @@ export function ReviewCard({
       <p className="mt-1 text-body font-medium text-text-primary">{itemTitle(item)}</p>
       {item.snippet ? <p className="mt-1 text-meta text-text-secondary">{item.snippet}</p> : null}
       <p className="mt-2 text-caption text-text-tertiary">
-        {item.authorFullName ?? "Auteur inconnu"} · {new Date(item.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+        {item.authorFullName ?? t("modcard.unknownAuthor")} · {new Date(item.createdAt).toLocaleString(localeFor(lang), { dateStyle: "medium", timeStyle: "short" })}
       </p>
 
       {!rejecting ? (
         <div className="mt-3 flex gap-2">
           <button type="button" onClick={onApprove} disabled={isSubmitting} className={primaryButton}>
-            {isSubmitting ? "Approbation..." : "Approuver"}
+            {isSubmitting ? t("modcard.approving") : t("modcard.approve")}
           </button>
           <button type="button" onClick={onRejectStart} disabled={isSubmitting} className={secondaryButton}>
-            Rejeter
+            {t("modcard.reject")}
           </button>
         </div>
       ) : (
         <div className="mt-3">
           <label htmlFor={textareaId} className="block text-meta font-medium text-text-secondary">
-            Motif du rejet
+            {t("modcard.rejectReason")}
           </label>
           <textarea
             id={textareaId}
@@ -74,7 +77,7 @@ export function ReviewCard({
             className="mt-1 w-full rounded-input border border-border bg-surface-2 px-3 py-2 text-meta text-text-primary placeholder:text-text-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-60"
           />
           {rejectComment.trim().length === 0 && !isSubmitting ? (
-            <p className="mt-1 text-caption text-text-tertiary">Un commentaire est requis pour rejeter.</p>
+            <p className="mt-1 text-caption text-text-tertiary">{t("modcard.commentRequired")}</p>
           ) : null}
           <div className="mt-2 flex gap-2">
             <button
@@ -83,10 +86,10 @@ export function ReviewCard({
               disabled={isSubmitting || rejectComment.trim().length === 0}
               className={dangerButton}
             >
-              {isSubmitting ? "Rejet..." : "Confirmer le rejet"}
+              {isSubmitting ? t("modcard.rejecting") : t("modcard.confirmReject")}
             </button>
             <button type="button" onClick={onRejectCancel} disabled={isSubmitting} className={secondaryButton}>
-              Annuler
+              {t("modcard.cancel")}
             </button>
           </div>
         </div>

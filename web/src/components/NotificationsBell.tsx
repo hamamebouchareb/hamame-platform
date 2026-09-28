@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { useLanguage } from "@/context/LanguageContext";
+import { localeFor, type UiLanguage } from "@/lib/i18n";
 import { cx } from "@/lib/cx";
 
 export type NotificationCategory = "social" | "prix" | "systeme";
@@ -18,16 +20,16 @@ export interface NotificationItem {
   createdAt: string;
 }
 
-const TABS: { id: NotificationTab; label: string }[] = [
-  { id: "all", label: "Tout" },
-  { id: "social", label: "Social" },
-  { id: "prix", label: "Prix" },
-  { id: "systeme", label: "Système" },
+const TABS: { id: NotificationTab; labelKey: "notifs.tabAll" | "notifs.tabSocial" | "notifs.tabPrice" | "notifs.tabSystem" }[] = [
+  { id: "all", labelKey: "notifs.tabAll" },
+  { id: "social", labelKey: "notifs.tabSocial" },
+  { id: "prix", labelKey: "notifs.tabPrice" },
+  { id: "systeme", labelKey: "notifs.tabSystem" },
 ];
 
-function formatWhen(iso: string): string {
+function formatWhen(iso: string, lang: UiLanguage): string {
   try {
-    return new Date(iso).toLocaleString("fr-FR", {
+    return new Date(iso).toLocaleString(localeFor(lang), {
       day: "numeric",
       month: "short",
       hour: "2-digit",
@@ -40,6 +42,7 @@ function formatWhen(iso: string): string {
 
 /** Header notification bell with unread badge + categorized dropdown panel. */
 export function NotificationsBell() {
+  const { lang, t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<NotificationTab>("all");
   const [items, setItems] = useState<NotificationItem[]>([]);
@@ -74,12 +77,12 @@ export function NotificationsBell() {
         setItems(data.notifications);
         setUnreadCount(data.unreadCount);
       } catch {
-        setError("Notifications indisponibles. Réessayez.");
+        setError(t("notifs.loadError"));
       } finally {
         setIsLoading(false);
       }
     },
-    []
+    [t]
   );
 
   useEffect(() => {
@@ -131,7 +134,7 @@ export function NotificationsBell() {
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={unreadCount > 0 ? `Notifications — ${unreadCount} non lues` : "Notifications"}
+        aria-label={unreadCount > 0 ? t("bell.unread", { count: unreadCount }) : t("nav.notifications")}
         onClick={() => setOpen((prev) => !prev)}
         className="relative inline-flex min-h-touch-target min-w-touch-target items-center justify-center rounded-pill text-text-secondary transition hover:bg-surface-2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
       >
@@ -152,45 +155,45 @@ export function NotificationsBell() {
       {open ? (
         <div
           role="menu"
-          aria-label="Notifications"
+          aria-label={t("nav.notifications")}
           className="hamame-dialog-enter absolute right-0 top-full z-30 mt-2 max-h-[70vh] w-80 overflow-y-auto rounded-card border border-border bg-surface-2 p-2 shadow-card-lg"
         >
           <div className="flex items-center justify-between gap-2 px-2 py-1">
-            <p className="text-body font-semibold text-text-primary">Notifications</p>
+            <p className="text-body font-semibold text-text-primary">{t("nav.notifications")}</p>
             {unreadCount > 0 ? (
               <button
                 type="button"
                 onClick={() => void markAllRead()}
                 className="text-meta font-medium text-accent-soft underline underline-offset-2 hover:text-accent-soft/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
               >
-                Tout marquer comme lu
+                {t("notifs.markAll")}
               </button>
             ) : null}
           </div>
-          <div className="flex gap-1 overflow-x-auto px-1 py-1" role="group" aria-label="Filtrer par catégorie">
-            {TABS.map((t) => (
+          <div className="flex gap-1 overflow-x-auto px-1 py-1" role="group" aria-label={t("notifs.filterAria")}>
+            {TABS.map((entry) => (
               <button
-                key={t.id}
+                key={entry.id}
                 type="button"
-                aria-pressed={tab === t.id}
-                onClick={() => setTab(t.id)}
+                aria-pressed={tab === entry.id}
+                onClick={() => setTab(entry.id)}
                 className={cx(
                   "shrink-0 rounded-pill px-3 py-1 text-meta font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
-                  tab === t.id
+                  tab === entry.id
                     ? "bg-accent-primary text-on-accent"
                     : "text-text-secondary hover:bg-surface-3 hover:text-text-primary"
                 )}
               >
-                {t.label}
+                {t(entry.labelKey)}
               </button>
             ))}
           </div>
           {isLoading ? (
-            <p className="px-3 py-6 text-center text-meta text-text-tertiary">Chargement…</p>
+            <p className="px-3 py-6 text-center text-meta text-text-tertiary">{t("builder.loadingShort")}</p>
           ) : error ? (
             <p role="alert" className="px-3 py-6 text-center text-meta text-danger">{error}</p>
           ) : items.length === 0 ? (
-            <p className="px-3 py-6 text-center text-meta text-text-secondary">Aucune notification</p>
+            <p className="px-3 py-6 text-center text-meta text-text-secondary">{t("notifs.empty")}</p>
           ) : (
             <ul className="flex flex-col gap-1">
               {items.map((item) => (
@@ -210,7 +213,7 @@ export function NotificationsBell() {
                       </span>
                     </span>
                     <span className="mt-0.5 block truncate text-meta text-text-secondary">{item.body}</span>
-                    <span className="mt-0.5 block text-caption text-text-tertiary">{formatWhen(item.createdAt)}</span>
+                    <span className="mt-0.5 block text-caption text-text-tertiary">{formatWhen(item.createdAt, lang)}</span>
                   </button>
                 </li>
               ))}
@@ -222,7 +225,7 @@ export function NotificationsBell() {
               onClick={() => setOpen(false)}
               className="block rounded-control px-3 py-2 text-center text-body font-medium text-accent-soft transition hover:bg-surface-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
             >
-              Voir toutes les notifications
+              {t("bell.viewAll")}
             </Link>
           </div>
         </div>

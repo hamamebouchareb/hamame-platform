@@ -4,15 +4,12 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { useApiResource } from "@/lib/useApiResource";
 import { useApiList } from "@/lib/useApiList";
 import { AppHeader, Footer, CourseCard, CurriculumToolbar, EmptyState, LoadingSkeleton } from "@/components";
 import type { CurriculumModule, ModuleProgress, Unit } from "@/lib/types";
-
-function plural(count: number, singular: string): string {
-  return `${count} ${count === 1 ? singular : `${singular}s`}`;
-}
 
 type SortValue = "az" | "za" | "progress-desc" | "progress-asc";
 type FilterValue = "all" | "not_started" | "in_progress" | "completed";
@@ -22,6 +19,7 @@ export default function YearModulesPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const { user, isHydrated } = useRequireAuth();
+  const { t } = useLanguage();
 
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortValue>("progress-desc");
@@ -85,7 +83,7 @@ export default function YearModulesPage() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <LoadingSkeleton className="h-8 w-48" ariaLabel="Chargement" />
+        <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
       </main>
     );
   }
@@ -99,18 +97,18 @@ export default function YearModulesPage() {
           href="/faculties"
           className="inline-flex min-h-touch-target items-center gap-1 text-meta font-medium text-text-secondary transition hover:text-accent-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
         >
-          <span aria-hidden>←</span> Bibliothèque
+          <span aria-hidden>←</span> {t("nav.library")}
         </Link>
 
         <header className="mt-2">
-          <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">Modules</p>
+          <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">{t("modules.kicker")}</p>
           <h1 className="mt-1 font-display text-hero font-bold leading-tight text-text-primary">
-            Modules de votre année
+            {t("modules.title")}
           </h1>
           <p className="mt-2 text-body text-text-secondary">
             {isLoading
-              ? "Chargement des modules…"
-              : `${plural(modules.length, "module")}${!progressLoading && totalLessons > 0 ? ` · ${plural(totalLessons, "leçon")}` : ""} — trié par progression.`}
+              ? t("modules.loadingEllipsis")
+              : `${t(modules.length === 1 ? "modules.countOne" : "modules.countMany", { count: modules.length })}${!progressLoading && totalLessons > 0 ? ` · ${t(totalLessons === 1 ? "modules.lessonsOne" : "modules.lessonsMany", { count: totalLessons })}` : ""}${t("modules.sortedSuffix")}`}
           </p>
         </header>
 
@@ -120,29 +118,29 @@ export default function YearModulesPage() {
           totalCount={modules.length}
           searchValue={search}
           onSearchChange={setSearch}
-          searchPlaceholder="Rechercher un module…"
+          searchPlaceholder={t("modules.searchPh")}
           sortValue={sort}
           onSortChange={(value) => setSort(value as SortValue)}
           sortOptions={[
-            { value: "progress-desc", label: "Progression (décroissante)" },
-            { value: "progress-asc", label: "Progression (croissante)" },
-            { value: "az", label: "Tri alphabétique A → Z" },
-            { value: "za", label: "Tri alphabétique Z → A" },
+            { value: "progress-desc", label: t("modules.sortProgressDesc") },
+            { value: "progress-asc", label: t("modules.sortProgressAsc") },
+            { value: "az", label: t("years.sortAz") },
+            { value: "za", label: t("years.sortZa") },
           ]}
           filterValue={filter}
           onFilterChange={(value) => setFilter(value as FilterValue)}
           filterOptions={[
-            { value: "all", label: "Tous les modules" },
-            { value: "not_started", label: "Non commencés" },
-            { value: "in_progress", label: "En cours" },
-            { value: "completed", label: "Terminés" },
+            { value: "all", label: t("modules.filterAll") },
+            { value: "not_started", label: t("modules.filterNotStarted") },
+            { value: "in_progress", label: t("dashboard.inProgress") },
+            { value: "completed", label: t("modules.filterCompleted") },
           ]}
         />
 
         {isLoading ? (
           <div className="mt-4 flex flex-col gap-card-gap">
             {[0, 1, 2].map((i) => (
-              <LoadingSkeleton key={i} className="h-24 w-full rounded-card" ariaLabel={i === 0 ? "Chargement des modules" : undefined} />
+              <LoadingSkeleton key={i} className="h-24 w-full rounded-card" ariaLabel={i === 0 ? t("modules.loading") : undefined} />
             ))}
           </div>
         ) : null}
@@ -156,7 +154,7 @@ export default function YearModulesPage() {
               onClick={refetch}
               className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 sm:w-auto"
             >
-              Réessayer
+              {t("common.retry")}
             </button>
           </div>
         ) : null}
@@ -164,9 +162,9 @@ export default function YearModulesPage() {
         {!isLoading && !error && modules.length === 0 ? (
           <div className="mt-4">
             <EmptyState
-              title="Aucun module pour cette année"
-              description="Cette année ne contient pas encore de modules publiés."
-              action={{ label: "Retour à la bibliothèque", href: "/faculties" }}
+              title={t("modules.empty")}
+              description={t("modules.emptyDesc")}
+              action={{ label: t("years.backToLibrary"), href: "/faculties" }}
             />
           </div>
         ) : null}
@@ -174,10 +172,10 @@ export default function YearModulesPage() {
         {!isLoading && !error && modules.length > 0 && visibleModules.length === 0 ? (
           <div className="mt-4">
             <EmptyState
-              title="Aucun module ne correspond"
-              description="Modifiez la recherche ou réinitialisez les filtres pour revoir tous les modules."
+              title={t("modules.noMatch")}
+              description={t("modules.noMatchDesc")}
               action={{
-                label: "Réinitialiser les filtres",
+                label: t("years.resetFilters"),
                 onClick: () => {
                   setSearch("");
                   setFilter("all");
@@ -193,7 +191,7 @@ export default function YearModulesPage() {
             const progress = progressByModule.get(module.id);
             const unitCount = unitCountByModule.get(module.id);
             const percentage = progress?.percentage ?? 0;
-            const statusLabel = percentage === 100 ? "Terminé" : percentage > 0 ? "En cours" : "Non commencé";
+            const statusLabel = percentage === 100 ? t("modules.done") : percentage > 0 ? t("dashboard.inProgress") : t("modules.notStarted");
             return (
               <li key={module.id}>
                 <CourseCard
@@ -204,10 +202,10 @@ export default function YearModulesPage() {
                   progressLoading={progressLoading}
                   description={
                     progressLoading || unitsLoading
-                      ? "Chargement…"
-                      : `${plural(progress?.totalLessons ?? 0, "leçon")} · ${plural(unitCount ?? 0, "unité")}`
+                      ? t("builder.loadingShort")
+                      : `${t((progress?.totalLessons ?? 0) === 1 ? "modules.lessonsOne" : "modules.lessonsMany", { count: progress?.totalLessons ?? 0 })} · ${t((unitCount ?? 0) === 1 ? "modules.unitsOne" : "modules.unitsMany", { count: unitCount ?? 0 })}`
                   }
-                  actionLabel={percentage === 100 ? "Revoir" : percentage > 0 ? "Reprendre" : "Commencer"}
+                  actionLabel={percentage === 100 ? t("modules.review") : percentage > 0 ? t("modules.resume") : t("modules.start")}
                   meta={
                     <span
                       className={

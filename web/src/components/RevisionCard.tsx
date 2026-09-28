@@ -1,22 +1,24 @@
 "use client";
 
 import { cx } from "@/lib/cx";
+import { useLanguage } from "@/context/LanguageContext";
+import type { I18nKey } from "@/lib/i18n";
 import type { DueReviewItem } from "@/lib/types";
 
 export interface QualityOption {
   value: number;
-  label: string;
-  description: string;
+  labelKey: I18nKey;
+  descriptionKey: I18nKey;
   tone: "danger" | "warning" | "primary" | "success";
 }
 
 export const QUALITY_OPTIONS: QualityOption[] = [
-  { value: 0, label: "Aucun souvenir", description: "Vous n'avez aucune idée.", tone: "danger" },
-  { value: 1, label: "Incorrect", description: "Vous ne saviez pas, mais en voyant la réponse ça revient.", tone: "danger" },
-  { value: 2, label: "Difficile", description: "Vous avez trouvé, mais avec beaucoup de mal.", tone: "warning" },
-  { value: 3, label: "Correct, difficile", description: "Vous avez trouvé, mais c'était hésitant.", tone: "primary" },
-  { value: 4, label: "Correct", description: "Vous avez trouvé avec une légère hésitation.", tone: "success" },
-  { value: 5, label: "Parfait", description: "Réponse immédiate et assurée.", tone: "success" },
+  { value: 0, labelKey: "rcard.q0l", descriptionKey: "rcard.q0d", tone: "danger" },
+  { value: 1, labelKey: "rcard.q1l", descriptionKey: "rcard.q1d", tone: "danger" },
+  { value: 2, labelKey: "rcard.q2l", descriptionKey: "rcard.q2d", tone: "warning" },
+  { value: 3, labelKey: "rcard.q3l", descriptionKey: "rcard.q3d", tone: "primary" },
+  { value: 4, labelKey: "rcard.q4l", descriptionKey: "rcard.q4d", tone: "success" },
+  { value: 5, labelKey: "rcard.q5l", descriptionKey: "rcard.q5d", tone: "success" },
 ];
 
 const toneBorder: Record<QualityOption["tone"], string> = {
@@ -26,22 +28,35 @@ const toneBorder: Record<QualityOption["tone"], string> = {
   success: "border-success/40 hover:border-success hover:bg-success/10",
 };
 
-function itemTargetLabel(item: DueReviewItem): { type: string; title: string } {
-  if (item.lesson) return { type: "Leçon", title: item.lesson.title };
+type TargetT = (key: "rcard.lesson" | "rcard.element" | "rcard.review") => string;
+
+function itemTargetLabel(
+  item: DueReviewItem,
+  t: TargetT
+): { type: string; title: string } {
+  if (item.lesson) return { type: t("rcard.lesson"), title: item.lesson.title };
   if (item.flashcard) return { type: "Flashcard", title: item.flashcard.front };
   if (item.question) return { type: `Question ${item.question.type}`, title: item.question.source };
-  return { type: "Élément", title: "Révision" };
+  return { type: t("rcard.element"), title: t("rcard.review") };
 }
 
-function formatDueDate(iso: string): string {
+type DueDateT = (
+  key: "rcard.lateOne" | "rcard.lateMany" | "rcard.today" | "rcard.tomorrow" | "rcard.inDays",
+  vars?: Record<string, string | number | null | undefined>
+) => string;
+
+function formatDueDate(iso: string, t: DueDateT): string {
   const date = new Date(iso);
   const now = new Date();
   const diffMs = date.getTime() - now.getTime();
   const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) return `en retard de ${Math.abs(diffDays)} jour${Math.abs(diffDays) > 1 ? "s" : ""}`;
-  if (diffDays === 0) return "aujourd'hui";
-  if (diffDays === 1) return "demain";
-  return `dans ${diffDays} jours`;
+  if (diffDays < 0) {
+    const n = Math.abs(diffDays);
+    return t(n === 1 ? "rcard.lateOne" : "rcard.lateMany", { n });
+  }
+  if (diffDays === 0) return t("rcard.today");
+  if (diffDays === 1) return t("rcard.tomorrow");
+  return t("rcard.inDays", { n: diffDays });
 }
 
 export interface RevisionCardProps {
@@ -56,7 +71,8 @@ export interface RevisionCardProps {
  *  self-assessment quality rating (SM-2 scale 0–5). This is NOT the content-moderation
  *  ReviewCard — it is specifically for the student revision flow. */
 export function RevisionCard({ item, isSubmitting = false, error, onRate, className }: RevisionCardProps) {
-  const { type, title } = itemTargetLabel(item);
+  const { t } = useLanguage();
+  const { type, title } = itemTargetLabel(item, t);
 
   return (
     <article
@@ -71,7 +87,7 @@ export function RevisionCard({ item, isSubmitting = false, error, onRate, classN
           {type}
         </span>
         <span className="text-caption text-text-tertiary">
-          Programmé {formatDueDate(item.dueAt)}
+          {t("rcard.scheduled", { date: formatDueDate(item.dueAt, t) })}
         </span>
       </div>
 
@@ -82,7 +98,7 @@ export function RevisionCard({ item, isSubmitting = false, error, onRate, classN
 
       {/* Self-assessment prompt */}
       <p className="mt-5 text-body font-medium text-text-secondary">
-        Évaluez votre rappel :
+        {t("rcard.ratePrompt")}
       </p>
 
       {/* Quality rating buttons */}
@@ -97,17 +113,17 @@ export function RevisionCard({ item, isSubmitting = false, error, onRate, classN
               "flex flex-col items-center gap-1 rounded-control border px-2 py-3 text-center transition duration-200 active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none",
               toneBorder[opt.tone]
             )}
-            title={opt.description}
+            title={t(opt.descriptionKey)}
           >
             <span className="font-display text-h3 font-bold tabular-nums text-text-primary">{opt.value}</span>
-            <span className="text-caption leading-tight text-text-secondary">{opt.label}</span>
+            <span className="text-caption leading-tight text-text-secondary">{t(opt.labelKey)}</span>
           </button>
         ))}
       </div>
 
       {/* Quality scale legend */}
       <p className="mt-3 text-caption text-text-tertiary text-center">
-        0–2 = à revoir bientôt · 3–5 = mémorisé, prochaine révision programmée
+        {t("rcard.legend")}
       </p>
 
       {error ? (

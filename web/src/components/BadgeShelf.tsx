@@ -1,6 +1,8 @@
 "use client";
 
 import { cx } from "@/lib/cx";
+import { useLanguage } from "@/context/LanguageContext";
+import { localeFor, type UiLanguage } from "@/lib/i18n";
 import { EmptyState } from "@/components/EmptyState";
 
 export interface EarnedBadge {
@@ -10,8 +12,8 @@ export interface EarnedBadge {
   earnedAt: string;
 }
 
-function formatDateShort(iso: string): string {
-  return new Date(iso).toLocaleDateString("fr-DZ", { dateStyle: "medium" });
+function formatDateShort(iso: string, lang: UiLanguage): string {
+  return new Date(iso).toLocaleDateString(localeFor(lang), { dateStyle: "medium" });
 }
 
 /** Per-criteria-type glyph. aria-hidden — the badge name carries the meaning. */
@@ -54,6 +56,7 @@ export function BadgeShelf({
   loading?: boolean;
   className?: string;
 }) {
+  const { lang, t } = useLanguage();
   return (
     <section aria-label="Badges" className={cx("mt-section-gap", className)}>
       <h2 className="font-display text-h2 font-semibold text-text-primary">Badges</h2>
@@ -66,9 +69,9 @@ export function BadgeShelf({
       ) : badges.length === 0 ? (
         <div className="mt-3">
           <EmptyState
-            title="Aucun badge pour l'instant"
-            description="Terminez des sessions QCM et gardez votre série pour débloquer vos premiers badges."
-            action={{ label: "Créer une session QCM", href: "/qcm" }}
+            title={t("badges.empty")}
+            description={t("badges.emptyDesc")}
+            action={{ label: t("dashboard.createQcm"), href: "/qcm" }}
           />
         </div>
       ) : (
@@ -81,7 +84,7 @@ export function BadgeShelf({
               <BadgeIcon type={badge.criteria?.type} />
               <div className="min-w-0">
                 <p className="truncate text-body font-medium text-text-primary">{badge.name}</p>
-                <p className="text-meta text-text-tertiary">Obtenu le {formatDateShort(badge.earnedAt)}</p>
+                <p className="text-meta text-text-tertiary">{t("badges.earnedOn", { date: formatDateShort(badge.earnedAt, lang) })}</p>
               </div>
             </li>
           ))}

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { cx } from "@/lib/cx";
+import { useLanguage } from "@/context/LanguageContext";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 
 export type MetricTone =
@@ -44,10 +45,11 @@ const toneText: Record<MetricTone, string> = {
 };
 
 export function MetricCard({ label, value, subtitle, loading, error, onRetry, tone = "neutral", className }: MetricCardProps) {
+  const { t } = useLanguage();
   return (
     <article className={cx("rounded-card border border-border bg-surface-1 p-card-padding shadow-card", className)}>
       {loading ? (
-        <LoadingSkeleton className="h-12 w-16" ariaLabel={`Chargement de ${label}`} />
+        <LoadingSkeleton className="h-12 w-16" ariaLabel={t("metric.loading", { label })} />
       ) : error ? (
         <div>
           <p className="text-meta text-danger">{error}</p>
@@ -57,7 +59,7 @@ export function MetricCard({ label, value, subtitle, loading, error, onRetry, to
               onClick={onRetry}
               className="mt-2 inline-flex min-h-touch-target items-center justify-center rounded-control border border-border px-3 text-meta font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
             >
-              Réessayer
+              {t("common.retry")}
             </button>
           ) : null}
         </div>

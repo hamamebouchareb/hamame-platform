@@ -10,22 +10,24 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cx } from "@/lib/cx";
+import { useLanguage } from "@/context/LanguageContext";
+import type { I18nKey } from "@/lib/i18n";
 
 type PresetId = "pomodoro" | "52-17" | "90-20" | "custom";
 type Phase = "idle" | "study" | "pause";
 
 interface TimerPreset {
   id: PresetId;
-  label: string;
+  labelKey: I18nKey;
   studyMinutes: number | null; // null = user-defined
   pauseMinutes: number | null;
 }
 
 const PRESETS: TimerPreset[] = [
-  { id: "pomodoro", label: "Pomodoro", studyMinutes: 25, pauseMinutes: 5 },
-  { id: "52-17", label: "Méthode 52/17", studyMinutes: 52, pauseMinutes: 17 },
-  { id: "90-20", label: "Focus 90 minutes", studyMinutes: 90, pauseMinutes: 20 },
-  { id: "custom", label: "Personnalisé", studyMinutes: null, pauseMinutes: null },
+  { id: "pomodoro", labelKey: "timer.presetPomodoro", studyMinutes: 25, pauseMinutes: 5 },
+  { id: "52-17", labelKey: "timer.preset5217", studyMinutes: 52, pauseMinutes: 17 },
+  { id: "90-20", labelKey: "timer.preset9020", studyMinutes: 90, pauseMinutes: 20 },
+  { id: "custom", labelKey: "timer.presetCustom", studyMinutes: null, pauseMinutes: null },
 ];
 
 const CUSTOM_MIN = 5;
@@ -72,6 +74,7 @@ function formatClock(totalSeconds: number): string {
 }
 
 export function StudyTimer() {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   // Selection state hydrates from localStorage after mount (SSR-safe, mirrors the
   // dashboard's guarded localStorage reads).
@@ -152,12 +155,12 @@ export function StudyTimer() {
         setPhase("pause");
         setEndsAtMs(Date.now() + pauseMinutes * 60_000);
         setRemainingSeconds(pauseMinutes * 60);
-        setAnnouncement("Temps d'étude terminé — pause commencée.");
+        setAnnouncement(t("timer.studyDone"));
       } else {
         setPhase("study");
         setEndsAtMs(Date.now() + studyMinutes * 60_000);
         setRemainingSeconds(studyMinutes * 60);
-        setAnnouncement("Pause terminée — reprise de l'étude.");
+        setAnnouncement(t("timer.breakDone"));
       }
     }, 500);
     return () => {
@@ -166,7 +169,7 @@ export function StudyTimer() {
         intervalRef.current = null;
       }
     };
-  }, [phase, endsAtMs, studyMinutes, pauseMinutes, stopTicking]);
+  }, [phase, endsAtMs, studyMinutes, pauseMinutes, stopTicking, t]);
 
   function handleStart() {
     setPhase("study");
@@ -205,10 +208,10 @@ export function StudyTimer() {
         type="button"
         onClick={() => setOpen(true)}
         className="fixed bottom-28 right-4 z-20 inline-flex min-h-touch-target items-center gap-2 rounded-pill border border-border bg-surface-1 px-4 py-2 text-meta font-medium text-text-secondary shadow-card transition hover:bg-surface-2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring sm:bottom-6"
-        aria-label="Ouvrir le minuteur d'étude"
+        aria-label={t("timer.open")}
         data-testid="study-timer-closed"
       >
-        <span aria-hidden>⏱</span> Minuteur d&apos;étude
+        <span aria-hidden>⏱</span> {t("timer.title")}
       </button>
     );
   }
@@ -217,16 +220,16 @@ export function StudyTimer() {
     <div
       className="fixed bottom-28 right-4 z-20 w-64 rounded-card border border-border bg-surface-1 p-4 shadow-card sm:bottom-6"
       role="group"
-      aria-label="Minuteur d'étude"
+      aria-label={t("timer.title")}
       data-testid="study-timer-open"
     >
       <div className="flex items-center justify-between">
-        <p className="text-meta font-medium text-text-secondary">Minuteur d&apos;étude</p>
+        <p className="text-meta font-medium text-text-secondary">{t("timer.title")}</p>
         <button
           type="button"
           onClick={() => setOpen(false)}
           className="rounded-control px-1 text-meta text-text-tertiary transition hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
-          aria-label="Fermer le minuteur d'étude"
+          aria-label={t("timer.close")}
         >
           ✕
         </button>
@@ -240,7 +243,7 @@ export function StudyTimer() {
             phase === "pause" ? "bg-success/15 text-success" : "bg-accent-qcm/15 text-accent-soft"
           )}
         >
-          {phase === "pause" ? "Pause" : "Étude"}
+          {phase === "pause" ? t("timer.pausePhase") : t("timer.studyPhase")}
         </span>
         <span
           className={cx(
@@ -258,7 +261,7 @@ export function StudyTimer() {
 
       {!isRunning ? (
         <fieldset className="mt-3" disabled={!hydrated}>
-          <legend className="mb-1.5 text-meta text-text-tertiary">Préréglage</legend>
+          <legend className="mb-1.5 text-meta text-text-tertiary">{t("timer.preset")}</legend>
           <div className="grid grid-cols-2 gap-1.5">
             {PRESETS.map((preset) => (
               <button
@@ -273,14 +276,14 @@ export function StudyTimer() {
                     : "border-border bg-surface-2 text-text-secondary hover:bg-surface-3 hover:text-text-primary"
                 )}
               >
-                {preset.label}
+                {t(preset.labelKey)}
               </button>
             ))}
           </div>
           {presetId === "custom" && (
             <div className="mt-2 grid grid-cols-2 gap-2">
               <label className="text-meta text-text-secondary">
-                Étude (min)
+                {t("timer.studyMin")}
                 <input
                   type="number"
                   min={CUSTOM_MIN}
@@ -289,11 +292,11 @@ export function StudyTimer() {
                   onChange={(event) => setCustomStudyMin(Number(event.target.value))}
                   onBlur={(event) => setCustomStudyMin(clampMinutes(Number(event.target.value)))}
                   className="mt-1 w-full rounded-control border border-border bg-surface-2 px-2 py-1.5 text-body text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
-                  aria-label="Minutes d'étude personnalisées"
+                  aria-label={t("timer.customStudyAria")}
                 />
               </label>
               <label className="text-meta text-text-secondary">
-                Pause (min)
+                {t("timer.breakMin")}
                 <input
                   type="number"
                   min={CUSTOM_MIN}
@@ -302,7 +305,7 @@ export function StudyTimer() {
                   onChange={(event) => setCustomPauseMin(Number(event.target.value))}
                   onBlur={(event) => setCustomPauseMin(clampMinutes(Number(event.target.value)))}
                   className="mt-1 w-full rounded-control border border-border bg-surface-2 px-2 py-1.5 text-body text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
-                  aria-label="Minutes de pause personnalisées"
+                  aria-label={t("timer.customBreakAria")}
                 />
               </label>
             </div>
@@ -312,7 +315,7 @@ export function StudyTimer() {
             onClick={handleStart}
             className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-qcm px-4 text-body font-semibold text-on-accent transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none"
           >
-            Démarrer ({studyMinutes} min étude / {pauseMinutes} min pause)
+            {t("timer.start", { s: studyMinutes, p: pauseMinutes })}
           </button>
         </fieldset>
       ) : (
@@ -322,14 +325,14 @@ export function StudyTimer() {
             onClick={handlePauseResume}
             className="inline-flex min-h-touch-target flex-1 items-center justify-center rounded-control border border-border px-3 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
           >
-            {isPaused ? "Reprendre" : "Suspendre"}
+            {isPaused ? t("timer.resume") : t("timer.suspend")}
           </button>
           <button
             type="button"
             onClick={handleReset}
             className="inline-flex min-h-touch-target flex-1 items-center justify-center rounded-control border border-border px-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
           >
-            Réinitialiser
+            {t("timer.reset")}
           </button>
         </div>
       )}

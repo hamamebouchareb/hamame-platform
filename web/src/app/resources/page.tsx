@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { useApiResource } from "@/lib/useApiResource";
 import {
@@ -29,22 +30,26 @@ interface FacultyOption {
 }
 
 const TYPE_OPTIONS = [
-  { value: "official_drive", label: "Drive officiel" },
-  { value: "reference", label: "Référence" },
-  { value: "past_exam", label: "Ancien examen" },
-  { value: "other", label: "Autre" },
+  { value: "official_drive", labelKey: "drive.typeOfficial" },
+  { value: "reference", labelKey: "drive.typeReference" },
+  { value: "past_exam", labelKey: "drive.typePastExam" },
+  { value: "other", labelKey: "drive.typeOther" },
 ] as const;
 
-function typeLabel(type: string): string {
+type TypeLabelT = (
+  key: "drive.typeOfficial" | "drive.typeReference" | "drive.typePastExam" | "drive.typeOther"
+) => string;
+
+function typeLabel(type: string, t: TypeLabelT): string {
   switch (type) {
     case "official_drive":
-      return "Drive officiel";
+      return t("drive.typeOfficial");
     case "reference":
-      return "Référence";
+      return t("drive.typeReference");
     case "past_exam":
-      return "Ancien examen";
+      return t("drive.typePastExam");
     case "other":
-      return "Autre";
+      return t("drive.typeOther");
     default:
       return type;
   }
@@ -55,6 +60,7 @@ function ResourcesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isHydrated } = useRequireAuth();
+  const { t } = useLanguage();
 
   const facultyFilter = searchParams.get("faculty") ?? "";
   const yearFilter = searchParams.get("year") ?? "";
@@ -97,7 +103,7 @@ function ResourcesContent() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <LoadingSkeleton className="h-8 w-48" ariaLabel="Chargement" />
+        <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
       </main>
     );
   }
@@ -111,12 +117,12 @@ function ResourcesContent() {
           <div className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
             <h1 className="font-display text-h2 font-semibold text-text-primary">Hamame Drive</h1>
             <p className="mt-1 text-body text-text-secondary">
-              Ressources officielles et références par faculté et année.
+              {t("drive.subtitle")}
             </p>
 
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <label className="flex flex-col gap-1 text-meta font-medium text-text-secondary">
-                Faculté
+                {t("settings.faculty")}
                 <select
                   value={facultyFilter}
                   onChange={(e) =>
@@ -124,7 +130,7 @@ function ResourcesContent() {
                   }
                   className="rounded-control border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
                 >
-                  <option value="">Toutes les facultés</option>
+                  <option value="">{t("builder.allFaculties")}</option>
                   {faculties.map((f) => (
                     <option key={f.id} value={f.id}>
                       {f.name}
@@ -134,7 +140,7 @@ function ResourcesContent() {
               </label>
 
               <label className="flex flex-col gap-1 text-meta font-medium text-text-secondary">
-                Année
+                {t("settings.year")}
                 <select
                   value={yearFilter}
                   onChange={(e) =>
@@ -142,7 +148,7 @@ function ResourcesContent() {
                   }
                   className="rounded-control border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
                 >
-                  <option value="">Toutes les années</option>
+                  <option value="">{t("builder.allYears")}</option>
                   <option value="00000000-0000-0000-0000-000000000020">Year 1</option>
                 </select>
               </label>
@@ -156,10 +162,10 @@ function ResourcesContent() {
                   }
                   className="rounded-control border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
                 >
-                  <option value="">Tous types</option>
-                  {TYPE_OPTIONS.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
+                  <option value="">{t("drive.allTypes")}</option>
+                  {TYPE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {t(option.labelKey)}
                     </option>
                   ))}
                 </select>
@@ -170,13 +176,13 @@ function ResourcesContent() {
                 onClick={() => applyFilters({})}
                 className="self-end rounded-control border border-border bg-surface-2 px-3 py-2 text-meta font-medium text-text-primary transition hover:bg-surface-2"
               >
-                Réinitialiser les filtres
+                {t("years.resetFilters")}
               </button>
             </div>
           </div>
 
           {resourcesRes.isLoading ? (
-            <LoadingSkeleton className="h-64 w-full rounded-card" ariaLabel="Chargement des ressources" />
+            <LoadingSkeleton className="h-64 w-full rounded-card" ariaLabel={t("drive.loading")} />
           ) : resourcesRes.error ? (
             <div className="rounded-card border border-danger bg-surface-1 p-card-padding">
               <p role="alert" className="text-body text-danger">
@@ -187,15 +193,15 @@ function ResourcesContent() {
                 onClick={resourcesRes.refetch}
                 className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 sm:w-auto"
               >
-                Réessayer
+                {t("common.retry")}
               </button>
             </div>
           ) : resources.length === 0 ? (
             <div data-empty-state>
               <EmptyState
-                title="Aucune ressource"
-                description="Aucune ressource ne correspond aux filtres sélectionnés, ou le hub de ressources est encore vide."
-                action={{ label: "Parcourir le programme", href: "/faculties" }}
+                title={t("drive.empty")}
+                description={t("drive.emptyDesc")}
+                action={{ label: t("drive.browseProgram"), href: "/faculties" }}
               />
             </div>
           ) : (
@@ -207,11 +213,11 @@ function ResourcesContent() {
                     title={resource.title}
                     description={
                       resource.sourceLabel
-                        ? `${resource.sourceLabel} · ${typeLabel(resource.type)}`
-                        : typeLabel(resource.type)
+                        ? `${resource.sourceLabel} · ${typeLabel(resource.type, t)}`
+                        : typeLabel(resource.type, t)
                     }
                     tone={resource.type === "official_drive" ? "primary" : "library"}
-                    actionLabel={resource.type === "official_drive" ? "Officiel" : undefined}
+                    actionLabel={resource.type === "official_drive" ? t("drive.officialBadge") : undefined}
                   />
                 </li>
               ))}
@@ -226,11 +232,12 @@ function ResourcesContent() {
 }
 
 export default function ResourcesPage() {
+  const { t } = useLanguage();
   return (
     <Suspense
       fallback={
         <main className="flex min-h-screen items-center justify-center px-card-padding">
-          <LoadingSkeleton className="h-8 w-48" ariaLabel="Chargement" />
+          <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
         </main>
       }
     >

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { AuthUser } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { cx } from "@/lib/cx";
 
 export interface UserMenuLink {
@@ -30,6 +31,7 @@ const menuItemBase =
 export function UserMenu({ user, onLogout, links = [] }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (!open) return;
@@ -57,7 +59,7 @@ export function UserMenu({ user, onLogout, links = [] }: UserMenuProps) {
         aria-expanded={open}
         // The visible full name is hidden below the sm breakpoint (initials-only
         // avatar), which leaves the button with no accessible text on mobile.
-        aria-label={`Menu du compte — ${user.fullName}`}
+        aria-label={t("usermenu.account", { name: user.fullName })}
         onClick={() => setOpen((prev) => !prev)}
         className="inline-flex min-h-touch-target min-w-touch-target items-center justify-center gap-2 rounded-pill border border-border bg-surface-1 px-3 text-body font-medium text-text-primary transition hover:border-border-strong hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
       >
@@ -73,7 +75,7 @@ export function UserMenu({ user, onLogout, links = [] }: UserMenuProps) {
       {open ? (
         <div
           role="menu"
-          aria-label="Menu utilisateur"
+          aria-label={t("usermenu.menu")}
           className="absolute right-0 top-full z-30 mt-2 w-60 rounded-card border border-border bg-surface-2 p-1 shadow-card-lg"
         >
           <div className="border-b border-border px-3 py-2">
@@ -104,7 +106,7 @@ export function UserMenu({ user, onLogout, links = [] }: UserMenuProps) {
               }}
               className={cx(menuItemBase, "text-danger")}
             >
-              Déconnexion
+              {t("usermenu.logout")}
             </button>
           </div>
         </div>

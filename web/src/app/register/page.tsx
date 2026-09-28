@@ -4,11 +4,14 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { ApiError } from "@/lib/api";
+import { LanguageToggle } from "@/components";
 
 export default function RegisterPage() {
   const router = useRouter();
   const { register } = useAuth();
+  const { t } = useLanguage();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,23 +27,26 @@ export default function RegisterPage() {
       await register({ email, password, fullName });
       router.push("/dashboard");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Une erreur est survenue. Veuillez réessayer.");
+      setError(err instanceof ApiError ? err.message : t("auth.genericError"));
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center px-4 py-10">
+    <main className="relative flex min-h-screen flex-col items-center justify-center px-4 py-10">
+      <div className="absolute right-4 top-4">
+        <LanguageToggle />
+      </div>
       <div className="w-full max-w-sm">
         <h1 className="mb-6 text-center font-display text-h2 font-bold text-text-primary">
-          Créer votre compte Hamame
+          {t("auth.registerTitle")}
         </h1>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <label htmlFor="fullName" className="text-sm font-medium text-text-secondary">
-              Nom complet
+              {t("settings.fullName")}
             </label>
             <input
               id="fullName"
@@ -57,7 +63,7 @@ export default function RegisterPage() {
 
           <div className="flex flex-col gap-1.5">
             <label htmlFor="email" className="text-sm font-medium text-text-secondary">
-              Email
+              {t("settings.email")}
             </label>
             <input
               id="email"
@@ -74,7 +80,7 @@ export default function RegisterPage() {
 
           <div className="flex flex-col gap-1.5">
             <label htmlFor="password" className="text-sm font-medium text-text-secondary">
-              Mot de passe
+              {t("auth.password")}
             </label>
             <input
               id="password"
@@ -87,7 +93,7 @@ export default function RegisterPage() {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full rounded-input border border-border bg-surface-2 px-4 py-3 text-body text-text-primary placeholder:text-text-tertiary focus:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             />
-            <p className="text-caption text-text-tertiary">Minimum 8 caractères.</p>
+            <p className="text-caption text-text-tertiary">{t("settings.minLength")}</p>
           </div>
 
           {error && (
@@ -101,20 +107,20 @@ export default function RegisterPage() {
             disabled={isSubmitting}
             className="mt-2 w-full min-h-touch-target rounded-control bg-accent-primary px-4 py-3 text-body font-medium text-on-accent transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-60"
           >
-            {isSubmitting ? "Création..." : "Créer mon compte"}
+            {isSubmitting ? t("auth.creating") : t("auth.registerCta")}
           </button>
           <p className="text-center text-caption text-text-tertiary">
-            Un email de vérification vous sera envoyé à cette adresse.
+            {t("auth.registerNote")}
           </p>
         </form>
 
         <p className="mt-6 text-center text-sm text-text-secondary">
-          Déjà un compte ?{" "}
+          {t("auth.hasAccount")}{" "}
           <Link
             href="/login"
             className="font-medium text-accent-soft underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
           >
-            Se connecter
+            {t("auth.loginCta")}
           </Link>
         </p>
       </div>

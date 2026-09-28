@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { useApiResource } from "@/lib/useApiResource";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { AppHeader, EmptyState, Footer, LoadingSkeleton } from "@/components";
@@ -26,16 +27,20 @@ function isPdfUrl(fileUrl: string): boolean {
   return /\.pdf($|\?|#)/i.test(fileUrl.trim());
 }
 
-function typeLabel(type: string): string {
+type TypeLabelT = (
+  key: "drive.typeOfficial" | "drive.typeReference" | "drive.typePastExam" | "drive.typeOther"
+) => string;
+
+function typeLabel(type: string, t: TypeLabelT): string {
   switch (type) {
     case "official_drive":
-      return "Drive officiel";
+      return t("drive.typeOfficial");
     case "reference":
-      return "Référence";
+      return t("drive.typeReference");
     case "past_exam":
-      return "Ancien examen";
+      return t("drive.typePastExam");
     case "other":
-      return "Autre";
+      return t("drive.typeOther");
     default:
       return type;
   }
@@ -46,6 +51,7 @@ function ResourceDetailContent() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const { user, isHydrated } = useRequireAuth();
+  const { t } = useLanguage();
   const { data, error, isLoading, refetch } = useApiResource<{ resource: ResourceItem }>(
     isHydrated && user && params?.id ? `/resources/${params.id}` : null
   );
@@ -59,7 +65,7 @@ function ResourceDetailContent() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <LoadingSkeleton className="h-8 w-48" ariaLabel="Chargement" />
+        <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
       </main>
     );
   }
@@ -71,7 +77,7 @@ function ResourceDetailContent() {
       <main className="mx-auto w-full max-w-3xl flex-1 px-card-padding py-section-gap">
         {isLoading ? (
           <div className="flex flex-col gap-4">
-            <LoadingSkeleton className="h-8 w-64" ariaLabel="Chargement de la ressource" />
+            <LoadingSkeleton className="h-8 w-64" ariaLabel={t("drive.detailLoading")} />
             <LoadingSkeleton className="h-48 w-full rounded-card" />
           </div>
         ) : null}
@@ -84,27 +90,27 @@ function ResourceDetailContent() {
               onClick={refetch}
               className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 sm:w-auto"
             >
-              Réessayer
+              {t("common.retry")}
             </button>
           </div>
         ) : null}
 
         {!isLoading && !error && !resource ? (
           <EmptyState
-            title="Ressource introuvable"
-            description="Cette ressource n'existe pas ou n'est pas disponible pour votre compte."
-            action={{ label: "Retour aux ressources", href: "/resources" }}
+            title={t("drive.notFound")}
+            description={t("drive.notFoundDesc")}
+            action={{ label: t("drive.backToResources"), href: "/resources" }}
           />
         ) : null}
 
         {resource ? (
           <>
-            <nav aria-label="Fil d'Ariane" className="flex min-h-touch-target flex-wrap items-center gap-1 text-meta">
+            <nav aria-label={t("drive.breadcrumb")} className="flex min-h-touch-target flex-wrap items-center gap-1 text-meta">
               <Link
                 href="/resources"
                 className="font-medium text-text-secondary transition hover:text-accent-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
               >
-                Ressources
+                {t("nav.resources")}
               </Link>
               {resource.faculty ? (
                 <>
@@ -138,11 +144,11 @@ function ResourceDetailContent() {
               href="/resources"
               className="mt-2 inline-flex min-h-touch-target items-center gap-1 text-meta font-medium text-text-secondary transition hover:text-accent-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
             >
-              <span aria-hidden>←</span> Retour aux ressources
+              <span aria-hidden>←</span> {t("drive.backToResources")}
             </Link>
 
             <header className="mt-2">
-              <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">Ressource · {typeLabel(resource.type)}</p>
+              <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">{t("drive.kicker", { type: typeLabel(resource.type, t) })}</p>
               <h1 className="mt-1 font-display text-h1 font-bold leading-tight text-text-primary">{resource.title}</h1>
             </header>
 
@@ -154,7 +160,7 @@ function ResourceDetailContent() {
               <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <dt className="text-meta font-medium uppercase tracking-wide text-text-secondary">Type</dt>
-                  <dd className="mt-1 text-body text-text-primary">{typeLabel(resource.type)}</dd>
+                  <dd className="mt-1 text-body text-text-primary">{typeLabel(resource.type, t)}</dd>
                 </div>
                 {resource.sourceLabel ? (
                   <div>
@@ -168,11 +174,11 @@ function ResourceDetailContent() {
                 {isPdfUrl(resource.fileUrl) ? (
                   <div>
                     <p className="mb-2 text-meta font-medium text-text-secondary">
-                      Aperçu intégré — le téléchargement reste disponible ci-dessous.
+                      {t("drive.previewNote")}
                     </p>
                     <iframe
                       src={resource.fileUrl}
-                      title={`Aperçu : ${resource.title}`}
+                      title={t("drive.previewTitle", { title: resource.title })}
                       className="h-[70vh] w-full rounded-panel border border-border bg-surface-2"
                     />
                   </div>
@@ -183,7 +189,7 @@ function ResourceDetailContent() {
                   rel="noopener noreferrer"
                   className="mt-4 inline-flex min-h-touch-target items-center justify-center gap-2 rounded-control bg-accent-primary px-5 text-body font-medium text-on-accent shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring first:mt-0"
                 >
-                  Télécharger la ressource
+                  {t("drive.download")}
                 </a>
               </div>
             </article>
@@ -197,11 +203,12 @@ function ResourceDetailContent() {
 }
 
 export default function ResourceDetailPage() {
+  const { t } = useLanguage();
   return (
     <Suspense
       fallback={
         <main className="flex min-h-screen items-center justify-center px-card-padding">
-          <LoadingSkeleton className="h-8 w-48" ariaLabel="Chargement" />
+          <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
         </main>
       }
     >

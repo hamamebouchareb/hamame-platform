@@ -80,7 +80,7 @@ model User {
   universityId                String?   @map("university_id") @db.Uuid
   wilaya                      String? // city/province, per FR-4
   profilePhotoUrl             String?   @map("profile_photo_url")
-  uiLanguage                  String    @default("fr") @map("ui_language") // 'fr' | 'ar' -- NFR-6
+  uiLanguage                  String    @default("fr") @map("ui_language") // 'fr' | 'en' -- NFR-6 (was 'fr' | 'ar'; Arabic UI never shipped, EN/FR toggle built 2026-09-28)
   theme                       String    @default("light") // 'light' | 'dark'
   emailVerifiedAt             DateTime? @map("email_verified_at") @db.Timestamptz
   phoneVerifiedAt             DateTime? @map("phone_verified_at") @db.Timestamptz

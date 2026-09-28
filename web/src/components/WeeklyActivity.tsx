@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { cx } from "@/lib/cx";
+import { useLanguage } from "@/context/LanguageContext";
 import { EmptyState, type EmptyStateAction } from "@/components/EmptyState";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 
@@ -30,11 +31,12 @@ export function WeeklyActivity({
   loading,
   error,
   onRetry,
-  emptyTitle = "Aucune activité",
+  emptyTitle,
   emptyDescription,
   emptyAction,
   className,
 }: WeeklyActivityProps) {
+  const { t } = useLanguage();
   if (loading) {
     return (
       <ul className={cx("flex flex-col gap-2", className)} aria-busy="true">
@@ -50,14 +52,14 @@ export function WeeklyActivity({
   if (error) {
     return (
       <div className={cx("rounded-card border border-danger bg-surface-1 p-card-padding", className)}>
-        <p className="text-body text-danger">Impossible de charger l&apos;activité. {error}</p>
+        <p className="text-body text-danger">{t("suivi.activityError", { error })}</p>
         {onRetry ? (
           <button
             type="button"
             onClick={onRetry}
             className="mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
           >
-            Réessayer
+            {t("common.retry")}
           </button>
         ) : null}
       </div>
@@ -66,11 +68,11 @@ export function WeeklyActivity({
 
   if (items.length === 0) {
     if (!emptyAction) return null;
-    return <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} className={className} />;
+    return <EmptyState title={emptyTitle ?? t("activity.empty")} description={emptyDescription} action={emptyAction} className={className} />;
   }
 
   return (
-    <ul className={cx("flex flex-col gap-2", className)} aria-label={`${items.length} élément${items.length > 1 ? "s" : ""} d&apos;activité récente`}>
+    <ul className={cx("flex flex-col gap-2", className)} aria-label={t(items.length === 1 ? "activity.itemsOne" : "activity.itemsMany", { count: items.length })}>
       {items.map((item) => (
         <li key={item.key}>
           <Link

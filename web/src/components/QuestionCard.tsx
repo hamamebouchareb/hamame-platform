@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { cx } from "@/lib/cx";
+import { useLanguage } from "@/context/LanguageContext";
 import { AnswerOption } from "@/components/AnswerOption";
 import type { QuestionOptionRef, QuestionType } from "@/lib/types";
 
@@ -64,6 +65,7 @@ export function QuestionCard({
   onRetrySubmit,
   className,
 }: QuestionCardProps) {
+  const { t } = useLanguage();
   const canSubmit =
     !answer.submitted &&
     !isSubmitting &&
@@ -119,7 +121,7 @@ export function QuestionCard({
 
       {/* P5 course + sitting chips */}
       {unitName || moduleName || sittingChips.length > 0 ? (
-        <div className="mt-2 flex flex-wrap gap-1.5" aria-label="Contexte de la question">
+        <div className="mt-2 flex flex-wrap gap-1.5" aria-label={t("qcard.chipsAria")}>
           {unitName ? (
             <span className="rounded-pill border border-border bg-surface-2 px-2.5 py-1 text-meta font-medium text-text-secondary">
               {unitName}
@@ -147,7 +149,7 @@ export function QuestionCard({
         ))}
       </div>
 
-      <div className="mt-5 flex flex-col gap-2" role="group" aria-label="Options de réponse">
+      <div className="mt-5 flex flex-col gap-2" role="group" aria-label={t("qcard.optionsAria")}>
         {type === "QCM" &&
           options.map((option) => (
             <AnswerOption
@@ -202,7 +204,7 @@ export function QuestionCard({
             disabled={answer.submitted}
             onChange={(event) => onFreeTextChange(event.target.value)}
             rows={4}
-            placeholder="Saisissez votre réponse..."
+            placeholder={t("qcard.freePh")}
             className="min-h-touch-target w-full rounded-input border border-border bg-surface-2 px-4 py-3 text-body text-text-primary placeholder:text-text-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-60"
           />
         )}
@@ -217,7 +219,7 @@ export function QuestionCard({
               onClick={onRetrySubmit}
               className="mt-2 text-meta font-medium text-accent-soft underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
             >
-              Réessayer l&apos;envoi
+              {t("qcard.retrySend")}
             </button>
           ) : null}
         </div>
@@ -238,15 +240,16 @@ export function QuestionCard({
           >
             <p className="text-body font-medium">
               {answer.isCorrect === null || answer.isCorrect === undefined
-                ? "Réponse envoyée — non notée automatiquement."
+                ? t("qcard.sentUngraded")
                 : answer.isCorrect
                   ? "Correct"
                   : "Incorrect"}
             </p>
             {answer.answerStats ? (
               <p className="mt-1 text-text-tertiary">
-                Basé sur {answer.answerStats.attempts} réponse{answer.answerStats.attempts === 1 ? "" : "s"}{" "}
-                d&apos;apprenants.
+                {t(answer.answerStats.attempts === 1 ? "qcard.statsOne" : "qcard.statsMany", {
+                  n: answer.answerStats.attempts,
+                })}
               </p>
             ) : null}
             {/* Comment toggle uses the EXISTING validated explanation content only.
@@ -259,7 +262,7 @@ export function QuestionCard({
                   aria-expanded={commentOpen}
                   className="inline-flex min-h-touch-target items-center justify-center rounded-pill border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
                 >
-                  {commentOpen ? "Masquer le commentaire" : "Voir le commentaire"}
+                  {commentOpen ? t("qcard.hideComment") : t("qcard.showComment")}
                 </button>
                 {commentOpen ? (
                   <div className="mt-3 rounded-control border border-border bg-surface-2 px-3 py-3">
@@ -274,17 +277,17 @@ export function QuestionCard({
             ) : null}
           </div>
         ) : (
-          <p className="mt-4 inline-flex rounded-pill border border-border px-3 py-1 text-meta text-text-secondary">Répondu</p>
+          <p className="mt-4 inline-flex rounded-pill border border-border px-3 py-1 text-meta text-text-secondary">{t("qcard.answeredBadge")}</p>
         )
       ) : (
         <button
           type="button"
           onClick={onSubmit}
           disabled={!canSubmit}
-          title={!canSubmit && !isSubmitting ? "Sélectionnez une réponse pour valider" : undefined}
+          title={!canSubmit && !isSubmitting ? t("qcard.needAnswer") : undefined}
           className="mt-4 inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-qcm px-4 text-body font-medium text-on-accent shadow-glow-qcm transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none"
         >
-          {isSubmitting ? "Envoi..." : "Valider la réponse"}
+          {isSubmitting ? t("qcard.sending") : t("qcard.submit")}
         </button>
       )}
     </article>

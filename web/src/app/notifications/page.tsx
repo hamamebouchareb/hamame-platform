@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
+import { localeFor, type UiLanguage } from "@/lib/i18n";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { apiFetch, ApiError } from "@/lib/api";
 import { AppHeader, EmptyState, Footer, LoadingSkeleton } from "@/components";
@@ -11,18 +13,18 @@ import type { NotificationItem } from "@/components/NotificationsBell";
 
 type NotificationTab = "all" | "social" | "prix" | "systeme";
 
-const TABS: { id: NotificationTab; label: string }[] = [
-  { id: "all", label: "Tout" },
-  { id: "social", label: "Social" },
-  { id: "prix", label: "Prix" },
-  { id: "systeme", label: "Système" },
+const TABS: { id: NotificationTab; labelKey: "notifs.tabAll" | "notifs.tabSocial" | "notifs.tabPrice" | "notifs.tabSystem" }[] = [
+  { id: "all", labelKey: "notifs.tabAll" },
+  { id: "social", labelKey: "notifs.tabSocial" },
+  { id: "prix", labelKey: "notifs.tabPrice" },
+  { id: "systeme", labelKey: "notifs.tabSystem" },
 ];
 
 const PAGE_LIMIT = 20;
 
-function formatWhen(iso: string): string {
+function formatWhen(iso: string, lang: UiLanguage): string {
   try {
-    return new Date(iso).toLocaleString("fr-FR", {
+    return new Date(iso).toLocaleString(localeFor(lang), {
       day: "numeric",
       month: "short",
       hour: "2-digit",
@@ -37,6 +39,7 @@ export default function NotificationsPage() {
   const { logout } = useAuth();
   const router = useRouter();
   const { user, isHydrated } = useRequireAuth();
+  const { lang, t } = useLanguage();
 
   const [tab, setTab] = useState<NotificationTab>("all");
   const [items, setItems] = useState<NotificationItem[]>([]);
@@ -71,12 +74,12 @@ export default function NotificationsPage() {
         setTotal(data.pagination.total);
         setPage(data.pagination.page);
       } catch (err) {
-        setError(err instanceof ApiError ? err.message : "Notifications indisponibles. Réessayez.");
+        setError(err instanceof ApiError ? err.message : t("notifs.loadError"));
       } finally {
         setIsLoading(false);
       }
     },
-    []
+    [t]
   );
 
   useEffect(() => {
@@ -107,7 +110,7 @@ export default function NotificationsPage() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <LoadingSkeleton className="h-8 w-48" ariaLabel="Chargement" />
+        <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
       </main>
     );
   }
@@ -121,9 +124,9 @@ export default function NotificationsPage() {
       <main className="mx-auto w-full max-w-3xl flex-1 px-card-padding py-section-gap">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="font-display text-h1 font-bold leading-tight text-text-primary">Notifications</h1>
+            <h1 className="font-display text-h1 font-bold leading-tight text-text-primary">{t("nav.notifications")}</h1>
             <p className="mt-1 text-body text-text-secondary">
-              {unreadCount > 0 ? `${unreadCount} non lue${unreadCount === 1 ? "" : "s"}` : "Tout est lu"}
+              {unreadCount > 0 ? t(unreadCount === 1 ? "notifs.unreadOne" : "notifs.unreadMany", { count: unreadCount }) : t("notifs.allRead")}
             </p>
           </div>
           {unreadCount > 0 && !isLoading ? (
@@ -132,29 +135,29 @@ export default function NotificationsPage() {
               onClick={() => void markAllRead()}
               className="inline-flex min-h-touch-target shrink-0 items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
             >
-              Tout marquer comme lu
+              {t("notifs.markAll")}
             </button>
           ) : null}
         </div>
 
-        <div className="mt-4 flex gap-1 overflow-x-auto pb-1" role="group" aria-label="Filtrer par catégorie">
-          {TABS.map((t) => (
+        <div className="mt-4 flex gap-1 overflow-x-auto pb-1" role="group" aria-label={t("notifs.filterAria")}>
+          {TABS.map((entry) => (
             <button
-              key={t.id}
+              key={entry.id}
               type="button"
-              aria-pressed={tab === t.id}
+              aria-pressed={tab === entry.id}
               onClick={() => {
-                setTab(t.id);
+                setTab(entry.id);
                 setPage(1);
               }}
               className={cx(
                 "shrink-0 rounded-pill px-4 py-1.5 text-body font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
-                tab === t.id
+                tab === entry.id
                   ? "bg-accent-primary text-on-accent"
                   : "text-text-secondary hover:bg-surface-2 hover:text-text-primary"
               )}
             >
-              {t.label}
+              {t(entry.labelKey)}
             </button>
           ))}
         </div>
@@ -173,15 +176,15 @@ export default function NotificationsPage() {
               onClick={() => void loadPage(page, tab)}
               className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 sm:w-auto"
             >
-              Réessayer
+              {t("common.retry")}
             </button>
           </div>
         ) : items.length === 0 ? (
           <div className="mt-4">
             <EmptyState
-              title="Aucune notification"
-              description="Vos notifications apparaîtront ici."
-              action={{ label: "Retour au tableau de bord", href: "/dashboard" }}
+              title={t("notifs.empty")}
+              description={t("notifs.emptyDesc")}
+              action={{ label: t("classement.backToDashboard"), href: "/dashboard" }}
             />
           </div>
         ) : (
@@ -195,7 +198,7 @@ export default function NotificationsPage() {
                   <button
                     type="button"
                     onClick={() => void markRead(item)}
-                    aria-label={item.isRead ? item.title : `${item.title} — marquer comme lue`}
+                    aria-label={item.isRead ? item.title : t("notifs.markRead", { title: item.title })}
                     className="block w-full rounded-control text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
                   >
                     <span className="flex items-center gap-2">
@@ -205,7 +208,7 @@ export default function NotificationsPage() {
                       <span className="min-w-0 flex-1 truncate text-body font-semibold text-text-primary">
                         {item.title}
                       </span>
-                      <span className="shrink-0 text-caption text-text-tertiary">{formatWhen(item.createdAt)}</span>
+                      <span className="shrink-0 text-caption text-text-tertiary">{formatWhen(item.createdAt, lang)}</span>
                     </span>
                     <span className="mt-1 block text-body text-text-secondary">{item.body}</span>
                   </button>
@@ -220,7 +223,7 @@ export default function NotificationsPage() {
                   onClick={() => void loadPage(page - 1, tab)}
                   className="inline-flex min-h-touch-target items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-40"
                 >
-                  Précédent
+                  {t("player.prev")}
                 </button>
                 <p className="text-meta tabular-nums text-text-secondary">
                   Page {page} / {totalPages}
@@ -231,7 +234,7 @@ export default function NotificationsPage() {
                   onClick={() => void loadPage(page + 1, tab)}
                   className="inline-flex min-h-touch-target items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-40"
                 >
-                  Suivant
+                  {t("player.next")}
                 </button>
               </div>
             ) : null}

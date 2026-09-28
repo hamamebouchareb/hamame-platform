@@ -3,6 +3,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
+import { localeFor, type UiLanguage } from "@/lib/i18n";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { apiFetch } from "@/lib/api";
 import { useApiResource } from "@/lib/useApiResource";
@@ -13,15 +15,23 @@ import type { DueReviewItem, ReviewCompleteResponse, ReviewSettings } from "@/li
 
 const ESTIMATED_SECONDS_PER_ITEM = 20;
 
-function formatDuration(seconds: number): string {
-  if (seconds < 60) return `${seconds} secondes`;
+type DurationT = (
+  key: "revision.seconds" | "revision.oneMinute" | "revision.minutes",
+  vars?: Record<string, string | number | null | undefined>
+) => string;
+
+function formatDuration(
+  seconds: number,
+  t: DurationT
+): string {
+  if (seconds < 60) return t("revision.seconds", { count: seconds });
   const minutes = Math.round(seconds / 60);
-  if (minutes === 1) return "1 minute";
-  return `${minutes} minutes`;
+  if (minutes === 1) return t("revision.oneMinute");
+  return t("revision.minutes", { count: minutes });
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("fr-DZ", { dateStyle: "long" });
+function formatDate(iso: string, lang: UiLanguage): string {
+  return new Date(iso).toLocaleDateString(localeFor(lang), { dateStyle: "long" });
 }
 
 type View = "landing" | "reviewing" | "summary";
@@ -38,6 +48,7 @@ export default function RevisionPage() {
   const { logout } = useAuth();
   const router = useRouter();
   const { user, isHydrated } = useRequireAuth();
+  const { lang, t } = useLanguage();
   const canFetch = isHydrated && !!user;
 
   const dueItems = useApiResource<{ items: DueReviewItem[] }>(canFetch ? "/reviews/due" : null);
@@ -115,17 +126,17 @@ export default function RevisionPage() {
         };
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Erreur lors de l'enregistrement.";
+      const message = err instanceof Error ? err.message : t("revision.saveError");
       setError(message);
     } finally {
       setIsSubmitting(false);
     }
-  }, [currentItem, isSubmitting]);
+  }, [currentItem, isSubmitting, t]);
 
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <LoadingSkeleton className="h-8 w-48" ariaLabel="Chargement" />
+        <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
       </main>
     );
   }
@@ -136,12 +147,11 @@ export default function RevisionPage() {
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-card-padding py-section-gap">
         {/* Hero */}
-        <section aria-label="En-tête des révisions" className="text-center">
-          <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">Répétition espacée</p>
-          <h1 className="mt-2 font-display text-hero font-bold leading-tight text-text-primary">Révision</h1>
+        <section aria-label={t("revision.heroAria")} className="text-center">
+          <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">{t("revision.kicker")}</p>
+          <h1 className="mt-2 font-display text-hero font-bold leading-tight text-text-primary">{t("nav.revision")}</h1>
           <p className="mx-auto mt-3 max-w-xl text-body text-text-secondary">
-            Révisez les éléments que vous avez oubliés ou mal mémorisés. Chaque réponse
-            ajuste automatiquement la date de prochaine révision.
+            {t("revision.heroSubtitle")}
           </p>
         </section>
 
@@ -151,7 +161,7 @@ export default function RevisionPage() {
             {isLoading ? (
               <div className="mx-auto mt-section-gap max-w-lg flex flex-col gap-4">
                 <div className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
-                  <LoadingSkeleton className="h-5 w-40" ariaLabel="Chargement des révisions" />
+                  <LoadingSkeleton className="h-5 w-40" ariaLabel={t("revision.loadRevisions")} />
                   <LoadingSkeleton className="mt-3 h-8 w-24" ariaLabel="" />
                 </div>
                 <LoadingSkeleton className="h-12 w-full rounded-card" ariaLabel="" />
@@ -159,23 +169,23 @@ export default function RevisionPage() {
             ) : dueItems.error ? (
               <div className="mx-auto mt-section-gap max-w-lg rounded-card border border-danger bg-surface-1 p-card-padding">
                 <p role="alert" className="text-body text-danger">
-                  Impossible de charger les révisions. {dueItems.error}
+                  {t("revision.loadError", { error: dueItems.error })}
                 </p>
                 <button
                   type="button"
                   onClick={dueItems.refetch}
                   className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 sm:w-auto"
                 >
-                  Réessayer
+                  {t("common.retry")}
                 </button>
               </div>
             ) : !hasItems ? (
               /* Empty state — nothing due */
               <div className="mx-auto mt-section-gap max-w-lg">
                 <EmptyState
-                  title="Aucune révision pour le moment"
-                  description="Vous êtes à jour ! Revenez plus tard ou lancez une session QCM pour accumuler de nouvelles révisions."
-                  action={{ label: "Créer une session QCM", href: "/qcm" }}
+                  title={t("revision.emptyTitle")}
+                  description={t("revision.emptyDesc")}
+                  action={{ label: t("dashboard.createQcm"), href: "/qcm" }}
                 />
               </div>
             ) : (
@@ -190,21 +200,21 @@ export default function RevisionPage() {
                     <div>
                       <p className="font-display text-display font-bold text-text-primary">{queue.length}</p>
                       <p className="text-meta text-text-secondary">
-                        élément{queue.length > 1 ? "s" : ""} à réviser
+                        {t(queue.length > 1 ? "revision.itemsMany" : "revision.itemsOne")}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="font-display text-h3 font-semibold text-text-primary">
-                        ~{formatDuration(estimatedTime)}
+                        ~{formatDuration(estimatedTime, t)}
                       </p>
-                      <p className="text-meta text-text-tertiary">temps estimé</p>
+                      <p className="text-meta text-text-tertiary">{t("revision.estTime")}</p>
                     </div>
                   </div>
 
                   <ProgressBar
                     className="mt-4"
                     value={0}
-                    label="Progression de la session"
+                    label={t("revision.sessionProgress")}
                     valueLabel="0%"
                     tone="primary"
                   />
@@ -216,15 +226,18 @@ export default function RevisionPage() {
                   onClick={startSession}
                   className="mt-4 inline-flex min-h-touch-target w-full items-center justify-center gap-2 rounded-control bg-accent-primary px-5 text-body font-medium text-on-accent shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
                 >
-                  Commencer les révisions
+                  {t("revision.start")}
                 </button>
 
                 {/* Settings info */}
                 {settings.data?.settings && settings.data.settings.isEnabled && (
                   <p className="mt-3 text-caption text-text-tertiary text-center">
-                    Révisions activées · Jours : {settings.data.settings.scheduleDays.length > 0
-                      ? settings.data.settings.scheduleDays.join(", ")
-                      : "non configuré"}
+                    {t("revision.enabledDays", {
+                      days:
+                        settings.data.settings.scheduleDays.length > 0
+                          ? settings.data.settings.scheduleDays.join(", ")
+                          : t("revision.noDays"),
+                    })}
                   </p>
                 )}
               </div>
@@ -243,7 +256,7 @@ export default function RevisionPage() {
               <ProgressBar
                 value={session.currentIndex}
                 max={session.queue.length}
-                label="Progression de la session"
+                label={t("revision.sessionProgress")}
                 tone="primary"
               />
             </div>
@@ -259,10 +272,14 @@ export default function RevisionPage() {
             {/* Quick stats */}
             <div className="mt-3 flex items-center justify-between text-caption text-text-tertiary">
               <span>
-                {session.completedCount} terminé{session.completedCount > 1 ? "s" : ""}
+                {t(session.completedCount > 1 ? "revision.doneMany" : "revision.doneOne", {
+                  count: session.completedCount,
+                })}
               </span>
               <span>
-                ~{formatDuration(estimatedTime)} restant{estimatedTime > 60 ? "s" : ""}
+                {t(estimatedTime > 60 ? "revision.remainingMany" : "revision.remainingOne", {
+                  time: `~${formatDuration(estimatedTime, t)}`,
+                })}
               </span>
             </div>
           </div>
@@ -276,35 +293,35 @@ export default function RevisionPage() {
               className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card"
               style={{ borderTop: `3px solid ${accentVar("revision")}` }}
             >
-              <h2 className="font-display text-h2 font-semibold text-text-primary">Session terminée</h2>
+              <h2 className="font-display text-h2 font-semibold text-text-primary">{t("revision.summaryTitle")}</h2>
 
               <div className="mt-4 grid grid-cols-3 gap-4">
                 <div className="text-center">
                   <p className="font-display text-display font-bold text-text-primary">{session.completedCount}</p>
-                  <p className="text-meta text-text-secondary">révisés</p>
+                  <p className="text-meta text-text-secondary">{t("revision.reviewed")}</p>
                 </div>
                 <div className="text-center">
                   <p className="font-display text-display font-bold text-success">{session.passedCount}</p>
-                  <p className="text-meta text-text-secondary">mémorisés</p>
+                  <p className="text-meta text-text-secondary">{t("revision.memorized")}</p>
                 </div>
                 <div className="text-center">
                   <p className="font-display text-display font-bold text-danger">
                     {session.completedCount - session.passedCount}
                   </p>
-                  <p className="text-meta text-text-secondary">à revoir</p>
+                  <p className="text-meta text-text-secondary">{t("revision.toReview")}</p>
                 </div>
               </div>
 
               <ProgressBar
                 className="mt-4"
                 value={session.completedCount > 0 ? (session.passedCount / session.completedCount) * 100 : 0}
-                label="Taux de réussite"
+                label={t("revision.successRate")}
                 tone={session.passedCount === session.completedCount ? "success" : "primary"}
               />
 
               {session.nextDueDate && (
                 <p className="mt-4 text-body text-text-secondary text-center">
-                  Prochaine révision : <strong>{formatDate(session.nextDueDate)}</strong>
+                  {t("revision.nextDue")} <strong>{formatDate(session.nextDueDate, lang)}</strong>
                 </p>
               )}
             </article>
@@ -320,14 +337,14 @@ export default function RevisionPage() {
                 }}
                 className="inline-flex min-h-touch-target w-full items-center justify-center gap-2 rounded-control border border-border px-5 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
               >
-                Retour aux révisions
+                {t("revision.backToReviews")}
               </button>
               <button
                 type="button"
                 onClick={() => router.push("/dashboard")}
                 className="inline-flex min-h-touch-target w-full items-center justify-center gap-2 rounded-control bg-accent-primary px-5 text-body font-medium text-on-accent shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
               >
-                Retour au tableau de bord
+                {t("revision.backToDashboard")}
               </button>
             </div>
           </div>

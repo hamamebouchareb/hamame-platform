@@ -1,6 +1,7 @@
 "use client";
 
 import { cx } from "@/lib/cx";
+import { useLanguage } from "@/context/LanguageContext";
 
 export interface AnswerOptionProps {
   optionId: string;
@@ -61,6 +62,7 @@ export function AnswerOption({
   onSelect,
   disabled,
 }: AnswerOptionProps) {
+  const { t } = useLanguage();
   const base =
     "flex min-h-touch-target w-full items-start gap-3 rounded-control border px-4 py-3 text-left text-body transition duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 disabled:opacity-60 disabled:cursor-not-allowed";
 
@@ -116,8 +118,8 @@ export function AnswerOption({
           tabIndex={strikeDisabled ? -1 : 0}
           aria-pressed={!!struck}
           aria-disabled={strikeDisabled}
-          title="Rayer cette réponse"
-          aria-label={struck ? "Annuler le barrage de cette réponse" : "Rayer cette réponse"}
+          title={t("answer.strike")}
+          aria-label={struck ? t("answer.unstrike") : t("answer.strike")}
           onClick={(event) => {
             event.stopPropagation();
             event.preventDefault();

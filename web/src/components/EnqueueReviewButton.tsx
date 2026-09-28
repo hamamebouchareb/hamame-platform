@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/api";
+import { useLanguage } from "@/context/LanguageContext";
 import { useToast } from "@/components/Toast";
 import type { DueReviewItem } from "@/lib/types";
 
@@ -41,6 +42,7 @@ type EnqueueReviewButtonProps = EnqueueTarget & {
  */
 export function EnqueueReviewButton({ variant = "full", ...target }: EnqueueReviewButtonProps) {
   const toast = useToast();
+  const { t } = useLanguage();
   const lessonId = target.lessonId;
   const questionId = target.questionId;
   const [queued, setQueued] = useState(false);
@@ -84,16 +86,16 @@ export function EnqueueReviewButton({ variant = "full", ...target }: EnqueueRevi
         body: JSON.stringify(lessonId !== undefined ? { lessonId } : { questionId }),
       });
       setQueued(true);
-      toast.success({ title: "Ajouté à mes révisions." });
+      toast.success({ title: t("enqueue.added") });
     } catch (err) {
       const message =
-        err instanceof ApiError ? err.message : "Échec de l'ajout. Réessayez.";
+        err instanceof ApiError ? err.message : t("enqueue.addFail");
       setError(message);
       toast.error({ title: message });
     } finally {
       setAdding(false);
     }
-  }, [queued, adding, checking, lessonId, questionId, toast]);
+  }, [queued, adding, checking, lessonId, questionId, toast, t]);
 
   if (variant === "icon") {
     return (
@@ -103,13 +105,13 @@ export function EnqueueReviewButton({ variant = "full", ...target }: EnqueueRevi
         disabled={queued || checking || adding}
         title={
           queued
-            ? "Déjà dans vos révisions"
+            ? t("enqueue.alreadyIn")
             : checking
-              ? "Vérification de vos révisions…"
-              : "Ajouter à mes révisions"
+              ? t("enqueue.checkingLong")
+              : t("enqueue.addShort")
         }
         aria-label={
-          queued ? "Déjà dans vos révisions" : "Ajouter cette question à mes révisions"
+          queued ? t("enqueue.alreadyIn") : t("enqueue.addQuestion")
         }
         aria-pressed={queued}
         className={[
@@ -144,8 +146,8 @@ export function EnqueueReviewButton({ variant = "full", ...target }: EnqueueRevi
         disabled={queued || checking || adding}
         title={
           queued
-            ? "Cette leçon est déjà dans votre file de révision"
-            : "Ajouter cette leçon à votre file de révision"
+            ? t("enqueue.lessonQueued")
+            : t("enqueue.lessonAdd")
         }
         aria-pressed={queued}
         className={[
@@ -155,7 +157,7 @@ export function EnqueueReviewButton({ variant = "full", ...target }: EnqueueRevi
             : "border-border text-text-primary hover:bg-surface-2 active:bg-surface-2",
         ].join(" ")}
       >
-        {checking ? "Vérification…" : adding ? "Ajout…" : queued ? "Dans mes révisions" : "Ajouter à mes révisions"}
+        {checking ? t("enqueue.checking") : adding ? t("enqueue.adding") : queued ? t("enqueue.inReviews") : t("enqueue.addShort")}
       </button>
       {error ? (
         <p role="alert" className="mt-2 text-meta text-danger">

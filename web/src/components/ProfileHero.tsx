@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { cx } from "@/lib/cx";
+import { useLanguage } from "@/context/LanguageContext";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 
 export interface ProfileHeroProps {
@@ -33,9 +34,10 @@ export function ProfileHero({
   ctaHref,
   className,
 }: ProfileHeroProps) {
+  const { t } = useLanguage();
   if (loading) {
     return (
-      <section aria-busy="true" aria-label="Chargement du profil" className={cx("rounded-card-lg bg-surface-2 p-card-padding shadow-card", className)}>
+      <section aria-busy="true" aria-label={t("hero.loading")} className={cx("rounded-card-lg bg-surface-2 p-card-padding shadow-card", className)}>
         {/* Heading must exist in every branch so the page always exposes its h1,
             even transiently while data loads (axe: page-has-heading-one). */}
         <h1 className="sr-only">{greeting}</h1>
@@ -54,14 +56,14 @@ export function ProfileHero({
       <section className={cx("rounded-card-lg bg-surface-2 p-card-padding shadow-card", className)}>
         <div className="flex flex-col gap-3">
           <h1 className="font-display text-h3 font-semibold text-text-primary">{greeting}</h1>
-          <p className="text-body text-danger">Impossible de charger votre score de préparation. {error}</p>
+          <p className="text-body text-danger">{t("hero.scoreError", { error })}</p>
           {onRetry ? (
             <button
               type="button"
               onClick={onRetry}
               className="inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-primary px-4 text-body font-medium text-on-accent transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring sm:w-auto sm:px-5"
             >
-              Réessayer
+              {t("common.retry")}
             </button>
           ) : null}
         </div>
@@ -80,7 +82,7 @@ export function ProfileHero({
               href={ctaHref}
               className="inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-primary px-4 text-body font-medium text-on-accent shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring sm:w-auto sm:px-5"
             >
-              {ctaLabel ?? "Commencez à étudier"}
+              {ctaLabel ?? t("hero.startStudy")}
             </Link>
           ) : null}
         </div>
@@ -97,14 +99,14 @@ export function ProfileHero({
             {score}
             <span className="ml-1 text-h3 font-semibold text-text-secondary">/100</span>
           </p>
-          {scoreLabel ? <p className="mt-1 text-body text-text-secondary">Préparation : {scoreLabel}</p> : null}
+          {scoreLabel ? <p className="mt-1 text-body text-text-secondary">{t("hero.prep", { label: scoreLabel })}</p> : null}
         </div>
         {ctaHref ? (
           <Link
             href={ctaHref}
             className="inline-flex min-h-touch-target items-center justify-center rounded-control bg-accent-primary px-5 text-body font-medium text-on-accent shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
           >
-            {ctaLabel ?? "Reprendre l'étude"}
+            {ctaLabel ?? t("dashboard.resume")}
           </Link>
         ) : null}
       </div>

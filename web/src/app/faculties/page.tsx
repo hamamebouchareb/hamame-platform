@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { useApiResource } from "@/lib/useApiResource";
 import { useApiList } from "@/lib/useApiList";
@@ -11,14 +12,11 @@ import { accentText, accentVar } from "@/components/FeatureCard";
 import type { Faculty, Year } from "@/lib/types";
 import { cx } from "@/lib/cx";
 
-function plural(count: number, singular: string): string {
-  return `${count} ${count === 1 ? singular : `${singular}s`}`;
-}
-
 export default function FacultiesPage() {
   const { logout } = useAuth();
   const router = useRouter();
   const { user, isHydrated } = useRequireAuth();
+  const { t } = useLanguage();
 
   const { data, error, isLoading, refetch } = useApiResource<{ faculties: Faculty[] }>(
     isHydrated && user ? "/faculties" : null
@@ -38,7 +36,7 @@ export default function FacultiesPage() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <LoadingSkeleton className="h-8 w-48" ariaLabel="Chargement" />
+        <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
       </main>
     );
   }
@@ -53,28 +51,27 @@ export default function FacultiesPage() {
       <AppHeader user={user} onLogout={handleLogout} />
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-card-padding py-section-gap">
-        <section aria-label="Présentation de la bibliothèque" className="mx-auto max-w-3xl text-center">
-          <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">Catalogue des cours</p>
+        <section aria-label={t("library.heroAria")} className="mx-auto max-w-3xl text-center">
+          <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">{t("library.kicker")}</p>
           <h1 className="mt-2 font-display text-hero font-bold leading-tight text-text-primary">
-            La bibliothèque de cours
+            {t("library.title")}
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-body text-text-secondary">
-            Les programmes officiels des facultés de médecine et de pharmacie, organisés par année, module et unité.
-            Tous les cours sont gratuits pour les membres inscrits.
+            {t("library.subtitle")}
           </p>
         </section>
 
         {myFaculty ? (
-          <section aria-label="Ma filière" className="mx-auto mt-section-gap max-w-4xl">
+          <section aria-label={t("library.myTrack")} className="mx-auto mt-section-gap max-w-4xl">
             <Link
               href={myYear ? `/years/${myYear.id}/modules` : `/faculties/${myFaculty.id}/years`}
               className="group flex flex-col gap-2 rounded-card-lg border border-border bg-surface-2 p-card-padding shadow-card transition hover:border-border-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
               style={{ borderTop: `3px solid ${accentVar("library")}`, boxShadow: "0 0 28px color-mix(in srgb, var(--color-accent-library) 12%, transparent)" }}
             >
               <div className="flex items-center justify-between gap-3">
-                <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">Ma filière</p>
+                <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">{t("library.myTrack")}</p>
                 <span className="rounded-pill border border-accent-library/40 bg-accent-library/15 px-2.5 py-0.5 text-caption font-medium text-accent-soft">
-                  Votre parcours
+                  {t("library.yourPath")}
                 </span>
               </div>
               <h2 className={cx("font-display text-h2 font-semibold", accentText("library"))}>
@@ -82,11 +79,11 @@ export default function FacultiesPage() {
               </h2>
               <p className="text-body text-text-secondary">
                 {myYear
-                  ? "Reprenez vos modules et suivez votre progression sur votre année."
-                  : "Choisissez votre année pour retrouver vos modules."}
+                  ? t("library.resumeDesc")
+                  : t("library.needYearDesc")}
               </p>
               <span className="mt-1 inline-flex min-h-touch-target w-fit items-center justify-center gap-2 rounded-control px-5 text-body font-semibold text-background transition group-hover:brightness-110 active:scale-[0.98]">
-                {myYear ? "Reprendre mes cours" : "Choisir mon année"}
+                {myYear ? t("library.resumeCourses") : t("library.chooseYear")}
                 <span aria-hidden className="transition-transform group-hover:translate-x-1">
                   →
                 </span>
@@ -94,27 +91,27 @@ export default function FacultiesPage() {
             </Link>
           </section>
         ) : (
-          <section aria-label="Choix de la filière" className="mx-auto mt-section-gap max-w-4xl">
+          <section aria-label={t("library.pickTrack")} className="mx-auto mt-section-gap max-w-4xl">
             <EmptyState
-              title="Choisissez votre filière"
-              description="Indiquez votre faculté et votre année dans vos paramètres pour accéder directement à votre programme."
-              action={{ label: "Compléter mon profil", href: "/settings" }}
+              title={t("library.pickTitle")}
+              description={t("library.pickDesc")}
+              action={{ label: t("library.completeProfile"), href: "/settings" }}
             />
           </section>
         )}
 
-        <section aria-label="Toutes les facultés" className="mx-auto mt-section-gap max-w-4xl">
+        <section aria-label={t("library.allFaculties")} className="mx-auto mt-section-gap max-w-4xl">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="font-display text-h3 font-semibold text-text-primary">Toutes les facultés</h2>
+            <h2 className="font-display text-h3 font-semibold text-text-primary">{t("library.allFaculties")}</h2>
             <p className="text-meta text-text-tertiary">
-              {isLoading ? "Chargement..." : plural(faculties.length, "faculté disponible")}
+              {isLoading ? t("common.loadingMore") : t(faculties.length === 1 ? "library.facultiesOne" : "library.facultiesMany", { count: faculties.length })}
             </p>
           </div>
 
           {isLoading ? (
             <div className="mt-4 grid gap-card-gap sm:grid-cols-2 lg:grid-cols-3">
               {[0, 1, 2].map((i) => (
-                <LoadingSkeleton key={i} className="h-28 w-full rounded-card" ariaLabel={i === 0 ? "Chargement des facultés" : undefined} />
+                <LoadingSkeleton key={i} className="h-28 w-full rounded-card" ariaLabel={i === 0 ? t("library.loadingFaculties") : undefined} />
               ))}
             </div>
           ) : null}
@@ -128,7 +125,7 @@ export default function FacultiesPage() {
                 onClick={refetch}
                 className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 sm:w-auto"
               >
-                Réessayer
+                {t("common.retry")}
               </button>
             </div>
           ) : null}
@@ -136,9 +133,9 @@ export default function FacultiesPage() {
           {!isLoading && !error && faculties.length === 0 ? (
             <div className="mt-4">
               <EmptyState
-                title="Aucune faculté disponible"
-                description="Le catalogue n'est pas encore publié. Revenez plus tard ou lancez une session QCM."
-                action={{ label: "Créer une session QCM", href: "/qcm" }}
+                title={t("library.noFaculty")}
+                description={t("library.noFacultyDesc")}
+                action={{ label: t("dashboard.createQcm"), href: "/qcm" }}
               />
             </div>
           ) : null}
@@ -155,18 +152,18 @@ export default function FacultiesPage() {
                     tone="library"
                     description={
                       yearsLoading && yearCount === undefined
-                        ? "Chargement des années…"
-                        : plural(yearCount ?? 0, "année")
+                        ? t("library.loadingYears")
+                        : t((yearCount ?? 0) === 1 ? "library.yearsOne" : "library.yearsMany", { count: yearCount ?? 0 })
                     }
-                    actionLabel="Explorer"
+                    actionLabel={t("library.explore")}
                     meta={
                       isMine ? (
                           <span className="rounded-pill border border-accent-library/40 bg-accent-library/15 px-2 py-0.5 font-medium text-accent-soft">
-                          Votre filière
+                          {t("library.mineBadge")}
                         </span>
                       ) : (
                         <span className="rounded-pill border border-success/40 bg-success/15 px-2 py-0.5 font-medium text-success">
-                          Disponible
+                          {t("library.availableBadge")}
                         </span>
                       )
                     }
@@ -178,7 +175,7 @@ export default function FacultiesPage() {
         </section>
 
         <p className="mt-section-gap text-center text-meta text-text-tertiary">
-          Le catalogue est entièrement gratuit pour tous les membres — aucun abonnement requis pour accéder aux cours.
+          {t("library.footnote")}
         </p>
       </main>
 

@@ -4,15 +4,12 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { useApiResource } from "@/lib/useApiResource";
 import { useApiList } from "@/lib/useApiList";
 import { AppHeader, Footer, CourseCard, CurriculumToolbar, EmptyState, LoadingSkeleton } from "@/components";
 import type { CurriculumModule, Faculty, Year } from "@/lib/types";
-
-function plural(count: number, singular: string): string {
-  return `${count} ${count === 1 ? singular : `${singular}s`}`;
-}
 
 type SortValue = "az" | "za" | "recent";
 
@@ -21,6 +18,7 @@ export default function FacultyYearsPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const { user, isHydrated } = useRequireAuth();
+  const { t } = useLanguage();
 
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortValue>("az");
@@ -70,7 +68,7 @@ export default function FacultyYearsPage() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <LoadingSkeleton className="h-8 w-48" ariaLabel="Chargement" />
+        <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
       </main>
     );
   }
@@ -86,18 +84,18 @@ export default function FacultyYearsPage() {
           href="/faculties"
           className="inline-flex min-h-touch-target items-center gap-1 text-meta font-medium text-text-secondary transition hover:text-accent-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
         >
-          <span aria-hidden>←</span> Bibliothèque
+          <span aria-hidden>←</span> {t("nav.library")}
         </Link>
 
         <header className="mt-2">
           <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">
-            {facultyName ?? "Filière"}
+            {facultyName ?? t("years.trackFallback")}
           </p>
           <h1 className="mt-1 font-display text-hero font-bold leading-tight text-text-primary">
-            {facultyName ? `${facultyName} — Années` : "Années"}
+            {facultyName ? t("years.titleWith", { name: facultyName }) : t("years.title")}
           </h1>
           <p className="mt-2 text-body text-text-secondary">
-            Choisissez votre année pour retrouver les modules du programme.
+            {t("years.subtitle")}
           </p>
         </header>
 
@@ -107,20 +105,20 @@ export default function FacultyYearsPage() {
           totalCount={years.length}
           searchValue={search}
           onSearchChange={setSearch}
-          searchPlaceholder="Rechercher une année…"
+          searchPlaceholder={t("years.searchPh")}
           sortValue={sort}
           onSortChange={(value) => setSort(value as SortValue)}
           sortOptions={[
-            { value: "az", label: "Tri alphabétique A → Z" },
-            { value: "za", label: "Tri alphabétique Z → A" },
-            { value: "recent", label: "Plus récentes" },
+            { value: "az", label: t("years.sortAz") },
+            { value: "za", label: t("years.sortZa") },
+            { value: "recent", label: t("years.sortRecent") },
           ]}
         />
 
         {isLoading ? (
           <div className="mt-4 grid gap-card-gap sm:grid-cols-2">
             {[0, 1].map((i) => (
-              <LoadingSkeleton key={i} className="h-28 w-full rounded-card" ariaLabel={i === 0 ? "Chargement des années" : undefined} />
+              <LoadingSkeleton key={i} className="h-28 w-full rounded-card" ariaLabel={i === 0 ? t("years.loading") : undefined} />
             ))}
           </div>
         ) : null}
@@ -134,7 +132,7 @@ export default function FacultyYearsPage() {
               onClick={refetch}
               className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 sm:w-auto"
             >
-              Réessayer
+              {t("common.retry")}
             </button>
           </div>
         ) : null}
@@ -142,9 +140,9 @@ export default function FacultyYearsPage() {
         {!isLoading && !error && years.length === 0 ? (
           <div className="mt-4">
             <EmptyState
-              title="Aucune année disponible"
-              description="Cette faculté n'a pas encore d'années publiées."
-              action={{ label: "Retour à la bibliothèque", href: "/faculties" }}
+              title={t("years.empty")}
+              description={t("years.emptyDesc")}
+              action={{ label: t("years.backToLibrary"), href: "/faculties" }}
             />
           </div>
         ) : null}
@@ -152,10 +150,10 @@ export default function FacultyYearsPage() {
         {!isLoading && !error && years.length > 0 && visibleYears.length === 0 ? (
           <div className="mt-4">
             <EmptyState
-              title="Aucune année ne correspond"
-              description="Modifiez la recherche ou réinitialisez les filtres pour revoir toutes les années."
+              title={t("years.noMatch")}
+              description={t("years.noMatchDesc")}
               action={{
-                label: "Réinitialiser les filtres",
+                label: t("years.resetFilters"),
                 onClick: () => {
                   setSearch("");
                   setSort("az");
@@ -176,18 +174,18 @@ export default function FacultyYearsPage() {
                   tone="library"
                   description={
                     modulesLoading && moduleCount === undefined
-                      ? "Chargement des modules…"
-                      : plural(moduleCount ?? 0, "module")
+                      ? t("years.loadingModules")
+                      : t((moduleCount ?? 0) === 1 ? "years.modulesOne" : "years.modulesMany", { count: moduleCount ?? 0 })
                   }
-                  actionLabel="Explorer"
+                  actionLabel={t("library.explore")}
                   meta={
                     isMyYear(year) ? (
                         <span className="rounded-pill border border-accent-library/40 bg-accent-library/15 px-2 py-0.5 font-medium text-accent-soft">
-                        Votre année
+                        {t("years.myYear")}
                       </span>
                     ) : (
                       <span className="rounded-pill border border-success/40 bg-success/15 px-2 py-0.5 font-medium text-success">
-                        Disponible
+                        {t("library.availableBadge")}
                       </span>
                     )
                   }
@@ -198,7 +196,7 @@ export default function FacultyYearsPage() {
         </ul>
 
         <p className="mt-6 text-center text-meta text-text-tertiary">
-          Sélectionnez votre année pour ne pas la perdre de vue : vos modules suivent votre progression.
+          {t("years.footnote")}
         </p>
       </main>
 

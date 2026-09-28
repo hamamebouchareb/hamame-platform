@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
+import { localeFor, type UiLanguage } from "@/lib/i18n";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { apiFetch, ApiError } from "@/lib/api";
 import { AppHeader, BackLink, EmptyState, Footer, LoadingSkeleton } from "@/components";
@@ -16,8 +18,8 @@ interface HistoryResponse {
   pagination: { page: number; limit: number; total: number };
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString("fr-DZ", {
+function formatDate(iso: string, lang: UiLanguage): string {
+  return new Date(iso).toLocaleString(localeFor(lang), {
     dateStyle: "medium",
     timeStyle: "short",
   });
@@ -32,6 +34,7 @@ export default function HistoryPage() {
   const router = useRouter();
   const { logout } = useAuth();
   const { user, isHydrated } = useRequireAuth();
+  const { lang, t } = useLanguage();
 
   const [sessions, setSessions] = useState<SessionHistoryEntry[]>([]);
   const [page, setPage] = useState(0);
@@ -54,11 +57,11 @@ export default function HistoryPage() {
       setPage(response.pagination.page);
       setTotal(response.pagination.total);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Impossible de charger l'historique. Réessayez.");
+      setError(err instanceof ApiError ? err.message : t("history.loadError"));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -87,13 +90,13 @@ export default function HistoryPage() {
     const map = new Map<string, SessionHistoryEntry[]>();
     for (const session of sessions) {
       const first = session.units[0];
-      const key = first ? `${first.facultyName} · ${first.yearLabel}` : "Autres sessions";
+      const key = first ? `${first.facultyName} · ${first.yearLabel}` : t("history.others");
       const list = map.get(key) ?? [];
       list.push(session);
       map.set(key, list);
     }
     return [...map.entries()];
-  }, [sessions]);
+  }, [sessions, t]);
 
   function handleLogout() {
     logout();
@@ -103,7 +106,7 @@ export default function HistoryPage() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <LoadingSkeleton className="h-8 w-48" ariaLabel="Chargement" />
+        <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
       </main>
     );
   }
@@ -116,24 +119,23 @@ export default function HistoryPage() {
       <AppHeader user={user} onLogout={handleLogout} />
 
       <main className="mx-auto w-full max-w-2xl flex-1 px-card-padding py-section-gap">
-        <BackLink href="/dashboard">Retour au tableau de bord</BackLink>
-        <h1 className="mt-2 font-display text-h1 font-bold text-text-primary">Historique des sessions</h1>
+        <BackLink href="/dashboard">{t("classement.backToDashboard")}</BackLink>
+        <h1 className="mt-2 font-display text-h1 font-bold text-text-primary">{t("history.title")}</h1>
         <p className="mt-2 text-body text-text-secondary">
-          Toutes vos sessions, groupées par faculté et année, avec la progression par unité.
-          Reprenez une session en cours ou revoyez une session terminée.
+          {t("history.subtitle")}
         </p>
 
         {/* P12 cheap simulations history: mode tabs on the same endpoint. */}
-        <div className="mt-4 flex gap-2" role="group" aria-label="Filtrer par mode">
+        <div className="mt-4 flex gap-2" role="group" aria-label={t("history.filterMode")}>
           {(
             [
-              { value: "", label: "Toutes" },
-              { value: "practice", label: "Entraînements" },
-              { value: "exam", label: "Examens" },
+              { value: "", labelKey: "history.tabAll" },
+              { value: "practice", labelKey: "history.tabPractice" },
+              { value: "exam", labelKey: "history.tabExams" },
             ] as const
           ).map((tab) => (
             <button
-              key={tab.label}
+              key={tab.labelKey}
               type="button"
               onClick={() => handleModeChange(tab.value)}
               aria-pressed={modeFilter === tab.value}
@@ -144,7 +146,7 @@ export default function HistoryPage() {
                   : "border-border text-text-secondary hover:bg-surface-2",
               ].join(" ")}
             >
-              {tab.label}
+              {t(tab.labelKey)}
             </button>
           ))}
         </div>
@@ -159,7 +161,7 @@ export default function HistoryPage() {
               onClick={() => loadPage(page === 0 ? 1 : page, modeFilter)}
               className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 sm:w-auto"
             >
-              Réessayer
+              {t("common.retry")}
             </button>
           </div>
         ) : null}
@@ -167,13 +169,9 @@ export default function HistoryPage() {
         {isEmpty ? (
           <div className="mt-section-gap">
             <EmptyState
-              title={modeFilter === "exam" ? "Aucun examen pour l'instant" : "Aucune session pour l'instant"}
-              description={
-                modeFilter === "exam"
-                  ? "Lancez un examen chronométré depuis la banque QCM pour le retrouver ici."
-                  : "Lancez votre première session QCM pour la retrouver ici avec votre progression."
-              }
-              action={{ label: "Créer une session QCM", href: "/qcm" }}
+              title={t(modeFilter === "exam" ? "history.emptyExam" : "history.emptySessions")}
+              description={t(modeFilter === "exam" ? "history.emptyExamDesc" : "history.emptySessionsDesc")}
+              action={{ label: t("dashboard.createQcm"), href: "/qcm" }}
             />
           </div>
         ) : null}
@@ -194,8 +192,8 @@ export default function HistoryPage() {
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h2 className="font-display text-h3 font-semibold text-text-primary">{groupLabel}</h2>
               <p className="text-meta tabular-nums text-text-tertiary">
-                {groupSessions.length} session{groupSessions.length === 1 ? "" : "s"} ·{" "}
-                {accuracy(groupAnswered, groupCorrect)} global
+                {t(groupSessions.length === 1 ? "history.groupOne" : "history.groupMany", { count: groupSessions.length })} ·{" "}
+                {accuracy(groupAnswered, groupCorrect)} {t("history.groupOverall")}
               </p>
             </div>
             <ul className="mt-3 flex flex-col gap-3">
@@ -209,15 +207,15 @@ export default function HistoryPage() {
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <p className="text-body font-semibold text-text-primary">{session.name}</p>
                       <p className="text-meta text-text-tertiary">
-                        {session.mode === "exam" ? "Examen" : "Entraînement"} · {formatDate(session.startedAt)}
+                        {session.mode === "exam" ? t("builder.nameExam") : t("builder.namePractice")} · {formatDate(session.startedAt, lang)}
                       </p>
                     </div>
                     <p className="mt-1 text-meta text-text-secondary">
-                      {session.stats.answered}/{session.stats.total} répondues
+                      {t("history.answered", { a: session.stats.answered, t: session.stats.total })}
                       {" · "}
-                      Précision {accuracy(session.stats.answered, session.stats.correct)}
-                      {completed && session.score !== null ? ` · Score ${Math.round(session.score)} %` : null}
-                      {completed ? " · Terminée" : " · En cours"}
+                      {t("history.accuracy", { v: accuracy(session.stats.answered, session.stats.correct) })}
+                      {completed && session.score !== null ? ` · ${t("history.score", { v: Math.round(session.score) })}` : null}
+                      {completed ? ` · ${t("history.done")}` : ` · ${t("dashboard.inProgress")}`}
                     </p>
                     {session.units.length > 0 ? (
                       <ul className="mt-2 flex flex-col gap-1 border-t border-border pt-2">
@@ -240,7 +238,7 @@ export default function HistoryPage() {
                       href={completed ? `/sessions/${session.id}/results` : `/sessions/${session.id}`}
                       className="mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
                     >
-                      {completed ? "Revoir" : "Continuer"}
+                      {completed ? t("history.review") : t("history.continue")}
                     </Link>
                     </li>
                   );
@@ -257,7 +255,7 @@ export default function HistoryPage() {
             disabled={isLoading}
             className="mt-4 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-60 sm:w-auto"
           >
-            {isLoading ? "Chargement..." : "Charger plus"}
+            {isLoading ? t("common.loadingMore") : t("history.loadMore")}
           </button>
         ) : null}
       </main>

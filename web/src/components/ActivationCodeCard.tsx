@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { apiFetch, ApiError } from "@/lib/api";
+import { useLanguage } from "@/context/LanguageContext";
 import { useToast } from "@/components/Toast";
 import { cx } from "@/lib/cx";
 
@@ -18,6 +19,7 @@ interface UnlockedInfo {
  */
 export function ActivationCodeCard({ onRedeemed, className }: { onRedeemed?: () => void; className?: string }) {
   const toast = useToast();
+  const { t } = useLanguage();
   const [code, setCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,10 +37,10 @@ export function ActivationCodeCard({ onRedeemed, className }: { onRedeemed?: () 
       });
       setUnlocked(data.unlocked);
       setCode("");
-      toast.success({ title: "Code activé — accès Premium accordé." });
+      toast.success({ title: t("activation.success") });
       onRedeemed?.();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Impossible d'activer ce code. Réessayez.");
+      setError(err instanceof ApiError ? err.message : t("activation.fail"));
     } finally {
       setSubmitting(false);
     }
@@ -46,21 +48,19 @@ export function ActivationCodeCard({ onRedeemed, className }: { onRedeemed?: () 
 
   return (
     <section
-      aria-label="Activer un code"
+      aria-label={t("activation.title")}
       className={cx("rounded-card border border-border bg-surface-1 p-card-padding shadow-card", className)}
     >
-      <h2 className="font-display text-h3 font-semibold text-text-primary">Activer un code</h2>
+      <h2 className="font-display text-h3 font-semibold text-text-primary">{t("activation.title")}</h2>
       <p className="mt-1 text-meta text-text-secondary">
-        Un code d&apos;activation vous a été remis après confirmation de paiement ? Saisissez-le ici pour
-        débloquer le contenu Premium de votre filière.
+        {t("activation.desc")}
       </p>
       {/* P15 year-context hint: a code always unlocks exactly one faculty-year
           (shown back after redemption below). The backend cannot reveal what an
           unredeemed code unlocks — a pre-entry lookup would be a code-validity
           oracle — so this states the rule up front instead of faking it. */}
       <p className="mt-2 text-meta text-text-tertiary">
-        Chaque code débloque une seule filière-année. Après activation, la filière et l&apos;année
-        débloquées s&apos;affichent ici même.
+        {t("activation.hint")}
       </p>
 
       {unlocked ? (
@@ -68,12 +68,12 @@ export function ActivationCodeCard({ onRedeemed, className }: { onRedeemed?: () 
           role="status"
           className="mt-3 rounded-panel border border-success/30 bg-success/10 px-3 py-2 text-body text-success"
         >
-          Accès Premium débloqué : {unlocked.faculty} — {unlocked.year}.
+          {t("activation.unlocked", { f: unlocked.faculty, y: unlocked.year })}
         </p>
       ) : (
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <label htmlFor="activation-code" className="sr-only">
-            Code d&apos;activation
+            {t("activation.codeSr")}
           </label>
           <input
             id="activation-code"
@@ -93,7 +93,7 @@ export function ActivationCodeCard({ onRedeemed, className }: { onRedeemed?: () 
             disabled={submitting || !code.trim()}
             className="inline-flex h-11 shrink-0 items-center justify-center rounded-control bg-accent-primary px-5 text-body font-medium text-on-accent shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none"
           >
-            {submitting ? "Activation..." : "Activer"}
+            {submitting ? t("activation.submitting") : t("activation.submit")}
           </button>
         </div>
       )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { cx } from "@/lib/cx";
+import { useLanguage } from "@/context/LanguageContext";
 import { EmptyState, type EmptyStateAction } from "@/components/EmptyState";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 
@@ -35,13 +36,14 @@ export function FriendsPanel({
   error,
   onRetry,
   emptyAction,
-  emptyTitle = "Pas encore d'amis",
+  emptyTitle,
   emptyDescription,
   className,
 }: FriendsPanelProps) {
+  const { t } = useLanguage();
   return (
     <section className={cx("rounded-card border border-border bg-surface-1 p-card-padding shadow-card", className)}>
-      <p className="text-meta font-medium uppercase tracking-wide text-text-secondary">Amis</p>
+      <p className="text-meta font-medium uppercase tracking-wide text-text-secondary">{t("profile.friends")}</p>
 
       {loading ? (
         <div className="mt-2 flex flex-col gap-2" aria-busy="true">
@@ -58,16 +60,16 @@ export function FriendsPanel({
               onClick={onRetry}
               className="mt-2 inline-flex min-h-touch-target items-center justify-center rounded-control border border-border px-3 text-meta font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
             >
-              Réessayer
+              {t("common.retry")}
             </button>
           ) : null}
         </div>
       ) : friends.length === 0 ? (
         <div className="mt-3">
           <EmptyState
-            title={emptyTitle}
+            title={emptyTitle ?? t("dashboard.noFriends")}
             description={emptyDescription}
-            action={emptyAction ?? { label: "Bientôt disponible", disabled: true }}
+            action={emptyAction ?? { label: t("friendsPanel.soon"), disabled: true }}
           />
         </div>
       ) : (

@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRequireAuth } from "@/lib/useRequireAuth";
+import { useLanguage } from "@/context/LanguageContext";
 import { useApiResource } from "@/lib/useApiResource";
 import { apiFetch, ApiError } from "@/lib/api";
 import type { ContributorStats, LessonDraft, LessonVersionDraft, QuestionDraft } from "@/lib/types";
@@ -23,26 +24,34 @@ function emptyOptionRows(): OptionRow[] {
   return [{ bodyText: "", isCorrect: false }, { bodyText: "", isCorrect: false }];
 }
 
-function errorMessage(err: unknown): string {
-  return err instanceof ApiError ? err.message : "Something went wrong. Please try again.";
+function errorMessage(
+  err: unknown,
+  t: (key: "auth.genericError") => string
+): string {
+  return err instanceof ApiError ? err.message : t("auth.genericError");
 }
 
-function statLabel(status: string): string {
+type StatLabelT = (
+  key: "authoring.statusDraft" | "authoring.statusPending" | "authoring.statusApproved" | "authoring.statusRejected"
+) => string;
+
+function statLabel(status: string, t: StatLabelT): string {
   switch (status) {
     case "draft":
-      return "Draft";
+      return t("authoring.statusDraft");
     case "pending_review":
-      return "Pending Review";
+      return t("authoring.statusPending");
     case "approved":
-      return "Approved";
+      return t("authoring.statusApproved");
     case "rejected":
-      return "Rejected";
+      return t("authoring.statusRejected");
     default:
       return status;
   }
 }
 
 function StatCards({ title, counts }: { title: string; counts: ContributorStats["lessons"] }) {
+  const { t } = useLanguage();
   return (
     <div>
       <p className="text-sm font-medium text-gray-700">{title}</p>
@@ -50,7 +59,7 @@ function StatCards({ title, counts }: { title: string; counts: ContributorStats[
         {(["draft", "pending_review", "approved", "rejected"] as const).map((status) => (
           <div key={status} className="rounded-lg border border-gray-200 bg-white px-2 py-3 text-center">
             <p className="text-xl font-semibold text-gray-900">{counts[status]}</p>
-            <p className="mt-1 text-xs text-gray-500">{statLabel(status)}</p>
+            <p className="mt-1 text-xs text-gray-500">{statLabel(status, t)}</p>
           </div>
         ))}
       </div>
@@ -59,6 +68,7 @@ function StatCards({ title, counts }: { title: string; counts: ContributorStats[
 }
 
 function LessonForm() {
+  const { t } = useLanguage();
   const [unitId, setUnitId] = useState("");
   const [title, setTitle] = useState("");
   const [contentTier, setContentTier] = useState<(typeof CONTENT_TIERS)[number]>(CONTENT_TIERS[0]);
@@ -91,7 +101,7 @@ function LessonForm() {
       setContentTier(CONTENT_TIERS[0]);
       setBody("");
     } catch (err) {
-      setError(errorMessage(err));
+      setError(errorMessage(err, t));
     } finally {
       setIsSubmitting(false);
     }
@@ -108,7 +118,7 @@ function LessonForm() {
       );
       setCreated((prev) => (prev ? { ...prev, version: data.version } : prev));
     } catch (err) {
-      setSubmitForReviewError(errorMessage(err));
+      setSubmitForReviewError(errorMessage(err, t));
     } finally {
       setIsSubmittingForReview(false);
     }
@@ -116,12 +126,12 @@ function LessonForm() {
 
   return (
     <section className="rounded-lg border border-gray-200 bg-white px-4 py-4">
-      <h3 className="text-base font-semibold text-gray-900">New Lesson Draft</h3>
+      <h3 className="text-base font-semibold text-gray-900">{t("authoring.lessonForm")}</h3>
 
       <form onSubmit={handleCreateDraft} className="mt-3 flex flex-col gap-3">
         <div>
           <label htmlFor="lesson-unit-id" className="block text-sm font-medium text-gray-700">
-            Unit ID
+            {t("authoring.unitId")}
           </label>
           <input
             id="lesson-unit-id"
@@ -129,14 +139,14 @@ function LessonForm() {
             required
             value={unitId}
             onChange={(e) => setUnitId(e.target.value)}
-            placeholder="Paste a unit UUID"
+            placeholder={t("authoring.pasteUuid")}
             className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
           />
         </div>
 
         <div>
           <label htmlFor="lesson-title" className="block text-sm font-medium text-gray-700">
-            Title
+            {t("authoring.titleLabel")}
           </label>
           <input
             id="lesson-title"
@@ -150,7 +160,7 @@ function LessonForm() {
 
         <div>
           <label htmlFor="lesson-content-tier" className="block text-sm font-medium text-gray-700">
-            Content Tier
+            {t("authoring.tierLabel")}
           </label>
           <select
             id="lesson-content-tier"
@@ -168,7 +178,7 @@ function LessonForm() {
 
         <div>
           <label htmlFor="lesson-body" className="block text-sm font-medium text-gray-700">
-            Body
+            {t("authoring.bodyLabel")}
           </label>
           <textarea
             id="lesson-body"
@@ -187,7 +197,7 @@ function LessonForm() {
           disabled={isSubmitting}
           className="w-full rounded-lg bg-blue-600 px-4 py-3 text-base font-medium text-white transition hover:bg-blue-700 disabled:opacity-60"
         >
-          {isSubmitting ? "Creating..." : "Create Draft"}
+          {isSubmitting ? t("authoring.creating") : t("authoring.createDraft")}
         </button>
       </form>
 
@@ -195,7 +205,7 @@ function LessonForm() {
         <div className="mt-4 rounded-lg bg-green-50 px-3 py-3">
           <p className="text-sm font-medium text-gray-900">{created.lesson.title}</p>
           <p className="mt-1 text-xs text-gray-600">
-            Status: {statLabel(created.version.status)} · Version ID: {created.version.id}
+            {t("authoring.statusLine", { s: statLabel(created.version.status, t), id: created.version.id })}
           </p>
 
           {created.version.status !== "pending_review" && (
@@ -205,7 +215,7 @@ function LessonForm() {
               disabled={isSubmittingForReview}
               className="mt-3 w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-900 transition hover:bg-gray-50 disabled:opacity-60"
             >
-              {isSubmittingForReview ? "Submitting..." : "Submit for Review"}
+              {isSubmittingForReview ? t("authoring.submitting") : t("authoring.submitReview")}
             </button>
           )}
 
@@ -219,6 +229,7 @@ function LessonForm() {
 }
 
 function QuestionForm() {
+  const { t } = useLanguage();
   const [unitId, setUnitId] = useState("");
   const [type, setType] = useState<QuestionType>("QCM");
   const [source, setSource] = useState<(typeof QUESTION_SOURCES)[number]>(QUESTION_SOURCES[0]);
@@ -252,7 +263,7 @@ function QuestionForm() {
     setError(null);
 
     if (showOptions && options.some((row) => row.bodyText.trim().length === 0)) {
-      setError("Every option needs text.");
+      setError(t("authoring.everyOption"));
       return;
     }
 
@@ -285,7 +296,7 @@ function QuestionForm() {
       setExplanation("");
       setOptions(emptyOptionRows());
     } catch (err) {
-      setError(errorMessage(err));
+      setError(errorMessage(err, t));
     } finally {
       setIsSubmitting(false);
     }
@@ -301,7 +312,7 @@ function QuestionForm() {
       });
       setCreated(data.question);
     } catch (err) {
-      setSubmitForReviewError(errorMessage(err));
+      setSubmitForReviewError(errorMessage(err, t));
     } finally {
       setIsSubmittingForReview(false);
     }
@@ -309,12 +320,12 @@ function QuestionForm() {
 
   return (
     <section className="rounded-lg border border-gray-200 bg-white px-4 py-4">
-      <h3 className="text-base font-semibold text-gray-900">New Question Draft</h3>
+      <h3 className="text-base font-semibold text-gray-900">{t("authoring.questionForm")}</h3>
 
       <form onSubmit={handleCreateDraft} className="mt-3 flex flex-col gap-3">
         <div>
           <label htmlFor="question-unit-id" className="block text-sm font-medium text-gray-700">
-            Unit ID
+            {t("authoring.unitId")}
           </label>
           <input
             id="question-unit-id"
@@ -322,7 +333,7 @@ function QuestionForm() {
             required
             value={unitId}
             onChange={(e) => setUnitId(e.target.value)}
-            placeholder="Paste a unit UUID"
+            placeholder={t("authoring.pasteUuid")}
             className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
           />
         </div>
@@ -367,7 +378,7 @@ function QuestionForm() {
 
         <div>
           <label htmlFor="question-body" className="block text-sm font-medium text-gray-700">
-            Question Body
+            {t("authoring.bodyQ")}
           </label>
           <textarea
             id="question-body"
@@ -381,7 +392,7 @@ function QuestionForm() {
 
         <div>
           <label htmlFor="question-explanation" className="block text-sm font-medium text-gray-700">
-            Explanation
+            {t("authoring.explanation")}
           </label>
           <textarea
             id="question-explanation"
@@ -403,7 +414,7 @@ function QuestionForm() {
                     type="checkbox"
                     checked={row.isCorrect}
                     onChange={(e) => updateOption(index, { isCorrect: e.target.checked })}
-                    title="Correct answer"
+                    title={t("authoring.correctTitle")}
                     className="h-4 w-4"
                   />
                   <input
@@ -420,7 +431,7 @@ function QuestionForm() {
                       onClick={() => removeOption(index)}
                       className="rounded-lg border border-gray-300 px-2 py-2 text-xs font-medium text-gray-600 transition hover:bg-gray-50"
                     >
-                      Remove
+                      {t("authoring.remove")}
                     </button>
                   )}
                 </div>
@@ -431,7 +442,7 @@ function QuestionForm() {
               onClick={addOption}
               className="mt-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-900 transition hover:bg-gray-50"
             >
-              Add Option
+              {t("authoring.addOption")}
             </button>
           </div>
         )}
@@ -443,14 +454,14 @@ function QuestionForm() {
           disabled={isSubmitting}
           className="w-full rounded-lg bg-blue-600 px-4 py-3 text-base font-medium text-white transition hover:bg-blue-700 disabled:opacity-60"
         >
-          {isSubmitting ? "Creating..." : "Create Draft"}
+          {isSubmitting ? t("authoring.creating") : t("authoring.createDraft")}
         </button>
       </form>
 
       {created && (
         <div className="mt-4 rounded-lg bg-green-50 px-3 py-3">
           <p className="text-sm font-medium text-gray-900">
-            {created.type} question — Status: {statLabel(created.status)}
+            {t("authoring.createdLine", { type: created.type, s: statLabel(created.status, t) })}
           </p>
           <p className="mt-1 text-xs text-gray-600">Question ID: {created.id}</p>
 
@@ -461,7 +472,7 @@ function QuestionForm() {
               disabled={isSubmittingForReview}
               className="mt-3 w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-900 transition hover:bg-gray-50 disabled:opacity-60"
             >
-              {isSubmittingForReview ? "Submitting..." : "Submit for Review"}
+              {isSubmittingForReview ? t("authoring.submitting") : t("authoring.submitReview")}
             </button>
           )}
 
@@ -476,6 +487,7 @@ function QuestionForm() {
 
 export default function AuthoringPage() {
   const { user, isHydrated } = useRequireAuth();
+  const { t } = useLanguage();
   const canFetch = isHydrated && !!user;
 
   const {
@@ -488,7 +500,7 @@ export default function AuthoringPage() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-4">
-        <p className="text-sm text-gray-500">Loading...</p>
+        <p className="text-sm text-gray-500">{t("billing.loading")}</p>
       </main>
     );
   }
@@ -501,13 +513,13 @@ export default function AuthoringPage() {
   if (!canAuthor || statsErrorCode === "FORBIDDEN") {
     return (
       <main className="mx-auto min-h-screen w-full max-w-md px-4 py-8">
-        <h1 className="text-2xl font-semibold text-gray-900">Author Content</h1>
-        <p className="mt-4 text-base text-gray-700">You don&apos;t have permission to access this page.</p>
+        <h1 className="text-2xl font-semibold text-gray-900">{t("authoring.title")}</h1>
+        <p className="mt-4 text-base text-gray-700">{t("authoring.deniedDesc")}</p>
         <Link
           href="/dashboard"
           className="mt-6 block w-full rounded-lg bg-blue-600 px-4 py-3 text-center text-base font-medium text-white transition hover:bg-blue-700"
         >
-          Back to Dashboard
+          {t("authoring.backDashboard")}
         </Link>
       </main>
     );
@@ -515,15 +527,15 @@ export default function AuthoringPage() {
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-md px-4 py-8">
-      <h1 className="text-2xl font-semibold text-gray-900">Author Content</h1>
+      <h1 className="text-2xl font-semibold text-gray-900">{t("authoring.title")}</h1>
 
       <section className="mt-6 flex flex-col gap-4">
-        {statsLoading && <p className="text-sm text-gray-500">Loading your stats...</p>}
+        {statsLoading && <p className="text-sm text-gray-500">{t("authoring.statsLoading")}</p>}
         {statsError && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{statsError}</p>}
         {stats && (
           <>
-            <StatCards title="Lessons" counts={stats.lessons} />
-            <StatCards title="Questions" counts={stats.questions} />
+            <StatCards title={t("authoring.lessonsTitle")} counts={stats.lessons} />
+            <StatCards title={t("authoring.questionsTitle")} counts={stats.questions} />
           </>
         )}
       </section>

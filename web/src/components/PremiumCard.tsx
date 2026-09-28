@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { cx } from "@/lib/cx";
+import { useLanguage } from "@/context/LanguageContext";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 
 export interface PremiumCardProps {
@@ -44,10 +45,11 @@ export function PremiumCard({
   successMessage,
   className,
 }: PremiumCardProps) {
+  const { t } = useLanguage();
   if (status === "loading") {
     return (
       <article className={cx("rounded-card border border-border bg-surface-1 p-card-padding shadow-card", className)}>
-        <LoadingSkeleton className="h-4 w-28" ariaLabel="Chargement de l'abonnement" />
+        <LoadingSkeleton className="h-4 w-28" ariaLabel={t("premium.loading")} />
         <LoadingSkeleton className="mt-3 h-8 w-40" />
         <LoadingSkeleton className="mt-2 h-11 w-full" />
       </article>
@@ -57,15 +59,15 @@ export function PremiumCard({
   if (status === "error") {
     return (
       <article className={cx("rounded-card border border-danger bg-surface-1 p-card-padding shadow-card", className)}>
-        <p className={cx(titleBase, "text-danger")}>Abonnement</p>
-        <p className="mt-1 text-body text-danger">Solde indisponible. {error}</p>
+        <p className={cx(titleBase, "text-danger")}>{t("nav.subscription")}</p>
+        <p className="mt-1 text-body text-danger">{t("dashboard.balanceError", { error: error ?? "" })}</p>
         {onRetry ? (
           <button
             type="button"
             onClick={onRetry}
             className="mt-2 inline-flex min-h-touch-target items-center justify-center rounded-control border border-border px-3 text-meta font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
           >
-            Réessayer
+            {t("common.retry")}
           </button>
         ) : null}
       </article>
@@ -82,20 +84,20 @@ export function PremiumCard({
         className
       )}
     >
-      <p className="text-meta font-medium uppercase tracking-wide text-text-secondary">Abonnement</p>
+      <p className="text-meta font-medium uppercase tracking-wide text-text-secondary">{t("nav.subscription")}</p>
 
       {status === "free" ? (
         <>
-          <p className={cx(titleBase, "mt-2 text-text-primary")}>Plan Gratuit</p>
+          <p className={cx(titleBase, "mt-2 text-text-primary")}>{t("premium.freeTitle")}</p>
           <p className="mt-1 text-meta text-text-secondary">
-            Débloquez l&apos;IA, les examens blancs et les statistiques avancées.
+            {t("premium.freeDesc")}
           </p>
           {upgradeHref ? (
             <Link
               href={upgradeHref}
               className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-secondary px-4 text-body font-medium text-on-accent transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
             >
-              Passer Premium
+              {t("premium.upgrade")}
             </Link>
           ) : onUpgrade ? (
             <button
@@ -103,7 +105,7 @@ export function PremiumCard({
               onClick={onUpgrade}
               className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-secondary px-4 text-body font-medium text-on-accent transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
             >
-              Passer Premium
+              {t("premium.upgrade")}
             </button>
           ) : null}
         </>
@@ -111,9 +113,9 @@ export function PremiumCard({
 
       {status === "active" ? (
         <>
-          <p className={cx(titleBase, "mt-2 text-accent-soft")}>{planName ?? "Plan Premium"}</p>
+          <p className={cx(titleBase, "mt-2 text-accent-soft")}>{planName ?? t("premium.defaultName")}</p>
           {priceLabel ? <p className="mt-1 text-meta text-text-secondary">{priceLabel}</p> : null}
-          {renewsAt ? <p className="mt-1 text-meta text-text-tertiary">Renouvellement le {renewsAt}</p> : null}
+          {renewsAt ? <p className="mt-1 text-meta text-text-tertiary">{t("premium.renews", { date: renewsAt })}</p> : null}
           {onCancel ? (
             <button
               type="button"
@@ -121,7 +123,7 @@ export function PremiumCard({
               disabled={isCancelling}
               className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 disabled:opacity-50 disabled:pointer-events-none"
             >
-              {isCancelling ? "Annulation..." : "Annuler l'abonnement"}
+              {isCancelling ? t("billing.cancelling") : t("billing.cancel")}
             </button>
           ) : null}
         </>
@@ -129,16 +131,16 @@ export function PremiumCard({
 
       {status === "cancelled" ? (
         <>
-          <p className={cx(titleBase, "mt-2 text-text-primary")}>{planName ?? "Plan Premium"} — annulé</p>
+          <p className={cx(titleBase, "mt-2 text-text-primary")}>{planName ?? t("premium.defaultName")} {t("premium.cancelledSuffix")}</p>
           <p className="mt-1 text-meta text-text-secondary">
-            Vous gardez l&apos;accès jusqu&apos;au {cancelsAt ?? renewsAt ?? "fin de période"}, puis retour au Plan Gratuit.
+            {t("premium.cancelledDesc", { date: cancelsAt ?? renewsAt ?? t("premium.noDate") })}
           </p>
           {upgradeHref ? (
             <Link
               href={upgradeHref}
               className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-secondary px-4 text-body font-medium text-on-accent transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
             >
-              Choisir un plan
+              {t("premium.choosePlan")}
             </Link>
           ) : null}
         </>

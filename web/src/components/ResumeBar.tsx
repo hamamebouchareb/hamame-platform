@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { cx } from "@/lib/cx";
+import { useLanguage } from "@/context/LanguageContext";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 
 export interface ResumeBarProps {
@@ -10,7 +11,7 @@ export interface ResumeBarProps {
   /** Optional short context pill (e.g. "3 révisions à faire"). */
   meta?: string;
   metaLoading?: boolean;
-  /** Primary call-to-action label. Defaults to "Reprendre l'étude". */
+  /** Primary call-to-action label. Defaults to the "resume studying" string. */
   primaryLabel?: string;
   primaryHref: string;
   className?: string;
@@ -26,13 +27,15 @@ export function ResumeBar({
   subtitle,
   meta,
   metaLoading,
-  primaryLabel = "Reprendre l'étude",
+  primaryLabel,
   primaryHref,
   className,
 }: ResumeBarProps) {
+  const { t } = useLanguage();
+  const resolvedLabel = primaryLabel ?? t("dashboard.resume");
   return (
     <section
-      aria-label="Reprendre l'étude"
+      aria-label={resolvedLabel}
       className={cx(
         "flex flex-col gap-4 rounded-card-lg border border-border bg-surface-1 p-card-padding shadow-card sm:flex-row sm:items-center sm:justify-between",
         className
@@ -46,7 +49,7 @@ export function ResumeBar({
               {meta}
             </span>
           ) : null}
-          {metaLoading ? <LoadingSkeleton className="h-5 w-24 rounded-pill" ariaLabel="Chargement de la prochaine étape" /> : null}
+          {metaLoading ? <LoadingSkeleton className="h-5 w-24 rounded-pill" ariaLabel={t("resume.loading")} /> : null}
         </p>
         {subtitle ? <p className="mt-1 text-meta text-text-secondary">{subtitle}</p> : null}
       </div>
@@ -55,7 +58,7 @@ export function ResumeBar({
         href={primaryHref}
         className="inline-flex min-h-touch-target w-full shrink-0 items-center justify-center rounded-control bg-accent-primary px-6 text-body font-semibold text-on-accent shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring sm:w-auto"
       >
-        {primaryLabel}
+        {resolvedLabel}
       </Link>
     </section>
   );

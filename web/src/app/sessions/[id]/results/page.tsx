@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useRequireAuth } from "@/lib/useRequireAuth";
+import { useLanguage } from "@/context/LanguageContext";
 import { useApiResource } from "@/lib/useApiResource";
 import { apiFetch, ApiError } from "@/lib/api";
 import { extractParagraphs } from "@/lib/richtext";
@@ -18,6 +19,7 @@ export default function SessionResultsPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const sessionId = params.id;
+  const { t } = useLanguage();
 
   const { data, error, errorCode, isLoading, refetch } = useApiResource<{
     session: SessionSummary;
@@ -79,7 +81,7 @@ export default function SessionResultsPage() {
       ];
 
       if (unitIds.length === 0) {
-        setRedoError("Impossible de cibler les unités des erreurs. Retournez aux modules pour relancer.");
+        setRedoError(t("results.redoError"));
         setIsRedoing(false);
         return;
       }
@@ -87,7 +89,7 @@ export default function SessionResultsPage() {
       const { session } = await apiFetch<{ session: SessionDetail }>("/sessions", {
         method: "POST",
         body: JSON.stringify({
-          name: "Session ciblée — points à revoir",
+          name: t("results.redoName"),
           mode: "practice",
           unitIds,
           size: Math.min(20, Math.max(5, stats.weak.length * 2)),
@@ -95,7 +97,7 @@ export default function SessionResultsPage() {
       });
       router.push(`/sessions/${session.id}`);
     } catch (err) {
-      setRedoError(err instanceof ApiError ? err.message : "Une erreur est survenue. Réessayez.");
+      setRedoError(err instanceof ApiError ? err.message : t("player.submitError"));
       setIsRedoing(false);
     }
   }
@@ -103,7 +105,7 @@ export default function SessionResultsPage() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <p className="text-meta text-text-secondary">Chargement...</p>
+        <p className="text-meta text-text-secondary">{t("common.loadingMore")}</p>
       </main>
     );
   }
@@ -114,7 +116,7 @@ export default function SessionResultsPage() {
 
       <div className="mx-auto max-w-3xl px-card-padding py-section-gap">
         {isLoading && !data && (
-          <div aria-busy aria-label="Chargement des résultats">
+          <div aria-busy aria-label={t("results.loading")}>
             <div className="hamame-skeleton h-10 w-40" />
             <div className="mt-4 hamame-skeleton h-4 w-56" />
             <div className="mt-8 flex gap-3">
@@ -133,7 +135,7 @@ export default function SessionResultsPage() {
                 href={`/sessions/${sessionId}`}
                 className="mt-3 inline-flex min-h-touch-target items-center text-body font-medium text-accent-soft underline"
               >
-                Retour à la session
+                {t("results.backToSession")}
               </Link>
             ) : (
               <button
@@ -141,7 +143,7 @@ export default function SessionResultsPage() {
                 onClick={() => refetch()}
                 className="mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control bg-accent-qcm px-4 text-body font-medium text-on-accent"
               >
-                Réessayer
+                {t("common.retry")}
               </button>
             )}
           </div>
@@ -150,34 +152,34 @@ export default function SessionResultsPage() {
         {data && (
           <>
             <p className="text-meta font-medium uppercase tracking-wide text-text-tertiary">{data.session.name}</p>
-            <h1 className="mt-1 font-display text-h1 font-semibold text-text-primary">Résultats</h1>
+            <h1 className="mt-1 font-display text-h1 font-semibold text-text-primary">{t("results.title")}</h1>
 
             {/* Score summary */}
             <section aria-live="polite" className="mt-6 rounded-card-lg border border-border bg-surface-2 p-card-padding shadow-card">
-              <p className="text-meta text-text-secondary">Score</p>
+              <p className="text-meta text-text-secondary">{t("results.score")}</p>
               <p className="mt-1 font-display text-display font-bold leading-none text-text-primary">
                 {data.session.score === null ? "—" : `${Math.round(data.session.score)}%`}
               </p>
               <p className="mt-2 text-body text-text-secondary">
                 {data.session.score === null
-                  ? "Aucune question auto-notée dans cette session."
-                  : `Précision sur ${stats.gradableCount} question${stats.gradableCount === 1 ? "" : "s"} notée${stats.gradableCount === 1 ? "" : "s"}.`}
+                  ? t("results.noGraded")
+                  : t(stats.gradableCount === 1 ? "results.accuracyOne" : "results.accuracyMany", { count: stats.gradableCount })}
               </p>
 
               {showDetailedStats && (
                 <div className="mt-5 flex flex-wrap gap-4">
                   <p className="flex items-center gap-2 text-meta text-text-secondary">
                     <span className="h-2.5 w-2.5 rounded-full bg-success" aria-hidden />
-                    {stats.correct} correctes
+                    {t("results.correct", { count: stats.correct })}
                   </p>
                   <p className="flex items-center gap-2 text-meta text-text-secondary">
                     <span className="h-2.5 w-2.5 rounded-full bg-danger" aria-hidden />
-                    {stats.incorrect} incorrectes
+                    {t("results.incorrect", { count: stats.incorrect })}
                   </p>
                   {stats.unanswered > 0 && (
                     <p className="flex items-center gap-2 text-meta text-text-tertiary">
                       <span className="h-2.5 w-2.5 rounded-full bg-text-tertiary" aria-hidden />
-                      {stats.unanswered} sans réponse
+                      {t("results.unanswered", { count: stats.unanswered })}
                     </p>
                   )}
                 </div>
@@ -192,7 +194,7 @@ export default function SessionResultsPage() {
                 disabled={stats.weak.length === 0}
                 className="inline-flex min-h-touch-target flex-1 items-center justify-center rounded-control border border-border bg-surface-1 px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 disabled:opacity-40"
               >
-                Revoir mes erreurs
+                {t("results.reviewErrors")}
               </button>
               <button
                 type="button"
@@ -200,7 +202,7 @@ export default function SessionResultsPage() {
                 disabled={isRedoing || stats.weak.length === 0}
                 className="inline-flex min-h-touch-target flex-1 items-center justify-center rounded-control bg-accent-qcm px-4 text-body font-semibold text-on-accent shadow-glow-qcm transition hover:brightness-110 disabled:opacity-50"
               >
-                {isRedoing ? "Création..." : "Refaire une session ciblée"}
+                {isRedoing ? t("results.creating") : t("results.redo")}
               </button>
             </div>
             {redoError && (
@@ -214,22 +216,22 @@ export default function SessionResultsPage() {
                 onClick={() => setReviewMode(false)}
                 className="mt-2 text-meta text-text-secondary underline"
               >
-                Afficher toutes les questions
+                {t("results.showAll")}
               </button>
             )}
 
             {/* Points à revoir — scannable list (hidden by the FR-16 showStats toggle) */}
             {showDetailedStats && (
-            <section className="mt-section-gap" aria-label="Points à revoir">
-              <h2 className="font-display text-h2 font-semibold text-text-primary">Points à revoir</h2>
+            <section className="mt-section-gap" aria-label={t("results.weakPoints")}>
+              <h2 className="font-display text-h2 font-semibold text-text-primary">{t("results.weakPoints")}</h2>
               {stats.weak.length === 0 ? (
                 <p className="mt-2 text-body text-text-secondary">
-                  Aucun point faible sur cette session — bien joué.
+                  {t("results.noWeak")}
                 </p>
               ) : (
                 <ol className="mt-3 divide-y divide-border border-y border-border">
                   {stats.weak.map((item, index) => {
-                    const snippet = extractParagraphs(item.question.bodyRichtext)[0] ?? "Question";
+                    const snippet = extractParagraphs(item.question.bodyRichtext)[0] ?? t("results.questionFallback");
                     return (
                       <li key={item.sessionQuestionId} className="flex gap-3 py-3">
                         <span className="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full bg-danger" aria-hidden />
@@ -242,7 +244,7 @@ export default function SessionResultsPage() {
                         >
                           <p className="text-meta text-text-tertiary">
                             Q{item.presentedOrder + 1} · {item.question.type}
-                            {item.studentAnswer === null ? " · sans réponse" : " · incorrecte"}
+                            {item.studentAnswer === null ? ` · ${t("results.unansweredShort")}` : ` · ${t("results.incorrectShort")}`}
                           </p>
                           <p className="truncate text-body text-text-primary">{snippet}</p>
                         </a>
@@ -256,9 +258,9 @@ export default function SessionResultsPage() {
             )}
 
             {/* Detailed results */}
-            <section className="mt-section-gap" aria-label="Détail des questions">
+            <section className="mt-section-gap" aria-label={t("results.detailTitle")}>
               <h2 className="font-display text-h2 font-semibold text-text-primary">
-                {reviewMode ? "Erreurs à revoir" : "Toutes les questions"}
+                {reviewMode ? t("results.reviewTitle") : t("results.allTitle")}
               </h2>
               <ul className="mt-4 flex flex-col gap-card-gap">
                 {visibleResults.map((result) => (
@@ -284,7 +286,7 @@ export default function SessionResultsPage() {
                         </span>
                       )}
                       {result.isCorrect === null && (
-                        <span className="text-meta text-text-tertiary">Non noté</span>
+                        <span className="text-meta text-text-tertiary">{t("results.ungraded")}</span>
                       )}
                     </div>
 
@@ -315,8 +317,8 @@ export default function SessionResultsPage() {
                           return (
                             <li key={option.id} className={classes}>
                               {option.bodyText}
-                              {wasSelected ? " · votre choix" : ""}
-                              {option.isCorrect ? " · bonne réponse" : ""}
+                              {wasSelected ? t("results.yourChoice") : ""}
+                              {option.isCorrect ? t("results.rightAnswer") : ""}
                             </li>
                           );
                         })}
@@ -325,7 +327,9 @@ export default function SessionResultsPage() {
 
                     {result.options.length === 0 && (
                       <p className="mt-3 text-meta text-text-secondary">
-                        Votre réponse : {result.studentAnswer?.freeTextAnswer || "(aucune)"}
+                        {t("results.yourAnswer", {
+                          answer: result.studentAnswer?.freeTextAnswer || t("results.noAnswer"),
+                        })}
                       </p>
                     )}
 
@@ -348,7 +352,7 @@ export default function SessionResultsPage() {
                 href="/dashboard"
                 className="inline-flex min-h-touch-target items-center text-body font-medium text-accent-soft hover:underline"
               >
-                Retour au tableau de bord
+                {t("classement.backToDashboard")}
               </Link>
             </div>
           </>

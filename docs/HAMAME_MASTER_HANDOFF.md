@@ -1587,22 +1587,76 @@ buckets already cap SMS sends). Real-SMS delivery itself is NOT yet proven
 
 ### 13.3 Still open (sequencing for next)
 
-- **EN/FR toggle UI** — scope now precisely measured (2026-09-28, script since
-  removed): **51 files** with French UI text (74 ts/tsx total), **926 accented
-  chars** — slightly above the Phase 6 estimate (43/868). Biggest surfaces:
-  `suivi` (93), `dashboard` (68), `SessionBuilder` (63), `settings` (56),
-  `revision`/`classement` (~40 each). Persistence already exists
-  (`User.uiLanguage` + `PUT /api/users/me/preferences`). Deliberately NOT
-  started as a side-task: a language toggle is all-or-nothing UX — converting
-  chrome-only (or a few pages) ships a mixed-language UI, and a rushed 51-file
-  pass with only `tsc` as guard violates this project's verification bar.
-  Recommended execution as a dedicated session: (1) `LanguageContext` +
-  fr/en dictionaries (hand-maintained lookup, per Phase 6 decision) + toggle
-  in settings persisted via preferences; (2) convert file-by-file in
-  descending string-count order; (3) close with a live page-walk of all
-  converted routes in both languages, same as the Phase 5/6 passes.
+- **EN/FR toggle UI** — ✅ BUILT 2026-09-28 as a dedicated session (see §14
+  below). Measured scope going in: **51 files** with French UI text (74 ts/tsx
+  total), **926 accented chars** — slightly above the Phase 6 estimate
+  (43/868). The all-or-nothing rule held: every one of the 51 files plus the
+  two pre-existing English-only pages (subscription, authoring) now render in
+  both languages.
 - **Scheduled simulations system** — needs a simulations table + migration +
   scheduling job at minimum; MedSparkDZ's live example (4 sept. 2026 fields)
   is the reference. Nothing started.
 - **Google OAuth** — blocked on Google Cloud console setup + account-linking
   product rule (external actions first; code after). Nothing started.
+
+---
+
+## 14. EN/FR toggle — BUILT and verified (2026-09-28)
+
+Product decision at kickoff: **French + English** (not the schema's
+speculative `fr`/`ar` — no Arabic UI ever shipped; all 926 strings were
+French). Backend change is code-only, no migration: `z.enum(["fr","ar"])` →
+`z.enum(["fr","en"])` in `PUT /api/users/me/preferences`, plus comment-only
+updates to `prisma/schema.prisma` and `docs/hamame_database_schema.md` (the
+column is an unconstrained `String DEFAULT 'fr'`). API contract notes the
+`fr`/`en` values.
+
+**Mechanism** (`web/src/lib/i18n.ts`, `web/src/context/LanguageContext.tsx`,
+`web/src/components/LanguageToggle.tsx`):
+- Hand-maintained `fr`/`en` tables (Phase 6 decision), `en` typed
+  `Record<I18nKey, string>` so tsc fails on any missing translation.
+- `{var}` interpolation; plurals are caller-selected key pairs (FR and EN
+  inflect differently — no shared plural logic).
+- Resolution: server `uiLanguage` on login/hydrate wins → `localStorage
+  hamame_lang` (guests) → French default. Toggle applies instantly (state +
+  storage + `<html lang>`) and persists best-effort via PUT preferences when
+  authed. Shared `readinessLabel(lang, label)` + `localeFor()` (fr keeps
+  exact `fr-DZ` formatting behavior; en uses `en`).
+- Toggle surfaces: full card in settings + compact FR/EN segmented control in
+  the global `Footer` and on all five public auth pages (guests have no
+  settings page).
+- `nav.ts` now stores dictionary keys (`NavKeyEntry`), resolved by
+  `AppHeader` — the single-source-of-truth fix from §2C is preserved.
+
+**Deliberate non-obvious calls:** player report `reason` text stays French
+(stored verbatim for the moderation queue — UI labels translate, the triage
+taxonomy doesn't); session names generated client-side (`builder`,
+targeted-redo, unit practice/exam) render in the *current* UI language since
+they're new content; wilaya/faculty/year/currency/brand/API error strings and
+backend emails/SMS/question/lesson content are untouched.
+
+**Converted: all 51 French files + subscription + authoring** (53 total) —
+every page, the player/results, the builder, and all shared components
+(header/menu/nav, footer, cards, toolbar, timer, banner, bell, dialogs'
+call-site props). `Modal`/`ConfirmDialog`/`BackLink`/`EmptyState`/
+`LoadingSkeleton`/`Toast`/`PrimaryTabs`/`FeatureCard`/`CourseCard`/
+`ProgressBar` take caller-supplied strings and needed no changes.
+
+**Verification:** backend `tsc` exit 0; frontend `tsc --noEmit` exit 0;
+`next build` exit 0 (all 26 routes); accented-string sweep of `web/src`
+shows zero remaining French UI outside the dictionary itself (report reasons,
+wilaya nouns, and code comments excepted, all documented above); **live
+both-language walk in production-mode Chromium** (`next start`, zero
+pageerrors): FR default renders (`Connexion à Hamame`, `lang="fr"`),
+click-to-EN flips h1 + `<html lang>` + localStorage, EN survives reload, and
+register/forgot/verify/reset-password all render EN. Authed pages are
+covered by tsc + the shared mechanism (no test credentials exist for a live
+authed walk — same standing limitation as prior sessions).
+
+**⚠️ Environment note (save future sessions the hour this cost):** `next dev`
+on this machine currently serves SSR HTML but **never hydrates** (React
+fibers absent on every button, clicks inert, no pageerrors; the HMR websocket
+handshake fails with `ERR_INVALID_HTTP_RESPONSE`). It is a dev-server
+transport issue, not app code — the identical build under `next start`
+hydrates and passes the full walk. If `next dev` interactivity ever goes dead
+again, re-verify under `next start` before blaming the code.

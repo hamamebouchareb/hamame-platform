@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
+import { localeFor, readinessLabel, type UiLanguage } from "@/lib/i18n";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { useApiResource } from "@/lib/useApiResource";
 import {
@@ -29,13 +31,13 @@ import type {
   Subscription,
 } from "@/lib/types";
 
-// Study-space navigation — the four Hamame pillars.
+// Study-space navigation — the four Hamame pillars (labels resolve via nav.* keys).
 const STUDY_TABS = [
-  { id: "qcm", label: "QCM" },
-  { id: "bibliotheque", label: "Bibliothèque" },
-  { id: "suivi", label: "Suivi" },
-  { id: "revision", label: "Révision" },
-];
+  { id: "qcm", labelKey: "nav.qcm" },
+  { id: "bibliotheque", labelKey: "nav.library" },
+  { id: "suivi", labelKey: "nav.progress" },
+  { id: "revision", labelKey: "nav.revision" },
+] as const;
 
 const STUDY_DESTINATIONS: Record<string, string | null> = {
   qcm: "/qcm",
@@ -65,19 +67,6 @@ function readActiveSession(): ActiveSession | null {
   }
 }
 
-function readinessLabelFr(label: ExamReadiness["label"]): string {
-  switch (label) {
-    case "Needs work":
-      return "À travailler";
-    case "On track":
-      return "Sur la bonne voie";
-    case "Exam ready":
-      return "Prêt pour l'examen";
-    default:
-      return "Indisponible";
-  }
-}
-
 function readinessTone(label: ExamReadiness["label"]): "primary" | "success" | "warning" {
   switch (label) {
     case "Exam ready":
@@ -94,37 +83,41 @@ function firstName(fullName: string): string {
   return part || fullName;
 }
 
-function formatActivity(item: RecentActivityItem): { title: string; subtitle: string; href: string } {
+function formatActivity(
+  item: RecentActivityItem,
+  t: (key: "dashboard.unscored" | "dashboard.sessionPractice" | "dashboard.sessionExam" | "dashboard.lessonViewed") => string
+): { title: string; subtitle: string; href: string } {
   if (item.type === "session") {
-    const scoreLabel = item.score === null ? "non noté" : `${item.score}%`;
+    const scoreLabel = item.score === null ? t("dashboard.unscored") : `${item.score}%`;
     return {
       title: item.name,
-      subtitle: `Session ${item.mode} · ${scoreLabel}`,
+      subtitle: `${item.mode === "practice" ? t("dashboard.sessionPractice") : t("dashboard.sessionExam")} · ${scoreLabel}`,
       href: `/sessions/${item.id}/results`,
     };
   }
   return {
     title: item.title,
-    subtitle: "Leçon consultée",
+    subtitle: t("dashboard.lessonViewed"),
     href: `/lessons/${item.lessonId}`,
   };
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString("fr-DZ", {
+function formatDate(iso: string, lang: UiLanguage): string {
+  return new Date(iso).toLocaleString(localeFor(lang), {
     dateStyle: "medium",
     timeStyle: "short",
   });
 }
 
-function formatDateShort(iso: string): string {
-  return new Date(iso).toLocaleDateString("fr-DZ", { dateStyle: "medium" });
+function formatDateShort(iso: string, lang: UiLanguage): string {
+  return new Date(iso).toLocaleDateString(localeFor(lang), { dateStyle: "medium" });
 }
 
 export default function DashboardPage() {
   const router = useRouter();
   const { logout } = useAuth();
   const { user, isHydrated } = useRequireAuth();
+  const { lang, t } = useLanguage();
   const canFetch = isHydrated && !!user;
 
   const progress = useApiResource<ProgressSummary>(canFetch ? "/progress/me" : null);
@@ -168,7 +161,7 @@ export default function DashboardPage() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <p className="text-meta text-text-secondary">Chargement...</p>
+        <p className="text-meta text-text-secondary">{t("common.loadingMore")}</p>
       </main>
     );
   }
@@ -182,38 +175,38 @@ export default function DashboardPage() {
   const currentSubscription = subscription.data?.subscription ?? null;
   const subscriptionPrice =
     currentSubscription?.plan.priceDzd != null
-      ? `${currentSubscription.plan.priceDzd.toLocaleString("fr-DZ")} DZD${
+      ? `${currentSubscription.plan.priceDzd.toLocaleString(localeFor(lang))} DZD${
           currentSubscription.plan.billingPeriod === "yearly"
-            ? " / an"
+            ? t("dashboard.billingYearly")
             : currentSubscription.plan.billingPeriod === "monthly"
-              ? " / mois"
+              ? t("dashboard.billingMonthly")
               : ""
         }`
       : undefined;
 
   const resumeBar = activeSession
     ? {
-        title: `Session « ${activeSession.name} »`,
-        subtitle: "Reprenez où vous en étiez.",
-        meta: "En cours",
-        primaryLabel: "Reprendre l'étude",
+        title: t("dashboard.resumeActiveTitle", { name: activeSession.name }),
+        subtitle: t("dashboard.resumeActiveSub"),
+        meta: t("dashboard.inProgress"),
+        primaryLabel: t("dashboard.resume"),
         primaryHref: `/sessions/${activeSession.id}`,
       }
     : hasAnyActivity
       ? {
-          title: "Poursuivez votre préparation",
+          title: t("dashboard.continueTitle"),
           subtitle:
             dueReviewCount > 0
-              ? "Des révisions vous attendent, puis gardez votre série avec une session QCM."
-              : "Enchaînez avec une session QCM pour garder votre série.",
-          meta: dueReviewCount > 0 ? `${dueReviewCount} révision${dueReviewCount > 1 ? "s" : ""} à faire` : undefined,
-          primaryLabel: "Reprendre l'étude",
+              ? t("dashboard.reviewsWaiting")
+              : t("dashboard.keepStreak"),
+          meta: dueReviewCount > 0 ? t(dueReviewCount === 1 ? "dashboard.dueOne" : "dashboard.dueMany", { count: dueReviewCount }) : undefined,
+          primaryLabel: t("dashboard.resume"),
           primaryHref: "/qcm",
         }
       : {
-          title: "Commencez votre préparation",
-          subtitle: "Première étape : une session QCM dans votre faculté.",
-          primaryLabel: "Commencer une session",
+          title: t("dashboard.startTitle"),
+          subtitle: t("dashboard.startSubtitle"),
+          primaryLabel: t("dashboard.startCta"),
           primaryHref: "/qcm",
         };
 
@@ -239,14 +232,14 @@ export default function DashboardPage() {
 
             {/* 2. Hero / welcome */}
             <ProfileHero
-              greeting={`Bonjour, ${firstName(user.fullName)}`}
+              greeting={t("dashboard.greeting", { name: firstName(user.fullName) })}
               score={readinessData ? readinessData.score : null}
-              scoreLabel={readinessData ? readinessLabelFr(readinessData.label) : null}
+              scoreLabel={readinessData ? readinessLabel(lang, readinessData.label) : null}
               insufficientData={readiness.data?.insufficientData ?? true}
               emptyMessage={
                 hasAnyActivity
-                  ? `Pas encore assez de réponses notées pour estimer votre préparation (minimum ${readiness.data?.minAttemptsRequired ?? 3} essais QCM/QCS).`
-                  : "Lancez votre première session QCM pour débloquer votre score de préparation à l'examen."
+                  ? t("dashboard.emptyActive", { min: readiness.data?.minAttemptsRequired ?? 3 })
+                  : t("dashboard.emptyNew")
               }
               loading={readiness.isLoading}
               error={readiness.error}
@@ -254,32 +247,32 @@ export default function DashboardPage() {
             />
 
             {/* 3. KPI row — max 3 */}
-            <section aria-label="Indicateurs clés" className="grid grid-cols-2 gap-card-gap md:grid-cols-3">
+            <section aria-label={t("dashboard.kpiAria")} className="grid grid-cols-2 gap-card-gap md:grid-cols-3">
               <MetricCard
-                label="Jours de série"
+                label={t("dashboard.streakDays")}
                 value={progress.data?.streak.currentStreakDays ?? 0}
                 loading={progress.isLoading}
-                error={progress.error ? "Série indisponible" : null}
+                error={progress.error ? t("dashboard.streakError") : null}
                 onRetry={retryReadiness}
                 tone="primary"
               />
               <MetricCard
                 label={
                   progress.data?.accuracy === null || progress.data?.accuracy === undefined
-                    ? "Pas encore de notes"
-                    : "Précision"
+                    ? t("dashboard.noGrades")
+                    : t("dashboard.accuracy")
                 }
                 value={
                   progress.data?.accuracy === null || progress.data?.accuracy === undefined ? "—" : `${progress.data.accuracy}%`
                 }
                 loading={progress.isLoading}
-                error={progress.error ? "Précision indisponible" : null}
+                error={progress.error ? t("dashboard.accuracyError") : null}
                 onRetry={retryReadiness}
                 tone="suivi"
               />
               <MetricCard
                 className="col-span-2 md:col-span-1"
-                label={readinessData ? readinessLabelFr(readinessData.label) : "Préparation à venir"}
+                label={readinessData ? readinessLabel(lang, readinessData.label) : t("dashboard.upcomingPrep")}
                 value={readinessData ? readinessData.score : "—"}
                 loading={readiness.isLoading}
                 error={readiness.error}
@@ -289,38 +282,38 @@ export default function DashboardPage() {
             </section>
 
             {/* 4. Study-space nav */}
-            <section aria-label="Espace d'étude">
+            <section aria-label={t("dashboard.studySpace")}>
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <h2 className="font-display text-h2 font-semibold text-text-primary">Espace d&apos;étude</h2>
+                <h2 className="font-display text-h2 font-semibold text-text-primary">{t("dashboard.studySpace")}</h2>
                 <PrimaryTabs
-                  tabs={STUDY_TABS}
+                  tabs={STUDY_TABS.map((tab) => ({ id: tab.id, label: t(tab.labelKey) }))}
                   activeId="qcm"
                   onChange={handleStudyTab}
-                  ariaLabel="Domaines d'étude"
+                  ariaLabel={t("dashboard.studyFields")}
                 />
               </div>
             </section>
 
             {/* 5. Recent activity */}
-            <section id="activite" aria-label="Activité récente">
-              <h2 className="mb-3 font-display text-h2 font-semibold text-text-primary">Activité récente</h2>
+            <section id="activite" aria-label={t("dashboard.recentActivity")}>
+              <h2 className="mb-3 font-display text-h2 font-semibold text-text-primary">{t("dashboard.recentActivity")}</h2>
               <WeeklyActivity
                 items={recentItems.map((item, index) => {
-                  const { title, subtitle, href } = formatActivity(item);
+                  const { title, subtitle, href } = formatActivity(item, t);
                   return {
                     key: `${item.type}-${index}`,
                     href,
                     title,
                     subtitle,
-                    timestamp: formatDate(item.at),
+                    timestamp: formatDate(item.at, lang),
                   };
                 })}
                 loading={progress.isLoading}
-                error={progress.error ? `Impossible de charger l&apos;activité. ${progress.error}` : null}
+                error={progress.error ? t("dashboard.activityError", { error: progress.error }) : null}
                 onRetry={retryReadiness}
-                emptyTitle="Aucune activité pour l'instant"
-                emptyDescription="Lancez une session QCM pour commencer."
-                emptyAction={{ label: "Créer une session QCM", href: "/qcm" }}
+                emptyTitle={t("dashboard.noActivityTitle")}
+                emptyDescription={t("dashboard.noActivityDesc")}
+                emptyAction={{ label: t("dashboard.createQcm"), href: "/qcm" }}
               />
             </section>
           </div>
@@ -338,36 +331,37 @@ export default function DashboardPage() {
                     : "border-border",
               ].join(" ")}
             >
-              <p className="text-meta font-medium uppercase tracking-wide text-text-secondary">Crédits IA</p>
-              {credits.isLoading && <LoadingSkeleton className="mt-2 h-8 w-24" ariaLabel="Chargement des crédits" />}
+              <p className="text-meta font-medium uppercase tracking-wide text-text-secondary">{t("dashboard.credits")}</p>
+              {credits.isLoading && <LoadingSkeleton className="mt-2 h-8 w-24" ariaLabel={t("dashboard.creditsLoading")} />}
               {!credits.isLoading && credits.error && (
                 <div className="mt-2">
-                  <p className="text-body text-danger">Solde indisponible. {credits.error}</p>
+                  <p className="text-body text-danger">{t("dashboard.balanceError", { error: credits.error })}</p>
                   <button
                     type="button"
                     onClick={retryReadiness}
                     className="mt-2 inline-flex min-h-touch-target items-center justify-center rounded-control border border-border bg-surface-1 px-3 text-meta font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
                   >
-                    Réessayer
+                    {t("common.retry")}
                   </button>
                 </div>
               )}
               {!credits.isLoading && !credits.error && credits.data && credits.data.remainingToday === 0 && (
                 <div className="mt-2">
-                  <p className="font-display text-h3 font-semibold text-danger">0 crédit restant</p>
+                  <p className="font-display text-h3 font-semibold text-danger">{t("dashboard.noCredit")}</p>
                   <p className="mt-1 text-meta text-text-secondary">
-                    Quota du jour épuisé ({credits.data.dailyAllowance}/jour). Réinitialisation :{" "}
-                    {new Date(credits.data.resetAt).toLocaleString("fr-DZ", {
-                      dateStyle: "short",
-                      timeStyle: "short",
+                    {t("dashboard.quotaOut", {
+                      allowance: credits.data.dailyAllowance,
+                      date: new Date(credits.data.resetAt).toLocaleString(localeFor(lang), {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                      }),
                     })}
-                    .
                   </p>
                   <Link
                     href="/subscription"
                     className="mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control bg-danger px-3 text-meta font-medium text-background transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
                   >
-                    Recharger
+                    {t("dashboard.recharge")}
                   </Link>
                 </div>
               )}
@@ -381,14 +375,16 @@ export default function DashboardPage() {
                   >
                     {credits.data.remainingToday}
                     <span className="ml-1 text-meta font-medium text-text-secondary">
-                      / {credits.data.dailyAllowance} restants
+                      {t("dashboard.remaining", { allowance: credits.data.dailyAllowance })}
                     </span>
                   </p>
                   {credits.data.lowBalance && (
-                    <p className="mt-1 text-meta text-warning">Solde bas — économisez vos indices pour aujourd&apos;hui.</p>
+                    <p className="mt-1 text-meta text-warning">{t("dashboard.lowBalance")}</p>
                   )}
                   <p className="mt-1 text-meta text-text-tertiary">
-                    Reset {new Date(credits.data.resetAt).toLocaleString("fr-DZ", { timeStyle: "short", dateStyle: "short" })}
+                    {t("dashboard.resetAt", {
+                      date: new Date(credits.data.resetAt).toLocaleString(localeFor(lang), { timeStyle: "short", dateStyle: "short" }),
+                    })}
                   </p>
                 </div>
               )}
@@ -399,23 +395,23 @@ export default function DashboardPage() {
                 endpoint, jobs, or ReviewSettings), so the widget shows the due
                 count only — it does not invent one. */}
             <article
-              aria-label="Révisions dues"
+              aria-label={t("dashboard.dueTitle")}
               className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card"
             >
               <p className="text-meta font-medium uppercase tracking-wide text-text-secondary">
-                Révisions dues
+                {t("dashboard.dueTitle")}
               </p>
               {dueReviews.isLoading && dueReviewCount === 0 ? (
-                <LoadingSkeleton className="mt-2 h-8 w-24" ariaLabel="Chargement des révisions" />
+                <LoadingSkeleton className="mt-2 h-8 w-24" ariaLabel={t("dashboard.dueLoading")} />
               ) : dueReviews.error ? (
                 <div className="mt-2">
-                  <p className="text-body text-danger">Révisions indisponibles. {dueReviews.error}</p>
+                  <p className="text-body text-danger">{t("dashboard.dueError", { error: dueReviews.error })}</p>
                   <button
                     type="button"
                     onClick={dueReviews.refetch}
                     className="mt-2 inline-flex min-h-touch-target items-center justify-center rounded-control border border-border bg-surface-1 px-3 text-meta font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
                   >
-                    Réessayer
+                    {t("common.retry")}
                   </button>
                 </div>
               ) : (
@@ -423,19 +419,19 @@ export default function DashboardPage() {
                   <p className="font-display text-h3 font-semibold text-text-primary">
                     {dueReviewCount}{" "}
                     <span className="ml-1 text-meta font-medium text-text-secondary">
-                      révision{dueReviewCount === 1 ? "" : "s"} à faire
+                      {t(dueReviewCount === 1 ? "dashboard.dueOne" : "dashboard.dueMany", { count: dueReviewCount })}
                     </span>
                   </p>
                   <p className="mt-1 text-meta text-text-tertiary">
                     {dueReviewCount === 0
-                      ? "À jour — revenez après vos prochaines sessions."
-                      : "File de mémorisation espacée, les plus urgentes d'abord."}
+                      ? t("dashboard.upToDate")
+                      : t("dashboard.spacedQueue")}
                   </p>
                   <Link
                     href="/revision"
                     className="mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control border border-border px-4 text-meta font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
                   >
-                    {dueReviewCount === 0 ? "Ouvrir les révisions" : "Réviser maintenant"}
+                    {dueReviewCount === 0 ? t("dashboard.openReviews") : t("dashboard.reviewNow")}
                   </Link>
                 </div>
               )}
@@ -456,8 +452,8 @@ export default function DashboardPage() {
               }
               planName={currentSubscription?.plan.name}
               priceLabel={subscriptionPrice}
-              renewsAt={currentSubscription ? formatDateShort(currentSubscription.currentPeriodEnd) : undefined}
-              cancelsAt={currentSubscription?.cancelledAt ? formatDateShort(currentSubscription.currentPeriodEnd) : undefined}
+              renewsAt={currentSubscription ? formatDateShort(currentSubscription.currentPeriodEnd, lang) : undefined}
+              cancelsAt={currentSubscription?.cancelledAt ? formatDateShort(currentSubscription.currentPeriodEnd, lang) : undefined}
               error={subscription.error}
               onRetry={subscription.refetch}
               upgradeHref="/subscription"
@@ -476,24 +472,24 @@ export default function DashboardPage() {
                 name: friend.fullName,
               }))}
               loading={friends.isLoading}
-              error={friends.error ? `Impossible de charger vos amis. ${friends.error}` : null}
+              error={friends.error ? t("dashboard.friendsError", { error: friends.error }) : null}
               onRetry={friends.refetch}
-              emptyTitle="Pas encore d'amis"
-              emptyDescription="Invitez des camarades pour comparer vos scores et rester motivé."
+              emptyTitle={t("dashboard.noFriends")}
+              emptyDescription={t("dashboard.noFriendsDesc")}
               emptyAction={{
-                label: "Voir mon activité",
+                label: t("dashboard.viewActivity"),
                 onClick: () => document.getElementById("activite")?.scrollIntoView({ behavior: "smooth" }),
               }}
             />
 
             {/* Resources */}
             <article className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
-              <p className="text-meta font-medium uppercase tracking-wide text-text-secondary">Ressources</p>
+              <p className="text-meta font-medium uppercase tracking-wide text-text-secondary">{t("dashboard.resources")}</p>
               <Link
                 href="/resources"
                 className="inline-flex min-h-touch-target items-center text-body font-medium text-accent-soft transition hover:text-accent-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
               >
-                Voir toutes les ressources
+                {t("dashboard.allResources")}
               </Link>
             </article>
           </aside>

@@ -3,6 +3,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { useApiResource } from "@/lib/useApiResource";
 import { apiFetch, ApiError } from "@/lib/api";
@@ -24,10 +25,13 @@ function initials(fullName: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-function subscriptionStatusLabel(sub: Subscription | null): string {
-  if (!sub) return "Gratuit";
+function subscriptionStatusLabel(
+  sub: Subscription | null,
+  t: (key: "profile.free" | "profile.cancelled") => string
+): string {
+  if (!sub) return t("profile.free");
   if (sub.status === "active") return sub.plan.name;
-  if (sub.status === "cancelled") return "Annulé";
+  if (sub.status === "cancelled") return t("profile.cancelled");
   return sub.status;
 }
 
@@ -45,11 +49,12 @@ function RankMetricCard({ facultyId, yearId, fullName }: { facultyId: string; ye
     () => board.data?.leaderboard.find((row) => row.fullName === fullName)?.rank ?? null,
     [board.data, fullName]
   );
+  const { t } = useLanguage();
   return (
     <MetricCard
-      label="Classement"
+      label={t("nav.leaderboard")}
       value={rank !== null ? `#${rank}` : "—"}
-      subtitle="promotion"
+      subtitle={t("profile.cohort")}
       loading={board.isLoading}
       tone="primary"
     />
@@ -60,6 +65,7 @@ export default function ProfilePage() {
   const { logout } = useAuth();
   const router = useRouter();
   const { user, isHydrated } = useRequireAuth();
+  const { t } = useLanguage();
   const canFetch = isHydrated && !!user;
 
   const streak = useApiResource<{ streak: { currentStreakDays: number; longestStreakDays: number } }>(
@@ -109,7 +115,7 @@ export default function ProfilePage() {
     event.preventDefault();
     const query = userQuery.trim();
     if (query.length < 3) {
-      setUserSearchError("Tapez au moins 3 caractères (nom, prénom ou e-mail exact).");
+      setUserSearchError(t("profile.queryShort"));
       return;
     }
     setUserSearching(true);
@@ -121,7 +127,7 @@ export default function ProfilePage() {
       setUserResults(data.users);
       setUserSearched(true);
     } catch (err) {
-      setUserSearchError(err instanceof ApiError ? err.message : "Recherche impossible. Réessayez.");
+      setUserSearchError(err instanceof ApiError ? err.message : t("profile.searchFailed"));
     } finally {
       setUserSearching(false);
     }
@@ -167,7 +173,7 @@ export default function ProfilePage() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <p className="text-meta text-text-secondary">Chargement...</p>
+        <p className="text-meta text-text-secondary">{t("common.loadingMore")}</p>
       </main>
     );
   }
@@ -181,7 +187,7 @@ export default function ProfilePage() {
             A3-REDO preview (profile hero only): band mirrors MedSparkDZ's
             measured 96px cover using the approved Blue→Violet stops; avatar
             pulled up to overlap it. Decorative band is aria-hidden. */}
-        <section aria-label="Profil" className="overflow-hidden rounded-card-lg bg-surface-1 shadow-card">
+        <section aria-label={t("profile.aria")} className="overflow-hidden rounded-card-lg bg-surface-1 shadow-card">
           <div
             aria-hidden
             className="h-24"
@@ -217,7 +223,7 @@ export default function ProfilePage() {
                   </span>
                 ) : null}
                 <span className="rounded-pill border border-border bg-surface-3 px-2.5 py-0.5 text-caption font-medium text-text-secondary">
-                  {subscriptionStatusLabel(subscription.data?.subscription ?? null)}
+                  {subscriptionStatusLabel(subscription.data?.subscription ?? null, t)}
                 </span>
               </div>
             </div>
@@ -226,32 +232,32 @@ export default function ProfilePage() {
           {/* Metrics row */}
           <div className="grid w-full grid-cols-2 gap-3 sm:ml-auto sm:w-auto sm:grid-cols-3 lg:grid-cols-5">
             <MetricCard
-              label="Série"
+              label={t("profile.streak")}
               value={streak.data?.streak.currentStreakDays ?? 0}
-              subtitle={`${streak.data?.streak.longestStreakDays ?? 0} jours au max`}
+              subtitle={t("profile.streakBest", { n: streak.data?.streak.longestStreakDays ?? 0 })}
               loading={streak.isLoading}
               tone="primary"
             />
             <MetricCard
-              label="Précision"
+              label={t("suivi.accuracy")}
               value={overallAccuracy !== null ? `${overallAccuracy}%` : "—"}
-              subtitle="QCM / QCS, au total"
+              subtitle={t("suivi.accuracySubtitle")}
               loading={qcmStats.isLoading}
               tone="suivi"
             />
             <MetricCard
-              label="Score moyen"
+              label={t("suivi.avgScore")}
               value={
                 progress.data?.averageScore !== null && progress.data?.averageScore !== undefined
                   ? `${progress.data.averageScore}%`
                   : "—"
               }
-              subtitle="sessions terminées"
+              subtitle={t("suivi.avgScoreSubtitle")}
               loading={progress.isLoading}
               tone="qcm"
             />
             <MetricCard
-              label="Préparation"
+              label={t("profile.readiness")}
               value={readinessData ? readinessData.score : "—"}
               subtitle="/100"
               loading={readiness.isLoading}
@@ -268,17 +274,17 @@ export default function ProfilePage() {
         </section>
 
         {/* Friends section */}
-        <section aria-label="Amis" className="mt-section-gap">
+        <section aria-label={t("profile.friends")} className="mt-section-gap">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="font-display text-h2 font-semibold text-text-primary">Amis</h2>
+            <h2 className="font-display text-h2 font-semibold text-text-primary">{t("profile.friends")}</h2>
             {friends.length > 0 && (
               <div className="relative">
                 <input
                   type="search"
                   value={friendSearch}
                   onChange={(e) => setFriendSearch(e.target.value)}
-                  placeholder="Rechercher un ami..."
-                  aria-label="Rechercher un ami"
+                  placeholder={t("profile.searchFriendPh")}
+                  aria-label={t("profile.searchFriend")}
                   className="h-10 w-full rounded-control border border-border bg-surface-2 px-3 pr-8 text-body text-text-primary placeholder:text-text-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
                 />
                 <svg viewBox="0 0 20 20" className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -302,13 +308,13 @@ export default function ProfilePage() {
           ) : friends.length === 0 ? (
             <div className="mt-3">
               <EmptyState
-                title="Pas encore d'amis"
-                description="Ajoutez des camarades pour comparer vos scores et rester motivé."
-                action={{ label: "Retour au tableau de bord", href: "/dashboard" }}
+                title={t("dashboard.noFriends")}
+                description={t("profile.noFriendsDesc")}
+                action={{ label: t("classement.backToDashboard"), href: "/dashboard" }}
               />
             </div>
           ) : filteredFriends.length === 0 ? (
-            <p className="mt-3 text-meta text-text-tertiary">Aucun ami ne correspond à « {friendSearch} ».</p>
+            <p className="mt-3 text-meta text-text-tertiary">{t("profile.noMatchFriends", { q: friendSearch })}</p>
           ) : (
             <ul className="mt-3 flex flex-col gap-1">
               {filteredFriends.map((friend) => (
@@ -328,10 +334,10 @@ export default function ProfilePage() {
           {/* Find new friends: server search (id + name only) + request */}
           <form onSubmit={handleUserSearch} className="mt-4 rounded-card border border-border bg-surface-1 p-3">
             <label htmlFor="find-friends" className="block text-body font-medium text-text-primary">
-              Ajouter un ami
+              {t("profile.addFriend")}
             </label>
             <p className="mt-0.5 text-meta text-text-tertiary">
-              Nom, prénom (3 lettres minimum) ou e-mail exact.
+              {t("profile.findHint")}
             </p>
             <div className="mt-2 flex gap-2">
               <input
@@ -339,8 +345,8 @@ export default function ProfilePage() {
                 type="search"
                 value={userQuery}
                 onChange={(e) => setUserQuery(e.target.value)}
-                placeholder="Ex. Sara, Amine…"
-                aria-label="Rechercher un utilisateur"
+                placeholder={t("profile.findPlaceholder")}
+                aria-label={t("profile.findAria")}
                 className="h-11 min-w-0 flex-1 rounded-control border border-border bg-surface-2 px-3 text-body text-text-primary placeholder:text-text-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
               />
               <button
@@ -348,7 +354,7 @@ export default function ProfilePage() {
                 disabled={userSearching}
                 className="inline-flex min-h-touch-target shrink-0 items-center justify-center rounded-control bg-accent-qcm px-4 text-body font-medium text-on-accent transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-60"
               >
-                {userSearching ? "…" : "Chercher"}
+                {userSearching ? "…" : t("profile.search")}
               </button>
             </div>
             {userSearchError ? (
@@ -358,7 +364,7 @@ export default function ProfilePage() {
             ) : null}
             {userSearched && !userSearching && !userSearchError ? (
               userResults.length === 0 ? (
-                <p className="mt-2 text-meta text-text-tertiary">Aucun utilisateur trouvé.</p>
+                <p className="mt-2 text-meta text-text-tertiary">{t("profile.noUsers")}</p>
               ) : (
                 <ul className="mt-2 flex flex-col gap-1">
                   {userResults.map((result) => (
@@ -373,7 +379,7 @@ export default function ProfilePage() {
                         {result.fullName}
                       </p>
                       {sentRequests[result.id] ? (
-                        <span className="shrink-0 text-meta font-medium text-success">Demande envoyée</span>
+                        <span className="shrink-0 text-meta font-medium text-success">{t("profile.requestSent")}</span>
                       ) : (
                         <button
                           type="button"
@@ -381,7 +387,7 @@ export default function ProfilePage() {
                           disabled={sendingId === result.id}
                           className="inline-flex min-h-touch-target shrink-0 items-center justify-center rounded-control border border-border px-3 text-meta font-medium text-text-primary transition hover:bg-surface-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-60"
                         >
-                          {sendingId === result.id ? "…" : "Ajouter"}
+                          {sendingId === result.id ? "…" : t("profile.add")}
                         </button>
                       )}
                     </li>
@@ -395,54 +401,54 @@ export default function ProfilePage() {
         <BadgeShelf badges={badgesData.data?.badges ?? []} loading={badgesData.isLoading} />
 
         {/* QCM Stats */}
-        <section aria-label="Statistiques QCM" className="mt-section-gap">
-          <h2 className="font-display text-h2 font-semibold text-text-primary">Statistiques QCM</h2>
+        <section aria-label={t("profile.qcmStats")} className="mt-section-gap">
+          <h2 className="font-display text-h2 font-semibold text-text-primary">{t("profile.qcmStats")}</h2>
           <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3">
             <MetricCard
-              label="Sessions terminées"
+              label={t("suivi.sessionsDone")}
               value={qcmStats.data?.sessionsCompleted ?? 0}
-              subtitle="au total"
+              subtitle={t("common.total")}
               loading={qcmStats.isLoading}
               tone="qcm"
             />
             <MetricCard
-              label="Précision"
+              label={t("suivi.accuracy")}
               value={overallAccuracy !== null ? `${overallAccuracy}%` : "—"}
-              subtitle={`${qcmStats.data?.correctCount ?? 0}/${gradedCount} bonnes réponses`}
+              subtitle={t("profile.goodAnswers", { c: qcmStats.data?.correctCount ?? 0, g: gradedCount })}
               loading={qcmStats.isLoading}
               tone="suivi"
             />
             <MetricCard
-              label="Score moyen"
+              label={t("suivi.avgScore")}
               value={
                 progress.data?.averageScore !== null && progress.data?.averageScore !== undefined
                   ? `${progress.data.averageScore}%`
                   : "—"
               }
-              subtitle="par session"
+              subtitle={t("profile.perSession")}
               loading={progress.isLoading}
               tone="qcm"
             />
             <MetricCard
-              label="Précision récente"
+              label={t("suivi.recentAccuracy")}
               value={
                 qcmStats.data?.accuracyRecent20 !== null && qcmStats.data?.accuracyRecent20 !== undefined
                   ? `${qcmStats.data.accuracyRecent20}%`
                   : "—"
               }
-              subtitle="20 dernières réponses"
+              subtitle={t("profile.last20")}
               loading={qcmStats.isLoading}
               tone="primary"
             />
             <MetricCard
-              label="Examens blancs"
+              label={t("profile.mockExams")}
               value={qcmStats.data?.mockExamsCompleted ?? 0}
-              subtitle="complétés"
+              subtitle={t("profile.completed")}
               loading={qcmStats.isLoading}
               tone="qcm"
             />
             <MetricCard
-              label="Durée moyenne"
+              label={t("profile.avgDuration")}
               value={
                 qcmStats.data && qcmStats.data.averageSessionDurationSeconds > 0
                   ? formatDuration(qcmStats.data.averageSessionDurationSeconds)
@@ -453,20 +459,20 @@ export default function ProfilePage() {
               tone="suivi"
             />
             <MetricCard
-              label="Couverture"
+              label={t("profile.coverage")}
               value={
                 readinessData
                   ? `${readinessData.components.curriculumCoverage}%`
                   : "—"
               }
-              subtitle="leçons consultées"
+              subtitle={t("profile.lessonsViewed")}
               loading={readiness.isLoading}
               tone="library"
             />
             <MetricCard
-              label="Série record"
+              label={t("profile.recordStreak")}
               value={qcmStats.data?.streakRecord ?? 0}
-              subtitle="jours consécutifs"
+              subtitle={t("profile.streakDays")}
               loading={qcmStats.isLoading}
               tone="success"
             />

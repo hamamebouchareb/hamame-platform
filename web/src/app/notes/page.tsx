@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
+import { localeFor, type I18nKey, type UiLanguage } from "@/lib/i18n";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { apiFetch, ApiError } from "@/lib/api";
 import { cx } from "@/lib/cx";
@@ -13,19 +15,19 @@ const PAGE_LIMIT = 20;
 
 /** Fixed 6-tag taxonomy (gap analysis §11, MedSparkDZ-confirmed) — slugs match
  * the backend NOTE_TAGS; labels/emoji are display-only. */
-const NOTE_TAG_META: Array<{ slug: string; emoji: string; label: string }> = [
-  { slug: "difficile", emoji: "🔴", label: "Difficile" },
-  { slug: "facile", emoji: "🟢", label: "Facile" },
-  { slug: "important", emoji: "⚡", label: "Important" },
-  { slug: "a_reviser", emoji: "📚", label: "À réviser" },
-  { slug: "compris", emoji: "✅", label: "Compris" },
-  { slug: "piege", emoji: "⚠️", label: "Piège" },
+const NOTE_TAG_META: Array<{ slug: string; emoji: string; labelKey: I18nKey }> = [
+  { slug: "difficile", emoji: "🔴", labelKey: "notes.tagDifficult" },
+  { slug: "facile", emoji: "🟢", labelKey: "notes.tagEasy" },
+  { slug: "important", emoji: "⚡", labelKey: "notes.tagImportant" },
+  { slug: "a_reviser", emoji: "📚", labelKey: "notes.tagToReview" },
+  { slug: "compris", emoji: "✅", labelKey: "notes.tagUnderstood" },
+  { slug: "piege", emoji: "⚠️", labelKey: "notes.tagTricky" },
 ];
 
-const tagLabel = (slug: string): string => {
+function tagLabel(slug: string, t: (key: I18nKey) => string): string {
   const meta = NOTE_TAG_META.find((entry) => entry.slug === slug);
-  return meta ? `${meta.emoji} ${meta.label}` : slug;
-};
+  return meta ? `${meta.emoji} ${t(meta.labelKey)}` : slug;
+}
 
 interface NotesResponse {
   notes: Note[];
@@ -40,8 +42,8 @@ interface NoteFilters {
 
 const EMPTY_FILTERS: NoteFilters = { q: "", tag: "", favoritesOnly: false };
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString("fr-DZ", {
+function formatDate(iso: string, lang: UiLanguage): string {
+  return new Date(iso).toLocaleString(localeFor(lang), {
     dateStyle: "medium",
     timeStyle: "short",
   });
@@ -60,6 +62,7 @@ export default function NotesPage() {
   const router = useRouter();
   const { logout } = useAuth();
   const { user, isHydrated } = useRequireAuth();
+  const { lang, t } = useLanguage();
 
   const [notes, setNotes] = useState<Note[]>([]);
   const [page, setPage] = useState(0); // 0 = nothing loaded yet
@@ -83,11 +86,11 @@ export default function NotesPage() {
       setPage(response.pagination.page);
       setTotal(response.pagination.total);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Impossible de charger les notes. Réessayez.");
+      setError(err instanceof ApiError ? err.message : t("notes.loadError"));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   // Initial fetch once auth hydrates.
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -156,7 +159,7 @@ export default function NotesPage() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <LoadingSkeleton className="h-8 w-48" ariaLabel="Chargement" />
+        <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
       </main>
     );
   }
@@ -170,25 +173,25 @@ export default function NotesPage() {
       <AppHeader user={user} onLogout={handleLogout} />
 
       <main className="mx-auto w-full max-w-2xl flex-1 px-card-padding py-section-gap">
-        <BackLink href="/dashboard">Retour au tableau de bord</BackLink>
-        <h1 className="mt-2 font-display text-h1 font-bold text-text-primary">Mes notes</h1>
+        <BackLink href="/dashboard">{t("classement.backToDashboard")}</BackLink>
+        <h1 className="mt-2 font-display text-h1 font-bold text-text-primary">{t("notes.title")}</h1>
         <p className="mt-2 text-body text-text-secondary">
-          Notes prises sur les questions et les leçons. Ajoutez-en pendant une session ou en lisant un cours.
+          {t("notes.subtitle")}
         </p>
 
         <div className="mt-4 flex flex-col gap-3">
           <label className="block">
-            <span className="sr-only">Rechercher dans les notes</span>
+            <span className="sr-only">{t("notes.searchSr")}</span>
             <input
               type="search"
               value={searchInput}
               onChange={(event) => handleSearchChange(event.target.value)}
-              placeholder="Rechercher dans les notes…"
+              placeholder={t("notes.searchPh")}
               className="h-11 w-full rounded-input border border-border bg-surface-2 px-4 text-body text-text-primary placeholder:text-text-tertiary transition focus:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             />
           </label>
 
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrer par tag">
+          <div className="flex flex-wrap gap-2" role="group" aria-label={t("notes.filterTags")}>
             {NOTE_TAG_META.map((meta) => {
               const active = filters.tag === meta.slug;
               return (
@@ -204,7 +207,7 @@ export default function NotesPage() {
                       : "border-border text-text-secondary hover:bg-surface-2"
                   )}
                 >
-                  {meta.emoji} {meta.label}
+                  {meta.emoji} {t(meta.labelKey)}
                 </button>
               );
             })}
@@ -219,7 +222,7 @@ export default function NotesPage() {
                   : "border-border text-text-secondary hover:bg-surface-2"
               )}
             >
-              ★ Favoris
+              ★ {t("notes.favorites")}
             </button>
           </div>
 
@@ -232,7 +235,7 @@ export default function NotesPage() {
               }}
               className="self-start text-meta font-medium text-accent-soft underline underline-offset-2 hover:text-accent-soft/80"
             >
-              Effacer les filtres
+              {t("notes.clearFilters")}
             </button>
           ) : null}
         </div>
@@ -247,7 +250,7 @@ export default function NotesPage() {
               onClick={() => loadPage(page === 0 ? 1 : page, filters)}
               className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 sm:w-auto"
             >
-              Réessayer
+              {t("common.retry")}
             </button>
           </div>
         ) : null}
@@ -255,22 +258,18 @@ export default function NotesPage() {
         {isEmpty ? (
           <div className="mt-section-gap">
             <EmptyState
-              title={hasActiveFilters ? "Aucune note ne correspond" : "Aucune note pour l'instant"}
-              description={
-                hasActiveFilters
-                  ? "Modifiez la recherche ou les filtres pour revoir toutes vos notes."
-                  : "Ajoutez une note depuis une question QCM ou une leçon pour la retrouver ici."
-              }
+              title={t(hasActiveFilters ? "notes.emptyFiltered" : "notes.empty")}
+              description={t(hasActiveFilters ? "notes.emptyFilteredDesc" : "notes.emptyDesc")}
               action={
                 hasActiveFilters
                   ? {
-                      label: "Effacer les filtres",
+                      label: t("notes.clearFilters"),
                       onClick: () => {
                         setSearchInput("");
                         applyFilters(EMPTY_FILTERS);
                       },
                     }
-                  : { label: "Créer une session QCM", href: "/qcm" }
+                  : { label: t("dashboard.createQcm"), href: "/qcm" }
               }
             />
           </div>
@@ -290,12 +289,12 @@ export default function NotesPage() {
               <li key={note.id} className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
                 {note.question ? (
                   <p className="text-caption font-medium uppercase tracking-wide text-text-tertiary">
-                    Question : {note.question.label}
+                    {t("notes.questionPrefix")} {note.question.label}
                   </p>
                 ) : null}
                 {note.lesson ? (
                   <p className="text-caption font-medium uppercase tracking-wide text-text-tertiary">
-                    Leçon : {note.lesson.title}
+                    {t("notes.lessonPrefix")} {note.lesson.title}
                   </p>
                 ) : null}
                 <p className="mt-1 text-body text-text-primary">{note.bodyText}</p>
@@ -305,7 +304,7 @@ export default function NotesPage() {
                       key={slug}
                       className="rounded-pill border border-border bg-surface-2 px-2 py-0.5 text-meta text-text-secondary"
                     >
-                      {tagLabel(slug)}
+                      {tagLabel(slug, t)}
                     </span>
                   ))}
                   <button
@@ -313,7 +312,7 @@ export default function NotesPage() {
                     onClick={() => patchNote(note.id, { isFavorite: !note.isFavorite })}
                     disabled={mutatingId === note.id}
                     aria-pressed={note.isFavorite}
-                    aria-label={note.isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+                    aria-label={t(note.isFavorite ? "notes.favRemove" : "notes.favAdd")}
                     className={cx(
                       "inline-flex min-h-touch-target items-center rounded-pill border px-2 py-0.5 text-meta transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50",
                       note.isFavorite
@@ -333,7 +332,7 @@ export default function NotesPage() {
                   </button>
                 </div>
                 {editingTagsId === note.id ? (
-                  <div className="mt-2 flex flex-wrap gap-2 border-t border-border pt-2" role="group" aria-label="Modifier les tags">
+                  <div className="mt-2 flex flex-wrap gap-2 border-t border-border pt-2" role="group" aria-label={t("notes.editTags")}>
                     {NOTE_TAG_META.map((meta) => {
                       const checked = note.tags.includes(meta.slug);
                       return (
@@ -355,13 +354,13 @@ export default function NotesPage() {
                               : "border-border text-text-secondary hover:bg-surface-2"
                           )}
                         >
-                          {meta.emoji} {meta.label}
+                          {meta.emoji} {t(meta.labelKey)}
                         </button>
                       );
                     })}
                   </div>
                 ) : null}
-                <p className="mt-1 text-meta text-text-tertiary">{formatDate(note.createdAt)}</p>
+                <p className="mt-1 text-meta text-text-tertiary">{formatDate(note.createdAt, lang)}</p>
               </li>
             ))}
           </ul>
@@ -374,7 +373,7 @@ export default function NotesPage() {
             disabled={isLoading}
             className="mt-4 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-60 sm:w-auto"
           >
-            {isLoading ? "Chargement..." : "Charger plus"}
+            {isLoading ? t("common.loadingMore") : t("history.loadMore")}
           </button>
         ) : null}
       </main>

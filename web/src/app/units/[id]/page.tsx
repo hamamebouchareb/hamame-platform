@@ -4,15 +4,12 @@ import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { useApiResource } from "@/lib/useApiResource";
 import { apiFetch, ApiError } from "@/lib/api";
 import { AppHeader, Footer, CourseCard, EmptyState, LoadingSkeleton } from "@/components";
 import type { LessonSummary, SessionDetail } from "@/lib/types";
-
-function plural(count: number, singular: string): string {
-  return `${count} ${count === 1 ? singular : `${singular}s`}`;
-}
 
 const SESSION_SIZE = 20;
 const EXAM_TIME_LIMIT_SECONDS = 1200; // 20 minutes
@@ -28,6 +25,7 @@ export default function UnitDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const { user, isHydrated } = useRequireAuth();
+  const { t } = useLanguage();
   const unitId = params.id;
 
   const [search, setSearch] = useState("");
@@ -60,7 +58,7 @@ export default function UnitDetailPage() {
       const { session } = await apiFetch<{ session: SessionDetail }>("/sessions", {
         method: "POST",
         body: JSON.stringify({
-          name: mode === "practice" ? "Séance d'entraînement de l'unité" : "Examen de l'unité",
+          name: mode === "practice" ? t("unitDetail.practiceName") : t("unitDetail.examName"),
           mode,
           unitIds: [unitId],
           size: SESSION_SIZE,
@@ -69,7 +67,7 @@ export default function UnitDetailPage() {
       });
       router.push(`/sessions/${session.id}`);
     } catch (err) {
-      setStartError(err instanceof ApiError ? err.message : "Une erreur est survenue. Veuillez réessayer.");
+      setStartError(err instanceof ApiError ? err.message : t("unitDetail.startError"));
       setStartingMode(null);
     }
   }
@@ -82,7 +80,7 @@ export default function UnitDetailPage() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <LoadingSkeleton className="h-8 w-48" ariaLabel="Chargement" />
+        <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
       </main>
     );
   }
@@ -96,21 +94,21 @@ export default function UnitDetailPage() {
           href="/faculties"
           className="inline-flex min-h-touch-target items-center gap-1 text-meta font-medium text-text-secondary transition hover:text-accent-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
         >
-          <span aria-hidden>←</span> Bibliothèque
+          <span aria-hidden>←</span> {t("nav.library")}
         </Link>
 
         <header className="mt-2">
-          <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">Leçons de l&apos;unité</p>
-          <h1 className="mt-1 font-display text-hero font-bold leading-tight text-text-primary">Cours et entraînement</h1>
+          <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">{t("unitDetail.kicker")}</p>
+          <h1 className="mt-1 font-display text-hero font-bold leading-tight text-text-primary">{t("unitDetail.title")}</h1>
           <p className="mt-2 text-body text-text-secondary">
             {lessonsLoading
-              ? "Chargement…"
-              : `${plural(lessons.length, "leçon")}${questionCount > 0 ? ` · ${plural(questionCount, "question QCM")}` : ""}`}
+              ? t("builder.loadingShort")
+              : `${t(lessons.length === 1 ? "modules.lessonsOne" : "modules.lessonsMany", { count: lessons.length })}${questionCount > 0 ? ` · ${t(questionCount === 1 ? "units.qcmOne" : "units.qcmMany", { count: questionCount })}` : ""}`}
           </p>
         </header>
 
-        <section aria-label="Lancer une session" className="mt-section-gap">
-          <h2 className="font-display text-h3 font-semibold text-text-primary">Lancer une session</h2>
+        <section aria-label={t("unitDetail.launchTitle")} className="mt-section-gap">
+          <h2 className="font-display text-h3 font-semibold text-text-primary">{t("unitDetail.launchTitle")}</h2>
           <div className="mt-3 grid gap-card-gap sm:grid-cols-2">
             <button
               type="button"
@@ -118,7 +116,7 @@ export default function UnitDetailPage() {
               disabled={startingMode !== null}
               className="inline-flex min-h-touch-target items-center justify-center gap-2 rounded-control bg-accent-library px-5 text-body font-semibold text-on-accent shadow-glow-library transition hover:brightness-110 active:scale-[0.98] disabled:opacity-60"
             >
-              {startingMode === "practice" ? "Démarrage…" : "Entraînement — correction immédiate"}
+              {startingMode === "practice" ? t("unitDetail.starting") : t("unitDetail.practiceBtn")}
             </button>
             <button
               type="button"
@@ -126,7 +124,7 @@ export default function UnitDetailPage() {
               disabled={startingMode !== null}
               className="inline-flex min-h-touch-target items-center justify-center gap-2 rounded-control border border-accent-secondary/50 bg-accent-secondary/10 px-5 text-body font-semibold text-accent-soft transition hover:bg-accent-secondary/20 active:scale-[0.98] disabled:opacity-60"
             >
-              {startingMode === "exam" ? "Démarrage…" : "Examen chronométré (20 min)"}
+              {startingMode === "exam" ? t("unitDetail.starting") : t("unitDetail.examBtn")}
             </button>
           </div>
           {startError && (
@@ -136,14 +134,14 @@ export default function UnitDetailPage() {
           )}
         </section>
 
-        <section aria-label="Leçons" className="mt-section-gap">
+        <section aria-label={t("unitDetail.lessonsAria")} className="mt-section-gap">
           <label className="relative block max-w-md">
-            <span className="sr-only">Rechercher une leçon</span>
+            <span className="sr-only">{t("unitDetail.searchSr")}</span>
             <input
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Rechercher une leçon…"
+              placeholder={t("unitDetail.searchPh")}
               className="h-11 w-full rounded-input border border-border bg-surface-2 pl-10 pr-3 text-body text-text-primary placeholder:text-text-tertiary transition focus:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             />
             <svg
@@ -164,7 +162,7 @@ export default function UnitDetailPage() {
           {lessonsLoading ? (
             <div className="mt-4 flex flex-col gap-card-gap">
               {[0, 1, 2].map((i) => (
-                <LoadingSkeleton key={i} className="h-20 w-full rounded-card" ariaLabel={i === 0 ? "Chargement des leçons" : undefined} />
+                <LoadingSkeleton key={i} className="h-20 w-full rounded-card" ariaLabel={i === 0 ? t("unitDetail.loading") : undefined} />
               ))}
             </div>
           ) : null}
@@ -178,26 +176,26 @@ export default function UnitDetailPage() {
                 onClick={refetchLessons}
                 className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 sm:w-auto"
               >
-                Réessayer
+                {t("common.retry")}
               </button>
             </div>
           ) : null}
           {!lessonsLoading && !lessonsError && lessons.length === 0 ? (
             <div className="mt-4">
               <EmptyState
-                title="Aucune leçon pour cette unité"
-                description="Cette unité n'a pas encore de leçons publiées. Vous pouvez quand même lancer une session QCM."
-                action={{ label: "Créer une session QCM", href: "/qcm" }}
+                title={t("unitDetail.empty")}
+                description={t("unitDetail.emptyDesc")}
+                action={{ label: t("dashboard.createQcm"), href: "/qcm" }}
               />
             </div>
           ) : null}
           {!lessonsLoading && !lessonsError && lessons.length > 0 && visibleLessons.length === 0 ? (
             <div className="mt-4">
               <EmptyState
-                title="Aucune leçon ne correspond"
-                description="Modifiez la recherche pour revoir toutes les leçons de cette unité."
+                title={t("unitDetail.noMatch")}
+                description={t("unitDetail.noMatchDesc")}
                 action={{
-                  label: "Réinitialiser la recherche",
+                  label: t("unitDetail.resetSearch"),
                   onClick: () => setSearch(""),
                 }}
               />
@@ -211,7 +209,7 @@ export default function UnitDetailPage() {
                   href={`/lessons/${lesson.id}`}
                   title={lesson.title}
                   tone="library"
-                  actionLabel="Commencer"
+                  actionLabel={t("modules.start")}
                   meta={
                     <span
                       className={
@@ -220,7 +218,7 @@ export default function UnitDetailPage() {
                           : "rounded-pill border border-success/40 bg-success/15 px-2 py-0.5 font-medium text-success"
                       }
                     >
-                      {lesson.contentTier === "hamame_plus" ? "Hamame+" : "Contenu officiel"}
+                      {lesson.contentTier === "hamame_plus" ? "Hamame+" : t("unitDetail.tierOfficial")}
                     </span>
                   }
                 />

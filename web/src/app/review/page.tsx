@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { apiFetch, ApiError } from "@/lib/api";
 import { AppHeader, EmptyState, Footer, ReviewCard, useToast } from "@/components";
@@ -15,15 +16,12 @@ interface ItemActionState {
   error: string | null;
 }
 
-function errorMessage(err: unknown): string {
-  return err instanceof ApiError ? err.message : "Une erreur est survenue. Réessayez.";
-}
-
 export default function ReviewPage() {
   const router = useRouter();
   const { logout } = useAuth();
   const { user, isHydrated } = useRequireAuth();
   const { success } = useToast();
+  const { t } = useLanguage();
   const canFetch = isHydrated && !!user;
 
   function handleLogout() {
@@ -49,13 +47,13 @@ export default function ReviewPage() {
       const data = await apiFetch<ReviewQueueResponse>(`/review/queue?page=1&limit=${PAGE_LIMIT}`);
       setItems(data.items);
     } catch (err) {
-      setError(errorMessage(err));
+      setError(err instanceof ApiError ? err.message : t("player.submitError"));
       setErrorCode(err instanceof ApiError ? err.code : null);
     } finally {
       setIsLoading(false);
       setIsLoaded(true);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (canFetch && !isLoaded) {
@@ -77,9 +75,9 @@ export default function ReviewPage() {
     try {
       await apiFetch(`/review/${item.contentType}/${item.id}/approve`, { method: "POST" });
       removeItem(item.id);
-      success({ title: "Élément approuvé" });
+      success({ title: t("review.approved") });
     } catch (err) {
-      setActionState((prev) => ({ ...prev, [item.id]: { isSubmitting: false, error: errorMessage(err) } }));
+      setActionState((prev) => ({ ...prev, [item.id]: { isSubmitting: false, error: err instanceof ApiError ? err.message : t("player.submitError") } }));
     }
   }
 
@@ -104,16 +102,16 @@ export default function ReviewPage() {
       setRejectingId(null);
       setRejectComment("");
       removeItem(item.id);
-      success({ title: "Élément rejeté" });
+      success({ title: t("review.rejected") });
     } catch (err) {
-      setActionState((prev) => ({ ...prev, [item.id]: { isSubmitting: false, error: errorMessage(err) } }));
+      setActionState((prev) => ({ ...prev, [item.id]: { isSubmitting: false, error: err instanceof ApiError ? err.message : t("player.submitError") } }));
     }
   }
 
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <p className="text-meta text-text-secondary">Chargement...</p>
+        <p className="text-meta text-text-secondary">{t("common.loadingMore")}</p>
       </main>
     );
   }
@@ -127,12 +125,12 @@ export default function ReviewPage() {
       <>
         <AppHeader user={user} onLogout={handleLogout} />
         <main className="mx-auto w-full max-w-md flex-1 px-card-padding py-section-gap">
-          <h1 className="font-display text-h2 font-semibold text-text-primary">File de revue</h1>
+          <h1 className="font-display text-h2 font-semibold text-text-primary">{t("review.title")}</h1>
           <div className="mt-4">
             <EmptyState
-              title="Accès refusé"
-              description="Vous n'avez pas la permission d'accéder à cette page."
-              action={{ label: "Retour au tableau de bord", href: "/dashboard" }}
+              title={t("review.denied")}
+              description={t("review.deniedDesc")}
+              action={{ label: t("classement.backToDashboard"), href: "/dashboard" }}
             />
           </div>
         </main>
@@ -145,9 +143,9 @@ export default function ReviewPage() {
     <>
       <AppHeader user={user} onLogout={handleLogout} />
       <main className="mx-auto w-full max-w-md flex-1 px-card-padding py-section-gap">
-        <h1 className="font-display text-h2 font-semibold text-text-primary">File de revue</h1>
+        <h1 className="font-display text-h2 font-semibold text-text-primary">{t("review.title")}</h1>
 
-        {isLoading && !isLoaded && <p className="mt-4 text-meta text-text-secondary">Chargement de la file...</p>}
+        {isLoading && !isLoaded && <p className="mt-4 text-meta text-text-secondary">{t("review.loading")}</p>}
         {error && !isLoaded && (
           <div className="mt-4 rounded-card border border-danger bg-surface-1 p-card-padding">
             <p className="text-body text-danger">{error}</p>
@@ -156,7 +154,7 @@ export default function ReviewPage() {
               onClick={loadQueue}
               className="mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
             >
-              Réessayer
+              {t("common.retry")}
             </button>
           </div>
         )}
@@ -164,9 +162,9 @@ export default function ReviewPage() {
         {isLoaded && !error && items.length === 0 && (
           <div className="mt-4">
             <EmptyState
-              title="Rien en attente"
-              description="Aucun contenu n'attend une revue pour le moment."
-              action={{ label: "Retour au tableau de bord", href: "/dashboard" }}
+              title={t("review.empty")}
+              description={t("review.emptyDesc")}
+              action={{ label: t("classement.backToDashboard"), href: "/dashboard" }}
             />
           </div>
         )}

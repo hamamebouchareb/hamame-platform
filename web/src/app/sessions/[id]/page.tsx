@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useRequireAuth } from "@/lib/useRequireAuth";
+import { useLanguage } from "@/context/LanguageContext";
 import { useApiResource } from "@/lib/useApiResource";
 import { apiFetch, ApiError } from "@/lib/api";
 import { extractParagraphs } from "@/lib/richtext";
@@ -13,11 +14,13 @@ import type { AnswerAttemptResponse, AnswerStatsResponse, SessionDetail, Session
 // P7 report categories (MedSparkDZ-confirmed shape) mapped onto the existing
 // POST /api/questions/:id/report contract ({reason, severity?}) — the mapping
 // below IS the work, not a pass-through: their three UI kinds become our
-// reason text + severity tier.
+// reason text + severity tier. `reason` stays French on purpose: it is stored
+// verbatim for the moderation queue, so the triage taxonomy must not shift
+// with the UI language — only `labelKey` translates.
 const REPORT_TYPES = [
-  { id: "incorrect", label: "Réponse incorrecte", severity: "high" },
-  { id: "typo", label: "Faute de frappe", severity: "normal" },
-  { id: "other", label: "Autre", severity: "normal" },
+  { id: "incorrect", labelKey: "player.reportIncorrect", reason: "Réponse incorrecte", severity: "high" },
+  { id: "typo", labelKey: "player.reportTypo", reason: "Faute de frappe", severity: "normal" },
+  { id: "other", labelKey: "player.reportOther", reason: "Autre", severity: "normal" },
 ] as const;
 
 type ReportTypeId = (typeof REPORT_TYPES)[number]["id"];
@@ -39,14 +42,17 @@ function emptyAnswerState(): AnswerState {
   return { selectedOptionIds: [], freeText: "", submitted: false };
 }
 
-function formatSource(source: string): string {
+function formatSource(
+  source: string,
+  t: (key: "builder.sourceOfficial" | "builder.sourceHamame" | "builder.sourceAi") => string
+): string {
   switch (source) {
     case "official_exam":
-      return "Examen officiel";
+      return t("builder.sourceOfficial");
     case "hamame_authored":
-      return "Hamame";
+      return t("builder.sourceHamame");
     case "ai_generated":
-      return "IA";
+      return t("builder.sourceAi");
     default:
       return source;
   }
@@ -77,6 +83,7 @@ export default function SessionQuestionPage() {
   const params = useParams<{ id: string }>();
   const sessionId = params.id;
   const toast = useToast();
+  const { t } = useLanguage();
 
   const { data, error, isLoading, refetch } = useApiResource<{ session: SessionDetail }>(
     isHydrated && user ? `/sessions/${sessionId}` : null
@@ -246,7 +253,7 @@ export default function SessionQuestionPage() {
     } catch (err) {
       setCurrentAnswer((prev) => ({
         ...prev,
-        submitError: err instanceof ApiError ? err.message : "Une erreur est survenue. Réessayez.",
+        submitError: err instanceof ApiError ? err.message : t("player.submitError"),
       }));
     } finally {
       setIsSubmittingAnswer(false);
@@ -274,7 +281,7 @@ export default function SessionQuestionPage() {
       clearActiveSession();
       router.push(`/sessions/${sessionId}/results`);
     } catch (err) {
-      setFinishError(err instanceof ApiError ? err.message : "Une erreur est survenue. Réessayez.");
+      setFinishError(err instanceof ApiError ? err.message : t("player.submitError"));
       setIsFinishing(false);
     }
   }
@@ -329,16 +336,16 @@ export default function SessionQuestionPage() {
       const kind = REPORT_TYPES.find((entry) => entry.id === reportType)!;
       const reason =
         reportDescription.trim().length > 0
-          ? `${kind.label} — ${reportDescription.trim()}`
-          : kind.label;
+          ? `${kind.reason} — ${reportDescription.trim()}`
+          : kind.reason;
       await apiFetch(`/questions/${currentEntry.question.id}/report`, {
         method: "POST",
         body: JSON.stringify({ reason, severity: kind.severity }),
       });
       setReportSent(true);
-      toast.success({ title: "Signalement envoyé — merci." });
+      toast.success({ title: t("player.reportSent") });
     } catch (err) {
-      setReportError(err instanceof ApiError ? err.message : "Envoi impossible. Réessayez.");
+      setReportError(err instanceof ApiError ? err.message : t("player.reportFail"));
     } finally {
       setReportSending(false);
     }
@@ -347,14 +354,14 @@ export default function SessionQuestionPage() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <p className="text-meta text-text-secondary">Chargement...</p>
+        <p className="text-meta text-text-secondary">{t("common.loadingMore")}</p>
       </main>
     );
   }
 
   return (
     <main className="min-h-screen bg-background pb-60 text-text-primary sm:pb-28">
-      <h1 className="sr-only">Session QCM</h1>
+      <h1 className="sr-only">{t("player.srTitle")}</h1>
       {/* Sticky header */}
       <header
         className="sticky top-0 z-20 border-b border-border bg-surface-1/95 backdrop-blur"
@@ -365,10 +372,10 @@ export default function SessionQuestionPage() {
             <div className="flex items-center justify-between gap-2">
               <p className="text-meta font-medium text-text-secondary">
                 {questions.length > 0
-                  ? `Question ${currentIndex + 1}/${questions.length}`
-                  : "Session"}
+                  ? t("player.questionOf", { i: currentIndex + 1, n: questions.length })
+                  : t("player.sessionFallback")}
               </p>
-              <p className="text-meta text-text-tertiary">{answeredCount} répondues</p>
+              <p className="text-meta text-text-tertiary">{t("player.answered", { count: answeredCount })}</p>
             </div>
             <div className="mt-2 h-1.5 overflow-hidden rounded-pill bg-surface-3" aria-hidden>
               <div
@@ -405,15 +412,15 @@ export default function SessionQuestionPage() {
             onClick={() => setExitOpen(true)}
             className="inline-flex min-h-touch-target shrink-0 items-center justify-center rounded-control border border-border px-3 text-meta font-medium text-text-secondary transition hover:bg-surface-2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
           >
-            Quitter
+            {t("player.quit")}
           </button>
           {/* Fullscreen toggle (mirrors the reference "Plein écran" control).
               Pure local UI state — no data or session behavior involved. */}
           <button
             type="button"
             onClick={toggleFullscreen}
-            title={isFullscreen ? "Quitter le plein écran" : "Plein écran"}
-            aria-label={isFullscreen ? "Quitter le plein écran" : "Passer en plein écran"}
+            title={isFullscreen ? t("player.exitFullscreen") : t("player.fullscreen")}
+            aria-label={isFullscreen ? t("player.exitFullscreen") : t("player.enterFullscreen")}
             aria-pressed={isFullscreen}
             className="inline-flex min-h-touch-target w-11 shrink-0 items-center justify-center rounded-control border border-border text-text-secondary transition hover:bg-surface-2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
           >
@@ -439,8 +446,8 @@ export default function SessionQuestionPage() {
           <button
             type="button"
             onClick={openReport}
-            title="Signaler une erreur"
-            aria-label="Signaler une erreur sur cette question"
+            title={t("player.reportError")}
+            aria-label={t("player.reportErrorLong")}
             className="inline-flex min-h-touch-target w-11 shrink-0 items-center justify-center rounded-control border border-border text-text-secondary transition hover:bg-surface-2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
           >
             <svg
@@ -471,7 +478,7 @@ export default function SessionQuestionPage() {
 
       <div className="mx-auto max-w-3xl px-card-padding py-section-gap">
         {isLoading && !session && (
-          <div className="mx-auto max-w-xl" aria-busy aria-label="Chargement de la session">
+          <div className="mx-auto max-w-xl" aria-busy aria-label={t("player.loadingSession")}>
             <LoadingSkeleton className="mb-3 h-4 w-32" />
             <div className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
               <LoadingSkeleton className="h-4 w-24" />
@@ -490,20 +497,20 @@ export default function SessionQuestionPage() {
 
         {error && !session && (
           <div className="mx-auto max-w-xl rounded-card border border-danger bg-surface-2 p-card-padding">
-            <p className="text-body text-danger">Impossible de charger la session. {error}</p>
+            <p className="text-body text-danger">{t("player.loadSessionError", { error })}</p>
             <button
               type="button"
               onClick={() => refetch()}
               className="mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control bg-accent-qcm px-4 text-body font-medium text-on-accent transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
             >
-              Réessayer
+              {t("common.retry")}
             </button>
           </div>
         )}
 
         {session && !session.completedAt && questions.length === 0 && (
           <div className="mx-auto max-w-xl rounded-card border border-border bg-surface-1 p-card-padding">
-            <p className="text-body text-text-secondary">Cette session ne contient aucune question.</p>
+            <p className="text-body text-text-secondary">{t("player.emptySession")}</p>
             <button
               type="button"
               onClick={() => {
@@ -512,7 +519,7 @@ export default function SessionQuestionPage() {
               }}
               className="mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control border border-border px-4 text-body text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
             >
-              Retour au tableau de bord
+              {t("classement.backToDashboard")}
             </button>
           </div>
         )}
@@ -523,7 +530,7 @@ export default function SessionQuestionPage() {
                 states. Horizontal strip (not a sidebar) for the single-column
                 layout — same states and behavior as the reference rail. */}
             {questions.length > 1 ? (
-              <nav aria-label="Aller à la question" className="mx-auto mb-4 flex max-w-xl gap-1.5 overflow-x-auto pb-1">
+              <nav aria-label={t("player.railAria")} className="mx-auto mb-4 flex max-w-xl gap-1.5 overflow-x-auto pb-1">
                 {questions.map((entry, index) => {
                   const isCurrent = index === currentIndex;
                   const isAnswered = !!answers[entry.sessionQuestionId]?.submitted;
@@ -532,7 +539,7 @@ export default function SessionQuestionPage() {
                       key={entry.sessionQuestionId}
                       type="button"
                       onClick={() => setCurrentIndex(index)}
-                      aria-label={`Aller à la question ${index + 1}${isCurrent ? " (actuelle)" : ""}${isAnswered ? " (répondue)" : ""}`}
+                      aria-label={`${t("player.railGo", { n: index + 1 })}${isCurrent ? t("player.railCurrent") : ""}${isAnswered ? t("player.railAnswered") : ""}`}
                       aria-current={isCurrent ? "true" : undefined}
                       className={[
                         "flex h-12 w-12 shrink-0 items-center justify-center rounded-[20px] border text-meta font-semibold tabular-nums transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
@@ -555,7 +562,7 @@ export default function SessionQuestionPage() {
               <>
                 {currentEntry.question.type}
                 <span className="mx-1.5 text-border" aria-hidden="true">·</span>
-                {formatSource(currentEntry.question.source)}
+                {formatSource(currentEntry.question.source, t)}
                 {currentEntry.question.difficulty ? (
                   <>
                     <span className="mx-1.5 text-border" aria-hidden="true">·</span>
@@ -588,7 +595,7 @@ export default function SessionQuestionPage() {
       {session && !session.completedAt && questions.length > 0 && (
         <nav
           className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface-1/95 backdrop-blur"
-          aria-label="Navigation de session"
+          aria-label={t("player.bottomNav")}
         >
           <div className="mx-auto flex max-w-3xl flex-col gap-3 px-card-padding py-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex gap-2">
@@ -596,19 +603,19 @@ export default function SessionQuestionPage() {
                 type="button"
                 onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
                 disabled={currentIndex === 0}
-                title={currentIndex === 0 ? "Première question" : undefined}
+                title={currentIndex === 0 ? t("player.firstQuestion") : undefined}
                 className="inline-flex min-h-touch-target flex-1 items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-40 sm:flex-none"
               >
-                Précédent
+                {t("player.prev")}
               </button>
               <button
                 type="button"
                 onClick={() => setCurrentIndex((i) => Math.min(questions.length - 1, i + 1))}
                 disabled={currentIndex >= questions.length - 1}
-                title={currentIndex >= questions.length - 1 ? "Dernière question" : undefined}
+                title={currentIndex >= questions.length - 1 ? t("player.lastQuestion") : undefined}
                 className="inline-flex min-h-touch-target flex-1 items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-40 sm:flex-none"
               >
-                Suivant
+                {t("player.next")}
               </button>
             </div>
 
@@ -623,7 +630,7 @@ export default function SessionQuestionPage() {
                   : "border border-transparent text-text-secondary underline-offset-2 hover:text-text-primary hover:underline",
               ].join(" ")}
             >
-              {isMarked ? "Marqué pour revoir" : "Marquer pour revoir"}
+              {isMarked ? t("player.marked") : t("player.mark")}
             </button>
 
             <button
@@ -632,7 +639,7 @@ export default function SessionQuestionPage() {
               disabled={isFinishing}
               className="inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-qcm px-5 text-body font-semibold text-on-accent shadow-glow-qcm transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-60 sm:w-auto"
             >
-              {isFinishing ? "Finalisation..." : "Terminer la session"}
+              {isFinishing ? t("player.finishing") : t("player.finish")}
             </button>
           </div>
           {finishError && (
@@ -648,22 +655,22 @@ export default function SessionQuestionPage() {
         onClose={() => {
           if (!reportSending) setReportOpen(false);
         }}
-        title="Signaler une erreur"
+        title={t("player.reportError")}
       >
         {reportSent ? (
           <p role="status" className="text-body text-text-primary">
-            Signalement envoyé — merci pour votre aide.
+            {t("player.reportSentBody")}
           </p>
         ) : (
           <div className="flex flex-col gap-3">
             {currentEntry ? (
               <p className="text-meta text-text-tertiary">
-                Question : {extractParagraphs(currentEntry.question.bodyRichtext)[0]?.slice(0, 80) ?? "—"}
+                {t("player.reportQuestion")} {extractParagraphs(currentEntry.question.bodyRichtext)[0]?.slice(0, 80) ?? "—"}
                 {(extractParagraphs(currentEntry.question.bodyRichtext)[0]?.length ?? 0) > 80 ? "…" : ""}
               </p>
             ) : null}
             <fieldset>
-              <legend className="mb-2 text-meta font-medium text-text-secondary">Type d&apos;erreur *</legend>
+              <legend className="mb-2 text-meta font-medium text-text-secondary">{t("player.errorType")}</legend>
               <div className="flex flex-col gap-2">
                 {REPORT_TYPES.map((kind) => (
                   <label
@@ -679,14 +686,14 @@ export default function SessionQuestionPage() {
                       className="h-4 w-4 shrink-0 accent-[var(--color-accent-qcm)]"
                     />
                     {kind.id === "incorrect" ? "❌ " : kind.id === "typo" ? "✏️ " : "💬 "}
-                    {kind.label}
+                    {t(kind.labelKey)}
                   </label>
                 ))}
               </div>
             </fieldset>
             <div>
               <label htmlFor="report-description" className="mb-2 block text-meta font-medium text-text-secondary">
-                Description (optionnel)
+                {t("player.reportDesc")}
               </label>
               <textarea
                 id="report-description"
@@ -708,7 +715,7 @@ export default function SessionQuestionPage() {
               disabled={reportSending}
               className="inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-qcm px-5 text-body font-semibold text-on-accent shadow-glow-qcm transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none"
             >
-              {reportSending ? "Envoi..." : "Envoyer le signalement"}
+              {reportSending ? t("player.reportSending") : t("player.reportSend")}
             </button>
           </div>
         )}
@@ -716,10 +723,10 @@ export default function SessionQuestionPage() {
 
       <ConfirmDialog
         open={exitOpen}
-        title="Quitter la session ?"
-        description="Votre progression sur cet appareil est conservée tant que la session n'est pas terminée, mais quitter maintenant interrompt le flux en cours."
-        confirmLabel="Quitter"
-        cancelLabel="Continuer"
+        title={t("player.exitTitle")}
+        description={t("player.exitDesc")}
+        confirmLabel={t("player.quit")}
+        cancelLabel={t("player.exitCancel")}
         tone="danger"
         onConfirm={confirmExit}
         onCancel={() => setExitOpen(false)}

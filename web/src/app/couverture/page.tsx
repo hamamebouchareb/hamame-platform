@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { useApiResource } from "@/lib/useApiResource";
 import { AppHeader, BackLink, EmptyState, Footer, LoadingSkeleton } from "@/components";
@@ -28,6 +29,7 @@ export default function CoveragePage() {
   const router = useRouter();
   const { logout } = useAuth();
   const { user, isHydrated } = useRequireAuth();
+  const { t } = useLanguage();
 
   const [facultyId, setFacultyId] = useState("");
   const [yearId, setYearId] = useState("");
@@ -74,7 +76,7 @@ export default function CoveragePage() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <LoadingSkeleton className="h-8 w-48" ariaLabel="Chargement" />
+        <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
       </main>
     );
   }
@@ -84,17 +86,16 @@ export default function CoveragePage() {
       <AppHeader user={user} onLogout={handleLogout} />
 
       <main className="mx-auto w-full max-w-2xl flex-1 px-card-padding py-section-gap">
-        <BackLink href="/faculties">Retour à la bibliothèque</BackLink>
-        <h1 className="mt-2 font-display text-h1 font-bold text-text-primary">Couverture par module</h1>
+        <BackLink href="/faculties">{t("years.backToLibrary")}</BackLink>
+        <h1 className="mt-2 font-display text-h1 font-bold text-text-primary">{t("coverage.title")}</h1>
         <p className="mt-2 text-body text-text-secondary">
-          Nombre de questions validées par module — la couverture de la banque Hamame, pas la
-          fréquence d&apos;apparition aux examens.
+          {t("coverage.subtitle")}
         </p>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div>
             <label htmlFor="coverage-faculty" className="mb-2 block text-meta font-medium text-text-secondary">
-              Faculté
+              {t("settings.faculty")}
             </label>
             <select
               id="coverage-faculty"
@@ -106,7 +107,7 @@ export default function CoveragePage() {
               disabled={faculties.isLoading}
               className={selectClass}
             >
-              <option value="">{faculties.isLoading ? "Chargement…" : "Toutes les facultés"}</option>
+              <option value="">{faculties.isLoading ? t("builder.loadingShort") : t("builder.allFaculties")}</option>
               {facultyList.map((f) => (
                 <option key={f.id} value={f.id}>
                   {f.name}
@@ -116,7 +117,7 @@ export default function CoveragePage() {
           </div>
           <div>
             <label htmlFor="coverage-year" className="mb-2 block text-meta font-medium text-text-secondary">
-              Année
+              {t("settings.year")}
             </label>
             <select
               id="coverage-year"
@@ -125,7 +126,7 @@ export default function CoveragePage() {
               disabled={!facultyId || years.isLoading}
               className={selectClass}
             >
-              <option value="">{years.isLoading ? "Chargement…" : "Toutes les années"}</option>
+              <option value="">{years.isLoading ? t("builder.loadingShort") : t("builder.allYears")}</option>
               {yearList.map((y) => (
                 <option key={y.id} value={y.id}>
                   {y.label}
@@ -152,19 +153,19 @@ export default function CoveragePage() {
                 onClick={coverage.refetch}
                 className="mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring sm:w-auto"
               >
-                Réessayer
+                {t("common.retry")}
               </button>
             </div>
           ) : modules.length === 0 ? (
             <EmptyState
-              title="Aucune question validée ici"
-              description="Aucune question validée ne correspond à ces filtres pour le moment."
-              action={{ label: "Créer une session QCM", href: "/qcm" }}
+              title={t("coverage.empty")}
+              description={t("coverage.emptyDesc")}
+              action={{ label: t("dashboard.createQcm"), href: "/qcm" }}
             />
           ) : (
             <>
               <p className="text-meta text-text-secondary" aria-live="polite">
-                {coverage.data?.total ?? 0} questions validées au total
+                {t("coverage.total", { count: coverage.data?.total ?? 0 })}
               </p>
               <ol className="mt-3 flex flex-col gap-2">
                 {modules.map((entry, index) => (
@@ -174,7 +175,7 @@ export default function CoveragePage() {
                   >
                     <div className="flex items-baseline gap-3">
                       <span
-                        aria-label={`Rang ${index + 1}`}
+                        aria-label={t("classement.rank", { rank: index + 1 })}
                         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-3 font-display text-h3 font-bold text-text-primary"
                       >
                         {index + 1}

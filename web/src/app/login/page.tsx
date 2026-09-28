@@ -4,11 +4,14 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { ApiError } from "@/lib/api";
+import { LanguageToggle } from "@/components";
 
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
+  const { t } = useLanguage();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,23 +26,26 @@ export default function LoginPage() {
       await login({ email, password });
       router.push("/dashboard");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Une erreur est survenue. Veuillez réessayer.");
+      setError(err instanceof ApiError ? err.message : t("auth.genericError"));
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center px-4 py-10">
+    <main className="relative flex min-h-screen flex-col items-center justify-center px-4 py-10">
+      <div className="absolute right-4 top-4">
+        <LanguageToggle />
+      </div>
       <div className="w-full max-w-sm">
         <h1 className="mb-6 text-center font-display text-h2 font-bold text-text-primary">
-          Connexion à Hamame
+          {t("auth.loginTitle")}
         </h1>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <label htmlFor="email" className="text-sm font-medium text-text-secondary">
-              Email
+              {t("settings.email")}
             </label>
             <input
               id="email"
@@ -56,7 +62,7 @@ export default function LoginPage() {
 
           <div className="flex flex-col gap-1.5">
             <label htmlFor="password" className="text-sm font-medium text-text-secondary">
-              Mot de passe
+              {t("auth.password")}
             </label>
             <input
               id="password"
@@ -75,7 +81,7 @@ export default function LoginPage() {
               href="/forgot-password"
               className="text-sm font-medium text-accent-soft underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
             >
-              Mot de passe oublié ?
+              {t("auth.forgotLink")}
             </Link>
           </div>
 
@@ -90,17 +96,17 @@ export default function LoginPage() {
             disabled={isSubmitting}
             className="mt-2 w-full min-h-touch-target rounded-control bg-accent-primary px-4 py-3 text-body font-medium text-on-accent transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-60"
           >
-            {isSubmitting ? "Connexion..." : "Se connecter"}
+            {isSubmitting ? t("auth.signingIn") : t("auth.loginCta")}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-text-secondary">
-          Pas encore de compte ?{" "}
+          {t("auth.noAccount")}{" "}
           <Link
             href="/register"
             className="font-medium text-accent-soft underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
           >
-            S&apos;inscrire
+            {t("auth.signupLink")}
           </Link>
         </p>
       </div>

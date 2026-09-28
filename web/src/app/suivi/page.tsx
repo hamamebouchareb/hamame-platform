@@ -3,6 +3,8 @@
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
+import { localeFor, readinessLabel, type UiLanguage } from "@/lib/i18n";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { useApiResource } from "@/lib/useApiResource";
 import { useApiList } from "@/lib/useApiList";
@@ -24,21 +26,8 @@ function InfoTooltip({ tooltip, className }: { tooltip: string; className?: stri
   );
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString("fr-DZ", { dateStyle: "medium", timeStyle: "short" });
-}
-
-function readinessLabelFr(label: ExamReadiness["label"]): string {
-  switch (label) {
-    case "Exam ready":
-      return "Prêt pour l'examen";
-    case "On track":
-      return "Sur la bonne voie";
-    case "Needs work":
-      return "À travailler";
-    default:
-      return "Indisponible";
-  }
+function formatDate(iso: string, lang: UiLanguage): string {
+  return new Date(iso).toLocaleString(localeFor(lang), { dateStyle: "medium", timeStyle: "short" });
 }
 
 interface YearHierarchy {
@@ -53,6 +42,7 @@ export default function SuiviPage() {
   const { logout } = useAuth();
   const router = useRouter();
   const { user, isHydrated } = useRequireAuth();
+  const { lang, t } = useLanguage();
   const canFetch = isHydrated && !!user;
 
   const progress = useApiResource<ProgressSummary>(canFetch ? "/progress/me" : null);
@@ -124,7 +114,7 @@ export default function SuiviPage() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <LoadingSkeleton className="h-8 w-48" ariaLabel="Chargement" />
+        <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
       </main>
     );
   }
@@ -135,66 +125,65 @@ export default function SuiviPage() {
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-card-padding py-section-gap">
         {/* Hero */}
-        <section aria-label="En-tête du suivi" className="mx-auto max-w-3xl text-center">
-          <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">Progression</p>
+        <section aria-label={t("suivi.heroAria")} className="mx-auto max-w-3xl text-center">
+          <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">{t("suivi.heroKicker")}</p>
           <h1 className="mt-2 font-display text-hero font-bold leading-tight text-text-primary">
-            Suivi de progression
+            {t("suivi.heroTitle")}
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-body text-text-secondary">
-            Vue d&apos;ensemble de votre avancement dans le programme, votre régularité et votre préparation à
-            l&apos;examen.
+            {t("suivi.heroSubtitle")}
           </p>
         </section>
 
         {/* 1. Overview metrics */}
-        <section aria-label="Indicateurs clés" className="mx-auto mt-section-gap grid max-w-4xl grid-cols-2 gap-card-gap md:grid-cols-4">
+        <section aria-label={t("suivi.metricsAria")} className="mx-auto mt-section-gap grid max-w-4xl grid-cols-2 gap-card-gap md:grid-cols-4">
           <MetricCard
-            label="Jours de série"
+            label={t("suivi.streakDays")}
             value={progress.data?.streak.currentStreakDays ?? 0}
-            subtitle="au total"
+            subtitle={t("common.total")}
             loading={progress.isLoading}
-            error={progress.error ? "Série indisponible" : null}
+            error={progress.error ? t("suivi.streakError") : null}
             onRetry={progress.refetch}
             tone="primary"
           />
           <MetricCard
-            label="Précision"
+            label={t("suivi.accuracy")}
             value={progress.data?.accuracy !== null && progress.data?.accuracy !== undefined ? `${progress.data.accuracy}%` : "—"}
-            subtitle="QCM / QCS, au total"
+            subtitle={t("suivi.accuracySubtitle")}
             loading={progress.isLoading}
-            error={progress.error ? "Précision indisponible" : null}
+            error={progress.error ? t("suivi.accuracyError") : null}
             onRetry={progress.refetch}
             tone="primary"
           />
           <MetricCard
-            label="Score moyen"
+            label={t("suivi.avgScore")}
             value={progress.data?.averageScore !== null && progress.data?.averageScore !== undefined ? `${progress.data.averageScore}%` : "—"}
-            subtitle="sessions terminées"
+            subtitle={t("suivi.avgScoreSubtitle")}
             loading={progress.isLoading}
-            error={progress.error ? "Score indisponible" : null}
+            error={progress.error ? t("suivi.scoreError") : null}
             onRetry={progress.refetch}
             tone="qcm"
           />
           <MetricCard
-            label="Sessions terminées"
+            label={t("suivi.sessionsDone")}
             value={progress.data?.totalCompletedSessions ?? 0}
-            subtitle="au total"
+            subtitle={t("common.total")}
             loading={progress.isLoading}
-            error={progress.error ? "Sessions indisponibles" : null}
+            error={progress.error ? t("suivi.sessionsError") : null}
             onRetry={progress.refetch}
             tone="library"
           />
         </section>
 
         {/* 2. Curriculum progress hierarchy */}
-        <section aria-label="Progression dans le programme" className="mx-auto mt-section-gap max-w-4xl">
-          <h2 className="font-display text-h2 font-semibold text-text-primary">Progression dans le programme</h2>
+        <section aria-label={t("suivi.curriculumTitle")} className="mx-auto mt-section-gap max-w-4xl">
+          <h2 className="font-display text-h2 font-semibold text-text-primary">{t("suivi.curriculumTitle")}</h2>
 
           {progress.isLoading || moduleProgressLoading || yearsData.isLoading ? (
             <div className="mt-4 flex flex-col gap-4">
               {[0, 1].map((i) => (
                 <div key={i} className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
-                  <LoadingSkeleton className="mb-3 h-5 w-32" ariaLabel="Chargement de la progression" />
+                  <LoadingSkeleton className="mb-3 h-5 w-32" ariaLabel={t("suivi.curriculumLoading")} />
                   <LoadingSkeleton className="h-4 w-full" ariaLabel="" />
                 </div>
               ))}
@@ -202,30 +191,30 @@ export default function SuiviPage() {
           ) : yearsData.error ? (
             <div className="mt-4 rounded-card border border-danger bg-surface-1 p-card-padding">
               <p role="alert" className="text-body text-danger">
-                Impossible de charger le programme. {yearsData.error}
+                {t("suivi.curriculumLoadError", { error: yearsData.error })}
               </p>
               <button
                 type="button"
                 onClick={yearsData.refetch}
                 className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 sm:w-auto"
               >
-                Réessayer
+                {t("common.retry")}
               </button>
             </div>
           ) : showEmpty && !user.yearId ? (
             <div className="mt-4">
               <EmptyState
-                title="Aucune filière définie"
-                description="Indiquez votre faculté et votre année dans votre profil pour suivre votre progression dans le programme."
-                action={{ label: "Choisir ma filière", href: "/faculties" }}
+                title={t("suivi.noTrack")}
+                description={t("suivi.noTrackDesc")}
+                action={{ label: t("suivi.chooseTrack"), href: "/faculties" }}
               />
             </div>
           ) : !hasCurriculum && user.yearId ? (
             <div className="mt-4">
               <EmptyState
-                title="Aucun module dans votre année"
-                description="Votre année ne contient pas encore de modules. Revenez bientôt ou explorez le catalogue."
-                action={{ label: "Voir la bibliothèque", href: "/faculties" }}
+                title={t("suivi.noModules")}
+                description={t("suivi.noModulesDesc")}
+                action={{ label: t("suivi.viewLibrary"), href: "/faculties" }}
               />
             </div>
           ) : (
@@ -241,8 +230,8 @@ export default function SuiviPage() {
                       <p className="font-display text-h3 font-semibold text-text-primary">{yh.year.label}</p>
                       <p className="mt-0.5 text-meta text-text-secondary">
                         {yh.totalLessons > 0
-                          ? `${yh.completedLessons} / ${yh.totalLessons} leçons consultées`
-                          : "Aucune leçon publiée"}
+                          ? t("suivi.lessonsViewed", { completed: yh.completedLessons, total: yh.totalLessons })
+                          : t("suivi.noLessons")}
                       </p>
                     </div>
                     <span className="font-display text-display font-bold tabular-nums text-text-primary">
@@ -252,7 +241,7 @@ export default function SuiviPage() {
                   <ProgressBar
                     className="mt-3"
                     value={yh.percentage}
-                    label={`${yh.year.label} — progression globale`}
+                    label={t("suivi.overallProgress", { label: yh.year.label })}
                     tone="primary"
                   />
                   {yh.modules.length > 0 && (
@@ -266,7 +255,7 @@ export default function SuiviPage() {
                             <div className="flex items-center justify-between gap-3">
                               <p className="text-body font-medium text-text-primary">{mod.name}</p>
                               <span className="text-meta tabular-nums text-text-secondary">
-                                {total > 0 ? `${completed}/${total} leçons` : "—"}
+                                {total > 0 ? t("suivi.moduleLessons", { completed, total }) : "—"}
                               </span>
                             </div>
                             <ProgressBar value={pct} tone={pct === 100 ? "success" : "primary"} />
@@ -283,10 +272,10 @@ export default function SuiviPage() {
 
         {/* 3. Ranked modules — weakest first */}
         {rankedModules.length > 0 && (
-          <section aria-label="Modules à consolider" className="mx-auto mt-section-gap max-w-4xl">
-            <h2 className="font-display text-h2 font-semibold text-text-primary">Modules à consolider</h2>
+          <section aria-label={t("suivi.weakModules")} className="mx-auto mt-section-gap max-w-4xl">
+            <h2 className="font-display text-h2 font-semibold text-text-primary">{t("suivi.weakModules")}</h2>
             <p className="mt-1 text-body text-text-secondary">
-              Classés par progression croissante — les modules où vous avez le plus de travail en premier.
+              {t("suivi.weakModulesDesc")}
             </p>
             <ol className="mt-4 flex flex-col gap-card-gap">
               {rankedModules.map((mod, index) => {
@@ -305,7 +294,7 @@ export default function SuiviPage() {
                       <div className="flex items-center justify-between gap-3">
                         <p className="truncate text-body font-medium text-text-primary">{mod.name}</p>
                         <span className="shrink-0 text-meta tabular-nums text-text-secondary">
-                          {total > 0 ? `${completed}/${total} leçons` : "—"}
+                          {total > 0 ? t("suivi.moduleLessons", { completed, total }) : "—"}
                         </span>
                       </div>
                       <ProgressBar className="mt-2" value={pct} tone={pct === 100 ? "success" : pct > 0 ? "primary" : "warning"} />
@@ -318,13 +307,13 @@ export default function SuiviPage() {
         )}
 
         {/* 4. Readiness breakdown */}
-        <section aria-label="Préparation à l'examen" className="mx-auto mt-section-gap max-w-4xl">
-          <h2 className="font-display text-h2 font-semibold text-text-primary">Préparation à l&apos;examen</h2>
+        <section aria-label={t("suivi.examPrep")} className="mx-auto mt-section-gap max-w-4xl">
+          <h2 className="font-display text-h2 font-semibold text-text-primary">{t("suivi.examPrep")}</h2>
           {readiness.isLoading ? (
             <div className="mt-4 flex flex-col gap-4">
               {[0, 1, 2].map((i) => (
                 <div key={i} className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
-                  <LoadingSkeleton className="h-4 w-40" ariaLabel="Chargement" />
+                  <LoadingSkeleton className="h-4 w-40" ariaLabel={t("common.loading")} />
                 </div>
               ))}
             </div>
@@ -338,7 +327,7 @@ export default function SuiviPage() {
                 onClick={readiness.refetch}
                 className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 sm:w-auto"
               >
-                Réessayer
+                {t("common.retry")}
               </button>
             </div>
           ) : readinessData ? (
@@ -347,99 +336,99 @@ export default function SuiviPage() {
                 <span className="font-display text-display font-bold text-text-primary">{readinessData.score}</span>
                 <span className="font-display text-h3 font-semibold text-text-secondary">/100</span>
                 <span className="ml-auto rounded-pill border border-accent-suivi/40 bg-accent-suivi/15 px-2.5 py-0.5 text-caption font-medium text-accent-soft">
-                  {readinessLabelFr(readinessData.label)}
+                  {readinessLabel(lang, readinessData.label)}
                 </span>
               </div>
               <ul className="flex flex-col gap-4">
                 <li className="flex flex-col gap-2">
                   <span className="flex items-center gap-1.5 text-meta text-text-secondary">
-                    <InfoTooltip tooltip="Pourcentage de bonnes réponses sur les 20 dernières questions QCM/QCS. Pondération : 50% du score." />
-                    Précision récente
-                    <span className="text-caption text-text-tertiary">(20 dernières réponses — 50%)</span>
+                    <InfoTooltip tooltip={t("suivi.accuracyTip")} />
+                    {t("suivi.recentAccuracy")}
+                    <span className="text-caption text-text-tertiary">{t("suivi.recentAccuracyHint")}</span>
                   </span>
-                  <ProgressBar value={readinessData.components.recentAccuracy ?? 0} tone="primary" label="Précision récente" />
+                  <ProgressBar value={readinessData.components.recentAccuracy ?? 0} tone="primary" label={t("suivi.recentAccuracy")} />
                 </li>
                 <li className="flex flex-col gap-2">
                   <span className="flex items-center gap-1.5 text-meta text-text-secondary">
-                    <InfoTooltip tooltip="Pourcentage des leçons publiées de votre année que vous avez consultées au moins une fois. Pondération : 30% du score." />
-                    Couverture du programme
-                    <span className="text-caption text-text-tertiary">(votre année — 30%)</span>
+                    <InfoTooltip tooltip={t("suivi.coverageTip")} />
+                    {t("suivi.coverage")}
+                    <span className="text-caption text-text-tertiary">{t("suivi.coverageHint")}</span>
                   </span>
-                  <ProgressBar value={readinessData.components.curriculumCoverage} tone="secondary" label="Couverture du programme" />
+                  <ProgressBar value={readinessData.components.curriculumCoverage} tone="secondary" label={t("suivi.coverage")} />
                 </li>
                 <li className="flex flex-col gap-2">
                   <span className="flex items-center gap-1.5 text-meta text-text-secondary">
-                    <InfoTooltip tooltip="Nombre de jours consécutifs d'étude, plafonné à 30 jours puis mis à l'échelle 0–100. Pondération : 20% du score." />
-                    Régularité
-                    <span className="text-caption text-text-tertiary">(30 derniers jours — 20%)</span>
+                    <InfoTooltip tooltip={t("suivi.consistencyTip")} />
+                    {t("suivi.consistency")}
+                    <span className="text-caption text-text-tertiary">{t("suivi.consistencyHint")}</span>
                   </span>
-                  <ProgressBar value={readinessData.components.consistency} tone="primary" label="Régularité" />
+                  <ProgressBar value={readinessData.components.consistency} tone="primary" label={t("suivi.consistency")} />
                 </li>
               </ul>
               <p className="mt-4 text-caption text-text-tertiary">
-                Score composite basé sur les 3 composantes ci-dessus.
+                {t("suivi.compositeNote")}
               </p>
             </div>
           ) : (
             <div className="mt-4">
               <EmptyState
-                title="Pas encore de données suffisantes"
-                description={`Complétez au moins ${readiness.data?.minAttemptsRequired ?? 5} sessions QCM/QCS pour obtenir un score de préparation.`}
-                action={{ label: "Lancer une session", href: "/qcm" }}
+                title={t("suivi.insufficientTitle")}
+                description={t("suivi.insufficientDesc", { min: readiness.data?.minAttemptsRequired ?? 5 })}
+                action={{ label: t("suivi.startSession"), href: "/qcm" }}
               />
             </div>
           )}
         </section>
 
         {/* 5. Recent activity */}
-        <section aria-label="Activité récente" className="mx-auto mt-section-gap max-w-4xl">
-          <h2 className="font-display text-h2 font-semibold text-text-primary">Activité récente</h2>
+        <section aria-label={t("suivi.recentActivity")} className="mx-auto mt-section-gap max-w-4xl">
+          <h2 className="font-display text-h2 font-semibold text-text-primary">{t("suivi.recentActivity")}</h2>
           <WeeklyActivity
             className="mt-4"
             items={(progress.data?.recentActivity ?? []).map((item, index) => {
               if (item.type === "session") {
-                const scoreLabel = item.score === null ? "non noté" : `${item.score}%`;
+                const scoreLabel = item.score === null ? t("suivi.unscored") : `${item.score}%`;
                 return {
                   key: `session-${index}`,
                   href: `/sessions/${item.id}/results`,
                   title: item.name,
-                  subtitle: `Session ${item.mode === "practice" ? "d'entraînement" : "d'examen"} · ${scoreLabel}`,
-                  timestamp: formatDate(item.at),
+                  subtitle: `${item.mode === "practice" ? t("suivi.sessionPractice") : t("suivi.sessionExam")} · ${scoreLabel}`,
+                  timestamp: formatDate(item.at, lang),
                 };
               }
               return {
                 key: `lesson-${index}`,
                 href: `/lessons/${item.lessonId}`,
                 title: item.title,
-                subtitle: "Leçon consultée",
-                timestamp: formatDate(item.at),
+                subtitle: t("suivi.lessonViewed"),
+                timestamp: formatDate(item.at, lang),
               };
             })}
             loading={progress.isLoading}
-            error={progress.error ? `Impossible de charger l'activité. ${progress.error}` : null}
+            error={progress.error ? t("suivi.activityError", { error: progress.error }) : null}
             onRetry={progress.refetch}
-            emptyTitle="Aucune activité pour l'instant"
-            emptyDescription="Commencez par créer une session QCM pour suivre votre progression ici."
-            emptyAction={{ label: "Créer une session QCM", href: "/qcm" }}
+            emptyTitle={t("suivi.noActivityTitle")}
+            emptyDescription={t("suivi.noActivityDesc")}
+            emptyAction={{ label: t("suivi.createQcm"), href: "/qcm" }}
           />
         </section>
 
         {/* Global empty state — no curriculum, no activity, nothing */}
         {showEmpty && user.yearId && (
-          <section aria-label="Commencer à étudier" className="mx-auto mt-section-gap max-w-4xl">
+          <section aria-label={t("suivi.getStarted")} className="mx-auto mt-section-gap max-w-4xl">
             <EmptyState
-              title="Commencez votre préparation"
-              description="Vous n'avez pas encore de progression. Lancez votre première session QCM ou explorez les cours disponibles."
-              action={{ label: "Créer une session QCM", href: "/qcm" }}
+              title={t("suivi.getStartedTitle")}
+              description={t("suivi.getStartedDescSessions")}
+              action={{ label: t("suivi.createQcm"), href: "/qcm" }}
             />
           </section>
         )}
         {showEmpty && !user.yearId && (
-          <section aria-label="Commencer à étudier" className="mx-auto mt-section-gap max-w-4xl">
+          <section aria-label={t("suivi.getStarted")} className="mx-auto mt-section-gap max-w-4xl">
             <EmptyState
-              title="Commencez votre préparation"
-              description="Choisissez votre filière et votre année pour accéder au programme, puis lancez votre première session QCM."
-              action={{ label: "Choisir ma filière", href: "/faculties" }}
+              title={t("suivi.getStartedTitle")}
+              description={t("suivi.getStartedDescTrack")}
+              action={{ label: t("suivi.chooseTrack"), href: "/faculties" }}
             />
           </section>
         )}

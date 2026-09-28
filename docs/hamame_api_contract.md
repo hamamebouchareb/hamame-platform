@@ -13,7 +13,7 @@ Grounded in the PRD's FRs and the database schema (v0.1). Auth via Bearer JWT un
 | POST | /api/auth/verify | Verify email/phone (FR-3) |
 | GET | /api/users/me | Current profile |
 | PUT | /api/users/me | Update profile (faculty, year, university, wilaya, photo) |
-| PUT | /api/users/me/preferences | Language, theme, notification prefs |
+| PUT | /api/users/me/preferences | Language (`fr`/`en`), theme, notification prefs |
 | GET | /api/users/me/export | Data export request (FR-8) |
 | DELETE | /api/users/me | Account deletion request (FR-8) |
 

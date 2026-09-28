@@ -31,7 +31,7 @@ users (
   university TEXT,
   wilaya TEXT,                     -- city/province, per FR-4
   profile_photo_url TEXT NULL,
-  ui_language TEXT DEFAULT 'fr',   -- 'fr' | 'ar'  -- NFR-6
+  ui_language TEXT DEFAULT 'fr',   -- 'fr' | 'en'  -- NFR-6 (was 'fr' | 'ar'; Arabic UI never shipped, EN/FR toggle built 2026-09-28)
   theme TEXT DEFAULT 'light',      -- 'light' | 'dark'
   email_verified_at TIMESTAMPTZ NULL,
   phone_verified_at TIMESTAMPTZ NULL,

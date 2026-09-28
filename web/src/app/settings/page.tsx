@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
+import type { I18nKey } from "@/lib/i18n";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useApiResource } from "@/lib/useApiResource";
 import { usePushSubscription } from "@/lib/usePushSubscription";
 import { useToast } from "@/components/Toast";
-import { AppHeader, Footer, LoadingSkeleton } from "@/components";
+import { AppHeader, Footer, LanguageToggle, LoadingSkeleton } from "@/components";
 import type { PushPreferences } from "@/lib/types";
 
 const WILAYAS = [
@@ -40,12 +42,13 @@ function Switch({
   disabled?: boolean;
   label: string;
 }) {
+  const { t } = useLanguage();
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
-      aria-label={`${label} — ${checked ? "activé" : "désactivé"}`}
+      aria-label={`${label} — ${checked ? t("builder.switchOn") : t("builder.switchOff")}`}
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition disabled:opacity-50 ${
@@ -61,21 +64,21 @@ function Switch({
   );
 }
 
-const PREFERENCE_ROWS: { key: keyof PushPreferences; label: string; description: string }[] = [
+const PREFERENCE_ROWS: { key: keyof PushPreferences; labelKey: I18nKey; descriptionKey: I18nKey }[] = [
   {
     key: "dailyGoalReminder",
-    label: "Rappel objectif quotidien",
-    description: "Un rappel le soir si vous n'avez pas atteint votre objectif d'étude.",
+    labelKey: "settings.prefDaily",
+    descriptionKey: "settings.prefDailyDesc",
   },
   {
     key: "streakAtRisk",
-    label: "Série en danger",
-    description: "Une alerte si votre série va se rompre si vous n'étudiez pas aujourd'hui.",
+    labelKey: "settings.prefStreak",
+    descriptionKey: "settings.prefStreakDesc",
   },
   {
     key: "badgeEarned",
-    label: "Badge obtenu",
-    description: "Envoyé immédiatement quand vous gagnez un nouveau badge.",
+    labelKey: "settings.prefBadge",
+    descriptionKey: "settings.prefBadgeDesc",
   },
 ];
 
@@ -90,6 +93,7 @@ export default function SettingsPage() {
   const { user, isHydrated } = useRequireAuth();
   const router = useRouter();
   const { logout } = useAuth();
+  const { t } = useLanguage();
   const toast = useToast();
   const push = usePushSubscription();
   const canFetch = isHydrated && !!user;
@@ -106,11 +110,11 @@ export default function SettingsPage() {
       const data = await apiFetch<{ preferences: PushPreferences }>("/push/preferences");
       setPreferences(data.preferences);
     } catch (err) {
-      setPreferencesError(err instanceof ApiError ? err.message : "Impossible de charger les préférences.");
+      setPreferencesError(err instanceof ApiError ? err.message : t("settings.prefsLoadError"));
     } finally {
       setPreferencesLoaded(true);
     }
-  }, []);
+  }, [t]);
 
   /* ── Password change ── */
   const [currentPassword, setCurrentPassword] = useState("");
@@ -127,10 +131,10 @@ export default function SettingsPage() {
     setPasswordError(null);
     const fieldErrors: { newPassword?: string; confirmPassword?: string } = {};
     if (newPassword.length < 8) {
-      fieldErrors.newPassword = "Le nouveau mot de passe doit contenir au moins 8 caractères.";
+      fieldErrors.newPassword = t("settings.passwordTooShort");
     }
     if (newPassword !== confirmPassword) {
-      fieldErrors.confirmPassword = "Les mots de passe ne correspondent pas.";
+      fieldErrors.confirmPassword = t("settings.passwordMismatch");
     }
     setPasswordFieldErrors(fieldErrors);
     if (Object.keys(fieldErrors).length > 0) return;
@@ -144,12 +148,12 @@ export default function SettingsPage() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      toast.success({ title: "Mot de passe mis à jour." });
+      toast.success({ title: t("settings.passwordUpdated") });
     } catch {
       // Generic on purpose — the API rejects every failure mode with the same
       // PASSWORD_CHANGE_FAILED code so the UI must not reveal whether the current
       // password was wrong.
-      setPasswordError("Impossible de changer le mot de passe. Vérifiez vos informations et réessayez.");
+      setPasswordError(t("settings.passwordChangeError"));
     } finally {
       setChangingPassword(false);
     }
@@ -177,7 +181,7 @@ export default function SettingsPage() {
       setPreferences(data.preferences);
     } catch (err) {
       setPreferences(previous);
-      setPreferencesError(err instanceof ApiError ? err.message : "Erreur de sauvegarde.");
+      setPreferencesError(err instanceof ApiError ? err.message : t("settings.saveError"));
     } finally {
       setSavingKey(null);
     }
@@ -202,7 +206,7 @@ export default function SettingsPage() {
   async function saveProfile() {
     setProfileErrors({});
     const errors: FieldErrors = {};
-    if (!fullName.trim()) errors.fullName = "Le nom est requis.";
+    if (!fullName.trim()) errors.fullName = t("settings.nameRequired");
     if (Object.keys(errors).length > 0) {
       setProfileErrors(errors);
       return;
@@ -217,7 +221,7 @@ export default function SettingsPage() {
       if (wilaya !== (user?.wilaya ?? "")) body.wilaya = wilaya || null;
 
       if (Object.keys(body).length === 0) {
-        toast.info({ title: "Aucune modification à sauvegarder." });
+        toast.info({ title: t("settings.noChanges") });
         setSavingProfile(false);
         return;
       }
@@ -226,9 +230,9 @@ export default function SettingsPage() {
         method: "PUT",
         body: JSON.stringify(body),
       });
-      toast.success({ title: "Profil mis à jour." });
+      toast.success({ title: t("settings.profileUpdated") });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Erreur de sauvegarde.";
+      const message = err instanceof Error ? err.message : t("settings.saveError");
       toast.error({ title: message });
     } finally {
       setSavingProfile(false);
@@ -243,7 +247,7 @@ export default function SettingsPage() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <p className="text-meta text-text-secondary">Chargement...</p>
+        <p className="text-meta text-text-secondary">{t("common.loadingMore")}</p>
       </main>
     );
   }
@@ -255,17 +259,17 @@ export default function SettingsPage() {
       <AppHeader user={user} onLogout={handleLogout} />
 
       <main className="mx-auto w-full max-w-4xl flex-1 px-card-padding py-section-gap">
-        <h1 className="font-display text-h1 font-bold text-text-primary">Paramètres</h1>
+        <h1 className="font-display text-h1 font-bold text-text-primary">{t("nav.settings")}</h1>
 
         <div className="mt-section-gap grid gap-section-gap lg:grid-cols-2">
           {/* ── Personal info card ── */}
-          <section aria-label="Informations personnelles" className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
-            <h2 className="font-display text-h2 font-semibold text-text-primary">Informations personnelles</h2>
+          <section aria-label={t("settings.personalInfo")} className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
+            <h2 className="font-display text-h2 font-semibold text-text-primary">{t("settings.personalInfo")}</h2>
 
             <div className="mt-4 flex flex-col gap-4">
               {/* Full name */}
               <div>
-                <label htmlFor="fullName" className={labelClass}>Nom complet</label>
+                <label htmlFor="fullName" className={labelClass}>{t("settings.fullName")}</label>
                 <input
                   id="fullName"
                   type="text"
@@ -280,7 +284,7 @@ export default function SettingsPage() {
 
               {/* Email (read-only) */}
               <div>
-                <label htmlFor="email" className={labelClass}>Email</label>
+                <label htmlFor="email" className={labelClass}>{t("settings.email")}</label>
                 <input
                   id="email"
                   type="email"
@@ -288,12 +292,12 @@ export default function SettingsPage() {
                   readOnly
                   className={`${inputClass} opacity-60 cursor-not-allowed`}
                 />
-                <p className="mt-1 text-caption text-text-tertiary">L&apos;email ne peut pas être modifié ici.</p>
+                <p className="mt-1 text-caption text-text-tertiary">{t("settings.emailReadonly")}</p>
               </div>
 
               {/* Phone (read-only) */}
               <div>
-                <label htmlFor="phone" className={labelClass}>Téléphone</label>
+                <label htmlFor="phone" className={labelClass}>{t("settings.phone")}</label>
                 <input
                   id="phone"
                   type="tel"
@@ -301,19 +305,19 @@ export default function SettingsPage() {
                   readOnly
                   className={`${inputClass} opacity-60 cursor-not-allowed`}
                 />
-                <p className="mt-1 text-caption text-text-tertiary">Le téléphone ne peut pas être modifié ici.</p>
+                <p className="mt-1 text-caption text-text-tertiary">{t("settings.phoneReadonly")}</p>
               </div>
 
               {/* Faculty */}
               <div>
-                <label htmlFor="facultyId" className={labelClass}>Faculté</label>
+                <label htmlFor="facultyId" className={labelClass}>{t("settings.faculty")}</label>
                 <select
                   id="facultyId"
                   value={facultyId}
                   onChange={(e) => { setFacultyId(e.target.value); setYearId(""); }}
                   className={inputClass}
                 >
-                  <option value="">— Aucune —</option>
+                  <option value="">{t("settings.none")}</option>
                   {faculties.data?.faculties.map((f) => (
                     <option key={f.id} value={f.id}>{f.name}</option>
                   ))}
@@ -322,7 +326,7 @@ export default function SettingsPage() {
 
               {/* Year */}
               <div>
-                <label htmlFor="yearId" className={labelClass}>Année</label>
+                <label htmlFor="yearId" className={labelClass}>{t("settings.year")}</label>
                 <select
                   id="yearId"
                   value={yearId}
@@ -330,24 +334,24 @@ export default function SettingsPage() {
                   disabled={!facultyId}
                   className={inputClass}
                 >
-                  <option value="">— Aucune —</option>
+                  <option value="">{t("settings.none")}</option>
                   {years.data?.years.map((y) => (
                     <option key={y.id} value={y.id}>{y.label}</option>
                   ))}
                 </select>
-                {!facultyId ? <p className={errorTextClass}>Sélectionnez d&apos;abord une faculté.</p> : null}
+                {!facultyId ? <p className={errorTextClass}>{t("settings.needFaculty")}</p> : null}
               </div>
 
               {/* Wilaya */}
               <div>
-                <label htmlFor="wilaya" className={labelClass}>Wilaya</label>
+                <label htmlFor="wilaya" className={labelClass}>{t("settings.wilaya")}</label>
                 <select
                   id="wilaya"
                   value={wilaya}
                   onChange={(e) => setWilaya(e.target.value)}
                   className={inputClass}
                 >
-                  <option value="">— Aucune —</option>
+                  <option value="">{t("settings.none")}</option>
                   {WILAYAS.map((w) => (
                     <option key={w} value={w}>{w}</option>
                   ))}
@@ -360,18 +364,18 @@ export default function SettingsPage() {
                 disabled={savingProfile}
                 className="mt-2 inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-primary px-5 text-body font-medium text-on-accent shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none sm:w-auto"
               >
-                {savingProfile ? "Sauvegarde..." : "Sauvegarder"}
+                {savingProfile ? t("settings.saving") : t("settings.save")}
               </button>
             </div>
           </section>
 
           {/* ── Password change card ── */}
-          <section aria-label="Changer le mot de passe" className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
-            <h2 className="font-display text-h2 font-semibold text-text-primary">Changer le mot de passe</h2>
+          <section aria-label={t("settings.passwordTitle")} className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
+            <h2 className="font-display text-h2 font-semibold text-text-primary">{t("settings.passwordTitle")}</h2>
 
             <div className="mt-4 flex flex-col gap-3">
               <div>
-                <label htmlFor="current-password" className={labelClass}>Mot de passe actuel</label>
+                <label htmlFor="current-password" className={labelClass}>{t("settings.currentPassword")}</label>
                 <input
                   id="current-password"
                   type="password"
@@ -382,7 +386,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label htmlFor="new-password" className={labelClass}>Nouveau mot de passe</label>
+                <label htmlFor="new-password" className={labelClass}>{t("settings.newPassword")}</label>
                 <input
                   id="new-password"
                   type="password"
@@ -401,11 +405,11 @@ export default function SettingsPage() {
                 {passwordFieldErrors.newPassword ? (
                   <p id="new-password-error" className={errorTextClass}>{passwordFieldErrors.newPassword}</p>
                 ) : (
-                  <p id="new-password-hint" className="mt-1 text-caption text-text-tertiary">Minimum 8 caractères.</p>
+                  <p id="new-password-hint" className="mt-1 text-caption text-text-tertiary">{t("settings.minLength")}</p>
                 )}
               </div>
               <div>
-                <label htmlFor="confirm-password" className={labelClass}>Confirmer le nouveau mot de passe</label>
+                <label htmlFor="confirm-password" className={labelClass}>{t("settings.confirmPassword")}</label>
                 <input
                   id="confirm-password"
                   type="password"
@@ -438,23 +442,32 @@ export default function SettingsPage() {
                 disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
                 className="mt-2 inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-primary px-5 text-body font-medium text-on-accent shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none sm:w-auto"
               >
-                {changingPassword ? "Mise à jour..." : "Changer le mot de passe"}
+                {changingPassword ? t("settings.updating") : t("settings.changePassword")}
               </button>
+            </div>
+          </section>
+
+          {/* ── Language card ── */}
+          <section aria-label={t("language.label")} className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
+            <h2 className="font-display text-h2 font-semibold text-text-primary">{t("language.label")}</h2>
+            <p className="mt-1 text-body text-text-secondary">{t("settings.languageDesc")}</p>
+            <div className="mt-4">
+              <LanguageToggle />
             </div>
           </section>
         </div>
 
         {/* ── Notification settings (full width) ── */}
-        <section aria-label="Notifications" className="mt-section-gap rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
-          <h2 className="font-display text-h2 font-semibold text-text-primary">Notifications</h2>
+        <section aria-label={t("settings.notifications")} className="mt-section-gap rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
+          <h2 className="font-display text-h2 font-semibold text-text-primary">{t("settings.notifications")}</h2>
 
           <div className="mt-4">
             <p className="text-body text-text-secondary">
               {push.isSupported
                 ? push.isSubscribed
-                  ? "Cet appareil est abonné aux notifications push."
-                  : "Activez les notifications push pour recevoir des rappels même quand Hamame n&apos;est pas ouvert."
-                : "Votre navigateur ne supporte pas les notifications push."}
+                  ? t("settings.pushOn")
+                  : t("settings.pushOff")
+                : t("settings.pushUnsupported")}
             </p>
 
             {push.isSupported && (
@@ -465,10 +478,10 @@ export default function SettingsPage() {
                 className={
                   push.isSubscribed
                     ? "mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50"
-                    : "mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control bg-accent-primary px-4 text-body font-medium text-on-accent shadow-glow-primary transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50"
+                    : "mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control bg-accent-primary px-4 text-body font-medium text-on-accent shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50"
                 }
               >
-                {push.isLoading ? "Chargement..." : push.isSubscribed ? "Désactiver sur cet appareil" : "Activer sur cet appareil"}
+                {push.isLoading ? t("settings.pushLoading") : push.isSubscribed ? t("settings.pushDisable") : t("settings.pushEnable")}
               </button>
             )}
 
@@ -481,7 +494,7 @@ export default function SettingsPage() {
 
           {!preferencesLoaded ? (
             <div className="mt-4">
-              <LoadingSkeleton className="h-8 w-48" ariaLabel="Chargement des préférences" />
+              <LoadingSkeleton className="h-8 w-48" ariaLabel={t("settings.prefsLoading")} />
             </div>
           ) : preferencesError ? (
             <p role="alert" className="mt-4 rounded-panel border border-danger/30 bg-danger/10 px-3 py-2 text-meta text-danger">
@@ -491,14 +504,14 @@ export default function SettingsPage() {
             <div className="mt-4">
               <div className="flex items-center justify-between gap-4 border-t border-border pt-4">
                 <div>
-                  <p className="text-body font-medium text-text-primary">Toutes les notifications</p>
-                  <p className="mt-0.5 text-meta text-text-secondary">Interrupteur principal — désactive tous les types ci-dessous.</p>
+                  <p className="text-body font-medium text-text-primary">{t("settings.allNotifications")}</p>
+                  <p className="mt-0.5 text-meta text-text-secondary">{t("settings.masterDesc")}</p>
                 </div>
                 <Switch
                   checked={masterEnabled}
                   disabled={savingKey === "masterEnabled"}
                   onChange={(next) => updatePreference("masterEnabled", next)}
-                  label="Toutes les notifications"
+                  label={t("settings.allNotifications")}
                 />
               </div>
 
@@ -506,14 +519,14 @@ export default function SettingsPage() {
                 {PREFERENCE_ROWS.map((row) => (
                   <li key={row.key} className="flex items-center justify-between gap-4 border-t border-border pt-4">
                     <div className={!masterEnabled ? "opacity-50" : undefined}>
-                      <p className="text-body font-medium text-text-primary">{row.label}</p>
-                      <p className="mt-0.5 text-meta text-text-secondary">{row.description}</p>
+                      <p className="text-body font-medium text-text-primary">{t(row.labelKey)}</p>
+                      <p className="mt-0.5 text-meta text-text-secondary">{t(row.descriptionKey)}</p>
                     </div>
                     <Switch
                       checked={preferences[row.key]}
                       disabled={!masterEnabled || savingKey === row.key}
                       onChange={(next) => updatePreference(row.key, next)}
-                      label={row.label}
+                      label={t(row.labelKey)}
                     />
                   </li>
                 ))}

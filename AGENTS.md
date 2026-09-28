@@ -73,6 +73,7 @@ Real (non-exhaustive — see route files for the full surface):
 - **Windows console lies about encoding.** The shell runs under codepage 850, so UTF-8 bytes (accents, em-dashes) render as `??` / `Ǹ` in `git diff` / `curl` / script output. The bytes on disk, in Postgres (`server_encoding=UTF8`, byte-verified), in API JSON (`Content-Type: ...; charset=utf-8`, byte-verified), and in committed verification logs are correct — there is no app-wide encoding bug (handoff §2D verdict 2026-09-28). When checking non-ASCII text, compare hex/codepoints, never console glyphs.
 - **Inline `node -e` loses double quotes** (the shell layer strips `"` chars even inside single quotes). Use single-quotes-only in one-liners, or write a `tmp-*.ts`/`tmp-*.mjs` script file (gitignored) and run it.
 - **Never commit raw phone-camera dumps** (`docs/screenshotes/` ≈ 101 MB is gitignored on purpose). Transcribe findings into `docs/*.md`, keep binaries untracked on disk.
+- **UI copy is FR/EN via `web/src/lib/i18n.ts`** (hand-maintained `fr`/`en` tables; `en` is `Record<I18nKey,string>` so missing translations fail `tsc`). Never hard-code user-facing French/English in components — add both languages + use `t()` from `useLanguage()`. Plurals are caller-selected key pairs; `{var}` interpolation only. `nav.ts` stores label keys, resolved in `AppHeader`.
 
 ## Frontend notes
 

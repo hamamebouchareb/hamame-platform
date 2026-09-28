@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Fraunces, Manrope } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import { LanguageProvider } from "@/context/LanguageContext";
 import { ToastProvider } from "@/components";
 
 const manrope = Manrope({
@@ -28,7 +29,9 @@ export default function RootLayout({
     <html lang="fr" className={`${manrope.variable} ${fraunces.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col font-sans">
         <AuthProvider>
-          <ToastProvider>{children}</ToastProvider>
+          <LanguageProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </LanguageProvider>
         </AuthProvider>
       </body>
     </html>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { AppHeader, Footer, LoadingSkeleton } from "@/components";
 import { accentText, accentVar, type AccentTone } from "@/components/FeatureCard";
@@ -18,6 +19,7 @@ interface DecisionCardProps {
 }
 
 function DecisionCard({ href, title, description, points, cta, tone }: DecisionCardProps) {
+  const { t } = useLanguage();
   return (
     <Link
       href={href}
@@ -26,7 +28,7 @@ function DecisionCard({ href, title, description, points, cta, tone }: DecisionC
     >
       <div className="flex items-start justify-between gap-3">
         <h2 className={cxFont(tone)}>{title}</h2>
-        <span className={cxBadge(tone)}>100% gratuit</span>
+        <span className={cxBadge(tone)}>{t("qcm.freeBadge")}</span>
       </div>
       <p className="text-body text-text-secondary">{description}</p>
       <ul className="flex flex-col gap-1.5">
@@ -75,6 +77,7 @@ export default function QcmPage() {
   const { logout } = useAuth();
   const router = useRouter();
   const { user, isHydrated } = useRequireAuth();
+  const { t } = useLanguage();
 
   function handleLogout() {
     logout();
@@ -84,7 +87,7 @@ export default function QcmPage() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <LoadingSkeleton className="h-8 w-48" ariaLabel="Chargement" />
+        <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
       </main>
     );
   }
@@ -94,46 +97,45 @@ export default function QcmPage() {
       <AppHeader user={user} onLogout={handleLogout} />
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-card-padding py-section-gap">
-        <section aria-label="Présentation de la banque QCM" className="mx-auto max-w-3xl text-center">
-          <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">Banque de questions</p>
+        <section aria-label={t("qcm.heroAria")} className="mx-auto max-w-3xl text-center">
+          <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">{t("qcm.kicker")}</p>
           <h1 className="mt-2 font-display text-hero font-bold leading-tight text-text-primary">
-            Entraînez-vous sur de vrais sujets d&apos;examen
+            {t("qcm.title")}
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-body text-text-secondary">
-            Des milliers de questions officielles et rédigées par la communauté, filtrées par module. Gratuites pour
-            tous les membres inscrits.
+            {t("qcm.subtitle")}
           </p>
         </section>
 
-        <section aria-label="Choix du mode" className="mx-auto mt-section-gap grid max-w-4xl grid-cols-1 gap-card-gap md:grid-cols-2">
+        <section aria-label={t("qcm.modeAria")} className="mx-auto mt-section-gap grid max-w-4xl grid-cols-1 gap-card-gap md:grid-cols-2">
           <DecisionCard
             href="/qcm/builder?mode=practice"
-            title="Créer une session"
-            description="Choisissez votre module, les types de questions et le nombre. Chaque réponse est corrigée immédiatement avec son explication."
+            title={t("qcm.practiceTitle")}
+            description={t("qcm.practiceDesc")}
             points={[
-              "Filtres par faculté, année, module et unité",
-              "Correction immédiate question par question",
-              "Idéal pour réviser un chapitre précis",
+              t("qcm.practiceP1"),
+              t("qcm.practiceP2"),
+              t("qcm.practiceP3"),
             ]}
-            cta="Configurer"
+            cta={t("qcm.practiceCta")}
             tone="qcm"
           />
           <DecisionCard
             href="/qcm/builder?mode=exam"
-            title="Examen"
-            description="Conditions réelles : minuterie, aucun corrigé pendant l'épreuve, score détaillé à la fin. Parfait avant les partiels."
+            title={t("builder.nameExam")}
+            description={t("qcm.examDesc")}
             points={[
-              "Minuterie et mise en condition d'examen",
-              "Correction uniquement en fin de session",
-              "Score final avec revue de chaque question",
+              t("qcm.examP1"),
+              t("qcm.examP2"),
+              t("qcm.examP3"),
             ]}
-            cta="Lancer un examen"
+            cta={t("qcm.examCta")}
             tone="secondary"
           />
         </section>
 
         <p className="mt-section-gap text-center text-meta text-text-tertiary">
-          La banque QCM est entièrement gratuite pour tous les membres — aucun abonnement requis pour s&apos;entraîner.
+          {t("qcm.footnote")}
         </p>
       </main>
 

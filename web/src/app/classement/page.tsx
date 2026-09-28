@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
+import { localeFor } from "@/lib/i18n";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useApiResource } from "@/lib/useApiResource";
@@ -22,6 +24,7 @@ export default function LeaderboardPage() {
   const router = useRouter();
   const { logout } = useAuth();
   const { user, isHydrated } = useRequireAuth();
+  const { lang, t } = useLanguage();
 
   const [facultyId, setFacultyId] = useState("");
   const [yearId, setYearId] = useState("");
@@ -61,7 +64,7 @@ export default function LeaderboardPage() {
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <LoadingSkeleton className="h-8 w-48" ariaLabel="Chargement" />
+        <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
       </main>
     );
   }
@@ -71,12 +74,12 @@ export default function LeaderboardPage() {
       <AppHeader user={user} onLogout={handleLogout} />
 
       <main className="mx-auto w-full max-w-2xl flex-1 px-card-padding py-section-gap">
-        <BackLink href="/dashboard">Retour au tableau de bord</BackLink>
+        <BackLink href="/dashboard">{t("classement.backToDashboard")}</BackLink>
         <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="font-display text-h1 font-bold text-text-primary">Classement</h1>
+            <h1 className="font-display text-h1 font-bold text-text-primary">{t("nav.leaderboard")}</h1>
             <p className="mt-2 text-body text-text-secondary">
-              La promotion, classée sur les 30 derniers jours glissants.
+              {t("classement.subtitle")}
             </p>
           </div>
           <button
@@ -84,14 +87,14 @@ export default function LeaderboardPage() {
             onClick={() => setRulesOpen(true)}
             className="inline-flex min-h-touch-target items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
           >
-            Comment ça marche
+            {t("classement.howItWorks")}
           </button>
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div>
             <label htmlFor="board-faculty" className="mb-2 block text-meta font-medium text-text-secondary">
-              Faculté
+              {t("settings.faculty")}
             </label>
             <select
               id="board-faculty"
@@ -103,7 +106,7 @@ export default function LeaderboardPage() {
               disabled={faculties.isLoading}
               className={selectClass}
             >
-              <option value="">{faculties.isLoading ? "Chargement…" : "Choisir une faculté"}</option>
+              <option value="">{faculties.isLoading ? t("builder.loadingShort") : t("classement.pickFaculty")}</option>
               {facultyList.map((f) => (
                 <option key={f.id} value={f.id}>
                   {f.name}
@@ -113,7 +116,7 @@ export default function LeaderboardPage() {
           </div>
           <div>
             <label htmlFor="board-year" className="mb-2 block text-meta font-medium text-text-secondary">
-              Année
+              {t("settings.year")}
             </label>
             <select
               id="board-year"
@@ -122,7 +125,7 @@ export default function LeaderboardPage() {
               disabled={!facultyId || years.isLoading}
               className={selectClass}
             >
-              <option value="">{years.isLoading ? "Chargement…" : "Choisir une année"}</option>
+              <option value="">{years.isLoading ? t("builder.loadingShort") : t("classement.pickYear")}</option>
               {yearList.map((y) => (
                 <option key={y.id} value={y.id}>
                   {y.label}
@@ -132,7 +135,7 @@ export default function LeaderboardPage() {
           </div>
         </div>
 
-        <div className="mt-4 flex gap-2" role="group" aria-label="Type de classement">
+        <div className="mt-4 flex gap-2" role="group" aria-label={t("classement.boardType")}>
           {(["score", "contributors"] as BoardType[]).map((type) => (
             <button
               key={type}
@@ -145,7 +148,7 @@ export default function LeaderboardPage() {
                   : "border-border text-text-secondary hover:bg-surface-2"
               }`}
             >
-              {type === "score" ? "Scores" : "Participation"}
+              {type === "score" ? t("classement.scores") : t("classement.participation")}
             </button>
           ))}
         </div>
@@ -153,7 +156,7 @@ export default function LeaderboardPage() {
         <div className="mt-4">
           {!boardPath ? (
             <p className="rounded-panel border border-border bg-surface-2 px-3 py-2.5 text-meta text-text-tertiary">
-              Choisissez une faculté et une année pour voir le classement.
+              {t("classement.pickCohort")}
             </p>
           ) : board.isLoading && rows.length === 0 ? (
             <div className="flex flex-col gap-3" aria-busy="true">
@@ -171,14 +174,14 @@ export default function LeaderboardPage() {
                 onClick={board.refetch}
                 className="mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring sm:w-auto"
               >
-                Réessayer
+                {t("common.retry")}
               </button>
             </div>
           ) : rows.length === 0 ? (
             <EmptyState
-              title="Pas encore de classement"
-              description="Aucune session notée sur les 30 derniers jours pour cette promotion. Terminez une session pour y apparaître."
-              action={{ label: "Créer une session QCM", href: "/qcm" }}
+              title={t("classement.emptyTitle")}
+              description={t("classement.emptyDesc")}
+              action={{ label: t("dashboard.createQcm"), href: "/qcm" }}
             />
           ) : (
             <ol className="flex flex-col gap-2">
@@ -192,7 +195,7 @@ export default function LeaderboardPage() {
                     }`}
                   >
                     <span
-                      aria-label={`Rang ${row.rank}`}
+                      aria-label={t("classement.rank", { rank: row.rank })}
                       className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-3 font-display text-h3 font-bold text-text-primary"
                     >
                       {row.rank}
@@ -201,14 +204,14 @@ export default function LeaderboardPage() {
                       {row.fullName}
                       {isSelf ? (
                         <span className="ml-2 rounded-pill border border-accent-qcm/50 px-2 py-0.5 text-meta text-accent-soft">
-                          vous
+                          {t("classement.you")}
                         </span>
                       ) : null}
                     </span>
                     <span className="shrink-0 text-body font-semibold tabular-nums text-text-primary">
                       {boardType === "score"
-                        ? `${row.score.toFixed(1).replace(".", ",")} %`
-                        : `${row.score} session${row.score === 1 ? "" : "s"}`}
+                        ? `${row.score.toLocaleString(localeFor(lang), { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`
+                        : t(row.score === 1 ? "classement.sessionsOne" : "classement.sessionsMany", { count: row.score })}
                     </span>
                   </li>
                 );
@@ -217,31 +220,24 @@ export default function LeaderboardPage() {
           )}
         </div>
 
-        <Modal open={rulesOpen} onClose={() => setRulesOpen(false)} title="Comment marche le classement ?">
+        <Modal open={rulesOpen} onClose={() => setRulesOpen(false)} title={t("classement.rulesTitle")}>
           <div className="flex flex-col gap-3 text-body text-text-secondary">
             <p>
-              <strong className="text-text-primary">Scores.</strong> Chaque étudiant est classé sur la
-              moyenne de ses sessions terminées et notées des <strong className="text-text-primary">30
-              derniers jours glissants</strong> — pas un mois calendaire, pas un cumul à vie.
+              <strong className="text-text-primary">{t("classement.rulesScores")}</strong>{t("classement.rulesScoresBody1")}
+              <strong className="text-text-primary">{t("classement.rulesScoresBody2")}</strong>{t("classement.rulesScoresBody3")}
             </p>
             <p>
-              <strong className="text-text-primary">Promotion.</strong> Le classement est calculé par
-              faculté et année <strong className="text-text-primary">du profil de chaque
-              étudiant</strong> (les sessions elles-mêmes ne portent pas de faculté) : vous êtes
-              comparé aux étudiants qui partagent votre faculté et votre année.
+              <strong className="text-text-primary">{t("classement.rulesCohort")}</strong>{t("classement.rulesCohortBody1")}
+              <strong className="text-text-primary">{t("classement.rulesCohortBody2")}</strong>{t("classement.rulesCohortBody3")}
             </p>
             <p>
-              <strong className="text-text-primary">Participation.</strong> L&apos;autre onglet compte
-              simplement les sessions terminées sur 30 jours — la régularité plutôt que la note.
+              <strong className="text-text-primary">{t("classement.rulesParticipation")}</strong>{t("classement.rulesParticipationBody")}
             </p>
             <p>
-              <strong className="text-text-primary">Actualisation.</strong> Le classement est
-              recalculé périodiquement par le serveur et remplace le précédent : il n&apos;y a pas
-              d&apos;historique des anciens classements.
+              <strong className="text-text-primary">{t("classement.rulesRefresh")}</strong>{t("classement.rulesRefreshBody")}
             </p>
             <p>
-              <strong className="text-text-primary">Confidentialité.</strong> Seuls le rang, le
-              score et le nom affiché sont visibles — jamais d&apos;email ni de détail de sessions.
+              <strong className="text-text-primary">{t("classement.rulesPrivacy")}</strong>{t("classement.rulesPrivacyBody")}
             </p>
           </div>
         </Modal>
