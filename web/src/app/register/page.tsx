@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { ApiError } from "@/lib/api";
-import { LanguageToggle } from "@/components";
+import { GoogleSignInButton, LanguageToggle } from "@/components";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -113,6 +113,10 @@ export default function RegisterPage() {
             {t("auth.registerNote")}
           </p>
         </form>
+
+        <div className="mt-4">
+          <GoogleSignInButton />
+        </div>
 
         <p className="mt-6 text-center text-sm text-text-secondary">
           {t("auth.hasAccount")}{" "}

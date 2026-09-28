@@ -29,3 +29,4 @@ export { StudyTimer } from "@/components/StudyTimer";
 export { EnqueueReviewButton } from "@/components/EnqueueReviewButton";
 export { VerifyEmailBanner } from "@/components/VerifyEmailBanner";
 export { LanguageToggle } from "@/components/LanguageToggle";
+export { GoogleSignInButton } from "@/components/GoogleSignInButton";

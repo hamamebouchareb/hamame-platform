@@ -535,7 +535,7 @@ Status as of Phase 6 kickoff (all Phases 1–5 verified; see handoff §9.0).
 - [x] M6 leaderboard page + rules + cycle (HIGH) — Phase 3
 - [x] M7 session-history page + per-course resume (HIGH) — Phase 3
 - [x] M8 strike-through elimination (LOW) — Phase 5
-- [ ] M9 Google OAuth decision + implementation (MEDIUM) — DECISION GATE, Phase 6 Task 6
+- [ ] M9 Google OAuth (MEDIUM) — code complete 2026-09-28 (handoff §16; linking rule decided, env-gated, fail-closed); live Google round-trip still needs console credentials + one real login test
 - [x] P1 source toggle UI (HIGH) — Phase 1
 - [x] P2 period/sitting filter (MEDIUM) — Phase 1 R2
 - [x] P3 live question counter (MEDIUM) — Phase 1

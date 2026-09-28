@@ -96,6 +96,13 @@ Grounded in the PRD's FRs and the database schema (v0.1). Auth via Bearer JWT un
 | PATCH | /api/admin/simulations/:id | Reschedule/retitle/cancel (Admin only) |
 | DELETE | /api/admin/simulations/:id | Delete a simulation + registrations, sessions stay (Admin only) |
 
+## Google OAuth (env-gated; 501 unless configured)
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | /api/auth/providers | Advertises third-party logins (`{google}`), public |
+| GET | /api/auth/google/url | Fresh authorization URL with CSRF state for the frontend button |
+| GET | /api/auth/google/callback | Code exchange + account link (sub-stable), redirects to login with `?google_token=` or `?google_error=` |
+
 ## Content Authoring & Validation (Instructor/Reviewer)
 | Method | Endpoint | Description |
 |---|---|---|

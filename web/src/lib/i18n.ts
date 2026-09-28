@@ -690,6 +690,8 @@ const fr = {
   "auth.verifyCode": "Code de vérification",
   "auth.verifyPlaceholder": "Collez le code reçu par email",
   "auth.verifyCta": "Vérifier mon email",
+  "auth.googleCta": "Continuer avec Google",
+  "auth.googleFailed": "Échec de la connexion Google. Réessayez.",
   // ── Profil ──
   "profile.aria": "Profil",
   "profile.free": "Gratuit",
@@ -1670,6 +1672,8 @@ const en: Record<I18nKey, string> = {
   "auth.verifyCode": "Verification code",
   "auth.verifyPlaceholder": "Paste the code received by email",
   "auth.verifyCta": "Verify my email",
+  "auth.googleCta": "Continue with Google",
+  "auth.googleFailed": "Google sign-in failed. Try again.",
   // ── Profil ──
   "profile.aria": "Profile",
   "profile.free": "Free",

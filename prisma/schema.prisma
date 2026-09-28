@@ -84,6 +84,11 @@ model User {
   theme                       String    @default("light") // 'light' | 'dark'
   emailVerifiedAt             DateTime? @map("email_verified_at") @db.Timestamptz
   phoneVerifiedAt             DateTime? @map("phone_verified_at") @db.Timestamptz
+  // Google OAuth account link (M9). Set on first Google sign-in and matched on
+  // every later one — the stable `sub` claim, never the email (users can change
+  // their Google email; sub cannot be reassigned). Unique so two accounts can
+  // never claim the same Google identity.
+  googleSub                   String?   @unique @map("google_sub")
   isMinor                     Boolean   @default(false) @map("is_minor") // BR-11 data-handling awareness
   status                      String    @default("active") // 'active' | 'suspended' | 'deleted'
   // For time-based suspensions (POST /api/moderation/users/:id/restrict with

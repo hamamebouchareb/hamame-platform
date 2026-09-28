@@ -572,4 +572,124 @@ async function changePassword(req: Request, res: Response, next: NextFunction) {
 
 router.post("/change-password", requireAuth, validateBody(changePasswordSchema), changePassword);
 
+// ---------------------------------------------------------------------------
+// Google OAuth (M9) — authorization-code flow, env-gated (see src/lib/oauth-google.ts).
+// Disabled (no GOOGLE_CLIENT_ID/SECRET) = every entry fails closed with 501.
+//
+// Account-linking rule (decided, documented — the product input the handoff
+// asked for): the Google `sub` is the stable identity, never the email.
+// Returning sub → log in. Unknown sub + known non-deleted email → link (set
+// googleSub, stamp emailVerifiedAt) + log in — safe because Google verified
+// the email. Unknown sub + unknown email → create (mirroring register:
+// random unusable password, student_free role, email verified immediately).
+// Deleted accounts are rejected exactly like password login (generic 401).
+// ---------------------------------------------------------------------------
+import {
+  buildGoogleAuthUrl,
+  consumeOAuthState,
+  exchangeCodeForProfile,
+  frontendLoginRedirect,
+  isGoogleConfigured,
+  mintOAuthState,
+} from "../lib/oauth-google";
+
+function googleNotConfigured() {
+  return new ApiError(501, "OAUTH_NOT_CONFIGURED", "Google sign-in is not configured on this server.");
+}
+
+// GET /api/auth/providers — advertises third-party logins (public, leaks
+// nothing). The frontend hides the Google button when this says false.
+router.get("/providers", (_req: Request, res: Response) => {
+  res.status(200).json({ providers: { google: isGoogleConfigured() } });
+});
+
+// GET /api/auth/google/url — fresh authorization URL (with CSRF state) for
+// the frontend button to redirect to.
+router.get("/google/url", (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!isGoogleConfigured()) throw googleNotConfigured();
+    res.status(200).json({ url: buildGoogleAuthUrl(mintOAuthState()) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/auth/google/callback — Google redirects here with ?code=&state=.
+// Failures redirect to the frontend login page with ?google_error=<code> (no
+// internals leak); success redirects with ?google_token=<jwt>, the same
+// query-handoff pattern the /verify page already uses.
+router.get("/google/callback", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const frontendBase = (process.env.FRONTEND_URL ?? "http://localhost:3001").replace(/\/+$/, "");
+    const fail = (code: string) => res.redirect(`${frontendBase}/login?google_error=${code}`);
+
+    if (!isGoogleConfigured()) throw googleNotConfigured();
+    const { code, state } = req.query as { code?: string; state?: string };
+    if (!code || !consumeOAuthState(state)) {
+      return fail("invalid_state");
+    }
+
+    let profile;
+    try {
+      profile = await exchangeCodeForProfile(code);
+    } catch {
+      return fail("exchange_failed");
+    }
+    if (!profile.emailVerified) {
+      return fail("unverified_email");
+    }
+
+    let user = await prisma.user.findUnique({
+      where: { googleSub: profile.sub },
+      select: safeUserSelect,
+    });
+
+    if (!user) {
+      const byEmail = await prisma.user.findFirst({
+        where: { email: profile.email },
+        select: safeUserSelect,
+      });
+      if (byEmail) {
+        if (byEmail.status === "deleted") {
+          return fail("account_deleted");
+        }
+        user = await prisma.user.update({
+          where: { id: byEmail.id },
+          data: {
+            googleSub: profile.sub,
+            emailVerifiedAt: byEmail.emailVerifiedAt ?? new Date(),
+          },
+          select: safeUserSelect,
+        });
+      } else {
+        const passwordHash = await bcrypt.hash(randomBytes(32).toString("hex"), BCRYPT_SALT_ROUNDS);
+        const created = await prisma.user.create({
+          data: {
+            email: profile.email,
+            passwordHash,
+            fullName: profile.fullName,
+            googleSub: profile.sub,
+            emailVerifiedAt: new Date(),
+          },
+          select: safeUserSelect,
+        });
+        const studentFreeRole = await prisma.role.findUnique({ where: { name: "student_free" } });
+        if (studentFreeRole) {
+          await prisma.userRole.create({ data: { userId: created.id, roleId: studentFreeRole.id } });
+        }
+        user = created;
+      }
+    }
+
+    if (user.status === "deleted") {
+      return fail("account_deleted");
+    }
+
+    const accessToken = signAccessToken({ userId: user.id });
+    return res.redirect(frontendLoginRedirect(accessToken));
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

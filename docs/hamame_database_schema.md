@@ -35,6 +35,7 @@ users (
   theme TEXT DEFAULT 'light',      -- 'light' | 'dark'
   email_verified_at TIMESTAMPTZ NULL,
   phone_verified_at TIMESTAMPTZ NULL,
+  google_sub TEXT NULL UNIQUE,      -- Google OAuth stable identity (M9); matched before email, never reassigned
   is_minor BOOLEAN DEFAULT FALSE,  -- BR-11 data-handling awareness
   status TEXT DEFAULT 'active',    -- 'active','suspended','deleted'
   created_at TIMESTAMPTZ,

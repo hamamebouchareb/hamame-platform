@@ -1597,8 +1597,8 @@ buckets already cap SMS sends). Real-SMS delivery itself is NOT yet proven
   two pre-existing English-only pages (subscription, authoring) now render in
   both languages.
 - **Scheduled simulations system** — ✅ BUILT 2026-09-28 (see §15 below).
-- **Google OAuth** — blocked on Google Cloud console setup + account-linking
-  product rule (external actions first; code after). Nothing started.
+- **Google OAuth** — code complete 2026-09-28, live Google test blocked on
+  console credentials (see §16 below).
 
 ---
 
@@ -1720,3 +1720,54 @@ pass, stated openly). Cleanup confirmed by counts (2 sessions + 2
 registrations + 4 sims → 0/0/0); accounts left via the platform's own
 soft-delete. Backend `tsc` exit 0, frontend `tsc` exit 0. Contract + schema
 docs record the endpoints/tables.
+
+---
+
+## 16. Google OAuth — code complete, live test blocked on credentials (2026-09-28)
+
+**Account-linking rule (decided, was the requested product input):** the
+Google `sub` claim is the stable identity, never the email. Returning sub →
+log in. Unknown sub + known non-deleted email → link (`googleSub` set,
+`emailVerifiedAt` stamped) + log in — safe because Google verified the
+email. Unknown sub + unknown email → create, mirroring register (random
+unusable bcrypt password, `student_free` role, email verified immediately).
+Deleted accounts rejected exactly like password login.
+
+**Built** (migration `20260101000022_add_google_sub`: nullable unique
+`users.google_sub`; `src/lib/oauth-google.ts`, plain-fetch, zero new deps):
+- `GET /api/auth/providers` → `{providers: {google}}` (public; the frontend
+  hides the button when false — no dead UI).
+- `GET /api/auth/google/url` → fresh authorization URL with a server-stored
+  10-min CSRF `state` (single-instance map, same documented caveat as the
+  rate limiter).
+- `GET /api/auth/google/callback` → verifies state, exchanges the code
+  server-side (ID tokens are never accepted from the client), requires a
+  Google-verified email, applies the linking rule, then redirects to
+  `/login?google_token=<jwt>` (success) or `?google_error=<code>` (failure) —
+  the same query-handoff pattern `/verify` already uses. Everything
+  unconfigured fails closed with 501 `OAUTH_NOT_CONFIGURED` (never a
+  redirect loop or half-session).
+- Frontend: `GoogleSignInButton` (hidden unless configured) on login +
+  register; `AuthContext.loginWithToken()` (validates against `/users/me`
+  before storing — rejects user-less rows); login page consumes
+  `google_token`/`google_error` via `window.location` (no Suspense
+  restructuring needed); `auth.googleCta`/`auth.googleFailed` in both
+  languages.
+
+**Verified (everything verifiable without Google credentials):** backend
+`tsc` + frontend `tsc` exit 0; live `GET /providers` → 200
+`{google: false}`; live `/google/url` + `/google/callback` → 501
+`OAUTH_NOT_CONFIGURED` (fail-closed, no redirect); in-process harness with
+dummy env (never persisted): auth URL = `accounts.google.com` with
+client_id + `openid email profile` + state echo, state single-use
+(consume-once-then-reject, garbage/empty rejected), login-redirect shape
+exact.
+
+**Explicitly NOT yet proven (say so if relied upon):** the real Google
+round-trip — exchange, userinfo, link, and login with a real account.
+**Owner actions to finish:** (1) Google Cloud console → OAuth client ID
+(type Web application), authorized redirect URI = the API callback URL;
+(2) set `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` /
+`GOOGLE_CALLBACK_URL` (+ `FRONTEND_URL`) on Railway; (3) click through one
+real Google login on production, then keep the account (it becomes the
+regression probe). No code changes needed for any of this.

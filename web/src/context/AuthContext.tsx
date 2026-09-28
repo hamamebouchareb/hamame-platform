@@ -66,6 +66,9 @@ interface AuthContextValue {
   isHydrated: boolean;
   login: (input: LoginInput) => Promise<void>;
   register: (input: RegisterInput) => Promise<void>;
+  /** Adopt an externally-issued access token (Google OAuth callback handoff):
+      validates it against GET /users/me before storing anything. */
+  loginWithToken: (accessToken: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -210,6 +213,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [applyAuthResponse]
   );
 
+  const loginWithToken = useCallback(async (accessToken: string) => {
+    // Stage the token first so the profile fetch below authenticates; a stale
+    // entry can never linger because readStoredAuth() rejects user-less rows
+    // and every path below either writes a complete session or clears.
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ token: accessToken, user: null }));
+    try {
+      const profile = await apiFetch<AuthUser>("/users/me");
+      setToken(accessToken);
+      setUser(profile);
+      writeStoredAuth({ token: accessToken, user: profile });
+    } catch {
+      clearStoredAuth();
+      throw new Error("External token rejected by /users/me.");
+    }
+  }, []);
+
   const logout = useCallback(() => {
     setUser(null);
     setToken(null);
@@ -217,8 +236,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, token, isHydrated, login, register, logout }),
-    [user, token, isHydrated, login, register, logout]
+    () => ({ user, token, isHydrated, login, register, loginWithToken, logout }),
+    [user, token, isHydrated, login, register, loginWithToken, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

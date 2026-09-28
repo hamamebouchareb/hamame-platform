@@ -1,22 +1,47 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { ApiError } from "@/lib/api";
-import { LanguageToggle } from "@/components";
+import { GoogleSignInButton, LanguageToggle } from "@/components";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, loginWithToken } = useAuth();
   const { t } = useLanguage();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Google OAuth landing: the backend callback redirects here with
+  // ?google_token=<jwt> (success) or ?google_error=<code> (failure).
+  // window.location (not useSearchParams) keeps this page Suspense-free.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const googleToken = params.get("google_token");
+    const googleError = params.get("google_error");
+    if (!googleToken && !googleError) return;
+    router.replace("/login");
+    if (googleError) {
+      setError(t("auth.googleFailed"));
+      return;
+    }
+    setIsSubmitting(true);
+    loginWithToken(googleToken as string)
+      .then(() => router.push("/dashboard"))
+      .catch(() => {
+        setError(t("auth.googleFailed"));
+        setIsSubmitting(false);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -99,6 +124,10 @@ export default function LoginPage() {
             {isSubmitting ? t("auth.signingIn") : t("auth.loginCta")}
           </button>
         </form>
+
+        <div className="mt-4">
+          <GoogleSignInButton />
+        </div>
 
         <p className="mt-6 text-center text-sm text-text-secondary">
           {t("auth.noAccount")}{" "}
