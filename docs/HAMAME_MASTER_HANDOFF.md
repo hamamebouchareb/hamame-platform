@@ -1393,3 +1393,50 @@ state; Cursor Pro subscription status; leaderboard ranking math and friends flow
 not re-run); flashcard dedup specifics; SM-2 formula internals (file unchanged);
 4.11 cosmetic pass contents. Everything else in this document was checked against
 the live codebase, database, or API during this update.
+
+---
+
+## 11. Production deployment + email delivery — DONE (2026-09-28)
+
+**Live URLs (confirmed working by the owner on the live sites):**
+- Frontend (Vercel): `https://hamame-platform-wcpk.vercel.app`
+- Backend API (Railway): `https://hamame-platform-production.up.railway.app` (API base: `…/api`)
+
+**Wiring:**
+- Vercel project imports `hamamebouchareb/hamame-platform`, root directory `web`,
+  env: `NEXT_PUBLIC_API_URL=https://hamame-platform-production.up.railway.app/api`,
+  `NEXT_PUBLIC_VAPID_PUBLIC_KEY=<public VAPID key from web/.env.local>` (public, not secret).
+- Railway backend `ALLOWED_ORIGINS=http://localhost:3001,https://hamame-platform-wcpk.vercel.app`
+  (comma-separated; `CORS_ORIGIN` remains the legacy fallback — see `src/app.ts`).
+- `web/src/lib/api.ts` already read the API base from `NEXT_PUBLIC_API_URL` — no fix needed.
+
+**Email delivery via Resend (new — this session, warn-only policy):**
+- `src/lib/email.ts` — Resend HTTPS API via plain fetch (zero new npm deps).
+  Env: `RESEND_API_KEY`, `EMAIL_FROM`, `FRONTEND_URL` (must be the Vercel URL in
+  production — a `>`-for-`.` typo here once produced broken links; fixed).
+- Register sends the verification email best-effort (response carries
+  `verificationEmailSent`); new `POST /api/auth/resend-verification` (auth,
+  idempotent); `POST /api/auth/verify` unchanged; login never gated.
+- `POST /api/auth/forgot-password` sends the reset email best-effort; response
+  stays generic (anti-enumeration — no sent flag).
+- `emailVerifiedAt`/`phoneVerifiedAt` added to `toUserResponse` + both
+  `safeUserSelect`s (auth + users routes) so `AuthContext` sees them.
+- Frontend: `/verify?token=` page (auto-submit + manual fallback),
+  `VerifyEmailBanner` on the dashboard (renders only when unverified, dismissible),
+  register-page notice; `/reset-password` hides the token field when `?token=` is
+  present (manual paste kept as fallback).
+- No migration (columns already existed). Owner-confirmed live: verification email
+  arrives → `/verify` succeeds → banner clears; reset email arrives → new-password
+  flow works.
+
+**Commits (all pushed to `main`):** `07a47f0` (verification build), `8647526`
+(password-reset via Resend), `376ab78` (reset-page token-field cleanup).
+`tsc` + `next build` both green (run in the owner's terminal — the agent sandbox
+shell was hung for the entire session, so all command execution went through the
+owner; file edits were the agent's).
+
+**⚠️ Working-tree note (2026-09-28):** at commit time the tree held unrelated
+uncommitted changes (deleted docs scans/PDFs, modified historique/profile/
+sessions pages, AppHeader, AnswerOption, nav.ts, package.json, untracked e2e/,
+playwright.config.ts, three src/scripts/*verify*.ts). They were deliberately left
+untouched — commit or discard them on purpose.
