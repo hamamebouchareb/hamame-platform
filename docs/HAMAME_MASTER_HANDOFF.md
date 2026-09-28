@@ -1771,3 +1771,9 @@ round-trip — exchange, userinfo, link, and login with a real account.
 `GOOGLE_CALLBACK_URL` (+ `FRONTEND_URL`) on Railway; (3) click through one
 real Google login on production, then keep the account (it becomes the
 regression probe). No code changes needed for any of this.
+
+**Vercel note (2026-09-28):** a deploy failed with `npm run build exited
+with 2` on code that builds green locally (27/27 routes, clean 79-file
+import/case audit, all files committed) — root cause was the missing Node
+version pin. Fixed by `engines: { node: ">=20.9.0" }` in `web/package.json`;
+the next deploy went green with no code changes. Do not remove the pin.
