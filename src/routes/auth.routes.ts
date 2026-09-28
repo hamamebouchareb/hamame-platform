@@ -7,7 +7,7 @@ import { requireAuth } from "../middleware/auth";
 import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
 import { signAccessToken } from "../lib/jwt";
-import { sendVerificationEmail } from "../lib/email";
+import { sendPasswordResetEmail, sendVerificationEmail } from "../lib/email";
 
 const BCRYPT_SALT_ROUNDS = 10;
 
@@ -261,7 +261,7 @@ async function forgotPassword(req: Request, res: Response, next: NextFunction) {
       where: {
         OR: [...(email ? [{ email }] : []), ...(phone ? [{ phone }] : [])],
       },
-      select: { id: true, email: true, phone: true, status: true },
+      select: { id: true, email: true, phone: true, fullName: true, status: true },
     });
 
     // Anti-enumeration: respond identically whether or not the identifier is registered.
@@ -280,13 +280,21 @@ async function forgotPassword(req: Request, res: Response, next: NextFunction) {
         },
       });
 
-      // MVP workaround per PRD-section conventions (mirroring the documented
-      // 'manual_assisted' payment placeholder): there is no email/SMS provider in this
-      // project yet, so the raw token is logged to the server console, and additionally
-      // returned in the response ONLY outside production so the flow is testable without
+      // The raw token is logged to the server console, and additionally returned
+      // in the response ONLY outside production so the flow is testable without
       // real delivery. Never include it in the response when NODE_ENV === 'production'.
+      // Email delivery itself goes through Resend (best-effort, see above); there is
+      // still no SMS provider, so phone-only accounts keep the log-only fallback.
       const identifier = user.email ?? user.phone;
       console.log(`[DEV] Password reset token for ${identifier}: ${rawToken}`);
+
+      // Best-effort reset email via Resend (same pattern as registration). The
+      // response stays generic either way — revealing delivery would leak whether
+      // the identifier is registered. Phone-only accounts have no address to send
+      // to and keep the log-only fallback.
+      if (user.email) {
+        await sendPasswordResetEmail({ to: user.email, token: rawToken, fullName: user.fullName });
+      }
 
       if (process.env.NODE_ENV !== "production") {
         res.status(200).json({ message: RESET_TOKEN_GENERIC_MESSAGE, resetToken: rawToken });
