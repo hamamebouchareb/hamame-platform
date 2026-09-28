@@ -1529,4 +1529,68 @@ protection is the point); it shares the identical factory + wiring, reviewed
 in `auth.routes.ts`. Backend `tsc` exit 0. **Caught during verification:** the
 dev server had been started WITHOUT `tsx watch`, so the first probe ran
 against stale pre-middleware code (22× 401, no 429) — restarted with `watch`
-and re-proven. SMS provider for phone-only accounts remains open.
+and re-proven.
+
+---
+
+## 13. Push + prod verification + SMS provider (2026-09-28, same day)
+
+### 13.1 Push + production smoke — DONE
+
+`f9db1af` + `d0d40eb` pushed (`dd736ed..d0d40eb main -> main`). Prod smoke
+(quota-safe probes, scratch harness since removed):
+- `GET /api/plans` → 200, `charset=utf-8`, 2 plans (API up on Railway).
+- Vercel `/login` → 200 (frontend up).
+- **Limiter confirmed live on prod** (Railway redeploy lagged the first probe:
+  21× 401 immediately after push, then 20× 401 + 429 `RATE_LIMITED` with
+  `Retry-After` on re-probe — deploy propagation, not a code issue).
+
+### 13.2 SMS provider for phone-only accounts — BUILT (Twilio, warn-only)
+
+New `src/lib/sms.ts` (plain-fetch Twilio Messages API, zero new deps — same
+precedent as `email.ts`). Env: `SMS_PROVIDER=twilio` to enable,
+`TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_FROM`, `FRONTEND_URL`
+shared with email. Warn-only: never throws, returns false + warns without
+keys (dev fallback of log + non-prod token stays intact). Includes a small
+DZ-aware E.164 normalizer (`0550…` → `+213550…`, unit-tested 4/4).
+
+Wired into all three phone paths in `auth.routes.ts`:
+- `register`: phone-only accounts get the verification SMS (`verificationSmsSent`
+  response flag, additive — frontend register page is email-only and untouched).
+- `forgot-password`: phone accounts get the reset SMS; response stays generic
+  (anti-enumeration preserved).
+- `resend-verification`: phone-only branch with `verificationSmsSent` shape;
+  verified-phone accounts now get `alreadyVerified: true` (previously fell
+  into the `400 NO_EMAIL_ON_ACCOUNT` hole); the email path is byte-identical
+  in behavior.
+- `verify` needed NO change (token-based; already sets `phoneVerifiedAt`).
+
+**Design decision (deliberate, not a shortcut):** SMS carries the same
+tappable `/verify?token=` link as email — no second OTP system. One token
+system, and the `/verify` page already auto-submits `?token=` links.
+
+**Verified live on dev** (phone-only disposable account, scratch harness
+since removed): 201 (`smsSent: false`, no keys — correct fallback) →
+`verify` 200 with `phoneVerifiedAt` set → resend `alreadyVerified: true` →
+forgot 200 generic → reset 200 → login 200 with new password → `DELETE
+/users/me` 200 cleanup. **Process note:** the first harness verified with a
+stale (resend-rotated) token and correctly got 400 — single-use rotation
+working as designed, harness reordered, full cycle green. Backend `tsc`
+exit 0.
+
+**Go-live checklist (owner actions, no code needed):** create a Twilio
+account, buy/rent a sender number, set the four env vars on Railway
+(`SMS_PROVIDER=twilio` + sid/token/from), send one real SMS to a test
+Algerian number, then keep the rate limits as-is (the same per-endpoint
+buckets already cap SMS sends). Real-SMS delivery itself is NOT yet proven
+(no credentials exist) — say so if ever relied upon.
+
+### 13.3 Still open (sequencing for next)
+
+- **EN/FR toggle UI** — largest self-contained build (~43 files per the Phase 6
+  sizing; hand-maintained lookup table recommended). Nothing started.
+- **Scheduled simulations system** — needs a simulations table + migration +
+  scheduling job at minimum; MedSparkDZ's live example (4 sept. 2026 fields)
+  is the reference. Nothing started.
+- **Google OAuth** — blocked on Google Cloud console setup + account-linking
+  product rule (external actions first; code after). Nothing started.

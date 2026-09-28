@@ -9,6 +9,7 @@ import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
 import { signAccessToken } from "../lib/jwt";
 import { sendPasswordResetEmail, sendVerificationEmail } from "../lib/email";
+import { sendPasswordResetSms, sendVerificationSms } from "../lib/sms";
 
 const BCRYPT_SALT_ROUNDS = 10;
 
@@ -137,10 +138,10 @@ async function register(req: Request, res: Response, next: NextFunction) {
       },
     });
 
-    // MVP workaround (same documented pattern as forgot-password): no email/SMS provider
-    // exists, so the raw token is logged to the server console and additionally returned
-    // in the response ONLY outside production so FR-3 is testable without real delivery.
-    // Never include it in production.
+    // Testability fallback (same documented pattern as forgot-password): the raw
+    // token is logged to the server console and additionally returned in the
+    // response ONLY outside production, so FR-3 stays testable when no delivery
+    // provider is configured. Never include it in production.
     const verificationIdentifier = user.email ?? user.phone;
     console.log(`[DEV] Verification token for ${verificationIdentifier}: ${rawVerificationToken}`);
 
@@ -162,16 +163,22 @@ async function register(req: Request, res: Response, next: NextFunction) {
 
     const accessToken = signAccessToken({ userId: user.id });
 
-    // Warn-only verification: the email send is best-effort and never fails
-    // registration. Phone-only accounts have no address to send to — skipped.
-    // The dev fallback (raw token in log + non-production response) stays intact
-    // so the flow remains testable without a RESEND_API_KEY.
+    // Warn-only verification: the email/SMS send is best-effort and never fails
+    // registration. Phone-only accounts get the token by SMS; email accounts by
+    // email. The dev fallback (raw token in log + non-production response) stays
+    // intact so the flow remains testable with no provider keys configured.
     let verificationEmailSent = false;
+    let verificationSmsSent = false;
     if (user.email) {
       verificationEmailSent = await sendVerificationEmail({
         to: user.email,
         token: rawVerificationToken,
         fullName: user.fullName,
+      });
+    } else if (user.phone) {
+      verificationSmsSent = await sendVerificationSms({
+        to: user.phone,
+        token: rawVerificationToken,
       });
     }
 
@@ -179,8 +186,9 @@ async function register(req: Request, res: Response, next: NextFunction) {
       accessToken: string;
       user: ReturnType<typeof toUserResponse>;
       verificationEmailSent: boolean;
+      verificationSmsSent: boolean;
       verificationToken?: string;
-    } = { accessToken, user: toUserResponse(user), verificationEmailSent };
+    } = { accessToken, user: toUserResponse(user), verificationEmailSent, verificationSmsSent };
     if (process.env.NODE_ENV !== "production") {
       responseBody.verificationToken = rawVerificationToken;
     }
@@ -284,17 +292,19 @@ async function forgotPassword(req: Request, res: Response, next: NextFunction) {
       // The raw token is logged to the server console, and additionally returned
       // in the response ONLY outside production so the flow is testable without
       // real delivery. Never include it in the response when NODE_ENV === 'production'.
-      // Email delivery itself goes through Resend (best-effort, see above); there is
-      // still no SMS provider, so phone-only accounts keep the log-only fallback.
+      // Delivery itself is best-effort (see above); when no provider is configured
+      // the log is the only copy.
       const identifier = user.email ?? user.phone;
       console.log(`[DEV] Password reset token for ${identifier}: ${rawToken}`);
 
-      // Best-effort reset email via Resend (same pattern as registration). The
-      // response stays generic either way — revealing delivery would leak whether
-      // the identifier is registered. Phone-only accounts have no address to send
-      // to and keep the log-only fallback.
+      // Best-effort reset delivery (same pattern as registration): email accounts
+      // via Resend, phone-only accounts via SMS. The response stays generic
+      // either way — revealing delivery would leak whether the identifier is
+      // registered.
       if (user.email) {
         await sendPasswordResetEmail({ to: user.email, token: rawToken, fullName: user.fullName });
+      } else if (user.phone) {
+        await sendPasswordResetSms({ to: user.phone, token: rawToken });
       }
 
       if (process.env.NODE_ENV !== "production") {
@@ -427,11 +437,12 @@ async function verify(req: Request, res: Response, next: NextFunction) {
 
 router.post("/verify", validateBody(verifySchema), verify);
 
-// POST /api/auth/resend-verification — re-issue a verification email to the
-// caller's own address. Warn-only policy companion to /verify: authenticated
+// POST /api/auth/resend-verification — re-issue a verification email/SMS to the
+// caller themselves. Warn-only policy companion to /verify: authenticated
 // (no enumeration risk), idempotent when already verified, mints a fresh 24h
 // token since only the hash of the previous one is stored. The send itself is
-// best-effort — the endpoint reports whether the email went out.
+// best-effort — the endpoint reports whether the message went out. Email
+// accounts go by email (Resend), phone-only accounts by SMS (Twilio).
 async function resendVerification(req: Request, res: Response, next: NextFunction) {
   try {
     const caller = await prisma.user.findUnique({
@@ -439,9 +450,11 @@ async function resendVerification(req: Request, res: Response, next: NextFunctio
       select: {
         id: true,
         email: true,
+        phone: true,
         fullName: true,
         status: true,
         emailVerifiedAt: true,
+        phoneVerifiedAt: true,
       },
     });
 
@@ -449,13 +462,13 @@ async function resendVerification(req: Request, res: Response, next: NextFunctio
       throw new ApiError(404, "USER_NOT_FOUND", "User not found.");
     }
 
-    if (caller.emailVerifiedAt) {
-      res.status(200).json({ alreadyVerified: true, message: "This email address is already verified." });
+    if (caller.emailVerifiedAt || (caller.phone && !caller.email && caller.phoneVerifiedAt)) {
+      res.status(200).json({ alreadyVerified: true, message: "This account is already verified." });
       return;
     }
 
-    if (!caller.email) {
-      throw new ApiError(400, "NO_EMAIL_ON_ACCOUNT", "This account has no email address to verify.");
+    if (!caller.email && !caller.phone) {
+      throw new ApiError(400, "NO_EMAIL_ON_ACCOUNT", "This account has no email address or phone number to verify.");
     }
 
     const rawToken = randomBytes(32).toString("hex");
@@ -467,18 +480,35 @@ async function resendVerification(req: Request, res: Response, next: NextFunctio
       },
     });
 
-    const verificationEmailSent = await sendVerificationEmail({
-      to: caller.email,
+    if (caller.email) {
+      const verificationEmailSent = await sendVerificationEmail({
+        to: caller.email,
+        token: rawToken,
+        fullName: caller.fullName,
+      });
+
+      res.status(200).json({
+        alreadyVerified: false,
+        verificationEmailSent,
+        message: verificationEmailSent
+          ? "A new verification email has been sent."
+          : "A new verification token was issued, but the email could not be sent yet.",
+      });
+      return;
+    }
+
+    // Phone-only account (the neither-identifier case threw above, so phone is set).
+    const verificationSmsSent = await sendVerificationSms({
+      to: caller.phone!,
       token: rawToken,
-      fullName: caller.fullName,
     });
 
     res.status(200).json({
       alreadyVerified: false,
-      verificationEmailSent,
-      message: verificationEmailSent
-        ? "A new verification email has been sent."
-        : "A new verification token was issued, but the email could not be sent yet.",
+      verificationSmsSent,
+      message: verificationSmsSent
+        ? "A new verification SMS has been sent."
+        : "A new verification token was issued, but the SMS could not be sent yet.",
     });
   } catch (err) {
     next(err);
