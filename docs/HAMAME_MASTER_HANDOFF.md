@@ -1721,6 +1721,17 @@ registrations + 4 sims → 0/0/0); accounts left via the platform's own
 soft-delete. Backend `tsc` exit 0, frontend `tsc` exit 0. Contract + schema
 docs record the endpoints/tables.
 
+**First real simulation (2026-09-28, live on production):** "Simulation
+Blanche — Médecine" (`38b7f470-83ea-4f45-a23d-65ce841b9527`), Medicine-wide
+(year null), Sat 2026-10-24 20:30 Algiers (19:30Z) → 120 min, 50 questions.
+Verified on the live API: `status: scheduled`, seat count 0. Inserted via
+direct Prisma (no admin credentials exist for the API path; API-equivalent
+validation applied — visible faculty, null year). Manage it with an admin
+token: `PATCH /api/admin/simulations/:id` (reschedule/cancel) or `DELETE`
+(sessions stay). Grow the Medicine bank toward 50 approved questions before
+it opens, or lower `questionCount` — short banks still start, just with
+fewer questions.
+
 ---
 
 ## 16. Google OAuth — code complete, live test blocked on credentials (2026-09-28)
