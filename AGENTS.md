@@ -31,8 +31,9 @@ Monorepo with two workspaces:
 
 ## Route implementation status
 
-Most route groups have **real handlers**. Notable remaining stubs:
-- `PUT /api/users/me/preferences` — still 501 via `stubHandler`
+Most route groups have **real handlers**. No known 501 stubs remain —
+`PUT /api/users/me/preferences` is real persistence (`User.uiLanguage`/`theme` +
+`NotificationPreference` upserts; distinct from `PUT /api/push/preferences`).
 
 Real (non-exhaustive — see route files for the full surface):
 - `/api/auth/*` — register, login, forgot/reset password, verify
@@ -69,6 +70,9 @@ Real (non-exhaustive — see route files for the full surface):
 - **Streak updates** happen inside the session-submit transaction.
 - **Supabase session pooler concurrency:** more than ~10 simultaneous Prisma queries can throw intermittent `P1001`. Prefer sequential `await` over large `Promise.all` on multi-query endpoints.
 - **Review-queue / flashcard / user-badge awards** use `INSERT ... ON CONFLICT DO NOTHING` (not catch-P2002) so unique conflicts inside a transaction cannot abort session submit.
+- **Windows console lies about encoding.** The shell runs under codepage 850, so UTF-8 bytes (accents, em-dashes) render as `??` / `Ǹ` in `git diff` / `curl` / script output. The bytes on disk, in Postgres (`server_encoding=UTF8`, byte-verified), in API JSON (`Content-Type: ...; charset=utf-8`, byte-verified), and in committed verification logs are correct — there is no app-wide encoding bug (handoff §2D verdict 2026-09-28). When checking non-ASCII text, compare hex/codepoints, never console glyphs.
+- **Inline `node -e` loses double quotes** (the shell layer strips `"` chars even inside single quotes). Use single-quotes-only in one-liners, or write a `tmp-*.ts`/`tmp-*.mjs` script file (gitignored) and run it.
+- **Never commit raw phone-camera dumps** (`docs/screenshotes/` ≈ 101 MB is gitignored on purpose). Transcribe findings into `docs/*.md`, keep binaries untracked on disk.
 
 ## Frontend notes
 

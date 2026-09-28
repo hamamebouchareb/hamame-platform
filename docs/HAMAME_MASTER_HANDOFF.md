@@ -1440,3 +1440,93 @@ uncommitted changes (deleted docs scans/PDFs, modified historique/profile/
 sessions pages, AppHeader, AnswerOption, nav.ts, package.json, untracked e2e/,
 playwright.config.ts, three src/scripts/*verify*.ts). They were deliberately left
 untouched — commit or discard them on purpose.
+
+---
+
+## 12. Session closeout — 2026-09-28 (working-tree cleanup + §2D encoding verdict)
+
+### 12.1 Working tree cleaned — committed as `f9db1af` (not discarded)
+
+The 2026-09-28 uncommitted changes turned out to be the complete Final Sweep
+frontend (notification bell + `/notifications` nav entry, player fullscreen
+toggle, history group headers, profile cover band, AnswerOption danger-token
+translation, QST gradient) plus real tooling (Playwright smoke config +
+`test:e2e`, three VERIFY-fixture audit scripts). Verified before committing:
+backend `tsc -p tsconfig.json` exit 0, frontend `tsc --noEmit` exit 0.
+Dispositions for the non-code items: the 5 deleted doc binaries were
+**restored** (`git checkout -- docs/`), not committed as deletions — second
+recurrence of the §0 accidental-loss pattern on the same class of files
+(a deliberate deletion is a one-liner to redo). `docs/screenshotes/`
+(~101 MB phone-camera dump) and `docs/medspark_audit_report.pdf` (1.7 MB raw
+input whose findings are already transcribed into the gap-analysis doc) stay
+**untracked on disk**; `docs/screenshotes/` is now gitignored so a future
+`git add -A` cannot commit the 101 MB by accident. Only remaining untracked
+file after the commit is the audit PDF, by choice.
+
+### 12.2 §2D "app-wide encoding bug" — verdict: NOT A BUG (closed, no code fix)
+
+Byte-level investigation (all comparisons on raw bytes / hex, never console
+glyphs) proved every layer is correct UTF-8 end to end:
+
+- **Source files:** `web/src/lib/nav.ts` bytes around "Paramètres" are
+  `63 c3 a8 74` — correct UTF-8 for `è` (U+00E8). `new TextDecoder('utf-8',
+  {fatal:true})` passes on all touched files. The `??` seen in `git diff`
+  output is the Windows console (active codepage **850**) misrendering UTF-8
+  bytes, not file corruption.
+- **Seed → DB:** `prisma/seed.ts` is valid UTF-8; Postgres reports
+  `server_encoding=UTF8`; the stored university name is 42 chars / 47 bytes
+  with hex **byte-identical** to the UTF-8 encoding of the seed literal
+  (`c3a9` = é, `e28094` = em-dash), round-trip clean for both universities
+  (proof script was `tmp-` scratch, since removed).
+- **API JSON:** live `GET /api/plans` returns
+  `Content-Type: application/json; charset=utf-8` (Express `res.json()`
+  default). Grep over `src/` found no `latin1`/`binary`/manual-encoding path
+  anywhere — there is no code that could corrupt non-ASCII strings.
+- **Live DOM:** the committed verification logs themselves contain correct
+  `Référence` in captured DOM bytes (`...eference">Référence</option>...`,
+  `...ospital · Référence</span>...`) — the "RǸfǸrence" in §2D was how codepage
+  850 rendered those same bytes in the terminal at review time.
+
+**Standing rule from this:** on this machine, never judge encoding from
+rendered console text — compare hex/codepoints. This also explains the seed
+script's console output: `console.log` of correct UTF-8 strings to a cp850
+console. Nothing to fix in the app for any of it.
+
+**One real (trivial) gap found and fixed in passing:** `GET
+/api/users/me/export` explicitly set `Content-Type: application/json` with no
+charset (the only endpoint overriding Express's default). Now
+`application/json; charset=utf-8` (commit `f9db1af`).
+
+### 12.3 Stale-doc correction
+
+`AGENTS.md` claimed `PUT /api/users/me/preferences` was still a 501 stub —
+false since the Phase 4 build (real persistence in `src/routes/users.routes.ts`,
+comment-marked "was a 501 stub"). Corrected, and the codepage/quoting/
+no-phone-dump gotchas from this session recorded there.
+
+### 12.4 Auth rate limiting — BUILT and live-verified (2026-09-28)
+
+The open hardening item is now closed for the brute-force + quota-burn vectors:
+new `src/middleware/rateLimit.ts` (in-memory sliding window, zero new deps —
+same precedent as `src/lib/email.ts` using plain fetch). `limitEmailSends`
+(5 per 10 min per IP per endpoint) fronts `register`, `forgot-password`,
+`resend-verification`; `limitLogins` (20 per 10 min per IP) fronts `login`.
+429s use the standard `{ error: { code: "RATE_LIMITED", message } }` shape plus
+`Retry-After` (seconds), so the web client (`apiFetch` surfaces any
+code/message) needed no change. Deliberately NOT throttled: `reset-password` /
+`verify` (unguessable single-use tokens, nothing to brute-force, no email
+sent) and `change-password` (already authenticated, no email sent). Client IP
+is the LAST X-Forwarded-For entry (the one Railway itself observed — immune
+to XFF-spoof framing/evasion with a single proxy hop); per-process Map
+documented as single-instance-appropriate, revisit only for horizontal scale.
+API contract doc records the 429 behavior.
+
+**Verified live** (`tmp-` scratch harness, since removed): 22 sequential bad
+logins → exactly 20× `401 INVALID_CREDENTIALS`, then 2× `429 RATE_LIMITED`
+with `Retry-After: 598`, standard shape. The email-endpoint bucket was NOT
+live-fired on purpose (each probe would send a real Resend email — quota
+protection is the point); it shares the identical factory + wiring, reviewed
+in `auth.routes.ts`. Backend `tsc` exit 0. **Caught during verification:** the
+dev server had been started WITHOUT `tsx watch`, so the first probe ran
+against stale pre-middleware code (22× 401, no 429) — restarted with `watch`
+and re-proven. SMS provider for phone-only accounts remains open.

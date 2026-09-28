@@ -114,6 +114,11 @@ Grounded in the PRD's FRs and the database schema (v0.1). Auth via Bearer JWT un
 ---
 
 All endpoints return standard error shape: `{ error: { code, message } }`.
+Rate-limited auth endpoints (`POST /api/auth/register`, `/login`,
+`/forgot-password`, `/resend-verification`) return `429
+{ error: { code: "RATE_LIMITED", message: "Too many requests. Please try again
+later." } }` with a `Retry-After` header (seconds) when the per-IP budget is
+exceeded (email-sending endpoints: 5 per 10 min; login: 20 per 10 min).
 Pagination via `?page=&limit=` on list endpoints. Role-based access enforced per
 Section 6/14 of the PRD — exact middleware rules to be defined by Cursor against the
 `roles`/`user_roles` tables, not re-specified here.

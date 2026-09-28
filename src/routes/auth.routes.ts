@@ -4,6 +4,7 @@ import { NextFunction, Request, Response, Router } from "express";
 import { z } from "zod";
 import { validateBody } from "../middleware/validate";
 import { requireAuth } from "../middleware/auth";
+import { limitEmailSends, limitLogins } from "../middleware/rateLimit";
 import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
 import { signAccessToken } from "../lib/jwt";
@@ -189,7 +190,7 @@ async function register(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-router.post("/register", validateBody(registerSchema), register);
+router.post("/register", limitEmailSends, validateBody(registerSchema), register);
 
 // POST /api/auth/login
 const loginSchema = z
@@ -241,7 +242,7 @@ async function login(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-router.post("/login", validateBody(loginSchema), login);
+router.post("/login", limitLogins, validateBody(loginSchema), login);
 
 // POST /api/auth/forgot-password
 const forgotPasswordSchema = z
@@ -309,7 +310,7 @@ async function forgotPassword(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-router.post("/forgot-password", validateBody(forgotPasswordSchema), forgotPassword);
+router.post("/forgot-password", limitEmailSends, validateBody(forgotPasswordSchema), forgotPassword);
 
 // POST /api/auth/reset-password
 const resetPasswordSchema = z.object({
@@ -484,7 +485,7 @@ async function resendVerification(req: Request, res: Response, next: NextFunctio
   }
 }
 
-router.post("/resend-verification", requireAuth, resendVerification);
+router.post("/resend-verification", requireAuth, limitEmailSends, resendVerification);
 
 // POST /api/auth/change-password — authenticated self-service password change (settings
 // page). The caller proves knowledge of the CURRENT password, so unlike reset-password
