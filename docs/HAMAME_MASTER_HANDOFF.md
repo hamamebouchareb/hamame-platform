@@ -1587,8 +1587,20 @@ buckets already cap SMS sends). Real-SMS delivery itself is NOT yet proven
 
 ### 13.3 Still open (sequencing for next)
 
-- **EN/FR toggle UI** — largest self-contained build (~43 files per the Phase 6
-  sizing; hand-maintained lookup table recommended). Nothing started.
+- **EN/FR toggle UI** — scope now precisely measured (2026-09-28, script since
+  removed): **51 files** with French UI text (74 ts/tsx total), **926 accented
+  chars** — slightly above the Phase 6 estimate (43/868). Biggest surfaces:
+  `suivi` (93), `dashboard` (68), `SessionBuilder` (63), `settings` (56),
+  `revision`/`classement` (~40 each). Persistence already exists
+  (`User.uiLanguage` + `PUT /api/users/me/preferences`). Deliberately NOT
+  started as a side-task: a language toggle is all-or-nothing UX — converting
+  chrome-only (or a few pages) ships a mixed-language UI, and a rushed 51-file
+  pass with only `tsc` as guard violates this project's verification bar.
+  Recommended execution as a dedicated session: (1) `LanguageContext` +
+  fr/en dictionaries (hand-maintained lookup, per Phase 6 decision) + toggle
+  in settings persisted via preferences; (2) convert file-by-file in
+  descending string-count order; (3) close with a live page-walk of all
+  converted routes in both languages, same as the Phase 5/6 passes.
 - **Scheduled simulations system** — needs a simulations table + migration +
   scheduling job at minimum; MedSparkDZ's live example (4 sept. 2026 fields)
   is the reference. Nothing started.
