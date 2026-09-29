@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import Link from "next/link";
-import { useRequireAuth } from "@/lib/useRequireAuth";
+import { useAuthedPage } from "@/lib/useAuthedPage";
 import { useLanguage } from "@/context/LanguageContext";
 import { useApiResource } from "@/lib/useApiResource";
 import { apiFetch, ApiError } from "@/lib/api";
+import { Button, ButtonLink, Card, ErrorState, Input, LoadingSkeleton, PageShell, Select, Textarea } from "@/components";
 import type { ContributorStats, LessonDraft, LessonVersionDraft, QuestionDraft } from "@/lib/types";
 
 const CONTENT_TIERS = ["official", "hamame_plus"] as const;
@@ -53,17 +53,17 @@ function statLabel(status: string, t: StatLabelT): string {
 function StatCards({ title, counts }: { title: string; counts: ContributorStats["lessons"] }) {
   const { t } = useLanguage();
   return (
-    <div>
-      <p className="text-sm font-medium text-gray-700">{title}</p>
+    <Card>
+      <p className="text-meta font-medium text-text-secondary">{title}</p>
       <div className="mt-2 grid grid-cols-4 gap-2">
         {(["draft", "pending_review", "approved", "rejected"] as const).map((status) => (
-          <div key={status} className="rounded-lg border border-gray-200 bg-white px-2 py-3 text-center">
-            <p className="text-xl font-semibold text-gray-900">{counts[status]}</p>
-            <p className="mt-1 text-xs text-gray-500">{statLabel(status, t)}</p>
+          <div key={status} className="rounded-card border border-border bg-surface-2 px-2 py-3 text-center">
+            <p className="font-display text-h3 font-semibold text-text-primary">{counts[status]}</p>
+            <p className="mt-1 text-caption text-text-tertiary">{statLabel(status, t)}</p>
           </div>
         ))}
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -125,106 +125,75 @@ function LessonForm() {
   }
 
   return (
-    <section className="rounded-lg border border-gray-200 bg-white px-4 py-4">
-      <h3 className="text-base font-semibold text-gray-900">{t("authoring.lessonForm")}</h3>
+    <Card as="section">
+      <h3 className="font-display text-h3 font-semibold text-text-primary">{t("authoring.lessonForm")}</h3>
 
       <form onSubmit={handleCreateDraft} className="mt-3 flex flex-col gap-3">
-        <div>
-          <label htmlFor="lesson-unit-id" className="block text-sm font-medium text-gray-700">
-            {t("authoring.unitId")}
-          </label>
-          <input
-            id="lesson-unit-id"
-            type="text"
-            required
-            value={unitId}
-            onChange={(e) => setUnitId(e.target.value)}
-            placeholder={t("authoring.pasteUuid")}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
-          />
-        </div>
+        <Input
+          id="lesson-unit-id"
+          label={t("authoring.unitId")}
+          type="text"
+          required
+          value={unitId}
+          onChange={(e) => setUnitId(e.target.value)}
+          placeholder={t("authoring.pasteUuid")}
+        />
 
-        <div>
-          <label htmlFor="lesson-title" className="block text-sm font-medium text-gray-700">
-            {t("authoring.titleLabel")}
-          </label>
-          <input
-            id="lesson-title"
-            type="text"
-            required
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
-          />
-        </div>
+        <Input
+          id="lesson-title"
+          label={t("authoring.titleLabel")}
+          type="text"
+          required
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
 
-        <div>
-          <label htmlFor="lesson-content-tier" className="block text-sm font-medium text-gray-700">
-            {t("authoring.tierLabel")}
-          </label>
-          <select
-            id="lesson-content-tier"
-            value={contentTier}
-            onChange={(e) => setContentTier(e.target.value as (typeof CONTENT_TIERS)[number])}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
-          >
-            {CONTENT_TIERS.map((tier) => (
-              <option key={tier} value={tier}>
-                {tier}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="lesson-body" className="block text-sm font-medium text-gray-700">
-            {t("authoring.bodyLabel")}
-          </label>
-          <textarea
-            id="lesson-body"
-            required
-            rows={5}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
-          />
-        </div>
-
-        {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full rounded-lg bg-blue-600 px-4 py-3 text-base font-medium text-white transition hover:bg-blue-700 disabled:opacity-60"
+        <Select
+          id="lesson-content-tier"
+          label={t("authoring.tierLabel")}
+          value={contentTier}
+          onChange={(e) => setContentTier(e.target.value as (typeof CONTENT_TIERS)[number])}
         >
+          {CONTENT_TIERS.map((tier) => (
+            <option key={tier} value={tier}>
+              {tier}
+            </option>
+          ))}
+        </Select>
+
+        <Textarea
+          id="lesson-body"
+          label={t("authoring.bodyLabel")}
+          required
+          rows={5}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+        />
+
+        {error && <ErrorState message={error} />}
+
+        <Button type="submit" width="full" disabled={isSubmitting}>
           {isSubmitting ? t("authoring.creating") : t("authoring.createDraft")}
-        </button>
+        </Button>
       </form>
 
       {created && (
-        <div className="mt-4 rounded-lg bg-green-50 px-3 py-3">
-          <p className="text-sm font-medium text-gray-900">{created.lesson.title}</p>
-          <p className="mt-1 text-xs text-gray-600">
+        <Card variant="elevated" className="mt-4 border-success">
+          <p className="text-meta font-medium text-text-primary">{created.lesson.title}</p>
+          <p className="mt-1 text-caption text-text-secondary">
             {t("authoring.statusLine", { s: statLabel(created.version.status, t), id: created.version.id })}
           </p>
 
           {created.version.status !== "pending_review" && (
-            <button
-              type="button"
-              onClick={handleSubmitForReview}
-              disabled={isSubmittingForReview}
-              className="mt-3 w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-900 transition hover:bg-gray-50 disabled:opacity-60"
-            >
+            <Button variant="outline" width="full" onClick={handleSubmitForReview} disabled={isSubmittingForReview} className="mt-3">
               {isSubmittingForReview ? t("authoring.submitting") : t("authoring.submitReview")}
-            </button>
+            </Button>
           )}
 
-          {submitForReviewError && (
-            <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{submitForReviewError}</p>
-          )}
-        </div>
+          {submitForReviewError && <ErrorState message={submitForReviewError} className="mt-2" />}
+        </Card>
       )}
-    </section>
+    </Card>
   );
 }
 
@@ -319,95 +288,58 @@ function QuestionForm() {
   }
 
   return (
-    <section className="rounded-lg border border-gray-200 bg-white px-4 py-4">
-      <h3 className="text-base font-semibold text-gray-900">{t("authoring.questionForm")}</h3>
+    <Card as="section">
+      <h3 className="font-display text-h3 font-semibold text-text-primary">{t("authoring.questionForm")}</h3>
 
       <form onSubmit={handleCreateDraft} className="mt-3 flex flex-col gap-3">
-        <div>
-          <label htmlFor="question-unit-id" className="block text-sm font-medium text-gray-700">
-            {t("authoring.unitId")}
-          </label>
-          <input
-            id="question-unit-id"
-            type="text"
-            required
-            value={unitId}
-            onChange={(e) => setUnitId(e.target.value)}
-            placeholder={t("authoring.pasteUuid")}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
-          />
-        </div>
+        <Input
+          id="question-unit-id"
+          label={t("authoring.unitId")}
+          type="text"
+          required
+          value={unitId}
+          onChange={(e) => setUnitId(e.target.value)}
+          placeholder={t("authoring.pasteUuid")}
+        />
 
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label htmlFor="question-type" className="block text-sm font-medium text-gray-700">
-              Type
-            </label>
-            <select
-              id="question-type"
-              value={type}
-              onChange={(e) => setType(e.target.value as QuestionType)}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
-            >
-              {QUESTION_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </div>
+          <Select id="question-type" label="Type" value={type} onChange={(e) => setType(e.target.value as QuestionType)}>
+            {QUESTION_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </Select>
 
-          <div>
-            <label htmlFor="question-source" className="block text-sm font-medium text-gray-700">
-              Source
-            </label>
-            <select
-              id="question-source"
-              value={source}
-              onChange={(e) => setSource(e.target.value as (typeof QUESTION_SOURCES)[number])}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
-            >
-              {QUESTION_SOURCES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
+          <Select
+            id="question-source"
+            label="Source"
+            value={source}
+            onChange={(e) => setSource(e.target.value as (typeof QUESTION_SOURCES)[number])}
+          >
+            {QUESTION_SOURCES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </Select>
         </div>
 
-        <div>
-          <label htmlFor="question-body" className="block text-sm font-medium text-gray-700">
-            {t("authoring.bodyQ")}
-          </label>
-          <textarea
-            id="question-body"
-            required
-            rows={3}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
-          />
-        </div>
+        <Textarea id="question-body" label={t("authoring.bodyQ")} required rows={3} value={body} onChange={(e) => setBody(e.target.value)} />
 
-        <div>
-          <label htmlFor="question-explanation" className="block text-sm font-medium text-gray-700">
-            {t("authoring.explanation")}
-          </label>
-          <textarea
-            id="question-explanation"
-            required
-            rows={3}
-            value={explanation}
-            onChange={(e) => setExplanation(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
-          />
-        </div>
+        <Textarea
+          id="question-explanation"
+          label={t("authoring.explanation")}
+          required
+          rows={3}
+          value={explanation}
+          onChange={(e) => setExplanation(e.target.value)}
+        />
 
         {showOptions && (
           <div>
-            <p className="block text-sm font-medium text-gray-700">Options</p>
-            <div className="mt-1 flex flex-col gap-2">
+            <p className="mb-2 block text-meta font-medium text-text-secondary">Options</p>
+            <div className="flex flex-col gap-2">
               {options.map((row, index) => (
                 <div key={index} className="flex items-center gap-2">
                   <input
@@ -415,78 +347,60 @@ function QuestionForm() {
                     checked={row.isCorrect}
                     onChange={(e) => updateOption(index, { isCorrect: e.target.checked })}
                     title={t("authoring.correctTitle")}
-                    className="h-4 w-4"
+                    className="h-5 w-5 shrink-0 accent-[var(--color-accent-primary)]"
                   />
-                  <input
+                  <Input
+                    id={`question-option-${index}`}
                     type="text"
                     required
                     value={row.bodyText}
                     onChange={(e) => updateOption(index, { bodyText: e.target.value })}
                     placeholder={`Option ${index + 1}`}
-                    className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                    fieldClassName="flex-1"
                   />
                   {options.length > MIN_OPTIONS && (
-                    <button
-                      type="button"
-                      onClick={() => removeOption(index)}
-                      className="rounded-lg border border-gray-300 px-2 py-2 text-xs font-medium text-gray-600 transition hover:bg-gray-50"
-                    >
+                    <Button variant="outline" size="sm" type="button" onClick={() => removeOption(index)}>
                       {t("authoring.remove")}
-                    </button>
+                    </Button>
                   )}
                 </div>
               ))}
             </div>
-            <button
-              type="button"
-              onClick={addOption}
-              className="mt-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-900 transition hover:bg-gray-50"
-            >
+            <Button variant="outline" size="sm" type="button" onClick={addOption} className="mt-2">
               {t("authoring.addOption")}
-            </button>
+            </Button>
           </div>
         )}
 
-        {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+        {error && <ErrorState message={error} />}
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full rounded-lg bg-blue-600 px-4 py-3 text-base font-medium text-white transition hover:bg-blue-700 disabled:opacity-60"
-        >
+        <Button type="submit" width="full" disabled={isSubmitting}>
           {isSubmitting ? t("authoring.creating") : t("authoring.createDraft")}
-        </button>
+        </Button>
       </form>
 
       {created && (
-        <div className="mt-4 rounded-lg bg-green-50 px-3 py-3">
-          <p className="text-sm font-medium text-gray-900">
+        <Card variant="elevated" className="mt-4 border-success">
+          <p className="text-meta font-medium text-text-primary">
             {t("authoring.createdLine", { type: created.type, s: statLabel(created.status, t) })}
           </p>
-          <p className="mt-1 text-xs text-gray-600">Question ID: {created.id}</p>
+          <p className="mt-1 text-caption text-text-secondary">Question ID: {created.id}</p>
 
           {created.status !== "pending_review" && (
-            <button
-              type="button"
-              onClick={handleSubmitForReview}
-              disabled={isSubmittingForReview}
-              className="mt-3 w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-900 transition hover:bg-gray-50 disabled:opacity-60"
-            >
+            <Button variant="outline" width="full" type="button" onClick={handleSubmitForReview} disabled={isSubmittingForReview} className="mt-3">
               {isSubmittingForReview ? t("authoring.submitting") : t("authoring.submitReview")}
-            </button>
+            </Button>
           )}
 
-          {submitForReviewError && (
-            <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{submitForReviewError}</p>
-          )}
-        </div>
+          {submitForReviewError && <ErrorState message={submitForReviewError} className="mt-2" />}
+        </Card>
       )}
-    </section>
+    </Card>
   );
 }
 
 export default function AuthoringPage() {
-  const { user, isHydrated } = useRequireAuth();
+  const { user, isHydrated, handleLogout } = useAuthedPage();
   const { t } = useLanguage();
   const canFetch = isHydrated && !!user;
 
@@ -497,41 +411,43 @@ export default function AuthoringPage() {
     isLoading: statsLoading,
   } = useApiResource<ContributorStats>(canFetch ? "/authoring/me/stats" : null);
 
-  if (!isHydrated || !user) {
-    return (
-      <main className="flex min-h-screen items-center justify-center px-4">
-        <p className="text-sm text-gray-500">{t("billing.loading")}</p>
-      </main>
-    );
-  }
-
   // AuthContext roles (from GET /users/me) — same gate as the dashboard link.
   // The 403 FORBIDDEN path below covers the API rejecting the call regardless.
   const canAuthor =
-    user.roles.includes("instructor") || user.roles.includes("academic_reviewer");
+    !!user && (user.roles.includes("instructor") || user.roles.includes("academic_reviewer"));
 
   if (!canAuthor || statsErrorCode === "FORBIDDEN") {
     return (
-      <main className="mx-auto min-h-screen w-full max-w-md px-4 py-8">
-        <h1 className="text-2xl font-semibold text-gray-900">{t("authoring.title")}</h1>
-        <p className="mt-4 text-base text-gray-700">{t("authoring.deniedDesc")}</p>
-        <Link
-          href="/dashboard"
-          className="mt-6 block w-full rounded-lg bg-blue-600 px-4 py-3 text-center text-base font-medium text-white transition hover:bg-blue-700"
-        >
-          {t("authoring.backDashboard")}
-        </Link>
-      </main>
+      <PageShell
+        user={user}
+        isHydrated={isHydrated}
+        onLogout={handleLogout}
+        width="narrow"
+        title={t("authoring.title")}
+        loadingLabel={t("billing.loading")}
+      >
+        <Card className="mt-section-gap">
+          <p className="text-body text-text-secondary">{t("authoring.deniedDesc")}</p>
+          <ButtonLink href="/dashboard" width="full" className="mt-4">
+            {t("authoring.backDashboard")}
+          </ButtonLink>
+        </Card>
+      </PageShell>
     );
   }
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-md px-4 py-8">
-      <h1 className="text-2xl font-semibold text-gray-900">{t("authoring.title")}</h1>
-
-      <section className="mt-6 flex flex-col gap-4">
-        {statsLoading && <p className="text-sm text-gray-500">{t("authoring.statsLoading")}</p>}
-        {statsError && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{statsError}</p>}
+    <PageShell
+      user={user}
+      isHydrated={isHydrated}
+      onLogout={handleLogout}
+      width="narrow"
+      title={t("authoring.title")}
+      loadingLabel={t("billing.loading")}
+    >
+      <section className="mt-section-gap flex flex-col gap-card-gap">
+        {statsLoading && <LoadingSkeleton className="h-20 w-full" ariaLabel={t("authoring.statsLoading")} />}
+        {statsError && <ErrorState message={statsError} />}
         {stats && (
           <>
             <StatCards title={t("authoring.lessonsTitle")} counts={stats.lessons} />
@@ -540,10 +456,10 @@ export default function AuthoringPage() {
         )}
       </section>
 
-      <div className="mt-8 flex flex-col gap-6">
+      <div className="mt-section-gap flex flex-col gap-card-gap">
         <LessonForm />
         <QuestionForm />
       </div>
-    </main>
+    </PageShell>
   );
 }

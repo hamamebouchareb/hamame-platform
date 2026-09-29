@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRequireAuth } from "@/lib/useRequireAuth";
+import { useAuthedPage } from "@/lib/useAuthedPage";
 import { useLanguage } from "@/context/LanguageContext";
 import { localeFor, type UiLanguage } from "@/lib/i18n";
 import { useApiResource } from "@/lib/useApiResource";
 import { apiFetch, ApiError } from "@/lib/api";
+import { Button, Card, ErrorState, LoadingSkeleton, PageShell } from "@/components";
 import type { Plan, Subscription } from "@/lib/types";
 
 interface SubscribeErrorState {
@@ -31,7 +32,7 @@ function formatDate(iso: string, lang: UiLanguage): string {
 }
 
 export default function SubscriptionPage() {
-  const { user, isHydrated } = useRequireAuth();
+  const { user, isHydrated, handleLogout } = useAuthedPage();
   const { lang, t } = useLanguage();
   const canFetch = isHydrated && !!user;
 
@@ -135,14 +136,6 @@ export default function SubscriptionPage() {
     }
   }
 
-  if (!isHydrated || !user) {
-    return (
-      <main className="flex min-h-screen items-center justify-center px-4">
-        <p className="text-sm text-gray-500">{t("billing.loading")}</p>
-      </main>
-    );
-  }
-
   // GET /subscriptions/me returns the most recent subscription row regardless of
   // status, so a long-expired subscription would still come back non-null here.
   // Only a row with status 'active' represents real current access — anything else
@@ -150,32 +143,35 @@ export default function SubscriptionPage() {
   const activeSubscription = subscription !== null && subscription.status === "active" ? subscription : null;
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-md px-4 py-8">
-      <h1 className="text-2xl font-semibold text-gray-900">{t("nav.subscription")}</h1>
-
-      <section className="mt-6 rounded-lg border border-gray-200 bg-white px-4 py-4">
+    <PageShell
+      user={user}
+      isHydrated={isHydrated}
+      onLogout={handleLogout}
+      width="narrow"
+      title={t("nav.subscription")}
+      loadingLabel={t("billing.loading")}
+    >
+      <Card className="mt-section-gap">
         {isLoadingSubscription && !subscriptionLoaded && (
-          <p className="text-sm text-gray-500">{t("billing.loadingSub")}</p>
+          <LoadingSkeleton className="h-5 w-48" ariaLabel={t("billing.loadingSub")} />
         )}
-        {subscriptionError && (
-          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{subscriptionError}</p>
-        )}
+        {subscriptionError && <ErrorState message={subscriptionError} onRetry={loadSubscription} />}
 
         {subscriptionLoaded && !subscriptionError && (
           <>
-            {activeSubscription === null && <p className="text-base text-gray-900">{t("billing.freePlan")}</p>}
+            {activeSubscription === null && <p className="text-body text-text-primary">{t("billing.freePlan")}</p>}
 
             {activeSubscription !== null && activeSubscription.autoRenew && (
               <>
-                <p className="text-base font-medium text-gray-900">
+                <p className="text-body font-medium text-text-primary">
                   {capitalize(activeSubscription.plan.name)} — {formatPrice(activeSubscription.plan, t)}
                 </p>
-                <p className="mt-1 text-sm text-gray-600">{t("billing.renews", { date: formatDate(activeSubscription.currentPeriodEnd, lang) })}</p>
+                <p className="mt-1 text-meta text-text-secondary">{t("billing.renews", { date: formatDate(activeSubscription.currentPeriodEnd, lang) })}</p>
               </>
             )}
 
             {activeSubscription !== null && !activeSubscription.autoRenew && (
-              <p className="text-sm text-gray-900">
+              <p className="text-meta text-text-primary">
                 {t("billing.cancelledDesc", {
                   plan: capitalize(activeSubscription.plan.name),
                   date: formatDate(activeSubscription.currentPeriodEnd, lang),
@@ -184,68 +180,54 @@ export default function SubscriptionPage() {
             )}
 
             {activeSubscription !== null && activeSubscription.autoRenew && (
-              <button
-                type="button"
-                onClick={handleCancel}
-                disabled={isCancelling}
-                className="mt-3 w-full rounded-lg border border-gray-300 px-4 py-3 text-base font-medium text-gray-900 transition hover:bg-gray-50 disabled:opacity-60"
-              >
+              <Button variant="outline" width="full" onClick={handleCancel} disabled={isCancelling} className="mt-3">
                 {isCancelling ? t("billing.cancelling") : t("billing.cancel")}
-              </button>
+              </Button>
             )}
 
-            {cancelError && (
-              <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{cancelError}</p>
-            )}
+            {cancelError && <ErrorState message={cancelError} className="mt-2" />}
             {cancelConfirmation && (
-              <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{cancelConfirmation}</p>
+              <Card variant="default" className="mt-2 border-success">
+                <p className="text-meta text-success">{cancelConfirmation}</p>
+              </Card>
             )}
           </>
         )}
-      </section>
+      </Card>
 
-      <h2 className="mt-8 text-lg font-semibold text-gray-900">{t("billing.plansTitle")}</h2>
+      <h2 className="mt-section-gap font-display text-h3 font-semibold text-text-primary">{t("billing.plansTitle")}</h2>
 
-      {plansLoading && <p className="mt-4 text-sm text-gray-500">{t("billing.loadingPlans")}</p>}
-      {plansError && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{plansError}</p>}
+      {plansLoading && <LoadingSkeleton className="mt-4 h-5 w-48" ariaLabel={t("billing.loadingPlans")} />}
+      {plansError && <ErrorState message={plansError} className="mt-4" />}
 
-      <ul className="mt-4 flex flex-col gap-3">
+      <ul className="mt-4 flex flex-col gap-card-gap">
         {plansData?.plans.map((plan) => {
           const isCurrentPlan = activeSubscription !== null && activeSubscription.planId === plan.id;
           const isSubscribing = subscribingPlanId === plan.id;
 
           return (
-            <li key={plan.id} className="rounded-lg border border-gray-200 bg-white px-4 py-4 shadow-sm">
-              <p className="text-base font-medium text-gray-900">{capitalize(plan.name)}</p>
-              <p className="mt-1 text-sm text-gray-600">{formatPrice(plan, t)}</p>
-              <p className="mt-1 text-sm text-gray-500">{plan.features.description}</p>
+            <Card as="li" key={plan.id}>
+              <p className="text-body font-medium text-text-primary">{capitalize(plan.name)}</p>
+              <p className="mt-1 text-meta text-text-secondary">{formatPrice(plan, t)}</p>
+              <p className="mt-1 text-meta text-text-tertiary">{plan.features.description}</p>
 
               {isCurrentPlan ? (
-                <button
-                  type="button"
-                  disabled
-                  className="mt-3 w-full rounded-lg bg-gray-100 px-4 py-3 text-base font-medium text-gray-500"
-                >
+                <Button variant="outline" width="full" disabled className="mt-3">
                   {t("billing.currentPlan")}
-                </button>
+                </Button>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => handleSubscribe(plan)}
-                  disabled={isSubscribing}
-                  className="mt-3 w-full rounded-lg bg-blue-600 px-4 py-3 text-base font-medium text-white transition hover:bg-blue-700 disabled:opacity-60"
-                >
+                <Button width="full" onClick={() => handleSubscribe(plan)} disabled={isSubscribing} className="mt-3">
                   {isSubscribing ? t("billing.subscribing") : t("billing.subscribe")}
-                </button>
+                </Button>
               )}
 
               {subscribeError && subscribeError.planId === plan.id && (
-                <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{subscribeError.message}</p>
+                <ErrorState message={subscribeError.message} className="mt-2" />
               )}
-            </li>
+            </Card>
           );
         })}
       </ul>
-    </main>
+    </PageShell>
   );
 }
