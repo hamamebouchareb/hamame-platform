@@ -125,7 +125,7 @@ export default function ReviewPage() {
       <>
         <AppHeader user={user} onLogout={handleLogout} />
         <main className="mx-auto w-full max-w-md flex-1 px-card-padding py-section-gap">
-          <h1 className="font-display text-h2 font-semibold text-text-primary">{t("review.title")}</h1>
+          <h1 className="font-display text-h2 font-bold text-text-primary sm:text-h1">{t("review.title")}</h1>
           <div className="mt-4">
             <EmptyState
               title={t("review.denied")}
@@ -143,7 +143,7 @@ export default function ReviewPage() {
     <>
       <AppHeader user={user} onLogout={handleLogout} />
       <main className="mx-auto w-full max-w-md flex-1 px-card-padding py-section-gap">
-        <h1 className="font-display text-h2 font-semibold text-text-primary">{t("review.title")}</h1>
+        <h1 className="font-display text-h2 font-bold text-text-primary sm:text-h1">{t("review.title")}</h1>
 
         {isLoading && !isLoaded && <p className="mt-4 text-meta text-text-secondary">{t("review.loading")}</p>}
         {error && !isLoaded && (

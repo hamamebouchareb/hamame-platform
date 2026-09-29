@@ -149,7 +149,7 @@ export default function RevisionPage() {
         {/* Hero */}
         <section aria-label={t("revision.heroAria")} className="text-center">
           <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">{t("revision.kicker")}</p>
-          <h1 className="mt-2 font-display text-hero font-bold leading-tight text-text-primary">{t("nav.revision")}</h1>
+          <h1 className="mt-2 font-display text-h1 font-bold leading-tight text-text-primary md:text-hero">{t("nav.revision")}</h1>
           <p className="mx-auto mt-3 max-w-xl text-body text-text-secondary">
             {t("revision.heroSubtitle")}
           </p>

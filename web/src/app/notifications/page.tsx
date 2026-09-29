@@ -124,7 +124,7 @@ export default function NotificationsPage() {
       <main className="mx-auto w-full max-w-3xl flex-1 px-card-padding py-section-gap">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="font-display text-h1 font-bold leading-tight text-text-primary">{t("nav.notifications")}</h1>
+            <h1 className="font-display text-h2 font-bold leading-tight text-text-primary sm:text-h1">{t("nav.notifications")}</h1>
             <p className="mt-1 text-body text-text-secondary">
               {unreadCount > 0 ? t(unreadCount === 1 ? "notifs.unreadOne" : "notifs.unreadMany", { count: unreadCount }) : t("notifs.allRead")}
             </p>

@@ -231,7 +231,7 @@ export default function SimulationsPage() {
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-card-padding py-section-gap">
         <section aria-label={t("nav.simulations")} className="mx-auto max-w-3xl text-center">
-          <h1 className="mt-2 font-display text-hero font-bold leading-tight text-text-primary">
+          <h1 className="mt-2 font-display text-h1 font-bold leading-tight text-text-primary md:text-hero">
             {t("nav.simulations")}
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-body text-text-secondary">{t("sims.subtitle")}</p>

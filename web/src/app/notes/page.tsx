@@ -174,7 +174,7 @@ export default function NotesPage() {
 
       <main className="mx-auto w-full max-w-2xl flex-1 px-card-padding py-section-gap">
         <BackLink href="/dashboard">{t("classement.backToDashboard")}</BackLink>
-        <h1 className="mt-2 font-display text-h1 font-bold text-text-primary">{t("notes.title")}</h1>
+        <h1 className="mt-2 font-display text-h2 font-bold text-text-primary sm:text-h1">{t("notes.title")}</h1>
         <p className="mt-2 text-body text-text-secondary">
           {t("notes.subtitle")}
         </p>

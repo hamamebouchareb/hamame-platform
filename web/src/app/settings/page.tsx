@@ -259,7 +259,7 @@ export default function SettingsPage() {
       <AppHeader user={user} onLogout={handleLogout} />
 
       <main className="mx-auto w-full max-w-4xl flex-1 px-card-padding py-section-gap">
-        <h1 className="font-display text-h1 font-bold text-text-primary">{t("nav.settings")}</h1>
+        <h1 className="font-display text-h2 font-bold text-text-primary sm:text-h1">{t("nav.settings")}</h1>
 
         <div className="mt-section-gap grid gap-section-gap lg:grid-cols-2">
           {/* ── Personal info card ── */}

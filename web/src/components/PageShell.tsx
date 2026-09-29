@@ -35,7 +35,10 @@ export interface PageShellProps {
   /** Small uppercase label above the title (section / curriculum context). */
   kicker?: ReactNode;
   title?: ReactNode;
-  /** `hero` is for landing-style pages; list and detail pages use `h1`. */
+  /**
+   * `hero` is for the five primary-nav landing pages; list and detail pages use
+   * `h1`. Both are responsive — see the ramp in the heading below.
+   */
   titleSize?: "h1" | "hero";
   description?: ReactNode;
   /** Controls aligned opposite the title (filters, primary CTA). */
@@ -113,7 +116,9 @@ export function PageShell({
                 <h1
                   className={cx(
                     "font-display font-bold leading-tight text-text-primary",
-                    titleSize === "hero" ? "text-hero" : "text-h1",
+                    // Both steps ramp down on small screens: a 48px hero wraps to
+                    // three lines on a phone, which buries the content below it.
+                    titleSize === "hero" ? "text-h1 md:text-hero" : "text-h2 sm:text-h1",
                     kicker ? "mt-1" : null
                   )}
                 >

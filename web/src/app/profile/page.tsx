@@ -203,7 +203,7 @@ export default function ProfilePage() {
               {initials(user.fullName)}
             </span>
             <div className="text-center sm:text-left">
-              <h1 className="font-display text-h2 font-bold text-text-primary">{user.fullName}</h1>
+              <h1 className="font-display text-h2 font-bold text-text-primary sm:text-h1">{user.fullName}</h1>
               {user.email ? <p className="mt-0.5 text-meta text-text-secondary">{user.email}</p> : null}
               {user.phone ? <p className="mt-0.5 text-meta text-text-tertiary">{user.phone}</p> : null}
               <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">

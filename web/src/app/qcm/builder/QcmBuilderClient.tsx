@@ -84,7 +84,7 @@ export default function QcmBuilderClient({ initialMode = "practice" }: QcmBuilde
           <span aria-hidden>←</span> {t("qcmBuilder.back")}
         </Link>
 
-        <h1 className="mt-2 font-display text-h1 font-bold leading-tight text-text-primary">
+        <h1 className="mt-2 font-display text-h2 font-bold leading-tight text-text-primary sm:text-h1">
           {t("qcmBuilder.title")}
         </h1>
         <p className="mt-2 text-body text-text-secondary">

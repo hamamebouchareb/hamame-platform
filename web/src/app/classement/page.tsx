@@ -77,7 +77,7 @@ export default function LeaderboardPage() {
         <BackLink href="/dashboard">{t("classement.backToDashboard")}</BackLink>
         <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="font-display text-h1 font-bold text-text-primary">{t("nav.leaderboard")}</h1>
+            <h1 className="font-display text-h2 font-bold text-text-primary sm:text-h1">{t("nav.leaderboard")}</h1>
             <p className="mt-2 text-body text-text-secondary">
               {t("classement.subtitle")}
             </p>

@@ -146,7 +146,7 @@ export default function SuiviPage() {
         {/* Hero */}
         <section aria-label={t("suivi.heroAria")} className="mx-auto max-w-3xl text-center">
           <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">{t("suivi.heroKicker")}</p>
-          <h1 className="mt-2 font-display text-hero font-bold leading-tight text-text-primary">
+          <h1 className="mt-2 font-display text-h1 font-bold leading-tight text-text-primary md:text-hero">
             {t("suivi.heroTitle")}
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-body text-text-secondary">

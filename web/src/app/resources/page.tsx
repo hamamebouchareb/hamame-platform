@@ -115,7 +115,7 @@ function ResourcesContent() {
       <main className="mx-auto w-full max-w-6xl flex-1 px-card-padding py-section-gap">
         <div className="flex flex-col gap-section-gap">
           <div className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
-            <h1 className="font-display text-h2 font-semibold text-text-primary">Hamame Drive</h1>
+            <h1 className="font-display text-h2 font-bold text-text-primary sm:text-h1">Hamame Drive</h1>
             <p className="mt-1 text-body text-text-secondary">
               {t("drive.subtitle")}
             </p>
