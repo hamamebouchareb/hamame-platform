@@ -1,23 +1,26 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
+import { useParams } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
-import { useRequireAuth } from "@/lib/useRequireAuth";
+import { useAuthedPage } from "@/lib/useAuthedPage";
 import { useApiResource } from "@/lib/useApiResource";
 import { useApiList } from "@/lib/useApiList";
-import { AppHeader, Footer, CourseCard, CurriculumToolbar, EmptyState, LoadingSkeleton } from "@/components";
+import {
+  CourseCard,
+  CurriculumToolbar,
+  EmptyState,
+  ErrorState,
+  LoadingSkeleton,
+  PageShell,
+} from "@/components";
 import type { CurriculumModule, Faculty, Year } from "@/lib/types";
 
 type SortValue = "az" | "za" | "recent";
 
 export default function FacultyYearsPage() {
-  const { logout } = useAuth();
-  const router = useRouter();
   const params = useParams<{ id: string }>();
-  const { user, isHydrated } = useRequireAuth();
+  const { user, isHydrated, handleLogout } = useAuthedPage();
   const { t } = useLanguage();
 
   const [search, setSearch] = useState("");
@@ -60,147 +63,112 @@ export default function FacultyYearsPage() {
     return sorted;
   }, [years, normalizedSearch, sort]);
 
-  function handleLogout() {
-    logout();
-    router.push("/login");
-  }
-
-  if (!isHydrated || !user) {
-    return (
-      <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
-      </main>
-    );
-  }
-
-  const isMyYear = (year: Year) => year.id === user.yearId;
-
   return (
-    <>
-      <AppHeader user={user} onLogout={handleLogout} />
-
-      <main className="mx-auto w-full max-w-4xl flex-1 px-card-padding py-section-gap">
-        <Link
-          href="/faculties"
-          className="inline-flex min-h-touch-target items-center gap-1 text-meta font-medium text-text-secondary transition hover:text-accent-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
-        >
-          <span aria-hidden>←</span> {t("nav.library")}
-        </Link>
-
-        <header className="mt-2">
-          <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">
-            {facultyName ?? t("years.trackFallback")}
-          </p>
-          <h1 className="mt-1 font-display text-hero font-bold leading-tight text-text-primary">
-            {facultyName ? t("years.titleWith", { name: facultyName }) : t("years.title")}
-          </h1>
-          <p className="mt-2 text-body text-text-secondary">
-            {t("years.subtitle")}
-          </p>
-        </header>
-
-        <CurriculumToolbar
-          className="mt-section-gap"
-          resultCount={visibleYears.length}
-          totalCount={years.length}
-          searchValue={search}
-          onSearchChange={setSearch}
-          searchPlaceholder={t("years.searchPh")}
-          sortValue={sort}
-          onSortChange={(value) => setSort(value as SortValue)}
-          sortOptions={[
-            { value: "az", label: t("years.sortAz") },
-            { value: "za", label: t("years.sortZa") },
-            { value: "recent", label: t("years.sortRecent") },
-          ]}
-        />
-
-        {isLoading ? (
-          <div className="mt-4 grid gap-card-gap sm:grid-cols-2">
-            {[0, 1].map((i) => (
-              <LoadingSkeleton key={i} className="h-28 w-full rounded-card" ariaLabel={i === 0 ? t("years.loading") : undefined} />
-            ))}
-          </div>
-        ) : null}
-        {error ? (
-          <div className="mt-4 rounded-card border border-danger bg-surface-1 p-card-padding">
-            <p role="alert" className="text-body text-danger">
-              {error}
-            </p>
-            <button
-              type="button"
-              onClick={refetch}
-              className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 sm:w-auto"
-            >
-              {t("common.retry")}
-            </button>
-          </div>
-        ) : null}
-
-        {!isLoading && !error && years.length === 0 ? (
-          <div className="mt-4">
-            <EmptyState
-              title={t("years.empty")}
-              description={t("years.emptyDesc")}
-              action={{ label: t("years.backToLibrary"), href: "/faculties" }}
+    <PageShell
+      user={user}
+      isHydrated={isHydrated}
+      onLogout={handleLogout}
+      width="content"
+      back={{ href: "/faculties", label: t("nav.library") }}
+      kicker={facultyName ?? t("years.trackFallback")}
+      title={facultyName ? t("years.titleWith", { name: facultyName }) : t("years.title")}
+      titleSize="hero"
+      description={t("years.subtitle")}
+    >
+      {(authedUser) => {
+        const isMyYear = (year: Year) => year.id === authedUser.yearId;
+        return (
+          <>
+            <CurriculumToolbar
+              className="mt-section-gap"
+              resultCount={visibleYears.length}
+              totalCount={years.length}
+              searchValue={search}
+              onSearchChange={setSearch}
+              searchPlaceholder={t("years.searchPh")}
+              sortValue={sort}
+              onSortChange={(value) => setSort(value as SortValue)}
+              sortOptions={[
+                { value: "az", label: t("years.sortAz") },
+                { value: "za", label: t("years.sortZa") },
+                { value: "recent", label: t("years.sortRecent") },
+              ]}
             />
-          </div>
-        ) : null}
 
-        {!isLoading && !error && years.length > 0 && visibleYears.length === 0 ? (
-          <div className="mt-4">
-            <EmptyState
-              title={t("years.noMatch")}
-              description={t("years.noMatchDesc")}
-              action={{
-                label: t("years.resetFilters"),
-                onClick: () => {
-                  setSearch("");
-                  setSort("az");
-                },
-              }}
-            />
-          </div>
-        ) : null}
+            {isLoading ? (
+              <div className="mt-4 grid gap-card-gap sm:grid-cols-2">
+                {[0, 1].map((i) => (
+                  <LoadingSkeleton key={i} className="h-28 w-full rounded-card" ariaLabel={i === 0 ? t("years.loading") : undefined} />
+                ))}
+              </div>
+            ) : null}
 
-        <ul className="mt-4 grid gap-card-gap sm:grid-cols-2">
-          {visibleYears.map((year) => {
-            const moduleCount = moduleCountByYear.get(year.id);
-            return (
-              <li key={year.id}>
-                <CourseCard
-                  href={`/years/${year.id}/modules`}
-                  title={year.label}
-                  tone="library"
-                  description={
-                    modulesLoading && moduleCount === undefined
-                      ? t("years.loadingModules")
-                      : t((moduleCount ?? 0) === 1 ? "years.modulesOne" : "years.modulesMany", { count: moduleCount ?? 0 })
-                  }
-                  actionLabel={t("library.explore")}
-                  meta={
-                    isMyYear(year) ? (
-                        <span className="rounded-pill border border-accent-library/40 bg-accent-library/15 px-2 py-0.5 font-medium text-accent-soft">
-                        {t("years.myYear")}
-                      </span>
-                    ) : (
-                      <span className="rounded-pill border border-success/40 bg-success/15 px-2 py-0.5 font-medium text-success">
-                        {t("library.availableBadge")}
-                      </span>
-                    )
-                  }
+            {error ? <ErrorState className="mt-4" message={error} onRetry={refetch} /> : null}
+
+            {!isLoading && !error && years.length === 0 ? (
+              <div className="mt-4">
+                <EmptyState
+                  title={t("years.empty")}
+                  description={t("years.emptyDesc")}
+                  action={{ label: t("years.backToLibrary"), href: "/faculties" }}
                 />
-              </li>
-            );
-          })}
-        </ul>
+              </div>
+            ) : null}
 
-        <p className="mt-6 text-center text-meta text-text-tertiary">
-          {t("years.footnote")}
-        </p>
-      </main>
+            {!isLoading && !error && years.length > 0 && visibleYears.length === 0 ? (
+              <div className="mt-4">
+                <EmptyState
+                  title={t("years.noMatch")}
+                  description={t("years.noMatchDesc")}
+                  action={{
+                    label: t("years.resetFilters"),
+                    onClick: () => {
+                      setSearch("");
+                      setSort("az");
+                    },
+                  }}
+                />
+              </div>
+            ) : null}
 
-      <Footer />
-    </>
+            <ul className="mt-4 grid gap-card-gap sm:grid-cols-2">
+              {visibleYears.map((year) => {
+                const moduleCount = moduleCountByYear.get(year.id);
+                return (
+                  <li key={year.id}>
+                    <CourseCard
+                      href={`/years/${year.id}/modules`}
+                      title={year.label}
+                      tone="library"
+                      description={
+                        modulesLoading && moduleCount === undefined
+                          ? t("years.loadingModules")
+                          : t((moduleCount ?? 0) === 1 ? "years.modulesOne" : "years.modulesMany", { count: moduleCount ?? 0 })
+                      }
+                      actionLabel={t("library.explore")}
+                      meta={
+                        isMyYear(year) ? (
+                          <span className="rounded-pill border border-accent-library/40 bg-accent-library/15 px-2 py-0.5 font-medium text-accent-soft">
+                            {t("years.myYear")}
+                          </span>
+                        ) : (
+                          <span className="rounded-pill border border-success/40 bg-success/15 px-2 py-0.5 font-medium text-success">
+                            {t("library.availableBadge")}
+                          </span>
+                        )
+                      }
+                    />
+                  </li>
+                );
+              })}
+            </ul>
+
+            <p className="mt-6 text-center text-meta text-text-tertiary">
+              {t("years.footnote")}
+            </p>
+          </>
+        );
+      }}
+    </PageShell>
   );
 }

@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
-import { useRequireAuth } from "@/lib/useRequireAuth";
+import { useAuthedPage } from "@/lib/useAuthedPage";
 import { useApiResource } from "@/lib/useApiResource";
-import { AppHeader, BackLink, EmptyState, Footer, LoadingSkeleton } from "@/components";
+import { Card, EmptyState, ErrorState, LoadingSkeleton, PageShell, Select } from "@/components";
 import type { Faculty, Year } from "@/lib/types";
 
 interface CoverageModule {
@@ -22,13 +20,8 @@ interface CoverageResponse {
   modules: CoverageModule[];
 }
 
-const selectClass =
-  "min-h-touch-target w-full rounded-input border border-border bg-surface-2 px-4 text-body text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50";
-
 export default function CoveragePage() {
-  const router = useRouter();
-  const { logout } = useAuth();
-  const { user, isHydrated } = useRequireAuth();
+  const { user, isHydrated, handleLogout } = useAuthedPage();
   const { t } = useLanguage();
 
   const [facultyId, setFacultyId] = useState("");
@@ -68,72 +61,49 @@ export default function CoveragePage() {
     [modules]
   );
 
-  function handleLogout() {
-    logout();
-    router.push("/login");
-  }
-
-  if (!isHydrated || !user) {
-    return (
-      <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
-      </main>
-    );
-  }
-
   return (
-    <>
-      <AppHeader user={user} onLogout={handleLogout} />
-
-      <main className="mx-auto w-full max-w-2xl flex-1 px-card-padding py-section-gap">
-        <BackLink href="/faculties">{t("years.backToLibrary")}</BackLink>
-        <h1 className="mt-2 font-display text-h1 font-bold text-text-primary">{t("coverage.title")}</h1>
-        <p className="mt-2 text-body text-text-secondary">
-          {t("coverage.subtitle")}
-        </p>
-
+    <PageShell
+      user={user}
+      isHydrated={isHydrated}
+      onLogout={handleLogout}
+      width="narrow"
+      back={{ href: "/faculties", label: t("years.backToLibrary") }}
+      title={t("coverage.title")}
+      description={t("coverage.subtitle")}
+    >
+      <>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <div>
-            <label htmlFor="coverage-faculty" className="mb-2 block text-meta font-medium text-text-secondary">
-              {t("settings.faculty")}
-            </label>
-            <select
-              id="coverage-faculty"
-              value={facultyId}
-              onChange={(event) => {
-                setFacultyId(event.target.value);
-                setYearId("");
-              }}
-              disabled={faculties.isLoading}
-              className={selectClass}
-            >
-              <option value="">{faculties.isLoading ? t("builder.loadingShort") : t("builder.allFaculties")}</option>
-              {facultyList.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="coverage-year" className="mb-2 block text-meta font-medium text-text-secondary">
-              {t("settings.year")}
-            </label>
-            <select
-              id="coverage-year"
-              value={yearId}
-              onChange={(event) => setYearId(event.target.value)}
-              disabled={!facultyId || years.isLoading}
-              className={selectClass}
-            >
-              <option value="">{years.isLoading ? t("builder.loadingShort") : t("builder.allYears")}</option>
-              {yearList.map((y) => (
-                <option key={y.id} value={y.id}>
-                  {y.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <Select
+            id="coverage-faculty"
+            label={t("settings.faculty")}
+            value={facultyId}
+            onChange={(event) => {
+              setFacultyId(event.target.value);
+              setYearId("");
+            }}
+            disabled={faculties.isLoading}
+          >
+            <option value="">{faculties.isLoading ? t("builder.loadingShort") : t("builder.allFaculties")}</option>
+            {facultyList.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
+          </Select>
+          <Select
+            id="coverage-year"
+            label={t("settings.year")}
+            value={yearId}
+            onChange={(event) => setYearId(event.target.value)}
+            disabled={!facultyId || years.isLoading}
+          >
+            <option value="">{years.isLoading ? t("builder.loadingShort") : t("builder.allYears")}</option>
+            {yearList.map((y) => (
+              <option key={y.id} value={y.id}>
+                {y.label}
+              </option>
+            ))}
+          </Select>
         </div>
 
         <div className="mt-4">
@@ -144,18 +114,7 @@ export default function CoveragePage() {
               ))}
             </div>
           ) : coverage.error ? (
-            <div className="rounded-card border border-danger bg-surface-1 p-card-padding">
-              <p role="alert" className="text-body text-danger">
-                {coverage.error}
-              </p>
-              <button
-                type="button"
-                onClick={coverage.refetch}
-                className="mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring sm:w-auto"
-              >
-                {t("common.retry")}
-              </button>
-            </div>
+            <ErrorState message={coverage.error} onRetry={coverage.refetch} />
           ) : modules.length === 0 ? (
             <EmptyState
               title={t("coverage.empty")}
@@ -169,10 +128,7 @@ export default function CoveragePage() {
               </p>
               <ol className="mt-3 flex flex-col gap-2">
                 {modules.map((entry, index) => (
-                  <li
-                    key={entry.moduleId}
-                    className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card"
-                  >
+                  <Card as="li" key={entry.moduleId}>
                     <div className="flex items-baseline gap-3">
                       <span
                         aria-label={t("classement.rank", { rank: index + 1 })}
@@ -204,15 +160,13 @@ export default function CoveragePage() {
                         {entry.questions}
                       </span>
                     </div>
-                  </li>
+                  </Card>
                 ))}
               </ol>
             </>
           )}
         </div>
-      </main>
-
-      <Footer />
-    </>
+      </>
+    </PageShell>
   );
 }

@@ -1,14 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { localeFor, type UiLanguage } from "@/lib/i18n";
-import { useRequireAuth } from "@/lib/useRequireAuth";
+import { useAuthedPage } from "@/lib/useAuthedPage";
 import { apiFetch, ApiError } from "@/lib/api";
-import { AppHeader, BackLink, EmptyState, Footer, LoadingSkeleton } from "@/components";
+import { cx } from "@/lib/cx";
+import {
+  Button,
+  ButtonLink,
+  Card,
+  EmptyState,
+  ErrorState,
+  LoadingSkeleton,
+  PageShell,
+} from "@/components";
 import type { SessionHistoryEntry } from "@/lib/types";
 
 const PAGE_LIMIT = 20;
@@ -31,9 +37,7 @@ function accuracy(answered: number, correct: number): string {
 }
 
 export default function HistoryPage() {
-  const router = useRouter();
-  const { logout } = useAuth();
-  const { user, isHydrated } = useRequireAuth();
+  const { user, isHydrated, handleLogout } = useAuthedPage();
   const { lang, t } = useLanguage();
 
   const [sessions, setSessions] = useState<SessionHistoryEntry[]>([]);
@@ -98,33 +102,20 @@ export default function HistoryPage() {
     return [...map.entries()];
   }, [sessions, t]);
 
-  function handleLogout() {
-    logout();
-    router.push("/login");
-  }
-
-  if (!isHydrated || !user) {
-    return (
-      <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
-      </main>
-    );
-  }
-
   const hasMore = page > 0 && sessions.length < total;
   const isEmpty = page > 0 && sessions.length === 0 && !isLoading && !error;
 
   return (
-    <>
-      <AppHeader user={user} onLogout={handleLogout} />
-
-      <main className="mx-auto w-full max-w-2xl flex-1 px-card-padding py-section-gap">
-        <BackLink href="/dashboard">{t("classement.backToDashboard")}</BackLink>
-        <h1 className="mt-2 font-display text-h1 font-bold text-text-primary">{t("history.title")}</h1>
-        <p className="mt-2 text-body text-text-secondary">
-          {t("history.subtitle")}
-        </p>
-
+    <PageShell
+      user={user}
+      isHydrated={isHydrated}
+      onLogout={handleLogout}
+      width="narrow"
+      back={{ href: "/dashboard", label: t("classement.backToDashboard") }}
+      title={t("history.title")}
+      description={t("history.subtitle")}
+    >
+      <>
         {/* P12 cheap simulations history: mode tabs on the same endpoint. */}
         <div className="mt-4 flex gap-2" role="group" aria-label={t("history.filterMode")}>
           {(
@@ -134,36 +125,27 @@ export default function HistoryPage() {
               { value: "exam", labelKey: "history.tabExams" },
             ] as const
           ).map((tab) => (
-            <button
+            <Button
               key={tab.labelKey}
-              type="button"
+              variant="outline"
               onClick={() => handleModeChange(tab.value)}
               aria-pressed={modeFilter === tab.value}
-              className={[
-                "inline-flex min-h-touch-target flex-1 items-center justify-center rounded-control border px-4 text-body font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring sm:flex-none",
-                modeFilter === tab.value
-                  ? "border-accent-qcm bg-accent-qcm/15 text-text-primary"
-                  : "border-border text-text-secondary hover:bg-surface-2",
-              ].join(" ")}
+              className={cx(
+                "flex-1 sm:flex-none",
+                modeFilter === tab.value && "border-accent-qcm bg-accent-qcm/15 text-text-primary"
+              )}
             >
               {t(tab.labelKey)}
-            </button>
+            </Button>
           ))}
         </div>
 
         {error ? (
-          <div className="mt-4 rounded-card border border-danger bg-surface-1 p-card-padding">
-            <p role="alert" className="text-body text-danger">
-              {error}
-            </p>
-            <button
-              type="button"
-              onClick={() => loadPage(page === 0 ? 1 : page, modeFilter)}
-              className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 sm:w-auto"
-            >
-              {t("common.retry")}
-            </button>
-          </div>
+          <ErrorState
+            className="mt-4"
+            message={error}
+            onRetry={() => loadPage(page === 0 ? 1 : page, modeFilter)}
+          />
         ) : null}
 
         {isEmpty ? (
@@ -200,10 +182,7 @@ export default function HistoryPage() {
               {groupSessions.map((session) => {
                 const completed = session.completedAt !== null;
                 return (
-                  <li
-                    key={session.id}
-                    className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card"
-                  >
+                  <Card as="li" key={session.id}>
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <p className="text-body font-semibold text-text-primary">{session.name}</p>
                       <p className="text-meta text-text-tertiary">
@@ -234,13 +213,14 @@ export default function HistoryPage() {
                         ))}
                       </ul>
                     ) : null}
-                    <Link
+                    <ButtonLink
                       href={completed ? `/sessions/${session.id}/results` : `/sessions/${session.id}`}
-                      className="mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
+                      variant="outline"
+                      className="mt-3"
                     >
                       {completed ? t("history.review") : t("history.continue")}
-                    </Link>
-                    </li>
+                    </ButtonLink>
+                  </Card>
                   );
                 })}
               </ul>
@@ -249,18 +229,17 @@ export default function HistoryPage() {
         })}
 
         {hasMore ? (
-          <button
-            type="button"
+          <Button
+            variant="outline"
+            width="full-mobile"
             onClick={() => loadPage(page + 1, modeFilter)}
             disabled={isLoading}
-            className="mt-4 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-60 sm:w-auto"
+            className="mt-4"
           >
             {isLoading ? t("common.loadingMore") : t("history.loadMore")}
-          </button>
+          </Button>
         ) : null}
-      </main>
-
-      <Footer />
-    </>
+      </>
+    </PageShell>
   );
 }
