@@ -11,7 +11,7 @@
 
    Written for Tailwind v4's CSS-first @theme config. Every variable below is
    emitted as a CSS custom property on :root and drives a Tailwind utility
-   namespace (--color-* → bg/text/border, --font-size-* → text-*,
+   namespace (--color-* → bg/text/border, --text-* → text-*,
    --spacing-* → p/m/gap, --size-* → w/h/min-*, --radius-* → rounded-*,
    --shadow-* → shadow-*, --ease-* → ease-*).
 
@@ -68,21 +68,25 @@
   --duration-slow: 300ms;    /* tab switches, primary CTAs, submit buttons */
   --duration-enter: 150ms;   /* dialog/dropdown open (tw-animate-css `enter`) */
 
-  /* ---- Typography scale (Manrope sans + Fraunces display from next/font) ---- */
-  --font-size-caption: 0.75rem;      /* 12px — labels */
-  --font-size-meta: 0.8125rem;       /* 13px — metadata/label */
-  --font-size-sm: 0.875rem;          /* 14px — small body */
-  --font-size-body: 1rem;            /* 16px — body */
-  --font-size-kpi: 2rem;             /* 32px — KPI numbers */
-  --font-size-kpi-lg: 2.25rem;       /* 36px — large KPI */
-  --font-size-h3: 1.375rem;          /* 22px — card heading */
-  --font-size-card: 1.375rem;        /* 22px — card heading */
-  --font-size-h2: 1.875rem;          /* 30px — section sub-heading */
-  --font-size-section: 2.25rem;      /* 36px — section heading */
-  --font-size-h1: 2.25rem;           /* 36px — page heading */
-  --font-size-hero: 3rem;            /* 48px — hero title (desktop) */
-  --font-size-display: 3rem;         /* 48px — hero numbers */
-  --font-size-hero-lg: 3.5rem;       /* 56px — hero title (large desktop) */
+  /* ---- Typography scale (Manrope sans + Fraunces display from next/font) ----
+     Must use the --text-* namespace: Tailwind v4 generates text-* utilities from
+     --text-*, NOT from --font-size-*. These were declared as --font-size-* until
+     2026-09-29, which emitted no utilities at all — every text-h1/text-body/
+     text-meta in the app was inert and inherited the 16px body size. */
+  --text-caption: 0.75rem;      /* 12px — labels */
+  --text-meta: 0.8125rem;       /* 13px — metadata/label */
+  --text-sm: 0.875rem;          /* 14px — small body (matches Tailwind's default) */
+  --text-body: 1rem;            /* 16px — body */
+  --text-kpi: 2rem;             /* 32px — KPI numbers */
+  --text-kpi-lg: 2.25rem;       /* 36px — large KPI */
+  --text-h3: 1.375rem;          /* 22px — card heading */
+  --text-card: 1.375rem;        /* 22px — card heading */
+  --text-h2: 1.875rem;          /* 30px — section sub-heading */
+  --text-section: 2.25rem;      /* 36px — section heading */
+  --text-h1: 2.25rem;           /* 36px — page heading */
+  --text-hero: 3rem;            /* 48px — hero title (desktop) */
+  --text-display: 3rem;         /* 48px — hero numbers */
+  --text-hero-lg: 3.5rem;       /* 56px — hero title (large desktop) */
 
   /* ---- Spacing (8px base grid) ---- */
   --spacing-card-padding: 1.25rem;   /* 20px — card inner padding (16–24) */
