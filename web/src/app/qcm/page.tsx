@@ -1,13 +1,34 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { localeFor, type UiLanguage } from "@/lib/i18n";
 import { useRequireAuth } from "@/lib/useRequireAuth";
-import { AppHeader, Footer, LoadingSkeleton } from "@/components";
+import { useApiResource } from "@/lib/useApiResource";
+import { AppHeader, ButtonLink, Card, ErrorState, Footer, LoadingSkeleton } from "@/components";
 import { accentText, accentVar, type AccentTone } from "@/components/FeatureCard";
 import { cx } from "@/lib/cx";
+import type { SessionHistoryEntry } from "@/lib/types";
+
+interface HistoryResponse {
+  sessions: SessionHistoryEntry[];
+  pagination: { page: number; limit: number; total: number };
+}
+
+function formatDate(iso: string, lang: UiLanguage): string {
+  return new Date(iso).toLocaleString(localeFor(lang), {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+function accuracy(answered: number, correct: number): string {
+  if (answered === 0) return "—";
+  return `${Math.round((correct / answered) * 100)} %`;
+}
 
 interface DecisionCardProps {
   href: string;
@@ -73,6 +94,99 @@ function cxCta(tone: AccentTone): string {
   );
 }
 
+function RecentSessions({ canFetch }: { canFetch: boolean }) {
+  const { lang, t } = useLanguage();
+  const { data, error, isLoading, refetch } = useApiResource<HistoryResponse>(
+    canFetch ? "/sessions?page=1&limit=6" : null
+  );
+
+  const groups = useMemo(() => {
+    const map = new Map<string, SessionHistoryEntry[]>();
+    for (const session of data?.sessions ?? []) {
+      const first = session.units[0];
+      const key = first ? `${first.facultyName} · ${first.yearLabel}` : t("history.others");
+      const list = map.get(key) ?? [];
+      list.push(session);
+      map.set(key, list);
+    }
+    return [...map.entries()]
+      .slice(0, 2)
+      .map(([label, list]) => [label, list.slice(0, 3)] as const);
+  }, [data, t]);
+
+  const isEmpty = !isLoading && !error && (data?.sessions.length ?? 0) === 0;
+
+  return (
+    <section aria-label={t("qcm.recentTitle")} className="mx-auto mt-section-gap max-w-4xl">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h2 className="font-display text-h3 font-semibold text-text-primary">{t("qcm.recentTitle")}</h2>
+          <p className="mt-1 text-meta text-text-secondary">{t("qcm.recentSub")}</p>
+        </div>
+        {!isLoading && !error && !isEmpty ? (
+          <Link
+            href="/historique"
+            className="inline-flex min-h-touch-target items-center text-meta font-medium text-accent-soft transition hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+          >
+            {t("qcm.viewAll")}
+          </Link>
+        ) : null}
+      </div>
+
+      {isLoading && !data ? (
+        <div className="mt-4 flex flex-col gap-3" aria-busy="true">
+          {[0, 1].map((i) => (
+            <LoadingSkeleton key={i} className="h-24 w-full rounded-card" />
+          ))}
+        </div>
+      ) : null}
+
+      {error ? <ErrorState className="mt-4" message={error} onRetry={refetch} /> : null}
+
+      {isEmpty ? (
+        <Card className="mt-4">
+          <ButtonLink href="/qcm/builder?mode=practice">{t("qcm.practiceCta")}</ButtonLink>
+        </Card>
+      ) : null}
+
+      {groups.map(([groupLabel, groupSessions]) => (
+        <section key={groupLabel} aria-label={groupLabel} className="mt-4">
+          <h3 className="font-display text-body font-semibold text-text-primary">{groupLabel}</h3>
+          <ul className="mt-2 flex flex-col gap-3">
+            {groupSessions.map((session) => {
+              const completed = session.completedAt !== null;
+              return (
+                <Card as="li" key={session.id}>
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <p className="text-body font-semibold text-text-primary">{session.name}</p>
+                    <p className="text-meta text-text-tertiary">
+                      {session.mode === "exam" ? t("builder.nameExam") : t("builder.namePractice")} · {formatDate(session.startedAt, lang)}
+                    </p>
+                  </div>
+                  <p className="mt-1 text-meta text-text-secondary">
+                    {t("history.answered", { a: session.stats.answered, t: session.stats.total })}
+                    {" · "}
+                    {t("history.accuracy", { v: accuracy(session.stats.answered, session.stats.correct) })}
+                    {completed && session.score !== null ? ` · ${t("history.score", { v: Math.round(session.score) })}` : null}
+                    {completed ? ` · ${t("history.done")}` : ` · ${t("dashboard.inProgress")}`}
+                  </p>
+                  <ButtonLink
+                    href={completed ? `/sessions/${session.id}/results` : `/sessions/${session.id}`}
+                    variant="outline"
+                    className="mt-3"
+                  >
+                    {completed ? t("history.review") : t("history.continue")}
+                  </ButtonLink>
+                </Card>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
+    </section>
+  );
+}
+
 export default function QcmPage() {
   const { logout } = useAuth();
   const router = useRouter();
@@ -133,6 +247,8 @@ export default function QcmPage() {
             tone="secondary"
           />
         </section>
+
+        <RecentSessions canFetch={isHydrated && !!user} />
 
         <p className="mt-section-gap text-center text-meta text-text-tertiary">
           {t("qcm.footnote")}

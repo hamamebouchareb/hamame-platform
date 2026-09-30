@@ -420,6 +420,9 @@ const fr = {
   "qcm.examP2": "Correction uniquement en fin de session",
   "qcm.examP3": "Score final avec revue de chaque question",
   "qcm.examCta": "Lancer un examen",
+  "qcm.recentTitle": "Mes sessions",
+  "qcm.recentSub": "Reprenez là où vous vous êtes arrêté.",
+  "qcm.viewAll": "Tout voir",
   "qcm.footnote":
     "La banque QCM est entièrement gratuite pour tous les membres — aucun abonnement requis pour s'entraîner.",
   // ── QCM builder ──
@@ -1433,6 +1436,9 @@ const en: Record<I18nKey, string> = {
   "qcm.examP2": "Grading only at the end of the session",
   "qcm.examP3": "Final score with per-question review",
   "qcm.examCta": "Start an exam",
+  "qcm.recentTitle": "Your sessions",
+  "qcm.recentSub": "Pick up where you left off.",
+  "qcm.viewAll": "View all",
   "qcm.footnote":
     "The QCM bank is entirely free for all members — no subscription needed to practice.",
   // ── QCM builder ──
