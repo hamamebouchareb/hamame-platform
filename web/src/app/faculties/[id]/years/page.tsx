@@ -7,14 +7,16 @@ import { useAuthedPage } from "@/lib/useAuthedPage";
 import { useApiResource } from "@/lib/useApiResource";
 import { useApiList } from "@/lib/useApiList";
 import {
+  Breadcrumb,
   CourseCard,
   CurriculumToolbar,
   EmptyState,
   ErrorState,
   LoadingSkeleton,
   PageShell,
+  curriculumTrail,
 } from "@/components";
-import type { CurriculumModule, Faculty, Year } from "@/lib/types";
+import type { CurriculumContext, CurriculumModule, Faculty, Year } from "@/lib/types";
 
 type SortValue = "az" | "za" | "recent";
 
@@ -26,7 +28,7 @@ export default function FacultyYearsPage() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortValue>("az");
 
-  const { data, error, isLoading, refetch } = useApiResource<{ years: Year[] }>(
+  const { data, error, isLoading, refetch } = useApiResource<{ years: Year[]; context?: CurriculumContext }>(
     isHydrated && user ? `/faculties/${params.id}/years` : null
   );
   const { data: facultiesData } = useApiResource<{ faculties: Faculty[] }>(
@@ -69,7 +71,15 @@ export default function FacultyYearsPage() {
       isHydrated={isHydrated}
       onLogout={handleLogout}
       width="content"
-      back={{ href: "/faculties", label: t("nav.library") }}
+      leading={
+        <Breadcrumb
+          label={t("common.breadcrumb")}
+          items={curriculumTrail(
+            t("nav.library"),
+            data?.context ?? (facultyName ? { faculty: { id: params.id, name: facultyName } } : null)
+          )}
+        />
+      }
       kicker={facultyName ?? t("years.trackFallback")}
       title={facultyName ? t("years.titleWith", { name: facultyName }) : t("years.title")}
       titleSize="hero"

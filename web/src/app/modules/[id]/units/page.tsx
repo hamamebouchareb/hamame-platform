@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -8,8 +7,8 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { useApiResource } from "@/lib/useApiResource";
 import { useApiList } from "@/lib/useApiList";
-import { AppHeader, Footer, CourseCard, CurriculumToolbar, EmptyState, LoadingSkeleton } from "@/components";
-import type { LessonSummary, Unit } from "@/lib/types";
+import { AppHeader, Breadcrumb, Footer, CourseCard, CurriculumToolbar, EmptyState, LoadingSkeleton, curriculumTrail } from "@/components";
+import type { CurriculumContext, LessonSummary, Unit } from "@/lib/types";
 
 interface QuestionListInfo {
   pagination: { total: number };
@@ -27,7 +26,7 @@ export default function ModuleUnitsPage() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortValue>("az");
 
-  const { data, error, isLoading, refetch } = useApiResource<{ units: Unit[] }>(
+  const { data, error, isLoading, refetch } = useApiResource<{ units: Unit[]; context?: CurriculumContext }>(
     isHydrated && user ? `/modules/${params.id}/units` : null
   );
 
@@ -87,12 +86,7 @@ export default function ModuleUnitsPage() {
       <AppHeader user={user} onLogout={handleLogout} />
 
       <main className="mx-auto w-full max-w-4xl flex-1 px-card-padding py-section-gap">
-        <Link
-          href="/faculties"
-          className="inline-flex min-h-touch-target items-center gap-1 text-meta font-medium text-text-secondary transition hover:text-accent-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
-        >
-          <span aria-hidden>←</span> {t("nav.library")}
-        </Link>
+        <Breadcrumb label={t("common.breadcrumb")} items={curriculumTrail(t("nav.library"), data?.context)} />
 
         <header className="mt-2">
           <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">{t("units.kicker")}</p>

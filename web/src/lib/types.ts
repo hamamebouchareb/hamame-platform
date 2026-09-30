@@ -35,6 +35,14 @@ export interface Unit {
   orderIndex: number;
 }
 
+/** Parent chain added to curriculum list and lesson responses. Each level is present only once the response is scoped to it. */
+export interface CurriculumContext {
+  faculty: { id: string; name: string };
+  year?: { id: string; label: string };
+  module?: { id: string; name: string };
+  unit?: { id: string; name: string };
+}
+
 /** Raw `source` values stored on questions (see prisma Question.source). */
 export type QuestionSource = "official_exam" | "hamame_authored" | "ai_generated";
 
@@ -60,6 +68,7 @@ export interface LessonDetail {
   id: string;
   unitId: string;
   title: string;
+  context?: CurriculumContext;
   contentTier: string;
   createdAt: string;
   currentVersion: {

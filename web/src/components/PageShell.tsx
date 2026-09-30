@@ -32,6 +32,8 @@ export interface PageShellProps {
   width?: PageWidth;
   /** Renders the shared back affordance above the heading. */
   back?: { href: string; label: ReactNode };
+  /** Sits above the back link and the heading. Used for the curriculum trail. */
+  leading?: ReactNode;
   /** Small uppercase label above the title (section / curriculum context). */
   kicker?: ReactNode;
   title?: ReactNode;
@@ -65,6 +67,7 @@ export function PageShell({
   onLogout,
   width = "content",
   back,
+  leading,
   kicker,
   title,
   titleSize = "h1",
@@ -99,6 +102,7 @@ export function PageShell({
       />
 
       <main className={cx("mx-auto w-full flex-1 px-card-padding py-section-gap", widthClasses[width], className)}>
+        {leading ? <div className="mb-2">{leading}</div> : null}
         {back ? <BackLink href={back.href}>{back.label}</BackLink> : null}
 
         {hasHeading ? (

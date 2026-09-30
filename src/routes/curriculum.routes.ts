@@ -61,7 +61,7 @@ async function listYearsForFaculty(req: Request, res: Response, next: NextFuncti
     // so a single query covering both cases is enough — no need to distinguish them.
     const faculty = await prisma.faculty.findFirst({
       where: { id, rolloutStatus: { in: [...VISIBLE_ROLLOUT_STATUSES] } },
-      select: { id: true },
+      select: { id: true, name: true },
     });
     if (!faculty) {
       throw FACULTY_NOT_FOUND();
@@ -72,7 +72,10 @@ async function listYearsForFaculty(req: Request, res: Response, next: NextFuncti
       orderBy: { orderIndex: "asc" },
     });
 
-    res.status(200).json({ years });
+    res.status(200).json({
+      context: { faculty: { id: faculty.id, name: faculty.name } },
+      years,
+    });
   } catch (err) {
     next(err);
   }
@@ -87,7 +90,11 @@ async function listModulesForYear(req: Request, res: Response, next: NextFunctio
 
     const year = await prisma.year.findUnique({
       where: { id },
-      select: { id: true, faculty: { select: { rolloutStatus: true } } },
+      select: {
+        id: true,
+        label: true,
+        faculty: { select: { id: true, name: true, rolloutStatus: true } },
+      },
     });
     if (!year) {
       throw new ApiError(404, "YEAR_NOT_FOUND", "No year exists with this id.");
@@ -101,7 +108,13 @@ async function listModulesForYear(req: Request, res: Response, next: NextFunctio
       orderBy: { orderIndex: "asc" },
     });
 
-    res.status(200).json({ modules });
+    res.status(200).json({
+      context: {
+        faculty: { id: year.faculty.id, name: year.faculty.name },
+        year: { id: year.id, label: year.label },
+      },
+      modules,
+    });
   } catch (err) {
     next(err);
   }
@@ -116,7 +129,17 @@ async function listUnitsForModule(req: Request, res: Response, next: NextFunctio
 
     const courseModule = await prisma.module.findUnique({
       where: { id },
-      select: { id: true, year: { select: { faculty: { select: { rolloutStatus: true } } } } },
+      select: {
+        id: true,
+        name: true,
+        year: {
+          select: {
+            id: true,
+            label: true,
+            faculty: { select: { id: true, name: true, rolloutStatus: true } },
+          },
+        },
+      },
     });
     if (!courseModule) {
       throw new ApiError(404, "MODULE_NOT_FOUND", "No module exists with this id.");
@@ -130,7 +153,14 @@ async function listUnitsForModule(req: Request, res: Response, next: NextFunctio
       orderBy: { orderIndex: "asc" },
     });
 
-    res.status(200).json({ units });
+    res.status(200).json({
+      context: {
+        faculty: { id: courseModule.year.faculty.id, name: courseModule.year.faculty.name },
+        year: { id: courseModule.year.id, label: courseModule.year.label },
+        module: { id: courseModule.id, name: courseModule.name },
+      },
+      units,
+    });
   } catch (err) {
     next(err);
   }
@@ -148,7 +178,20 @@ async function listLessonsForUnit(req: Request, res: Response, next: NextFunctio
       where: { id },
       select: {
         id: true,
-        module: { select: { year: { select: { faculty: { select: { rolloutStatus: true } } } } } },
+        name: true,
+        module: {
+          select: {
+            id: true,
+            name: true,
+            year: {
+              select: {
+                id: true,
+                label: true,
+                faculty: { select: { id: true, name: true, rolloutStatus: true } },
+              },
+            },
+          },
+        },
       },
     });
     if (!unit) {
@@ -168,7 +211,15 @@ async function listLessonsForUnit(req: Request, res: Response, next: NextFunctio
       select: { id: true, title: true, contentTier: true },
     });
 
-    res.status(200).json({ lessons });
+    res.status(200).json({
+      context: {
+        faculty: { id: unit.module.year.faculty.id, name: unit.module.year.faculty.name },
+        year: { id: unit.module.year.id, label: unit.module.year.label },
+        module: { id: unit.module.id, name: unit.module.name },
+        unit: { id: unit.id, name: unit.name },
+      },
+      lessons,
+    });
   } catch (err) {
     next(err);
   }
@@ -191,7 +242,25 @@ async function getLessonDetail(req: Request, res: Response, next: NextFunction) 
     const lesson = await prisma.lesson.findFirst({
       where: { id, AND: [universityScopeFilter(viewerUniversityId)] },
       include: {
-        unit: { select: { module: { select: { year: { select: { faculty: { select: { rolloutStatus: true } } } } } } } },
+        unit: {
+          select: {
+            id: true,
+            name: true,
+            module: {
+              select: {
+                id: true,
+                name: true,
+                year: {
+                  select: {
+                    id: true,
+                    label: true,
+                    faculty: { select: { id: true, name: true, rolloutStatus: true } },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
     if (!lesson) {
@@ -244,6 +313,12 @@ async function getLessonDetail(req: Request, res: Response, next: NextFunction) 
       id: lesson.id,
       unitId: lesson.unitId,
       title: lesson.title,
+      context: {
+        faculty: { id: lesson.unit.module.year.faculty.id, name: lesson.unit.module.year.faculty.name },
+        year: { id: lesson.unit.module.year.id, label: lesson.unit.module.year.label },
+        module: { id: lesson.unit.module.id, name: lesson.unit.module.name },
+        unit: { id: lesson.unit.id, name: lesson.unit.name },
+      },
       contentTier: lesson.contentTier,
       createdAt: lesson.createdAt,
       currentVersion: {

@@ -1,13 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { useApiResource } from "@/lib/useApiResource";
 import { extractParagraphs } from "@/lib/richtext";
-import { AppHeader, EmptyState, EnqueueReviewButton, Footer, LoadingSkeleton } from "@/components";
+import { AppHeader, Breadcrumb, EmptyState, EnqueueReviewButton, Footer, LoadingSkeleton, curriculumTrail } from "@/components";
 import type { LessonDetail } from "@/lib/types";
 
 export default function LessonDetailPage() {
@@ -68,12 +67,10 @@ export default function LessonDetailPage() {
 
         {lesson && (
           <>
-            <Link
-              href={`/units/${lesson.unitId}`}
-              className="inline-flex min-h-touch-target items-center gap-1 text-meta font-medium text-text-secondary transition hover:text-accent-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
-            >
-              <span aria-hidden>←</span> {t("lesson.backToLessons")}
-            </Link>
+            <Breadcrumb
+              label={t("common.breadcrumb")}
+              items={curriculumTrail(t("nav.library"), lesson.context, lesson.title)}
+            />
 
             <header className="mt-2">
               <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">{t("lesson.kicker")}</p>

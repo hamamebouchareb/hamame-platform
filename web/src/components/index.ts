@@ -1,4 +1,5 @@
 export { AppHeader } from "@/components/AppHeader";
+export { Breadcrumb, curriculumTrail, type BreadcrumbItem } from "@/components/Breadcrumb";
 export { PageShell, type PageWidth } from "@/components/PageShell";
 export { Card } from "@/components/Card";
 export { Button, ButtonLink, buttonClasses } from "@/components/Button";

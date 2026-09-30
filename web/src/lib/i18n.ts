@@ -62,6 +62,7 @@ const fr = {
   "footer.navAria": "Pied de page",
   // ── Shared ──
   "common.loading": "Chargement",
+  "common.breadcrumb": "Fil d'Ariane",
   "common.loadingMore": "Chargement...",
   "common.retry": "Réessayer",
   "common.total": "au total",
@@ -1074,6 +1075,7 @@ const en: Record<I18nKey, string> = {
   "footer.navAria": "Footer",
   // ── Shared ──
   "common.loading": "Loading",
+  "common.breadcrumb": "Breadcrumb",
   "common.loadingMore": "Loading...",
   "common.retry": "Retry",
   "common.total": "total",
