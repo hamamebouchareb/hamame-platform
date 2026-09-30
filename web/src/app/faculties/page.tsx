@@ -1,21 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
-import { useRequireAuth } from "@/lib/useRequireAuth";
+import { useAuthedPage } from "@/lib/useAuthedPage";
 import { useApiResource } from "@/lib/useApiResource";
 import { useApiList } from "@/lib/useApiList";
-import { AppHeader, EmptyState, Footer, CourseCard, LoadingSkeleton } from "@/components";
+import { CourseCard, EmptyState, LoadingSkeleton, PageShell } from "@/components";
 import { accentText, accentVar } from "@/components/FeatureCard";
 import type { Faculty, Year } from "@/lib/types";
 import { cx } from "@/lib/cx";
 
 export default function FacultiesPage() {
-  const { logout } = useAuth();
-  const router = useRouter();
-  const { user, isHydrated } = useRequireAuth();
+  const { user, isHydrated, handleLogout } = useAuthedPage();
   const { t } = useLanguage();
 
   const { data, error, isLoading, refetch } = useApiResource<{ faculties: Faculty[] }>(
@@ -28,29 +24,16 @@ export default function FacultiesPage() {
     isHydrated && user && faculties.length > 0 ? yearsPaths : null
   );
 
-  function handleLogout() {
-    logout();
-    router.push("/login");
-  }
-
-  if (!isHydrated || !user) {
-    return (
-      <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
-      </main>
-    );
-  }
-
-  const myFacultyIndex = user.facultyId ? faculties.findIndex((f) => f.id === user.facultyId) : -1;
-  const myFaculty = myFacultyIndex >= 0 ? faculties[myFacultyIndex] : null;
-  const myFacultyYears = myFacultyIndex >= 0 && yearBatches.length > myFacultyIndex ? yearBatches[myFacultyIndex]?.years ?? [] : [];
-  const myYear = myFaculty ? myFacultyYears.find((y) => y.id === user.yearId) ?? null : null;
-
   return (
-    <>
-      <AppHeader user={user} onLogout={handleLogout} />
+    <PageShell user={user} isHydrated={isHydrated} onLogout={handleLogout} width="wide">
+      {(authedUser) => {
+        const myFacultyIndex = authedUser.facultyId ? faculties.findIndex((f) => f.id === authedUser.facultyId) : -1;
+        const myFaculty = myFacultyIndex >= 0 ? faculties[myFacultyIndex] : null;
+        const myFacultyYears = myFacultyIndex >= 0 && yearBatches.length > myFacultyIndex ? yearBatches[myFacultyIndex]?.years ?? [] : [];
+        const myYear = myFaculty ? myFacultyYears.find((y) => y.id === authedUser.yearId) ?? null : null;
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-card-padding py-section-gap">
+        return (
+          <>
         <section aria-label={t("library.heroAria")} className="mx-auto max-w-3xl text-center">
           <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">{t("library.kicker")}</p>
           <h1 className="mt-2 font-display text-h1 font-bold leading-tight text-text-primary md:text-hero">
@@ -177,9 +160,9 @@ export default function FacultiesPage() {
         <p className="mt-section-gap text-center text-meta text-text-tertiary">
           {t("library.footnote")}
         </p>
-      </main>
-
-      <Footer />
-    </>
+          </>
+        );
+      }}
+    </PageShell>
   );
 }

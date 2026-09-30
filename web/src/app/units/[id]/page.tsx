@@ -2,12 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
-import { useRequireAuth } from "@/lib/useRequireAuth";
+import { useAuthedPage } from "@/lib/useAuthedPage";
 import { useApiResource } from "@/lib/useApiResource";
 import { apiFetch, ApiError } from "@/lib/api";
-import { AppHeader, Breadcrumb, Footer, CourseCard, EmptyState, LoadingSkeleton, curriculumTrail } from "@/components";
+import { Breadcrumb, CourseCard, EmptyState, LoadingSkeleton, PageShell, curriculumTrail } from "@/components";
 import type { CurriculumContext, LessonSummary, SessionDetail } from "@/lib/types";
 
 const SESSION_SIZE = 20;
@@ -20,10 +19,9 @@ interface QuestionListInfo {
 }
 
 export default function UnitDetailPage() {
-  const { logout } = useAuth();
   const router = useRouter();
   const params = useParams<{ id: string }>();
-  const { user, isHydrated } = useRequireAuth();
+  const { user, isHydrated, handleLogout } = useAuthedPage();
   const { t } = useLanguage();
   const unitId = params.id;
 
@@ -72,36 +70,23 @@ export default function UnitDetailPage() {
     }
   }
 
-  function handleLogout() {
-    logout();
-    router.push("/login");
-  }
-
-  if (!isHydrated || !user) {
-    return (
-      <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
-      </main>
-    );
-  }
-
   return (
-    <>
-      <AppHeader user={user} onLogout={handleLogout} />
-
-      <main className="mx-auto w-full max-w-4xl flex-1 px-card-padding py-section-gap">
-        <Breadcrumb label={t("common.breadcrumb")} items={curriculumTrail(t("nav.library"), lessonsData?.context)} />
-
-        <header className="mt-2">
-          <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">{t("unitDetail.kicker")}</p>
-          <h1 className="mt-1 font-display text-h1 font-bold leading-tight text-text-primary md:text-hero">{t("unitDetail.title")}</h1>
-          <p className="mt-2 text-body text-text-secondary">
-            {lessonsLoading
-              ? t("builder.loadingShort")
-              : `${t(lessons.length === 1 ? "modules.lessonsOne" : "modules.lessonsMany", { count: lessons.length })}${questionCount > 0 ? ` · ${t(questionCount === 1 ? "units.qcmOne" : "units.qcmMany", { count: questionCount })}` : ""}`}
-          </p>
-        </header>
-
+    <PageShell
+      user={user}
+      isHydrated={isHydrated}
+      onLogout={handleLogout}
+      width="content"
+      leading={<Breadcrumb label={t("common.breadcrumb")} items={curriculumTrail(t("nav.library"), lessonsData?.context)} />}
+      kicker={t("unitDetail.kicker")}
+      title={t("unitDetail.title")}
+      titleSize="hero"
+      description={
+        lessonsLoading
+          ? t("builder.loadingShort")
+          : `${t(lessons.length === 1 ? "modules.lessonsOne" : "modules.lessonsMany", { count: lessons.length })}${questionCount > 0 ? ` · ${t(questionCount === 1 ? "units.qcmOne" : "units.qcmMany", { count: questionCount })}` : ""}`
+      }
+    >
+      <>
         <section aria-label={t("unitDetail.launchTitle")} className="mt-section-gap">
           <h2 className="font-display text-h3 font-semibold text-text-primary">{t("unitDetail.launchTitle")}</h2>
           <div className="mt-3 grid gap-card-gap sm:grid-cols-2">
@@ -221,9 +206,7 @@ export default function UnitDetailPage() {
             ))}
           </ul>
         </section>
-      </main>
-
-      <Footer />
-    </>
+      </>
+    </PageShell>
   );
 }

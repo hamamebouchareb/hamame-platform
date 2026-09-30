@@ -1,23 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
+import { useParams } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
-import { useRequireAuth } from "@/lib/useRequireAuth";
+import { useAuthedPage } from "@/lib/useAuthedPage";
 import { useApiResource } from "@/lib/useApiResource";
 import { useApiList } from "@/lib/useApiList";
-import { AppHeader, Breadcrumb, Footer, CourseCard, CurriculumToolbar, EmptyState, LoadingSkeleton, curriculumTrail } from "@/components";
+import { Breadcrumb, CourseCard, CurriculumToolbar, EmptyState, LoadingSkeleton, PageShell, curriculumTrail } from "@/components";
 import type { CurriculumContext, CurriculumModule, ModuleProgress, Unit } from "@/lib/types";
 
 type SortValue = "az" | "za" | "progress-desc" | "progress-asc";
 type FilterValue = "all" | "not_started" | "in_progress" | "completed";
 
 export default function YearModulesPage() {
-  const { logout } = useAuth();
-  const router = useRouter();
   const params = useParams<{ id: string }>();
-  const { user, isHydrated } = useRequireAuth();
+  const { user, isHydrated, handleLogout } = useAuthedPage();
   const { t } = useLanguage();
 
   const [search, setSearch] = useState("");
@@ -74,38 +71,23 @@ export default function YearModulesPage() {
 
   const totalLessons = modules.reduce((sum, module) => sum + (progressByModule.get(module.id)?.totalLessons ?? 0), 0);
 
-  function handleLogout() {
-    logout();
-    router.push("/login");
-  }
-
-  if (!isHydrated || !user) {
-    return (
-      <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
-      </main>
-    );
-  }
-
   return (
-    <>
-      <AppHeader user={user} onLogout={handleLogout} />
-
-      <main className="mx-auto w-full max-w-4xl flex-1 px-card-padding py-section-gap">
-        <Breadcrumb label={t("common.breadcrumb")} items={curriculumTrail(t("nav.library"), data?.context)} />
-
-        <header className="mt-2">
-          <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">{t("modules.kicker")}</p>
-          <h1 className="mt-1 font-display text-h1 font-bold leading-tight text-text-primary md:text-hero">
-            {t("modules.title")}
-          </h1>
-          <p className="mt-2 text-body text-text-secondary">
-            {isLoading
-              ? t("modules.loadingEllipsis")
-              : `${t(modules.length === 1 ? "modules.countOne" : "modules.countMany", { count: modules.length })}${!progressLoading && totalLessons > 0 ? ` · ${t(totalLessons === 1 ? "modules.lessonsOne" : "modules.lessonsMany", { count: totalLessons })}` : ""}${t("modules.sortedSuffix")}`}
-          </p>
-        </header>
-
+    <PageShell
+      user={user}
+      isHydrated={isHydrated}
+      onLogout={handleLogout}
+      width="content"
+      leading={<Breadcrumb label={t("common.breadcrumb")} items={curriculumTrail(t("nav.library"), data?.context)} />}
+      kicker={t("modules.kicker")}
+      title={t("modules.title")}
+      titleSize="hero"
+      description={
+        isLoading
+          ? t("modules.loadingEllipsis")
+          : `${t(modules.length === 1 ? "modules.countOne" : "modules.countMany", { count: modules.length })}${!progressLoading && totalLessons > 0 ? ` · ${t(totalLessons === 1 ? "modules.lessonsOne" : "modules.lessonsMany", { count: totalLessons })}` : ""}${t("modules.sortedSuffix")}`
+      }
+    >
+      <>
         <CurriculumToolbar
           className="mt-section-gap"
           resultCount={visibleModules.length}
@@ -218,9 +200,7 @@ export default function YearModulesPage() {
             );
           })}
         </ul>
-      </main>
-
-      <Footer />
-    </>
+      </>
+    </PageShell>
   );
 }

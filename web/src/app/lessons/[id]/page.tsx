@@ -1,42 +1,37 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
+import { useParams } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
-import { useRequireAuth } from "@/lib/useRequireAuth";
+import { useAuthedPage } from "@/lib/useAuthedPage";
 import { useApiResource } from "@/lib/useApiResource";
 import { extractParagraphs } from "@/lib/richtext";
-import { AppHeader, Breadcrumb, EmptyState, EnqueueReviewButton, Footer, LoadingSkeleton, curriculumTrail } from "@/components";
+import { Breadcrumb, EmptyState, EnqueueReviewButton, LoadingSkeleton, PageShell, curriculumTrail } from "@/components";
 import type { LessonDetail } from "@/lib/types";
 
 export default function LessonDetailPage() {
-  const { logout } = useAuth();
-  const router = useRouter();
   const params = useParams<{ id: string }>();
-  const { user, isHydrated } = useRequireAuth();
+  const { user, isHydrated, handleLogout } = useAuthedPage();
   const { t } = useLanguage();
   const { data: lesson, error, isLoading, refetch } = useApiResource<LessonDetail>(
     isHydrated && user ? `/lessons/${params.id}` : null
   );
 
-  function handleLogout() {
-    logout();
-    router.push("/login");
-  }
-
-  if (!isHydrated || !user) {
-    return (
-      <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
-      </main>
-    );
-  }
-
   return (
-    <>
-      <AppHeader user={user} onLogout={handleLogout} />
-
-      <main className="mx-auto w-full max-w-3xl flex-1 px-card-padding py-section-gap">
+    <PageShell
+      user={user}
+      isHydrated={isHydrated}
+      onLogout={handleLogout}
+      width="narrow"
+      leading={
+        lesson ? (
+          <Breadcrumb
+            label={t("common.breadcrumb")}
+            items={curriculumTrail(t("nav.library"), lesson.context, lesson.title)}
+          />
+        ) : undefined
+      }
+    >
+      <>
         {isLoading ? (
           <div className="flex flex-col gap-4">
             <LoadingSkeleton className="h-8 w-64" ariaLabel={t("lesson.loading")} />
@@ -67,12 +62,7 @@ export default function LessonDetailPage() {
 
         {lesson && (
           <>
-            <Breadcrumb
-              label={t("common.breadcrumb")}
-              items={curriculumTrail(t("nav.library"), lesson.context, lesson.title)}
-            />
-
-            <header className="mt-2">
+            <header>
               <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">{t("lesson.kicker")}</p>
               <h1 className="mt-1 font-display text-h1 font-bold leading-tight text-text-primary">{lesson.title}</h1>
             </header>
@@ -96,9 +86,7 @@ export default function LessonDetailPage() {
             </p>
           </>
         )}
-      </main>
-
-      <Footer />
-    </>
+      </>
+    </PageShell>
   );
 }
