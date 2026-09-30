@@ -30,12 +30,12 @@ export function Sidebar() {
   const pathname = usePathname();
   const { t } = useLanguage();
   const [state, setState] = useState<SidebarState>("open");
-  const [hydrated, setHydrated] = useState(false);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- localStorage unavailable during SSR, must match server first render to avoid hydration mismatch */
   useEffect(() => {
     setState(readSidebarState());
-    setHydrated(true);
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function toggle() {
     setState((prev) => {
@@ -49,7 +49,7 @@ export function Sidebar() {
     });
   }
 
-  const collapsed = hydrated && state === "collapsed";
+  const collapsed = state === "collapsed";
 
   function linkClasses(active: boolean): string {
     return cx(
