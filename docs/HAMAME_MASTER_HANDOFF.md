@@ -1822,3 +1822,40 @@ soft-delete. Fixture footprint fully hard-removed with count proofs
 notification → all 0; the stray badge earned mid-test also caught its
 notification row). Backend `tsc` + frontend `tsc` exit 0. Contract doc
 records the endpoint.
+
+---
+
+## 18. UI shell after the 2026-09-30 MedSpark re-check — BUILT
+
+Live MedSpark (`https://www.medspark.online`, signed-in browser session on
+2026-09-30; the password was not stored and must not be written here) has
+moved on since the September gap audit. The home screen is now a social
+feed. The phone bar is Fil / Groupe / Biblio. / Entraînement / Apprentissage.
+Entraînement opens QCM, Notes QCM, Cours Hypertombables, and Simulations.
+Banque de QCM still leads with Nouvelle session, Nouvel examen, ECOS, and
+Résidanat, then groups "Mes Sessions" by year and module. Shared sessions
+still say "Bientôt disponible".
+
+**Built in Hamame from that pass (frontend, plus one additive API field):**
+
+- Typography tokens renamed `--font-size-*` → `--text-*`. Tailwind v4 never
+  emitted the old names, so every `text-h1` / `text-body` / `text-meta` was
+  inert and inherited 16px. Do not move them back.
+- Page headings are two responsive tiers: landing 36px → 48px at `md`,
+  list/detail 30px → 36px at `sm`. Course pages (`years/.../modules`,
+  `modules/.../units`, `units/[id]`) use the landing ramp.
+- Public `/` is a landing page. A signed-in visit still goes to `/dashboard`.
+- Phones get a fixed five-tab bar (`PRIMARY_NAV`) under `md`. From `lg` up
+  that bar is gone and the sidebar is the primary nav on **every** page that
+  renders `AppHeader`, not only the dashboard. The header links show only
+  between `md` and `lg`.
+- Curriculum responses now include an additive `context` object (faculty,
+  and year/module/unit once the response is scoped that far). Existing list
+  fields are unchanged. The course pages render it as a breadcrumb.
+
+**Deliberately not built:** the feed, groups, messages, Sparx balance,
+digital bookstore, and "Créer une page". Each needs new backend and a
+product decision. Hypertombables stays a different metric from `/couverture`
+(bank coverage, honestly labeled). Shared sessions are not live on MedSpark
+either.
+

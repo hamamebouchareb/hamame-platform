@@ -90,7 +90,7 @@ export default function ModuleUnitsPage() {
 
         <header className="mt-2">
           <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">{t("units.kicker")}</p>
-          <h1 className="mt-1 font-display text-hero font-bold leading-tight text-text-primary">
+          <h1 className="mt-1 font-display text-h1 font-bold leading-tight text-text-primary md:text-hero">
             {t("units.title")}
           </h1>
           <p className="mt-2 text-body text-text-secondary">

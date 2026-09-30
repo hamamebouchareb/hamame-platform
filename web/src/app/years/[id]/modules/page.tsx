@@ -96,7 +96,7 @@ export default function YearModulesPage() {
 
         <header className="mt-2">
           <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">{t("modules.kicker")}</p>
-          <h1 className="mt-1 font-display text-hero font-bold leading-tight text-text-primary">
+          <h1 className="mt-1 font-display text-h1 font-bold leading-tight text-text-primary md:text-hero">
             {t("modules.title")}
           </h1>
           <p className="mt-2 text-body text-text-secondary">

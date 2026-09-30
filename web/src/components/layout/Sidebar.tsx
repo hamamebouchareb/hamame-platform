@@ -21,9 +21,10 @@ function readSidebarState(): SidebarState {
 }
 
 /**
- * Desktop sidebar rail for the dashboard (Kiranism shell idea, Hamame tokens).
- * Same PRIMARY_NAV / SECONDARY_NAV sources as AppHeader — no route or label drift.
- * Mobile keeps the existing AppHeader drawer; this renders `hidden lg:flex` only.
+ * Desktop navigation rail (Kiranism shell idea, Hamame tokens).
+ * Rendered by AppHeader on every signed-in page, fixed under the header from
+ * the lg breakpoint up. Phones keep the bottom tab bar. Same PRIMARY_NAV /
+ * SECONDARY_NAV sources as the header — no route or label drift.
  */
 export function Sidebar() {
   const pathname = usePathname();
@@ -61,9 +62,11 @@ export function Sidebar() {
 
   return (
     <aside
+      data-hamame-sidebar=""
+      {...(collapsed ? { "data-collapsed": "" } : {})}
       aria-label={t("nav.mainAria")}
       className={cx(
-        "sticky top-20 hidden max-h-[calc(100vh-6rem)] shrink-0 flex-col overflow-y-auto rounded-card border border-border bg-surface-1 p-3 shadow-card lg:flex",
+        "fixed left-3 top-20 z-20 hidden max-h-[calc(100vh-6rem)] shrink-0 flex-col overflow-y-auto rounded-card border border-border bg-surface-1 p-3 shadow-card lg:flex",
         collapsed ? "w-16 items-center" : "w-60"
       )}
     >

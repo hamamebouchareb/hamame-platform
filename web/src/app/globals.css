@@ -8,10 +8,19 @@
   --font-display: var(--font-hamame-display), ui-serif, Georgia, serif;
 }
 
-/* Room for the fixed mobile tab bar rendered by AppHeader. Desktop has no bar. */
+/* Room for the fixed mobile tab bar (AppHeader) and, from lg up, the fixed sidebar. */
 @media (max-width: 767px) {
   body:has([data-hamame-bottom-nav]) {
     padding-bottom: calc(4.75rem + env(safe-area-inset-bottom));
+  }
+}
+
+@media (min-width: 1024px) {
+  body:has([data-hamame-sidebar]:not([data-collapsed])) {
+    padding-left: 17rem;
+  }
+  body:has([data-hamame-sidebar][data-collapsed]) {
+    padding-left: 5.5rem;
   }
 }
 

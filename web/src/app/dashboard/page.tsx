@@ -22,7 +22,6 @@ import {
   VerifyEmailBanner,
   WeeklyActivity,
 } from "@/components";
-import { Sidebar } from "@/components/layout/Sidebar";
 import type {
   AiCredits,
   ExamReadiness,
@@ -215,10 +214,7 @@ export default function DashboardPage() {
     <>
       <AppHeader user={user} onLogout={handleLogout} />
 
-      <div className="mx-auto flex w-full max-w-6xl flex-1 items-start gap-section-gap px-card-padding">
-        <Sidebar />
-
-        <main className="min-w-0 flex-1 py-section-gap">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-card-padding py-section-gap">
         <div className="grid gap-section-gap lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
           <div className="flex min-w-0 flex-col gap-section-gap">
             {/* 0. Email-verification nudge (warn-only: renders nothing when verified) */}
@@ -498,8 +494,7 @@ export default function DashboardPage() {
             </article>
           </aside>
         </div>
-        </main>
-      </div>
+      </main>
 
       <Footer />
     </>

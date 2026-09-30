@@ -9,6 +9,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { UserMenu } from "@/components/UserMenu";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { PRIMARY_NAV, SECONDARY_NAV, isNavActive, type NavKeyEntry } from "@/lib/nav";
+import { Sidebar } from "@/components/layout/Sidebar";
 
 export interface AppHeaderNavItem {
   href: string;
@@ -111,7 +112,7 @@ export function AppHeader({
         </Link>
 
         {resolvedNav.length > 0 ? (
-          <nav aria-label={t("nav.mainAria")} className="hidden min-w-0 flex-1 gap-1 overflow-x-auto md:flex">
+          <nav aria-label={t("nav.mainAria")} className="hidden min-w-0 flex-1 gap-1 overflow-x-auto md:flex lg:hidden">
             {resolvedNav.map((item) => {
               const active = isNavActive(pathname, item.href);
               return (
@@ -134,6 +135,7 @@ export function AppHeader({
         ) : (
           <div className="min-w-0 flex-1" />
         )}
+        <div className="hidden min-w-0 flex-1 lg:block" aria-hidden />
 
         {/* Hamburger — visible only on mobile */}
         {resolvedNav.length > 0 ? (
@@ -211,6 +213,8 @@ export function AppHeader({
         className="fixed inset-0 z-10 bg-overlay md:hidden"
       />
     ) : null}
+
+    {resolvedNav.length > 0 ? <Sidebar /> : null}
 
     {resolvedNav.length > 0 ? (
       <nav

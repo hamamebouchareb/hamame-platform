@@ -94,7 +94,7 @@ export default function UnitDetailPage() {
 
         <header className="mt-2">
           <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">{t("unitDetail.kicker")}</p>
-          <h1 className="mt-1 font-display text-hero font-bold leading-tight text-text-primary">{t("unitDetail.title")}</h1>
+          <h1 className="mt-1 font-display text-h1 font-bold leading-tight text-text-primary md:text-hero">{t("unitDetail.title")}</h1>
           <p className="mt-2 text-body text-text-secondary">
             {lessonsLoading
               ? t("builder.loadingShort")
