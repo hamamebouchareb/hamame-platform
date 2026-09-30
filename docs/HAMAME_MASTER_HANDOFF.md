@@ -1859,3 +1859,75 @@ product decision. Hypertombables stays a different metric from `/couverture`
 (bank coverage, honestly labeled). Shared sessions are not live on MedSpark
 either.
 
+---
+
+## 19. UI pass completion — SHIPPED to main (2026-09-30)
+
+Continuation of §18, all merged to `main` and pushed live (Vercel +
+Railway). Commits, in order: `9836a42` (QCM recents), `aacec9b` (sidebar
+convention), `b923b8a` (curriculum shells), `07fe9eb` (notes shell),
+`1ae2f20` (docs cleanup). The experimental branch
+`ui/design-system-primitives` is fully merged (nothing unique left) and kept
+as a checkpoint.
+
+**What shipped:**
+
+- `/qcm` "Mes sessions" (`9836a42`): `GET /sessions?page=1&limit=6` via
+  `useApiResource`, grouped faculty · year exactly like `/historique`
+  (2 groups × 3 rows), finished → results, live → player, "view all" →
+  `/historique`. Skeletons / `ErrorState` + retry / single empty link-card.
+  New `qcm.recentTitle/Sub/viewAll` keys in FR+EN. Hero, decision cards, and
+  footnote byte-identical.
+- Curriculum shells (`b923b8a`): `faculties`, `years/[id]/modules`,
+  `modules/[id]/units`, `units/[id]`, `lessons/[id]` moved to
+  `useAuthedPage` + `PageShell`, breadcrumb in the `leading` slot. Widths
+  preserved per page (faculties `wide`, lists `content`, lesson `narrow`).
+  Net −88 lines of repeated shell. No new i18n keys.
+- `/notes` shell (`07fe9eb`): `PageShell` narrow + `Card`/`Button`/
+  `ErrorState`/`Input` (sr-only search label kept). Two disclosed deltas:
+  content width `max-w-2xl` → `narrow` (`max-w-3xl`), and a pre-existing
+  render-phase ref write fixed via the `useApiList` effect convention.
+  Taxonomy, query builder, debounce, PATCH flows unchanged.
+- Sidebar convention (`aacec9b`): mount-effect + `eslint-disable` with
+  justification (matches `useApiResource`/dashboard), replacing a lazy-init
+  version that risked hydration mismatch for stored-collapsed users.
+  Toggle and storage key unchanged.
+- Lint baseline is now **18 errors / 6 warnings** (was 19/6 — the notes
+  render-phase ref fix removed one; the sidebar error was fixed the same
+  way). `tsc --noEmit` exit 0, `next build` exit 0 (27/27 routes) re-run
+  locally for each batch.
+
+**Backend exception stands (one, sanctioned):** the curriculum `context`
+object from §18 was diff-verified additive-only — same queries plus scalar
+`name`/`label` selects, no new round trips, no auth change, no migration —
+so it rides `main` to Railway with no extra work.
+
+**Production sign-off (owner, signed-in live walk):** landing homepage,
+`/qcm` recents with working resume/review links, breadcrumb trail
+Medicine → Year 1 → module → unit → lesson, landing FR copy read. Railway
+returns faculty context for Medicine / Year 1.
+
+**Docs hygiene:** the 5 phone-camera scans were removed from tracking
+(`1ae2f20`, per the standing no-raw-dumps rule); the September audit PDF
+(1.6 MB, untracked) was deleted from disk as superseded by the §18 live
+re-check. Credential note: a MedSpark password appeared in chat only during
+this pass — never written to the repo; rotate it if the chat is shared.
+
+**Still parked:** feed, groups, messages, Sparx, bookstore — backend +
+product decision required before any of them is built.
+
+---
+
+## 20. Settings shell — SHIPPED to main (2026-09-30)
+
+`/settings` (542 lines, the largest remaining hand-rolled form) moved to
+`useAuthedPage` + `PageShell` (`content` width, title unchanged) with
+`Input`/`Select`/`Button`/`Card`/`ErrorState` throughout: profile fields
+(full name, readonly email/phone with hints, faculty/year/wilaya),
+password change (field errors + min-length hint preserved), language card,
+and notification prefs (push subscribe button, prefs errors with retry).
+The bespoke `Switch` stays — no primitive covers `role="switch"`. All
+endpoints and validation flows unchanged (`PUT /users/me`,
+`POST /auth/change-password`, push + preferences). Standing rule going
+forward: every batch ends with commit + push, no gate.
+

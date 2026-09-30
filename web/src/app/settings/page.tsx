@@ -1,16 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import type { I18nKey } from "@/lib/i18n";
-import { useRequireAuth } from "@/lib/useRequireAuth";
+import { useAuthedPage } from "@/lib/useAuthedPage";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useApiResource } from "@/lib/useApiResource";
 import { usePushSubscription } from "@/lib/usePushSubscription";
 import { useToast } from "@/components/Toast";
-import { AppHeader, Footer, LanguageToggle, LoadingSkeleton } from "@/components";
+import { Button, Card, ErrorState, Input, LanguageToggle, LoadingSkeleton, PageShell, Select } from "@/components";
 import type { PushPreferences } from "@/lib/types";
 
 const WILAYAS = [
@@ -23,13 +21,6 @@ const WILAYAS = [
   "Ghardaïa","Relizane","El M'Ghair","El Meniaa","Ouled Djellal","Bordj Badji Mokhtar",
   "Béni Abbès","Timimoun","Touggourt","Djanet","In Salah","In Guezzam",
 ];
-
-const inputClass =
-  "w-full rounded-control border border-border bg-surface-2 px-3 py-2.5 text-body text-text-primary placeholder:text-text-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50";
-
-const labelClass = "block text-meta font-medium text-text-secondary mb-1";
-
-const errorTextClass = "mt-1 text-caption text-danger";
 
 function Switch({
   checked,
@@ -90,9 +81,7 @@ interface FieldErrors {
 }
 
 export default function SettingsPage() {
-  const { user, isHydrated } = useRequireAuth();
-  const router = useRouter();
-  const { logout } = useAuth();
+  const { user, isHydrated, handleLogout } = useAuthedPage();
   const { t } = useLanguage();
   const toast = useToast();
   const push = usePushSubscription();
@@ -239,226 +228,172 @@ export default function SettingsPage() {
     }
   }
 
-  function handleLogout() {
-    logout();
-    router.push("/login");
-  }
-
-  if (!isHydrated || !user) {
-    return (
-      <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <p className="text-meta text-text-secondary">{t("common.loadingMore")}</p>
-      </main>
-    );
-  }
-
   const masterEnabled = preferences?.masterEnabled ?? true;
 
   return (
-    <>
-      <AppHeader user={user} onLogout={handleLogout} />
-
-      <main className="mx-auto w-full max-w-4xl flex-1 px-card-padding py-section-gap">
-        <h1 className="font-display text-h2 font-bold text-text-primary sm:text-h1">{t("nav.settings")}</h1>
-
+    <PageShell
+      user={user}
+      isHydrated={isHydrated}
+      onLogout={handleLogout}
+      width="content"
+      title={t("nav.settings")}
+      loadingLabel={t("common.loadingMore")}
+    >
+      {(authed) => (
+      <>
         <div className="mt-section-gap grid gap-section-gap lg:grid-cols-2">
           {/* ── Personal info card ── */}
-          <section aria-label={t("settings.personalInfo")} className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
+          <Card as="section" aria-label={t("settings.personalInfo")}>
             <h2 className="font-display text-h2 font-semibold text-text-primary">{t("settings.personalInfo")}</h2>
 
             <div className="mt-4 flex flex-col gap-4">
               {/* Full name */}
-              <div>
-                <label htmlFor="fullName" className={labelClass}>{t("settings.fullName")}</label>
-                <input
-                  id="fullName"
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className={inputClass}
-                  aria-describedby={profileErrors.fullName ? "fullName-error" : undefined}
-                  aria-invalid={!!profileErrors.fullName || undefined}
-                />
-                {profileErrors.fullName ? <p id="fullName-error" className={errorTextClass}>{profileErrors.fullName}</p> : null}
-              </div>
+              <Input
+                id="fullName"
+                label={t("settings.fullName")}
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                error={profileErrors.fullName}
+              />
 
               {/* Email (read-only) */}
-              <div>
-                <label htmlFor="email" className={labelClass}>{t("settings.email")}</label>
-                <input
-                  id="email"
-                  type="email"
-                  value={user.email ?? "—"}
-                  readOnly
-                  className={`${inputClass} opacity-60 cursor-not-allowed`}
-                />
-                <p className="mt-1 text-caption text-text-tertiary">{t("settings.emailReadonly")}</p>
-              </div>
+              <Input
+                id="email"
+                label={t("settings.email")}
+                type="email"
+                value={authed.email ?? "—"}
+                readOnly
+                hint={t("settings.emailReadonly")}
+                className="opacity-60 cursor-not-allowed"
+              />
 
               {/* Phone (read-only) */}
-              <div>
-                <label htmlFor="phone" className={labelClass}>{t("settings.phone")}</label>
-                <input
-                  id="phone"
-                  type="tel"
-                  value={user.phone ?? "—"}
-                  readOnly
-                  className={`${inputClass} opacity-60 cursor-not-allowed`}
-                />
-                <p className="mt-1 text-caption text-text-tertiary">{t("settings.phoneReadonly")}</p>
-              </div>
+              <Input
+                id="phone"
+                label={t("settings.phone")}
+                type="tel"
+                value={authed.phone ?? "—"}
+                readOnly
+                hint={t("settings.phoneReadonly")}
+                className="opacity-60 cursor-not-allowed"
+              />
 
               {/* Faculty */}
-              <div>
-                <label htmlFor="facultyId" className={labelClass}>{t("settings.faculty")}</label>
-                <select
-                  id="facultyId"
-                  value={facultyId}
-                  onChange={(e) => { setFacultyId(e.target.value); setYearId(""); }}
-                  className={inputClass}
-                >
-                  <option value="">{t("settings.none")}</option>
-                  {faculties.data?.faculties.map((f) => (
-                    <option key={f.id} value={f.id}>{f.name}</option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                id="facultyId"
+                label={t("settings.faculty")}
+                value={facultyId}
+                onChange={(e) => { setFacultyId(e.target.value); setYearId(""); }}
+              >
+                <option value="">{t("settings.none")}</option>
+                {faculties.data?.faculties.map((f) => (
+                  <option key={f.id} value={f.id}>{f.name}</option>
+                ))}
+              </Select>
 
               {/* Year */}
-              <div>
-                <label htmlFor="yearId" className={labelClass}>{t("settings.year")}</label>
-                <select
-                  id="yearId"
-                  value={yearId}
-                  onChange={(e) => setYearId(e.target.value)}
-                  disabled={!facultyId}
-                  className={inputClass}
-                >
-                  <option value="">{t("settings.none")}</option>
-                  {years.data?.years.map((y) => (
-                    <option key={y.id} value={y.id}>{y.label}</option>
-                  ))}
-                </select>
-                {!facultyId ? <p className={errorTextClass}>{t("settings.needFaculty")}</p> : null}
-              </div>
+              <Select
+                id="yearId"
+                label={t("settings.year")}
+                value={yearId}
+                onChange={(e) => setYearId(e.target.value)}
+                disabled={!facultyId}
+                hint={!facultyId ? t("settings.needFaculty") : undefined}
+              >
+                <option value="">{t("settings.none")}</option>
+                {years.data?.years.map((y) => (
+                  <option key={y.id} value={y.id}>{y.label}</option>
+                ))}
+              </Select>
 
               {/* Wilaya */}
-              <div>
-                <label htmlFor="wilaya" className={labelClass}>{t("settings.wilaya")}</label>
-                <select
-                  id="wilaya"
-                  value={wilaya}
-                  onChange={(e) => setWilaya(e.target.value)}
-                  className={inputClass}
-                >
-                  <option value="">{t("settings.none")}</option>
-                  {WILAYAS.map((w) => (
-                    <option key={w} value={w}>{w}</option>
-                  ))}
-                </select>
-              </div>
-
-              <button
-                type="button"
-                onClick={saveProfile}
-                disabled={savingProfile}
-                className="mt-2 inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-primary px-5 text-body font-medium text-on-accent shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none sm:w-auto"
+              <Select
+                id="wilaya"
+                label={t("settings.wilaya")}
+                value={wilaya}
+                onChange={(e) => setWilaya(e.target.value)}
               >
+                <option value="">{t("settings.none")}</option>
+                {WILAYAS.map((w) => (
+                  <option key={w} value={w}>{w}</option>
+                ))}
+              </Select>
+
+              <Button width="full-mobile" onClick={saveProfile} disabled={savingProfile} className="mt-2">
                 {savingProfile ? t("settings.saving") : t("settings.save")}
-              </button>
+              </Button>
             </div>
-          </section>
+          </Card>
 
           {/* ── Password change card ── */}
-          <section aria-label={t("settings.passwordTitle")} className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
+          <Card as="section" aria-label={t("settings.passwordTitle")}>
             <h2 className="font-display text-h2 font-semibold text-text-primary">{t("settings.passwordTitle")}</h2>
 
             <div className="mt-4 flex flex-col gap-3">
-              <div>
-                <label htmlFor="current-password" className={labelClass}>{t("settings.currentPassword")}</label>
-                <input
-                  id="current-password"
-                  type="password"
-                  autoComplete="current-password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label htmlFor="new-password" className={labelClass}>{t("settings.newPassword")}</label>
-                <input
-                  id="new-password"
-                  type="password"
-                  autoComplete="new-password"
-                  value={newPassword}
-                  onChange={(e) => {
-                    setNewPassword(e.target.value);
-                    if (passwordFieldErrors.newPassword) {
-                      setPasswordFieldErrors((prev) => ({ ...prev, newPassword: undefined }));
-                    }
-                  }}
-                  className={inputClass}
-                  aria-invalid={!!passwordFieldErrors.newPassword || undefined}
-                  aria-describedby={passwordFieldErrors.newPassword ? "new-password-error" : "new-password-hint"}
-                />
-                {passwordFieldErrors.newPassword ? (
-                  <p id="new-password-error" className={errorTextClass}>{passwordFieldErrors.newPassword}</p>
-                ) : (
-                  <p id="new-password-hint" className="mt-1 text-caption text-text-tertiary">{t("settings.minLength")}</p>
-                )}
-              </div>
-              <div>
-                <label htmlFor="confirm-password" className={labelClass}>{t("settings.confirmPassword")}</label>
-                <input
-                  id="confirm-password"
-                  type="password"
-                  autoComplete="new-password"
-                  value={confirmPassword}
-                  onChange={(e) => {
-                    setConfirmPassword(e.target.value);
-                    if (passwordFieldErrors.confirmPassword) {
-                      setPasswordFieldErrors((prev) => ({ ...prev, confirmPassword: undefined }));
-                    }
-                  }}
-                  className={inputClass}
-                  aria-invalid={!!passwordFieldErrors.confirmPassword || undefined}
-                  aria-describedby={passwordFieldErrors.confirmPassword ? "confirm-password-error" : undefined}
-                />
-                {passwordFieldErrors.confirmPassword ? (
-                  <p id="confirm-password-error" className={errorTextClass}>{passwordFieldErrors.confirmPassword}</p>
-                ) : null}
-              </div>
+              <Input
+                id="current-password"
+                label={t("settings.currentPassword")}
+                type="password"
+                autoComplete="current-password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+              />
+              <Input
+                id="new-password"
+                label={t("settings.newPassword")}
+                type="password"
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(e) => {
+                  setNewPassword(e.target.value);
+                  if (passwordFieldErrors.newPassword) {
+                    setPasswordFieldErrors((prev) => ({ ...prev, newPassword: undefined }));
+                  }
+                }}
+                error={passwordFieldErrors.newPassword}
+                hint={passwordFieldErrors.newPassword ? undefined : t("settings.minLength")}
+              />
+              <Input
+                id="confirm-password"
+                label={t("settings.confirmPassword")}
+                type="password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  if (passwordFieldErrors.confirmPassword) {
+                    setPasswordFieldErrors((prev) => ({ ...prev, confirmPassword: undefined }));
+                  }
+                }}
+                error={passwordFieldErrors.confirmPassword}
+              />
 
-              {passwordError ? (
-                <p role="alert" className="rounded-panel border border-danger/30 bg-danger/10 px-3 py-2 text-meta text-danger">
-                  {passwordError}
-                </p>
-              ) : null}
+              {passwordError ? <ErrorState message={passwordError} /> : null}
 
-              <button
-                type="button"
+              <Button
+                width="full-mobile"
                 onClick={changePassword}
                 disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
-                className="mt-2 inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-primary px-5 text-body font-medium text-on-accent shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none sm:w-auto"
+                className="mt-2"
               >
                 {changingPassword ? t("settings.updating") : t("settings.changePassword")}
-              </button>
+              </Button>
             </div>
-          </section>
+          </Card>
 
           {/* ── Language card ── */}
-          <section aria-label={t("language.label")} className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
+          <Card as="section" aria-label={t("language.label")}>
             <h2 className="font-display text-h2 font-semibold text-text-primary">{t("language.label")}</h2>
             <p className="mt-1 text-body text-text-secondary">{t("settings.languageDesc")}</p>
             <div className="mt-4">
               <LanguageToggle />
             </div>
-          </section>
+          </Card>
         </div>
 
         {/* ── Notification settings (full width) ── */}
-        <section aria-label={t("settings.notifications")} className="mt-section-gap rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
+        <Card as="section" aria-label={t("settings.notifications")} className="mt-section-gap">
           <h2 className="font-display text-h2 font-semibold text-text-primary">{t("settings.notifications")}</h2>
 
           <div className="mt-4">
@@ -471,25 +406,17 @@ export default function SettingsPage() {
             </p>
 
             {push.isSupported && (
-              <button
-                type="button"
+              <Button
+                variant={push.isSubscribed ? "outline" : "primary"}
                 onClick={push.isSubscribed ? push.unsubscribe : push.subscribe}
                 disabled={push.isLoading}
-                className={
-                  push.isSubscribed
-                    ? "mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50"
-                    : "mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control bg-accent-primary px-4 text-body font-medium text-on-accent shadow-glow-primary transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50"
-                }
+                className="mt-3"
               >
                 {push.isLoading ? t("settings.pushLoading") : push.isSubscribed ? t("settings.pushDisable") : t("settings.pushEnable")}
-              </button>
+              </Button>
             )}
 
-            {push.error ? (
-              <p role="alert" className="mt-2 rounded-panel border border-danger/30 bg-danger/10 px-3 py-2 text-meta text-danger">
-                {push.error}
-              </p>
-            ) : null}
+            {push.error ? <ErrorState message={push.error} className="mt-2" /> : null}
           </div>
 
           {!preferencesLoaded ? (
@@ -497,9 +424,7 @@ export default function SettingsPage() {
               <LoadingSkeleton className="h-8 w-48" ariaLabel={t("settings.prefsLoading")} />
             </div>
           ) : preferencesError ? (
-            <p role="alert" className="mt-4 rounded-panel border border-danger/30 bg-danger/10 px-3 py-2 text-meta text-danger">
-              {preferencesError}
-            </p>
+            <ErrorState message={preferencesError} onRetry={loadPreferences} className="mt-4" />
           ) : preferences ? (
             <div className="mt-4">
               <div className="flex items-center justify-between gap-4 border-t border-border pt-4">
@@ -533,10 +458,9 @@ export default function SettingsPage() {
               </ul>
             </div>
           ) : null}
-        </section>
-      </main>
-
-      <Footer />
-    </>
+        </Card>
+      </>
+      )}
+    </PageShell>
   );
 }
