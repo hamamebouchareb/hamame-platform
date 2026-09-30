@@ -1,14 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { localeFor, type I18nKey, type UiLanguage } from "@/lib/i18n";
-import { useRequireAuth } from "@/lib/useRequireAuth";
+import { useAuthedPage } from "@/lib/useAuthedPage";
 import { apiFetch, ApiError } from "@/lib/api";
 import { cx } from "@/lib/cx";
-import { AppHeader, BackLink, EmptyState, Footer, LoadingSkeleton } from "@/components";
+import { Button, Card, EmptyState, ErrorState, Input, LoadingSkeleton, PageShell } from "@/components";
 import type { Note } from "@/lib/types";
 
 const PAGE_LIMIT = 20;
@@ -59,9 +57,7 @@ function filtersQuery(filters: NoteFilters): string {
 }
 
 export default function NotesPage() {
-  const router = useRouter();
-  const { logout } = useAuth();
-  const { user, isHydrated } = useRequireAuth();
+  const { user, isHydrated, handleLogout } = useAuthedPage();
   const { lang, t } = useLanguage();
 
   const [notes, setNotes] = useState<Note[]>([]);
@@ -127,8 +123,11 @@ export default function NotesPage() {
   }
 
   // Mutable ref so the debounced timer always sees current non-search filters.
+  // Written in an effect (never during render) — same convention as useApiList.
   const filtersRef = useRef(filters);
-  filtersRef.current = filters;
+  useEffect(() => {
+    filtersRef.current = filters;
+  });
 
   async function patchNote(id: string, patch: { tags?: string[]; isFavorite?: boolean }) {
     setMutatingId(id);
@@ -151,17 +150,9 @@ export default function NotesPage() {
     applyFilters({ ...filters, tag: filters.tag === slug ? "" : slug });
   }
 
-  function handleLogout() {
-    logout();
-    router.push("/login");
-  }
-
-  if (!isHydrated || !user) {
-    return (
-      <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
-      </main>
-    );
+  function clearFilters() {
+    setSearchInput("");
+    applyFilters(EMPTY_FILTERS);
   }
 
   const hasMore = page > 0 && notes.length < total;
@@ -169,25 +160,25 @@ export default function NotesPage() {
   const hasActiveFilters = filters.q.trim() !== "" || filters.tag !== "" || filters.favoritesOnly;
 
   return (
-    <>
-      <AppHeader user={user} onLogout={handleLogout} />
-
-      <main className="mx-auto w-full max-w-2xl flex-1 px-card-padding py-section-gap">
-        <BackLink href="/dashboard">{t("classement.backToDashboard")}</BackLink>
-        <h1 className="mt-2 font-display text-h2 font-bold text-text-primary sm:text-h1">{t("notes.title")}</h1>
-        <p className="mt-2 text-body text-text-secondary">
-          {t("notes.subtitle")}
-        </p>
-
+    <PageShell
+      user={user}
+      isHydrated={isHydrated}
+      onLogout={handleLogout}
+      width="narrow"
+      back={{ href: "/dashboard", label: t("classement.backToDashboard") }}
+      title={t("notes.title")}
+      description={t("notes.subtitle")}
+      loadingLabel={t("common.loading")}
+    >
         <div className="mt-4 flex flex-col gap-3">
-          <label className="block">
+          <label htmlFor="notes-search" className="block">
             <span className="sr-only">{t("notes.searchSr")}</span>
-            <input
+            <Input
+              id="notes-search"
               type="search"
               value={searchInput}
               onChange={(event) => handleSearchChange(event.target.value)}
               placeholder={t("notes.searchPh")}
-              className="h-11 w-full rounded-input border border-border bg-surface-2 px-4 text-body text-text-primary placeholder:text-text-tertiary transition focus:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             />
           </label>
 
@@ -229,10 +220,7 @@ export default function NotesPage() {
           {hasActiveFilters ? (
             <button
               type="button"
-              onClick={() => {
-                setSearchInput("");
-                applyFilters(EMPTY_FILTERS);
-              }}
+              onClick={clearFilters}
               className="self-start text-meta font-medium text-accent-soft underline underline-offset-2 hover:text-accent-soft/80"
             >
               {t("notes.clearFilters")}
@@ -241,18 +229,11 @@ export default function NotesPage() {
         </div>
 
         {error ? (
-          <div className="mt-4 rounded-card border border-danger bg-surface-1 p-card-padding">
-            <p role="alert" className="text-body text-danger">
-              {error}
-            </p>
-            <button
-              type="button"
-              onClick={() => loadPage(page === 0 ? 1 : page, filters)}
-              className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 sm:w-auto"
-            >
-              {t("common.retry")}
-            </button>
-          </div>
+          <ErrorState
+            className="mt-4"
+            message={error}
+            onRetry={() => loadPage(page === 0 ? 1 : page, filters)}
+          />
         ) : null}
 
         {isEmpty ? (
@@ -262,13 +243,7 @@ export default function NotesPage() {
               description={t(hasActiveFilters ? "notes.emptyFilteredDesc" : "notes.emptyDesc")}
               action={
                 hasActiveFilters
-                  ? {
-                      label: t("notes.clearFilters"),
-                      onClick: () => {
-                        setSearchInput("");
-                        applyFilters(EMPTY_FILTERS);
-                      },
-                    }
+                  ? { label: t("notes.clearFilters"), onClick: clearFilters }
                   : { label: t("dashboard.createQcm"), href: "/qcm" }
               }
             />
@@ -286,7 +261,7 @@ export default function NotesPage() {
         {notes.length > 0 ? (
           <ul className="mt-4 flex flex-col gap-3">
             {notes.map((note) => (
-              <li key={note.id} className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
+              <Card as="li" key={note.id}>
                 {note.question ? (
                   <p className="text-caption font-medium uppercase tracking-wide text-text-tertiary">
                     {t("notes.questionPrefix")} {note.question.label}
@@ -361,24 +336,22 @@ export default function NotesPage() {
                   </div>
                 ) : null}
                 <p className="mt-1 text-meta text-text-tertiary">{formatDate(note.createdAt, lang)}</p>
-              </li>
+              </Card>
             ))}
           </ul>
         ) : null}
 
         {hasMore ? (
-          <button
-            type="button"
+          <Button
+            variant="outline"
+            width="full-mobile"
             onClick={() => loadPage(page + 1, filters)}
             disabled={isLoading}
-            className="mt-4 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-60 sm:w-auto"
+            className="mt-4"
           >
             {isLoading ? t("common.loadingMore") : t("history.loadMore")}
-          </button>
+          </Button>
         ) : null}
-      </main>
-
-      <Footer />
-    </>
+    </PageShell>
   );
 }
