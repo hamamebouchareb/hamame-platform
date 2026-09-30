@@ -27,8 +27,10 @@ export interface AppHeaderProps {
 }
 
 /**
- * Sticky top app bar: Hamame wordmark + primary nav + UserMenu. On mobile, primary
- * nav collapses behind a hamburger button that opens a slide-down drawer.
+ * Sticky top app bar: Hamame wordmark + primary nav + UserMenu. On mobile the five
+ * primary tabs stay reachable in a fixed bottom bar (the hamburger drawer remains
+ * for the same links when the bar is covered). The bar is a sibling of <header>,
+ * never a child: backdrop-blur on the header would trap a fixed descendant.
  */
 export function AppHeader({
   user,
@@ -208,6 +210,34 @@ export function AppHeader({
         onClick={() => setDrawerOpen(false)}
         className="fixed inset-0 z-10 bg-overlay md:hidden"
       />
+    ) : null}
+
+    {resolvedNav.length > 0 ? (
+      <nav
+        data-hamame-bottom-nav
+        aria-label={t("nav.mainAria")}
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface-1/95 backdrop-blur-md md:hidden"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        <div className="grid grid-cols-5">
+          {resolvedNav.map((item) => {
+            const active = isNavActive(pathname, item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                className={cx(
+                  "flex min-h-14 flex-col items-center justify-center px-1 text-center text-caption font-medium leading-tight focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+                  active ? "text-accent-soft" : "text-text-secondary"
+                )}
+              >
+                <span className="line-clamp-2">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     ) : null}
     </>
   );
