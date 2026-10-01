@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { cx } from "@/lib/cx";
 import type { AuthUser } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useTheme, type ThemeChoice } from "@/context/ThemeContext";
 import { UserMenu } from "@/components/UserMenu";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { ACCOUNT_NAV, PRIMARY_NAV, SECONDARY_NAV, isNavActive, type NavKeyEntry } from "@/lib/nav";
@@ -29,6 +30,32 @@ export interface AppHeaderProps {
   menuLinks?: { href: string; label: string }[] | NavKeyEntry[];
 }
 
+const THEME_CYCLE: Record<ThemeChoice, { next: ThemeChoice; glyph: string; labelKey: "theme.light" | "theme.dark" | "theme.system" }> = {
+  light: { next: "dark", glyph: "☀", labelKey: "theme.light" },
+  dark: { next: "system", glyph: "☾", labelKey: "theme.dark" },
+  system: { next: "light", glyph: "◐", labelKey: "theme.system" },
+};
+
+/** Compact header theme control: one tap cycles Clair → Sombre → Système.
+ *  The full three-way choice lives in settings; this is the quick path. */
+function ThemeCycleButton({ theme, onCycle }: { theme: ThemeChoice; onCycle: (next: ThemeChoice) => void }) {
+  const { t } = useLanguage();
+  const current = THEME_CYCLE[theme];
+  return (
+    <button
+      type="button"
+      onClick={() => onCycle(current.next)}
+      aria-label={`${t("theme.label")} — ${t(current.labelKey)}`}
+      title={`${t("theme.label")} — ${t(current.labelKey)}`}
+      className="inline-flex min-h-touch-target min-w-touch-target items-center justify-center rounded-pill text-text-secondary transition hover:bg-surface-2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+    >
+      <span aria-hidden className="text-body leading-none">
+        {current.glyph}
+      </span>
+    </button>
+  );
+}
+
 /**
  * Sticky top app bar: Hamame wordmark + primary nav + UserMenu. On mobile the five
  * primary tabs stay reachable in a fixed bottom bar (the hamburger drawer remains
@@ -44,6 +71,7 @@ export function AppHeader({
 }: AppHeaderProps) {
   const pathname = usePathname();
   const { t } = useLanguage();
+  const { theme, setTheme } = useTheme();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -168,6 +196,7 @@ export function AppHeader({
         ) : null}
 
         <div className="flex shrink-0 items-center gap-1">
+          <ThemeCycleButton theme={theme} onCycle={setTheme} />
           <NotificationsBell />
           <UserMenu user={user} onLogout={onLogout} links={resolvedMenuLinks} />
         </div>
