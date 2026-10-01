@@ -1987,40 +1987,27 @@ localStorage selection persistence are untouched.
 
 ---
 
-## 25. Railway backend build — stale Prisma Client (diagnosed 2026-09-30)
+## 25. Backend build — committed script never ran generate (fixed 2026-09-30)
 
-Every Railway deploy failed `tsc` with `googleSub` / `prisma.simulation` /
-`prisma.simulationRegistration` unknown — i.e. a generated client older
-than the 2026-09-28 models. Schema, migrations 21/22, and code were all
-correct; local `npm run build` (`prisma generate && tsc`) exits 0, and the
-live DB reports all 23 migrations applied (runtime needs nothing). So the
-failure is strictly that `prisma generate` does not run (or its output is
-discarded) in the Railway build: custom build command bypassing
-`npm run build`, pruned devDependencies (the `prisma` CLI is a devDep), or
-a stale `node_modules` layer from before 2026-09-28. Fix in the Railway
-dashboard, no code change: (1) Build Command = `npm run build`; (2) no
-production-prune of devDeps at build time; (3) one "clear build cache"
-redeploy. Do NOT upgrade Prisma for this (v8 rc prompt is noise; the
-`package.json#prisma` deprecation warns only).
+Every clean build failed `tsc` with `googleSub` / `prisma.simulation` /
+`prisma.simulationRegistration` unknown. Root cause, confirmed against git
+(not the working tree): the committed `package.json` had
+`"build": "tsc -p tsconfig.json"` with no `postinstall` — `prisma generate`
+never ran in any fresh environment, so `tsc` read whatever stale client the
+install left behind. An earlier diagnosis blamed the Railway dashboard; that
+was wrong (it read the working tree, which already held the fix) and is
+retracted — the Railway API walk stands only for what it directly observed:
+no custom build command, correct repo + `main`, latest deploy SUCCESS, no
+FAILED in recent history.
 
-Follow-up (same day): ruled out every in-repo cause — `tsconfig.json` has
-no `paths` redirect and no vendored client copy exists, so `tsc` can only
-read the freshly generated client. Railway docs confirm Railpack lets the
-dashboard override the detected build command, and a `railpack.json`
-override was deliberately NOT added: overriding `build.commands` without
-the provider's inputs risks dropping `npm` from PATH, and appending after
-`...` cannot rescue a failing detected step anyway (builds stop at first
-failure). The dashboard setting is the only fix; nothing in the repo can
-force it. If the log head shows the command already IS `npm run build`,
-paste it — that reopens the diagnosis.
-
-Resolution (same day, via Railway API with a temporary token — deleted
-after): the failure does not exist on Railway. Verified live:
-`buildCommand: null` (auto `npm run build`), repo+`main`, RAILPACK,
-production env; latest deploy SUCCESS today on the §25 commit, and the
-last ~34 deploys back to Sept 12 show zero FAILED (REMOVED = healthy
-rotation, 1 SKIPPED). The pasted tsc errors match no recorded failure —
-stale log from another context, not the production pipeline. No dashboard
-change was needed and none was made; the checklist above stands only if
-the errors ever reappear on a real deploy (then cite its deploy ID).
+Fix (2 lines in `package.json`):
+`"build": "prisma generate && tsc -p tsconfig.json"` +
+`"postinstall": "prisma generate"`. Verified `npm run build` exit 0 from
+the current tree. Repro evidence:
+`docs/verification/prisma-generate-build-before.log` (exit 2, deleted +
+reinstalled `node_modules`). Live DB already reports all 23 migrations
+applied, so no migrate work is needed. Lesson: verify build scripts with
+`git show HEAD:package.json`, never the working tree. (A same-day Railway
+API walk separately confirmed no custom build command and a healthy deploy
+history — consistent with cache-state-dependent failures, not config.)
 
