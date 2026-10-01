@@ -4,6 +4,8 @@ import { cx } from "@/lib/cx";
 import { useLanguage } from "@/context/LanguageContext";
 import type { I18nKey } from "@/lib/i18n";
 import type { DueReviewItem } from "@/lib/types";
+import { Card } from "@/components/Card";
+import { ErrorState } from "@/components/ErrorState";
 
 export interface QualityOption {
   value: number;
@@ -75,11 +77,10 @@ export function RevisionCard({ item, isSubmitting = false, error, onRate, classN
   const { type, title } = itemTargetLabel(item, t);
 
   return (
-    <article
-      className={cx(
-        "rounded-card border border-border bg-surface-1 px-card-padding py-6 shadow-card",
-        className
-      )}
+    <Card
+      as="article"
+      padded={false}
+      className={cx("px-card-padding py-6", className)}
     >
       {/* Item type badge */}
       <div className="flex items-center justify-between gap-3">
@@ -92,9 +93,9 @@ export function RevisionCard({ item, isSubmitting = false, error, onRate, classN
       </div>
 
       {/* Item content */}
-      <div className="mt-4 rounded-panel border border-border bg-surface-2 p-4">
+      <Card variant="elevated" padded={false} className="mt-4 rounded-panel p-4">
         <p className="text-body font-medium text-text-primary">{title}</p>
-      </div>
+      </Card>
 
       {/* Self-assessment prompt */}
       <p className="mt-5 text-body font-medium text-text-secondary">
@@ -126,14 +127,7 @@ export function RevisionCard({ item, isSubmitting = false, error, onRate, classN
         {t("rcard.legend")}
       </p>
 
-      {error ? (
-        <p
-          role="alert"
-          className="mt-3 rounded-control border border-danger bg-surface-2 px-3 py-2 text-meta text-danger"
-        >
-          {error}
-        </p>
-      ) : null}
-    </article>
+      {error ? <ErrorState message={error} className="mt-3" /> : null}
+    </Card>
   );
 }

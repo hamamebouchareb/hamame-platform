@@ -1,9 +1,12 @@
 "use client";
 
-import { cx } from "@/lib/cx";
 import { useLanguage } from "@/context/LanguageContext";
-import { localeFor, type UiLanguage } from "@/lib/i18n";
+import { localeFor } from "@/lib/i18n";
 import type { ReviewQueueItem } from "@/lib/types";
+import { Button } from "@/components/Button";
+import { Card } from "@/components/Card";
+import { ErrorState } from "@/components/ErrorState";
+import { Textarea } from "@/components/Field";
 
 export interface ReviewCardProps {
   item: ReviewQueueItem;
@@ -22,13 +25,6 @@ function itemTitle(item: ReviewQueueItem): string {
   return item.contentType === "lesson" ? item.lessonTitle : `${item.type} question`;
 }
 
-const primaryButton =
-  "flex-1 rounded-control bg-accent-primary px-4 py-2 text-sm font-medium text-on-accent transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none";
-const dangerButton =
-  "flex-1 rounded-control bg-danger px-4 py-2 text-sm font-medium text-background transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none";
-const secondaryButton =
-  "flex-1 rounded-control border border-border px-4 py-2 text-sm font-medium text-text-primary transition hover:bg-surface-2 active:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none";
-
 /** Review-queue item card with approve, inline reject (comment required), and per-item error. */
 export function ReviewCard({
   item,
@@ -46,7 +42,7 @@ export function ReviewCard({
   const textareaId = `reject-comment-${item.id}`;
 
   return (
-    <li className="rounded-card border border-border bg-surface-1 px-card-padding py-4 shadow-card">
+    <Card as="li" padded={false} className="px-card-padding py-4">
       <p className="text-caption font-medium uppercase tracking-wide text-text-tertiary">{item.contentType}</p>
       <p className="mt-1 text-body font-medium text-text-primary">{itemTitle(item)}</p>
       {item.snippet ? <p className="mt-1 text-meta text-text-secondary">{item.snippet}</p> : null}
@@ -56,50 +52,42 @@ export function ReviewCard({
 
       {!rejecting ? (
         <div className="mt-3 flex gap-2">
-          <button type="button" onClick={onApprove} disabled={isSubmitting} className={primaryButton}>
+          <Button size="sm" onClick={onApprove} disabled={isSubmitting} className="flex-1">
             {isSubmitting ? t("modcard.approving") : t("modcard.approve")}
-          </button>
-          <button type="button" onClick={onRejectStart} disabled={isSubmitting} className={secondaryButton}>
+          </Button>
+          <Button size="sm" variant="outline" onClick={onRejectStart} disabled={isSubmitting} className="flex-1">
             {t("modcard.reject")}
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="mt-3">
-          <label htmlFor={textareaId} className="block text-meta font-medium text-text-secondary">
-            {t("modcard.rejectReason")}
-          </label>
-          <textarea
+          <Textarea
             id={textareaId}
+            label={t("modcard.rejectReason")}
             rows={3}
             value={rejectComment}
             onChange={(event) => onRejectCommentChange(event.target.value)}
             disabled={isSubmitting}
-            className="mt-1 w-full rounded-input border border-border bg-surface-2 px-3 py-2 text-meta text-text-primary placeholder:text-text-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-60"
+            hint={rejectComment.trim().length === 0 && !isSubmitting ? t("modcard.commentRequired") : undefined}
           />
-          {rejectComment.trim().length === 0 && !isSubmitting ? (
-            <p className="mt-1 text-caption text-text-tertiary">{t("modcard.commentRequired")}</p>
-          ) : null}
           <div className="mt-2 flex gap-2">
-            <button
-              type="button"
+            <Button
+              size="sm"
+              variant="danger"
               onClick={onRejectConfirm}
               disabled={isSubmitting || rejectComment.trim().length === 0}
-              className={dangerButton}
+              className="flex-1"
             >
               {isSubmitting ? t("modcard.rejecting") : t("modcard.confirmReject")}
-            </button>
-            <button type="button" onClick={onRejectCancel} disabled={isSubmitting} className={secondaryButton}>
+            </Button>
+            <Button size="sm" variant="outline" onClick={onRejectCancel} disabled={isSubmitting} className="flex-1">
               {t("modcard.cancel")}
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
-      {error ? (
-        <p role="alert" className={cx("mt-2 rounded-control border border-danger bg-surface-2 px-3 py-2 text-meta text-danger")}>
-          {error}
-        </p>
-      ) : null}
-    </li>
+      {error ? <ErrorState message={error} className="mt-2" /> : null}
+    </Card>
   );
 }

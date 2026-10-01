@@ -1960,3 +1960,17 @@ instance. One disclosed delta: panel radius `rounded-panel` (14px) →
 `Card` default (16px). Props, callbacks, and option shapes unchanged, so the
 three call sites needed no edits.
 
+---
+
+## 23. Review + revision cards — SHIPPED to main (2026-09-30)
+
+`ReviewCard` (moderation queue) and `RevisionCard` (spaced repetition)
+moved to `Card`/`Button`/`ErrorState`/`Field` with identical props and
+flows: approve/reject/confirm/cancel through `Button` (`danger` variant is
+exactly the old salmon fill + near-black text pair), reject comment through
+`Textarea` (required-hint preserved), both per-card errors through
+`ErrorState`. Bespoke survivors: the SM-2 tone tiles and the content panel
+(kept pixel-exact via `padded={false}`). Disclosed micro-deltas: action
+buttons gain touch-target height, reject textarea/hint render at body/meta
+instead of meta/caption.
+
