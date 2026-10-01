@@ -2014,3 +2014,13 @@ failure). The dashboard setting is the only fix; nothing in the repo can
 force it. If the log head shows the command already IS `npm run build`,
 paste it — that reopens the diagnosis.
 
+Resolution (same day, via Railway API with a temporary token — deleted
+after): the failure does not exist on Railway. Verified live:
+`buildCommand: null` (auto `npm run build`), repo+`main`, RAILPACK,
+production env; latest deploy SUCCESS today on the §25 commit, and the
+last ~34 deploys back to Sept 12 show zero FAILED (REMOVED = healthy
+rotation, 1 SKIPPED). The pasted tsc errors match no recorded failure —
+stale log from another context, not the production pipeline. No dashboard
+change was needed and none was made; the checklist above stands only if
+the errors ever reappear on a real deploy (then cite its deploy ID).
+
