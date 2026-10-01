@@ -17,6 +17,8 @@ export interface Year {
   id: string;
   facultyId: string;
   label: string;
+  /** Study track (medecine | dentaire | pharmacie); null on pre-track rows. */
+  track?: string | null;
   orderIndex: number;
   createdAt: string;
 }

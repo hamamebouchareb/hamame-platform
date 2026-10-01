@@ -22,6 +22,7 @@ export interface AuthUser {
   yearId: string | null;
   university: string | null;
   wilaya: string | null;
+  profilePhotoUrl: string | null;
   uiLanguage: string;
   theme: string;
   status: string;
@@ -70,6 +71,7 @@ interface AuthContextValue {
       validates it against GET /users/me before storing anything. */
   loginWithToken: (accessToken: string) => Promise<void>;
   logout: () => void;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -95,6 +97,7 @@ function readStoredAuth(): StoredAuth | null {
         roles: Array.isArray(parsed.user.roles) ? parsed.user.roles : [],
         emailVerifiedAt: parsed.user.emailVerifiedAt ?? null,
         phoneVerifiedAt: parsed.user.phoneVerifiedAt ?? null,
+        profilePhotoUrl: parsed.user.profilePhotoUrl ?? null,
       },
     };
   } catch {
@@ -178,6 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ...data.user,
       emailVerifiedAt: data.user.emailVerifiedAt ?? null,
       phoneVerifiedAt: data.user.phoneVerifiedAt ?? null,
+      profilePhotoUrl: data.user.profilePhotoUrl ?? null,
     };
     // Persist the token first so the follow-up GET /users/me can authenticate.
     writeStoredAuth({
@@ -235,9 +239,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearStoredAuth();
   }, []);
 
+  /** Re-reads GET /users/me into state + storage (e.g. after onboarding or
+      settings saves). Auth mechanics untouched — same merge as login. */
+  const refreshProfile = useCallback(async () => {
+    const stored = readStoredAuth();
+    if (!stored) return;
+    const profile = await fetchProfileWithRoles(stored.user);
+    setUser(profile);
+    writeStoredAuth({ token: stored.token, user: profile });
+  }, []);
+
   const value = useMemo(
-    () => ({ user, token, isHydrated, login, register, loginWithToken, logout }),
-    [user, token, isHydrated, login, register, loginWithToken, logout]
+    () => ({ user, token, isHydrated, login, register, loginWithToken, logout, refreshProfile }),
+    [user, token, isHydrated, login, register, loginWithToken, logout, refreshProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

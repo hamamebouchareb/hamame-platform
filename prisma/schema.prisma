@@ -232,6 +232,9 @@ model Year {
   id         String   @id @default(uuid()) @db.Uuid
   facultyId  String   @map("faculty_id") @db.Uuid
   label      String // 'Year 1', ..., 'Résidanat Prep'
+  // Study track this year belongs to: 'medecine' | 'dentaire' | 'pharmacie'.
+  // Nullable so pre-track rows stay valid; onboarding filters years by track.
+  track      String?  @map("track")
   orderIndex Int      @map("order_index")
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
 

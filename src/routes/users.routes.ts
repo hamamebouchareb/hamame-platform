@@ -22,6 +22,7 @@ const safeUserSelect = {
   university: true,
   universityId: true,
   wilaya: true,
+  profilePhotoUrl: true,
   uiLanguage: true,
   theme: true,
   status: true,

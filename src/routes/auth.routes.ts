@@ -39,6 +39,7 @@ const safeUserSelect = {
   yearId: true,
   university: true,
   wilaya: true,
+  profilePhotoUrl: true,
   uiLanguage: true,
   theme: true,
   status: true,
@@ -56,6 +57,7 @@ function toUserResponse(user: {
   yearId: string | null;
   university: string | null;
   wilaya: string | null;
+  profilePhotoUrl: string | null;
   uiLanguage: string;
   theme: string;
   status: string;
@@ -72,6 +74,7 @@ function toUserResponse(user: {
     yearId: user.yearId,
     university: user.university,
     wilaya: user.wilaya,
+    profilePhotoUrl: user.profilePhotoUrl,
     uiLanguage: user.uiLanguage,
     theme: user.theme,
     status: user.status,

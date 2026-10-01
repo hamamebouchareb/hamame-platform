@@ -2058,3 +2058,38 @@ disclosed: two bad oversized edits scrambled the file mid-migration, caught
 by re-reading (not by guessing) — restored from git once, then redone in
 single-purpose edits with `tsc` green throughout.
 
+---
+
+## 29. First-run onboarding — SHIPPED to main (2026-09-30)
+
+New users (and any account missing faculty/year) land on `/bienvenue`, a
+4-step wizard — Filière (Médecine / Dentaire / Pharmacie) → Faculté (15
+wilayas) → Année (track-filtered) → Profil (name + avatar) — persisting
+through the existing `PUT /users/me`, then `refreshProfile()` + dashboard.
+Skip sets `hamame_onboarding_skip`; settings stays the later edit path.
+The gate lives in `useRequireAuth` (public auth routes + `/bienvenue`
+exempt); complete accounts never see the wizard.
+
+**Backend (approved, minimal):** `Year.track` nullable (migration
+`...23_add_year_track`, pooler-safe extract) — no `User` change, the year
+row implies the track. `profilePhotoUrl` added to the two safe selects
+(`users/me`, auth payloads); `PUT` already accepted it. `AuthContext` gained
+`refreshProfile()`; auth mechanics untouched.
+
+**Seed:** 15 wilaya faculties (**DRAFT list — owner to confirm**) born
+`planned`, one-time flip to `beta` (visible, marked new; re-runs preserve
+status, `medicine`/`dentistry` fixtures intact), plus 7–8 track years each:
+verified 17 faculties / 331 years / zero untracked, Alger spot-checked
+22/22, re-run idempotent. Locked taxonomy: final year = Internat (no
+exams — honest empty bank states), then Résidanat.
+
+**Avatars:** DiceBear initials presets (pinned `9.x` URL shape, seed =
+display name — external-service PII note) + custom URL paste with live
+preview; `UserMenu` renders the photo when set, initials otherwise. Real
+file upload stays parked (needs Storage + endpoint).
+
+**Not live-verified end-to-end** (no test credentials — same standing
+limitation as prior sessions): beta visibility is the pre-existing tested
+gate, and DB state was verified row-for-row; the signed-in walk needs the
+owner.
+

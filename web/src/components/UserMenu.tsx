@@ -63,8 +63,13 @@ export function UserMenu({ user, onLogout, links = [] }: UserMenuProps) {
         onClick={() => setOpen((prev) => !prev)}
         className="inline-flex min-h-touch-target min-w-touch-target items-center justify-center gap-2 rounded-pill border border-border bg-surface-1 px-3 text-body font-medium text-text-primary transition hover:border-border-strong hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
       >
-        <span className="flex h-7 w-7 items-center justify-center rounded-pill bg-accent-primary font-display text-caption font-bold text-on-accent" aria-hidden>
-          {initials(user.fullName)}
+        <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-pill bg-accent-primary font-display text-caption font-bold text-on-accent" aria-hidden>
+          {user.profilePhotoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={user.profilePhotoUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            initials(user.fullName)
+          )}
         </span>
         <span className="hidden max-w-[10rem] truncate sm:inline">{user.fullName}</span>
         <svg viewBox="0 0 20 20" className={cx("h-4 w-4 text-text-tertiary transition", open && "rotate-180")} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>

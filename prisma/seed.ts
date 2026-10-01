@@ -84,11 +84,69 @@ async function main() {
     create: { name: "Dentistry", slug: "dentistry", rolloutStatus: "planned" },
   });
 
+  // 2b. Wilaya faculties for onboarding (DRAFT list — owner to confirm; all
+  // 'planned' = invisible until approved, so this stages safely on prod).
+  // One row per wilaya (track-agnostic); study tracks live on Year.track.
+  // Years have no natural unique key, so this uses findFirst-by-triple +
+  // create/update instead of 330 fixed UUIDs (documented deviation from the
+  // fixed-id convention above, which stays in force for fixture rows).
+  const WILAYA_FACULTIES: { slug: string; name: string }[] = [
+    { slug: "fac-alger", name: "Faculté de Médecine — Alger" },
+    { slug: "fac-oran", name: "Faculté de Médecine — Oran" },
+    { slug: "fac-constantine", name: "Faculté de Médecine — Constantine" },
+    { slug: "fac-annaba", name: "Faculté de Médecine — Annaba" },
+    { slug: "fac-blida", name: "Faculté de Médecine — Blida" },
+    { slug: "fac-tlemcen", name: "Faculté de Médecine — Tlemcen" },
+    { slug: "fac-setif", name: "Faculté de Médecine — Sétif" },
+    { slug: "fac-batna", name: "Faculté de Médecine — Batna" },
+    { slug: "fac-bejaia", name: "Faculté de Médecine — Béjaïa" },
+    { slug: "fac-tizi-ouzou", name: "Faculté de Médecine — Tizi Ouzou" },
+    { slug: "fac-sidi-bel-abbes", name: "Faculté de Médecine — Sidi Bel Abbès" },
+    { slug: "fac-mostaganem", name: "Faculté de Médecine — Mostaganem" },
+    { slug: "fac-ouargla", name: "Faculté de Médecine — Ouargla" },
+    { slug: "fac-tebessa", name: "Faculté de Médecine — Tébessa" },
+    { slug: "fac-djelfa", name: "Faculté de Médecine — Djelfa" },
+  ];
+
+  // Exam years per track + final Internat (no exams) + Résidanat (postgraduate).
+  const TRACK_YEARS: { track: string; labels: string[] }[] = [
+    { track: "medecine", labels: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Internat", "Résidanat"] },
+    { track: "dentaire", labels: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Internat", "Résidanat"] },
+    { track: "pharmacie", labels: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Internat", "Résidanat"] },
+  ];
+
+  for (const fac of WILAYA_FACULTIES) {
+    const faculty = await prisma.faculty.upsert({
+      where: { slug: fac.slug },
+      // Name-only: never touch rolloutStatus here, so a manual planned→live
+      // graduation (or back) survives the next seed run. New rows are born
+      // 'beta' (visible, marked new) via create below.
+      update: { name: fac.name },
+      create: { name: fac.name, slug: fac.slug, rolloutStatus: "beta" },
+    });
+    for (const { track, labels } of TRACK_YEARS) {
+      for (let i = 0; i < labels.length; i++) {
+        const existing = await prisma.year.findFirst({
+          where: { facultyId: faculty.id, label: labels[i], track },
+        });
+        if (existing) {
+          if (existing.orderIndex !== i) {
+            await prisma.year.update({ where: { id: existing.id }, data: { orderIndex: i } });
+          }
+        } else {
+          await prisma.year.create({
+            data: { facultyId: faculty.id, label: labels[i] as string, track, orderIndex: i },
+          });
+        }
+      }
+    }
+  }
+
   // 3. Curriculum tree under Medicine only.
   const year1 = await prisma.year.upsert({
     where: { id: YEAR_1_ID },
-    update: { facultyId: medicine.id, label: "Year 1", orderIndex: 0 },
-    create: { id: YEAR_1_ID, facultyId: medicine.id, label: "Year 1", orderIndex: 0 },
+    update: { facultyId: medicine.id, label: "Year 1", track: "medecine", orderIndex: 0 },
+    create: { id: YEAR_1_ID, facultyId: medicine.id, label: "Year 1", track: "medecine", orderIndex: 0 },
   });
 
   const cardiologyModule = await prisma.module.upsert({
