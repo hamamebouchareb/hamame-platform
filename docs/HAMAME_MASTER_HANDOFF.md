@@ -2009,5 +2009,12 @@ reinstalled `node_modules`). Live DB already reports all 23 migrations
 applied, so no migrate work is needed. Lesson: verify build scripts with
 `git show HEAD:package.json`, never the working tree. (A same-day Railway
 API walk separately confirmed no custom build command and a healthy deploy
-history — consistent with cache-state-dependent failures, not config.)
+history. Correction via the Vercel API: the red board was the
+**`hamame-platform` (express, repo-root) Vercel project**, which compiles the
+backend with the committed script — bare `tsc` + stale client failed every
+deploy since the Sept-28 models landed. `f827859` is READY there, so the fix
+is proven live; the two frontend projects (`-wcpk`, `-z3cq`, both
+`rootDirectory: web`) were never affected. Open decision: that express
+project redundantly deploys the backend alongside Railway — keep as staging
+or delete it.)
 
