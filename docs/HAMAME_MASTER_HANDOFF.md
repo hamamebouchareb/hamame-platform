@@ -1933,15 +1933,6 @@ forward: every batch ends with commit + push, no gate.
 
 ---
 
-## 31. Header theme cycler — SHIPPED to main (2026-09-30)
-
-One-tap ☀ → ☾ → ◐ button beside the notification bell (same `ThemeChoice`
-state as settings, current choice announced). Full three-way choice stays
-in settings; also corrected a stale `AppHeader` comment still naming
-`SECONDARY_NAV` as the menu default.
-
----
-
 ## 21. SessionBuilder primitives — SHIPPED to main (2026-09-30)
 
 The last big hand-rolled form (886-line QCM session builder) moved to the
@@ -2117,4 +2108,13 @@ server-wins rule: a stored server `'light'` can never mean a deliberate
 pick (no UI ever offered one), so explicit local picks win, server
 dark/system is adopted, and pristine `'light'` converges to dark with a
 best-effort write-back.
+
+---
+
+## 31. Header theme cycler — SHIPPED to main (2026-09-30)
+
+One-tap ☀ → ☾ → ◐ button beside the notification bell (same `ThemeChoice`
+state as settings, current choice announced). Full three-way choice stays
+in settings; also corrected a stale `AppHeader` comment still naming
+`SECONDARY_NAV` as the menu default.
 
