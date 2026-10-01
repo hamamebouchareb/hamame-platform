@@ -1985,3 +1985,21 @@ to `Button` (`accent="qcm"` start is the exact previous fill/glow).
 Deadline-timestamp timekeeping, clamp-at-derivation, phase effects, and
 localStorage selection persistence are untouched.
 
+---
+
+## 25. Railway backend build — stale Prisma Client (diagnosed 2026-09-30)
+
+Every Railway deploy failed `tsc` with `googleSub` / `prisma.simulation` /
+`prisma.simulationRegistration` unknown — i.e. a generated client older
+than the 2026-09-28 models. Schema, migrations 21/22, and code were all
+correct; local `npm run build` (`prisma generate && tsc`) exits 0, and the
+live DB reports all 23 migrations applied (runtime needs nothing). So the
+failure is strictly that `prisma generate` does not run (or its output is
+discarded) in the Railway build: custom build command bypassing
+`npm run build`, pruned devDependencies (the `prisma` CLI is a devDep), or
+a stale `node_modules` layer from before 2026-09-28. Fix in the Railway
+dashboard, no code change: (1) Build Command = `npm run build`; (2) no
+production-prune of devDeps at build time; (3) one "clear build cache"
+redeploy. Do NOT upgrade Prisma for this (v8 rc prompt is noise; the
+`package.json#prisma` deprecation warns only).
+
