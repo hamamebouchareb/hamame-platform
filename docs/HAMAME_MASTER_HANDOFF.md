@@ -2018,3 +2018,15 @@ is proven live; the two frontend projects (`-wcpk`, `-z3cq`, both
 project redundantly deploys the backend alongside Railway — keep as staging
 or delete it.)
 
+---
+
+## 26. Suivi shell — SHIPPED to main (2026-09-30)
+
+`/suivi` (501 lines) moved to `useAuthedPage` + `PageShell` (`wide`, no
+header — the centered hero is kept as-is on the landing tier). Year
+articles through `Card accentTone="suivi"`, ranked/perf rows through `Card
+as="li"`, all three error blocks through `ErrorState` (perf gains a retry
+it lacked). Metrics, bars, tooltips, activity list, and all data flows
+unchanged. Fixed my own edit slip in the same pass (dropped import +
+duplicated line, caught by `tsc` before anything else ran).
+

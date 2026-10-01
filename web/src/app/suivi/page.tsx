@@ -1,16 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { localeFor, readinessLabel, type UiLanguage } from "@/lib/i18n";
-import { useRequireAuth } from "@/lib/useRequireAuth";
+import { useAuthedPage } from "@/lib/useAuthedPage";
 import { useApiResource } from "@/lib/useApiResource";
 import { useApiList } from "@/lib/useApiList";
-import { AppHeader, Footer, MetricCard, ProgressBar, WeeklyActivity, EmptyState } from "@/components";
-import { accentVar } from "@/components/FeatureCard";
-import { LoadingSkeleton } from "@/components/LoadingSkeleton";
+import { Card, ErrorState, LoadingSkeleton, MetricCard, PageShell, ProgressBar, WeeklyActivity, EmptyState } from "@/components";
 import type { CurriculumModule, ExamReadiness, ModuleProgress, ProgressSummary, Year } from "@/lib/types";
 
 function InfoTooltip({ tooltip, className }: { tooltip: string; className?: string }) {
@@ -39,9 +35,7 @@ interface YearHierarchy {
 }
 
 export default function SuiviPage() {
-  const { logout } = useAuth();
-  const router = useRouter();
-  const { user, isHydrated } = useRequireAuth();
+  const { user, isHydrated, handleLogout } = useAuthedPage();
   const { lang, t } = useLanguage();
   const canFetch = isHydrated && !!user;
 
@@ -125,25 +119,17 @@ export default function SuiviPage() {
 
   const readinessData = readiness.data && !readiness.data.insufficientData ? readiness.data : null;
 
-  function handleLogout() {
-    logout();
-    router.push("/login");
-  }
-
-  if (!isHydrated || !user) {
-    return (
-      <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
-      </main>
-    );
-  }
-
   return (
-    <>
-      <AppHeader user={user} onLogout={handleLogout} />
-
-      <main className="mx-auto w-full max-w-6xl flex-1 px-card-padding py-section-gap">
-        {/* Hero */}
+    <PageShell
+      user={user}
+      isHydrated={isHydrated}
+      onLogout={handleLogout}
+      width="wide"
+      loadingLabel={t("common.loading")}
+    >
+      {(authed) => (
+      <>
+        {/* Hero (centered landing style — kept, not the PageShell header) */}
         <section aria-label={t("suivi.heroAria")} className="mx-auto max-w-3xl text-center">
           <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">{t("suivi.heroKicker")}</p>
           <h1 className="mt-2 font-display text-h1 font-bold leading-tight text-text-primary md:text-hero">
@@ -208,19 +194,12 @@ export default function SuiviPage() {
               ))}
             </div>
           ) : yearsData.error ? (
-            <div className="mt-4 rounded-card border border-danger bg-surface-1 p-card-padding">
-              <p role="alert" className="text-body text-danger">
-                {t("suivi.curriculumLoadError", { error: yearsData.error })}
-              </p>
-              <button
-                type="button"
-                onClick={yearsData.refetch}
-                className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 sm:w-auto"
-              >
-                {t("common.retry")}
-              </button>
-            </div>
-          ) : showEmpty && !user.yearId ? (
+            <ErrorState
+              className="mt-4"
+              message={t("suivi.curriculumLoadError", { error: yearsData.error })}
+              onRetry={yearsData.refetch}
+            />
+          ) : showEmpty && !authed.yearId ? (
             <div className="mt-4">
               <EmptyState
                 title={t("suivi.noTrack")}
@@ -228,7 +207,7 @@ export default function SuiviPage() {
                 action={{ label: t("suivi.chooseTrack"), href: "/faculties" }}
               />
             </div>
-          ) : !hasCurriculum && user.yearId ? (
+          ) : !hasCurriculum && authed.yearId ? (
             <div className="mt-4">
               <EmptyState
                 title={t("suivi.noModules")}
@@ -239,11 +218,7 @@ export default function SuiviPage() {
           ) : (
             <div className="mt-4 flex flex-col gap-4">
               {yearHierarchy.map((yh) => (
-                <article
-                  key={yh.year.id}
-                  className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card"
-                  style={{ borderTop: `3px solid ${accentVar("suivi")}` }}
-                >
+                <Card as="article" key={yh.year.id} accentTone="suivi">
                   <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                     <div>
                       <p className="font-display text-h3 font-semibold text-text-primary">{yh.year.label}</p>
@@ -283,7 +258,7 @@ export default function SuiviPage() {
                       })}
                     </ul>
                   )}
-                </article>
+                </Card>
               ))}
             </div>
           )}
@@ -302,9 +277,11 @@ export default function SuiviPage() {
                 const total = mod.progress?.totalLessons ?? 0;
                 const completed = mod.progress?.completedLessons ?? 0;
                 return (
-                  <li
+                  <Card
+                    as="li"
                     key={mod.id}
-                    className="flex items-center gap-4 rounded-card border border-border bg-surface-1 p-card-padding shadow-card transition hover:border-border-strong hover:bg-surface-2"
+                    interactive
+                    className="flex items-center gap-4"
                   >
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-surface-3 font-display text-caption font-bold tabular-nums text-text-secondary">
                       {index + 1}
@@ -318,7 +295,7 @@ export default function SuiviPage() {
                       </div>
                       <ProgressBar className="mt-2" value={pct} tone={pct === 100 ? "success" : pct > 0 ? "primary" : "warning"} />
                     </div>
-                  </li>
+                  </Card>
                 );
               })}
             </ol>
@@ -337,16 +314,15 @@ export default function SuiviPage() {
               ))}
             </div>
           ) : performance.error ? (
-            <p role="alert" className="mt-4 text-body text-danger">
-              {performance.error}
-            </p>
+            <ErrorState
+              className="mt-4"
+              message={performance.error}
+              onRetry={performance.refetch}
+            />
           ) : (
             <ol className="mt-4 flex flex-col gap-card-gap">
               {perfModules.map((mod) => (
-                <li
-                  key={mod.moduleId}
-                  className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card"
-                >
+                <Card as="li" key={mod.moduleId}>
                   <div className="flex items-baseline justify-between gap-3">
                     <p className="truncate text-body font-medium text-text-primary">{mod.moduleName}</p>
                     <span className="shrink-0 text-meta tabular-nums text-text-secondary">
@@ -361,7 +337,7 @@ export default function SuiviPage() {
                     tone={mod.accuracy !== null && mod.accuracy >= 70 ? "success" : "primary"}
                     label={`${mod.moduleName} — ${t("suivi.perfTitle")}`}
                   />
-                </li>
+                </Card>
               ))}
             </ol>
           )}
@@ -379,20 +355,13 @@ export default function SuiviPage() {
               ))}
             </div>
           ) : readiness.error ? (
-            <div className="mt-4 rounded-card border border-danger bg-surface-1 p-card-padding">
-              <p role="alert" className="text-body text-danger">
-                {readiness.error}
-              </p>
-              <button
-                type="button"
-                onClick={readiness.refetch}
-                className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 sm:w-auto"
-              >
-                {t("common.retry")}
-              </button>
-            </div>
+            <ErrorState
+              className="mt-4"
+              message={readiness.error}
+              onRetry={readiness.refetch}
+            />
           ) : readinessData ? (
-            <div className="mt-4 rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
+            <Card className="mt-4">
               <div className="mb-4 flex items-baseline gap-3">
                 <span className="font-display text-display font-bold text-text-primary">{readinessData.score}</span>
                 <span className="font-display text-h3 font-semibold text-text-secondary">/100</span>
@@ -429,7 +398,7 @@ export default function SuiviPage() {
               <p className="mt-4 text-caption text-text-tertiary">
                 {t("suivi.compositeNote")}
               </p>
-            </div>
+            </Card>
           ) : (
             <div className="mt-4">
               <EmptyState
@@ -475,7 +444,7 @@ export default function SuiviPage() {
         </section>
 
         {/* Global empty state — no curriculum, no activity, nothing */}
-        {showEmpty && user.yearId && (
+        {showEmpty && authed.yearId && (
           <section aria-label={t("suivi.getStarted")} className="mx-auto mt-section-gap max-w-4xl">
             <EmptyState
               title={t("suivi.getStartedTitle")}
@@ -484,7 +453,7 @@ export default function SuiviPage() {
             />
           </section>
         )}
-        {showEmpty && !user.yearId && (
+        {showEmpty && !authed.yearId && (
           <section aria-label={t("suivi.getStarted")} className="mx-auto mt-section-gap max-w-4xl">
             <EmptyState
               title={t("suivi.getStartedTitle")}
@@ -493,9 +462,8 @@ export default function SuiviPage() {
             />
           </section>
         )}
-      </main>
-
-      <Footer />
-    </>
+      </>
+      )}
+    </PageShell>
   );
 }
