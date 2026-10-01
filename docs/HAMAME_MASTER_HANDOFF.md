@@ -2003,3 +2003,14 @@ production-prune of devDeps at build time; (3) one "clear build cache"
 redeploy. Do NOT upgrade Prisma for this (v8 rc prompt is noise; the
 `package.json#prisma` deprecation warns only).
 
+Follow-up (same day): ruled out every in-repo cause — `tsconfig.json` has
+no `paths` redirect and no vendored client copy exists, so `tsc` can only
+read the freshly generated client. Railway docs confirm Railpack lets the
+dashboard override the detected build command, and a `railpack.json`
+override was deliberately NOT added: overriding `build.commands` without
+the provider's inputs risks dropping `npm` from PATH, and appending after
+`...` cannot rescue a failing detected step anyway (builds stop at first
+failure). The dashboard setting is the only fix; nothing in the repo can
+force it. If the log head shows the command already IS `npm run build`,
+paste it — that reopens the diagnosis.
+
