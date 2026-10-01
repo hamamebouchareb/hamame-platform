@@ -2042,3 +2042,19 @@ into the mobile drawer under a divider (phones have no sidebar), keeping
 every route reachable at every width: sidebar everything on desktop,
 drawer everything on phones.
 
+---
+
+## 28. Simulations shell — SHIPPED to main (2026-09-30)
+
+`/simulations` moved to `useAuthedPage` + `PageShell` (`wide`, centered
+hero kept) with sim cards through `Card`, register/unregister/start through
+`Button` (`accent="qcm"` start is the exact previous fill/glow), and both
+error surfaces through `ErrorState`. Sections, badges, seats/dates,
+register/start flows, and the official-mock start redirect are unchanged.
+MedSpark note: their bank leads with session-type choices incl. ECOS plus
+shared sessions ("Bientôt disponible" — not live there either); ECOS and
+shared sessions need backend and stay parked. Rough pass honestly
+disclosed: two bad oversized edits scrambled the file mid-migration, caught
+by re-reading (not by guessing) — restored from git once, then redone in
+single-purpose edits with `tsc` green throughout.
+
