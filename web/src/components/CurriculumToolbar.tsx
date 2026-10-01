@@ -1,7 +1,10 @@
 "use client";
 
+import { useId } from "react";
 import { cx } from "@/lib/cx";
 import { useLanguage } from "@/context/LanguageContext";
+import { Card } from "@/components/Card";
+import { Input, Select } from "@/components/Field";
 
 export interface SortOption {
   value: string;
@@ -30,9 +33,6 @@ export interface CurriculumToolbarProps {
   className?: string;
 }
 
-const controlClass =
-  "h-11 rounded-input border border-border bg-surface-2 px-3 text-body text-text-primary placeholder:text-text-tertiary transition focus:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring";
-
 /** Search + sort + optional filter bar shared by the curriculum list pages. */
 export function CurriculumToolbar({
   resultCount,
@@ -49,21 +49,23 @@ export function CurriculumToolbar({
   className,
 }: CurriculumToolbarProps) {
   const { t } = useLanguage();
+  const uid = useId();
   return (
-    <div
+    <Card
       className={cx(
-        "flex flex-col gap-3 rounded-panel border border-border bg-surface-1 p-card-padding shadow-card sm:flex-row sm:items-center",
+        "flex flex-col gap-3 sm:flex-row sm:items-center",
         className
       )}
     >
-      <label className="relative block min-w-0 flex-1">
+      <label htmlFor={`${uid}-search`} className="relative block min-w-0 flex-1">
         <span className="sr-only">{searchPlaceholder ?? t("toolbar.search")}</span>
-        <input
+        <Input
+          id={`${uid}-search`}
           type="search"
           value={searchValue}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder={searchPlaceholder ?? t("toolbar.searchEllipsis")}
-          className={cx(controlClass, "w-full pl-10")}
+          className="w-full pl-10"
         />
         <svg
           aria-hidden
@@ -82,35 +84,37 @@ export function CurriculumToolbar({
 
       <div className="flex flex-wrap items-center gap-3">
         {filterValue !== undefined && onFilterChange && filterOptions && filterOptions.length > 0 ? (
-          <label>
+          <label htmlFor={`${uid}-filter`}>
             <span className="sr-only">{t("toolbar.filter")}</span>
-            <select
+            <Select
+              id={`${uid}-filter`}
               value={filterValue}
               onChange={(event) => onFilterChange(event.target.value)}
-              className={cx(controlClass, "min-w-[10.5rem]")}
+              className="min-w-[10.5rem]"
             >
               {filterOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
         ) : null}
 
-        <label>
+        <label htmlFor={`${uid}-sort`}>
           <span className="sr-only">{t("toolbar.sort")}</span>
-          <select
+          <Select
+            id={`${uid}-sort`}
             value={sortValue}
             onChange={(event) => onSortChange(event.target.value)}
-            className={cx(controlClass, "min-w-[10.5rem]")}
+            className="min-w-[10.5rem]"
           >
             {sortOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
 
         <p className="text-meta tabular-nums text-text-tertiary">
@@ -119,6 +123,6 @@ export function CurriculumToolbar({
             : t(resultCount === 1 ? "toolbar.itemOne" : "toolbar.itemMany", { count: resultCount })}
         </p>
       </div>
-    </div>
+    </Card>
   );
 }

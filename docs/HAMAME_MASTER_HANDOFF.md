@@ -1949,3 +1949,14 @@ ref (identical proposal behavior), and the time-basis note moved from
 `text-caption` to the `Field` hint style. Cascade, counts queries, sitting
 derivation, and the emitted `SessionConfig` are untouched.
 
+---
+
+## 22. CurriculumToolbar primitives — SHIPPED to main (2026-09-30)
+
+The shared search/sort/filter bar (used by the three curriculum list
+pages) moved to `Card` + `Field` `Input`/`Select`: `controlClass` deleted,
+labels gained `htmlFor` via `useId` (sr-only spans kept), IDs unique per
+instance. One disclosed delta: panel radius `rounded-panel` (14px) →
+`Card` default (16px). Props, callbacks, and option shapes unchanged, so the
+three call sites needed no edits.
+
