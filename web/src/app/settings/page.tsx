@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useTheme, type ThemeChoice } from "@/context/ThemeContext";
 import type { I18nKey } from "@/lib/i18n";
 import { useAuthedPage } from "@/lib/useAuthedPage";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useApiResource } from "@/lib/useApiResource";
 import { usePushSubscription } from "@/lib/usePushSubscription";
 import { useToast } from "@/components/Toast";
-import { Button, Card, ErrorState, Input, LanguageToggle, LoadingSkeleton, PageShell, Select } from "@/components";
+import { Button, Card, ErrorState, Input, LanguageToggle, LoadingSkeleton, PageShell, PrimaryTabs, Select } from "@/components";
 import type { PushPreferences } from "@/lib/types";
 
 const WILAYAS = [
@@ -83,6 +84,7 @@ interface FieldErrors {
 export default function SettingsPage() {
   const { user, isHydrated, handleLogout } = useAuthedPage();
   const { t } = useLanguage();
+  const { theme, setTheme } = useTheme();
   const toast = useToast();
   const push = usePushSubscription();
   const canFetch = isHydrated && !!user;
@@ -388,6 +390,24 @@ export default function SettingsPage() {
             <p className="mt-1 text-body text-text-secondary">{t("settings.languageDesc")}</p>
             <div className="mt-4">
               <LanguageToggle />
+            </div>
+          </Card>
+
+          {/* ── Theme card ── */}
+          <Card as="section" aria-label={t("theme.label")}>
+            <h2 className="font-display text-h2 font-semibold text-text-primary">{t("theme.label")}</h2>
+            <p className="mt-1 text-body text-text-secondary">{t("theme.desc")}</p>
+            <div className="mt-4">
+              <PrimaryTabs
+                tabs={[
+                  { id: "light", label: t("theme.light") },
+                  { id: "dark", label: t("theme.dark") },
+                  { id: "system", label: t("theme.system") },
+                ]}
+                activeId={theme}
+                onChange={(id) => setTheme(id as ThemeChoice)}
+                ariaLabel={t("theme.label")}
+              />
             </div>
           </Card>
         </div>

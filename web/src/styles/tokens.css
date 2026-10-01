@@ -115,3 +115,34 @@
   --shadow-glow-revision: 0 0 28px color-mix(in srgb, var(--color-accent-revision) 25%, transparent);
   --shadow-glow-danger: 0 0 28px color-mix(in srgb, var(--color-danger) 25%, transparent);
 }
+
+/* ---- Light theme: same token names, light surfaces. Dark stays the default
+   (:root above); setting data-theme="light" on <html> flips these. Brand
+   accent fills are identical in both themes; only text/surface/companions
+   change, each re-checked for contrast on white (AA: soft 6.3, secondary
+   7.5+, tertiary 4.8, success 5.4, warning 4.7, danger 4.8, info 4.5). */
+:root[data-theme="light"] {
+  --color-background: #f4f6fb;
+  --color-surface-1: #ffffff;
+  --color-surface-2: #eef1f7;
+  --color-surface-3: #e2e8f2;
+  --color-border: #d7deea;
+  --color-border-strong: #b9c4d8;
+
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-tertiary: #64748b;
+
+  --color-on-accent: #ffffff;
+  --color-accent-soft: #1d4ed8;
+
+  --color-success: #15803d;
+  --color-warning: #b45309;
+  --color-danger: #dc2626;
+  --color-info: #0284c7;
+  --color-overlay: rgb(15 23 42 / 0.5);
+  --color-focus-ring: #4f46e5;
+
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.08);
+  --shadow-card-lg: 0 8px 28px rgb(15 23 42 / 0.12);
+}

@@ -37,6 +37,12 @@ const fr = {
   "language.switchToFrench": "Passer en français",
   "language.switchToEnglish": "Switch to English",
   "language.label": "Langue",
+  // ── Theme ──
+  "theme.label": "Thème",
+  "theme.desc": "Choisissez l'apparence de l'interface. Enregistrée sur votre compte.",
+  "theme.light": "Clair",
+  "theme.dark": "Sombre",
+  "theme.system": "Système",
   // ── Primary / secondary nav (single source of truth: web/src/lib/nav.ts) ──
   "nav.dashboard": "Tableau de bord",
   "nav.qcm": "QCM",
@@ -1076,6 +1082,12 @@ const en: Record<I18nKey, string> = {
   "language.switchToFrench": "Passer en français",
   "language.switchToEnglish": "Switch to English",
   "language.label": "Language",
+  // ── Theme ──
+  "theme.label": "Theme",
+  "theme.desc": "Choose the interface appearance. Saved to your account.",
+  "theme.light": "Light",
+  "theme.dark": "Dark",
+  "theme.system": "System",
   // ── Primary / secondary nav ──
   "nav.dashboard": "Dashboard",
   "nav.qcm": "QCM",

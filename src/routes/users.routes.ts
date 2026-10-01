@@ -184,7 +184,7 @@ router.put("/me", validateBody(updateProfileSchema), updateCurrentProfile);
 // PUT /api/users/me/preferences — FR-5, FR-6: language, theme, notification prefs.
 const updatePreferencesSchema = z.object({
   uiLanguage: z.enum(["fr", "en"]).optional(),
-  theme: z.enum(["light", "dark"]).optional(),
+  theme: z.enum(["light", "dark", "system"]).optional(),
   notificationPreferences: z
     .array(
       z.object({

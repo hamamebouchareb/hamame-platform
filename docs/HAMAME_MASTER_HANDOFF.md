@@ -2093,3 +2093,19 @@ limitation as prior sessions): beta visibility is the pre-existing tested
 gate, and DB state was verified row-for-row; the signed-in walk needs the
 owner.
 
+---
+
+## 30. Clair / Sombre / Système themes — SHIPPED to main (2026-09-30)
+
+The app was dark-only with no theme system (server column defaulted to
+`'light'` while everyone saw dark). Now: full light token set under
+`:root[data-theme="light"]` (brand fills identical, text/surface/companions
+re-checked AA on white), new `ThemeContext` (pick + resolved + OS listener
++ pre-paint inline script against flash), theme card in settings reusing
+`PrimaryTabs`, `theme.*` keys FR+EN. Backend: `theme` enum gains `"system"`
+(additive, column unconstrained). Deliberate deviation from the language
+server-wins rule: a stored server `'light'` can never mean a deliberate
+pick (no UI ever offered one), so explicit local picks win, server
+dark/system is adopted, and pristine `'light'` converges to dark with a
+best-effort write-back.
+
