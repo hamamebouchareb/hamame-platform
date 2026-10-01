@@ -43,6 +43,17 @@ export const SECONDARY_NAV: NavKeyEntry[] = [
 ];
 
 /**
+ * Avatar-menu links. Account actions only (profile, settings — logout is a
+ * separate control owned by UserMenu, not a nav entry): every other
+ * destination lives in the sidebar on desktop and in the mobile drawer on
+ * phones, so the menu never duplicates the navigation rail.
+ */
+export const ACCOUNT_NAV: NavKeyEntry[] = [
+  { href: "/profile", labelKey: "nav.profile" },
+  { href: "/settings", labelKey: "nav.settings" },
+];
+
+/**
  * Returns true when `pathname` is "within" `href`, used to mark the active tab.
  * Exact match, or any nested sub-route (e.g. /qcm/builder → QCM, /faculties/123
  * → Bibliothèque), so nested curriculum pages highlight the right primary tab.

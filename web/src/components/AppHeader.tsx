@@ -8,7 +8,7 @@ import type { AuthUser } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { UserMenu } from "@/components/UserMenu";
 import { NotificationsBell } from "@/components/NotificationsBell";
-import { PRIMARY_NAV, SECONDARY_NAV, isNavActive, type NavKeyEntry } from "@/lib/nav";
+import { ACCOUNT_NAV, PRIMARY_NAV, SECONDARY_NAV, isNavActive, type NavKeyEntry } from "@/lib/nav";
 import { Sidebar } from "@/components/layout/Sidebar";
 
 export interface AppHeaderNavItem {
@@ -21,7 +21,9 @@ export interface AppHeaderProps {
   user: AuthUser;
   onLogout: () => void;
   // Custom nav overrides (plain labels, never translated). When omitted, the
-  // dictionary-keyed PRIMARY_NAV / SECONDARY_NAV are resolved via useLanguage.
+  // dictionary-keyed PRIMARY_NAV / ACCOUNT_NAV are resolved via useLanguage.
+  // SECONDARY_NAV renders in the sidebar (desktop) and the mobile drawer —
+  // never in the avatar menu, which stays account-only.
   nav?: AppHeaderNavItem[] | NavKeyEntry[];
   brandHref?: string;
   menuLinks?: { href: string; label: string }[] | NavKeyEntry[];
@@ -38,7 +40,7 @@ export function AppHeader({
   onLogout,
   nav = PRIMARY_NAV,
   brandHref = "/dashboard",
-  menuLinks = SECONDARY_NAV,
+  menuLinks = ACCOUNT_NAV,
 }: AppHeaderProps) {
   const pathname = usePathname();
   const { t } = useLanguage();
@@ -49,6 +51,11 @@ export function AppHeader({
   // Resolve dictionary-keyed entries to display labels; plain-label overrides
   // pass through untouched.
   const resolvedNav: AppHeaderNavItem[] = nav.map((item) =>
+    "labelKey" in item ? { href: item.href, label: t(item.labelKey) } : item
+  );
+  // Secondary destinations ride the mobile drawer (phones have no sidebar),
+  // resolved with the same dictionary mechanism as the primary nav.
+  const resolvedSecondaryNav: AppHeaderNavItem[] = SECONDARY_NAV.map((item) =>
     "labelKey" in item ? { href: item.href, label: t(item.labelKey) } : item
   );
   const resolvedMenuLinks: { href: string; label: string }[] = menuLinks.map((link) =>
@@ -189,6 +196,26 @@ export function AppHeader({
                   onClick={() => setDrawerOpen(false)}
                   className={cx(
                     "inline-flex min-h-touch-target items-center rounded-control px-4 text-body font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+                    active
+                      ? "bg-surface-3 text-accent-soft"
+                      : "text-text-secondary hover:bg-surface-2 hover:text-text-primary active:bg-surface-2"
+                  )}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+            <div className="mx-4 my-2 border-t border-border" aria-hidden />
+            {resolvedSecondaryNav.map((item) => {
+              const active = isNavActive(pathname, item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  onClick={() => setDrawerOpen(false)}
+                  className={cx(
+                    "inline-flex min-h-touch-target items-center rounded-control px-4 text-meta font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
                     active
                       ? "bg-surface-3 text-accent-soft"
                       : "text-text-secondary hover:bg-surface-2 hover:text-text-primary active:bg-surface-2"

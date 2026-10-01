@@ -2030,3 +2030,15 @@ it lacked). Metrics, bars, tooltips, activity list, and all data flows
 unchanged. Fixed my own edit slip in the same pass (dropped import +
 duplicated line, caught by `tsc` before anything else ran).
 
+---
+
+## 27. Avatar menu split — SHIPPED to main (2026-09-30)
+
+The avatar menu duplicated the whole navigation rail. New `ACCOUNT_NAV`
+(`nav.ts`: profile + settings — logout stays a separate `UserMenu`
+control) is now the menu default, so clicking a name shows Mon profil,
+Paramètres, Déconnexion only. The 8 other secondary destinations moved
+into the mobile drawer under a divider (phones have no sidebar), keeping
+every route reachable at every width: sidebar everything on desktop,
+drawer everything on phones.
+
