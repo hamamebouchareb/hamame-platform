@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cx } from "@/lib/cx";
 import { useLanguage } from "@/context/LanguageContext";
 import type { I18nKey } from "@/lib/i18n";
 import { useApiResource } from "@/lib/useApiResource";
+import { Button } from "@/components/Button";
+import { ErrorState } from "@/components/ErrorState";
+import { Input, Select } from "@/components/Field";
 import type {
   CurriculumModule,
   Faculty,
@@ -122,14 +125,14 @@ function parseSittingYear(value: string): number | undefined {
   return year >= 1000 && year <= 9999 ? year : undefined;
 }
 
-const selectClass =
-  "min-h-touch-target w-full rounded-input border border-border bg-surface-2 px-4 text-body text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50";
-
 interface SelectOption {
   value: string;
   label: string;
 }
 
+/** Cascade select: shared Select with the builder's loading-placeholder row.
+ *  `title` carries the disabled-with-reason microcopy (valid select attr,
+ *  passed straight through). */
 function LabeledSelect({
   id,
   label,
@@ -154,26 +157,21 @@ function LabeledSelect({
 }) {
   const { t } = useLanguage();
   return (
-    <div>
-      <label htmlFor={id} className="mb-2 block text-meta font-medium text-text-secondary">
-        {label}
-      </label>
-      <select
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        disabled={disabled || loading}
-        title={title}
-        className={selectClass}
-      >
-        <option value="">{loading ? t("builder.loadingShort") : placeholder}</option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </div>
+    <Select
+      id={id}
+      label={label}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      disabled={disabled || loading}
+      title={title}
+    >
+      <option value="">{loading ? t("builder.loadingShort") : placeholder}</option>
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </Select>
   );
 }
 
@@ -260,7 +258,8 @@ export function SessionBuilder({
   const [resultSort, setResultSort] = useState<ResultSort>("random");
   const [showStats, setShowStats] = useState(true);
   // P17: once the student picks a time manually, proposals stop overriding it.
-  const timeTouchedRef = useRef(false);
+  // State (not a ref) so the time-basis hint below can read it during render.
+  const [timeTouched, setTimeTouched] = useState(false);
 
   const faculties = useApiResource<{ faculties: Faculty[] }>("/faculties");
   const years = useApiResource<{ years: Year[] }>(facultyId ? `/faculties/${facultyId}/years` : null);
@@ -376,13 +375,13 @@ export function SessionBuilder({
   // sitting leaves the current value alone rather than yanking it.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (mode !== "exam" || timeTouchedRef.current) return;
+    if (mode !== "exam" || timeTouched) return;
     const sittingPicked =
       parseSittingYear(examYear) !== undefined || sittingLabel.trim() !== "";
     if (!sittingPicked) return;
     if (liveTotal === undefined || liveTotal <= 0) return;
     setTimeLimitSeconds(presetForSeconds(liveTotal * EXAM_SECONDS_PER_QUESTION));
-  }, [mode, examYear, sittingLabel, liveTotal]);
+  }, [mode, examYear, sittingLabel, liveTotal, timeTouched]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   function handleFacultyChange(value: string) {
@@ -547,22 +546,24 @@ export function SessionBuilder({
           ) : (
             <>
               <div className="mb-2 flex gap-2">
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => setUnitIds(unitList.map((u) => u.id))}
                   disabled={isStarting}
-                  className="min-h-touch-target rounded-control border border-border px-3 text-meta font-medium text-text-secondary transition hover:bg-surface-3 disabled:opacity-50"
                 >
                   {t("builder.all")}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => setUnitIds([])}
                   disabled={isStarting}
-                  className="min-h-touch-target rounded-control border border-border px-3 text-meta font-medium text-text-secondary transition hover:bg-surface-3 disabled:opacity-50"
                 >
                   {t("builder.noneWholeModule")}
-                </button>
+                </Button>
               </div>
               <ul aria-labelledby="builder-units-label" className="grid grid-cols-1 gap-2 md:grid-cols-2">
                 {unitList.map((unit) => {
@@ -600,16 +601,11 @@ export function SessionBuilder({
           )}
         </div>
         {faculties.error ? (
-          <p className="mt-2 text-meta text-danger">
-            {t("builder.facultiesError")}{" "}
-            <button
-              type="button"
-              onClick={faculties.refetch}
-              className="font-medium text-accent-soft underline underline-offset-2 hover:text-accent-soft/80"
-            >
-              {t("common.retry")}
-            </button>
-          </p>
+          <ErrorState
+            className="mt-2"
+            message={t("builder.facultiesError")}
+            onRetry={faculties.refetch}
+          />
         ) : null}
       </fieldset>
 
@@ -678,164 +674,125 @@ export function SessionBuilder({
           </p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label htmlFor="builder-exam-year" className="mb-2 block text-meta font-medium text-text-secondary">
-                {t("builder.sittingYear")}
-              </label>
-              <select
-                id="builder-exam-year"
-                value={examYear}
-                onChange={(event) => {
-                  setExamYear(event.target.value);
-                  setSittingLabel("");
-                }}
-                disabled={isStarting || sittings.length === 0}
-                title={sittings.length === 0 ? t("builder.noSitting") : undefined}
-                className={selectClass}
-              >
-                <option value="">{t("builder.allSittingYears")}</option>
-                {sittingYears.map((year) => (
-                  <option key={year} value={String(year)}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="builder-sitting-label" className="mb-2 block text-meta font-medium text-text-secondary">
-                {t("builder.sitting")}
-              </label>
-              <select
-                id="builder-sitting-label"
-                value={sittingLabel}
-                onChange={(event) => setSittingLabel(event.target.value)}
-                disabled={isStarting || sittings.length === 0}
-                title={sittings.length === 0 ? t("builder.noSitting") : undefined}
-                className={selectClass}
-              >
-                <option value="">{t("builder.allSittings")}</option>
-                {sittingLabels.map((label) => (
-                  <option key={label} value={label}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              id="builder-exam-year"
+              label={t("builder.sittingYear")}
+              value={examYear}
+              onChange={(event) => {
+                setExamYear(event.target.value);
+                setSittingLabel("");
+              }}
+              disabled={isStarting || sittings.length === 0}
+              title={sittings.length === 0 ? t("builder.noSitting") : undefined}
+            >
+              <option value="">{t("builder.allSittingYears")}</option>
+              {sittingYears.map((year) => (
+                <option key={year} value={String(year)}>
+                  {year}
+                </option>
+              ))}
+            </Select>
+            <Select
+              id="builder-sitting-label"
+              label={t("builder.sitting")}
+              value={sittingLabel}
+              onChange={(event) => setSittingLabel(event.target.value)}
+              disabled={isStarting || sittings.length === 0}
+              title={sittings.length === 0 ? t("builder.noSitting") : undefined}
+            >
+              <option value="">{t("builder.allSittings")}</option>
+              {sittingLabels.map((label) => (
+                <option key={label} value={label}>
+                  {label}
+                </option>
+              ))}
+            </Select>
           </div>
         )}
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <div>
-            <label htmlFor="builder-year-from" className="mb-2 block text-meta font-medium text-text-secondary">
-              {t("builder.periodFrom")}
-            </label>
-            <input
-              id="builder-year-from"
-              inputMode="numeric"
-              placeholder={t("builder.yearExample", { year: 2020 })}
-              value={examYearFrom}
-              onChange={(event) => setExamYearFrom(event.target.value)}
-              disabled={isStarting}
-              className={selectClass}
-            />
-          </div>
-          <div>
-            <label htmlFor="builder-year-to" className="mb-2 block text-meta font-medium text-text-secondary">
-              {t("builder.periodTo")}
-            </label>
-            <input
-              id="builder-year-to"
-              inputMode="numeric"
-              placeholder={t("builder.yearExample", { year: 2025 })}
-              value={examYearTo}
-              onChange={(event) => setExamYearTo(event.target.value)}
-              disabled={isStarting}
-              className={selectClass}
-            />
-          </div>
+          <Input
+            id="builder-year-from"
+            label={t("builder.periodFrom")}
+            inputMode="numeric"
+            placeholder={t("builder.yearExample", { year: 2020 })}
+            value={examYearFrom}
+            onChange={(event) => setExamYearFrom(event.target.value)}
+            disabled={isStarting}
+          />
+          <Input
+            id="builder-year-to"
+            label={t("builder.periodTo")}
+            inputMode="numeric"
+            placeholder={t("builder.yearExample", { year: 2025 })}
+            value={examYearTo}
+            onChange={(event) => setExamYearTo(event.target.value)}
+            disabled={isStarting}
+          />
         </div>
       </fieldset>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label htmlFor="builder-question-count" className="mb-2 block text-meta font-medium text-text-secondary">
-            {t("builder.questionCount")}
-          </label>
-          <select
-            id="builder-question-count"
-            value={size}
-            onChange={(event) => setSize(Number(event.target.value))}
-            disabled={isStarting}
-            className={selectClass}
-          >
-            {questionCountOptions.map((count) => (
-              <option key={count} value={count}>
-                {count}
-              </option>
-            ))}
-          </select>
-        </div>
+        <Select
+          id="builder-question-count"
+          label={t("builder.questionCount")}
+          value={String(size)}
+          onChange={(event) => setSize(Number(event.target.value))}
+          disabled={isStarting}
+        >
+          {questionCountOptions.map((count) => (
+            <option key={count} value={count}>
+              {count}
+            </option>
+          ))}
+        </Select>
 
         {/* FR-15 — result ordering (by year / by course / randomized). */}
-        <div>
-          <label htmlFor="builder-result-sort" className="mb-2 block text-meta font-medium text-text-secondary">
-            {t("builder.resultSort")}
-          </label>
-          <select
-            id="builder-result-sort"
-            value={resultSort}
-            onChange={(event) => setResultSort(event.target.value as ResultSort)}
-            disabled={isStarting}
-            className={selectClass}
-          >
-            {RESULT_SORT_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {t(option.labelKey)}
-              </option>
-            ))}
-          </select>
-        </div>
+        <Select
+          id="builder-result-sort"
+          label={t("builder.resultSort")}
+          value={resultSort}
+          onChange={(event) => setResultSort(event.target.value as ResultSort)}
+          disabled={isStarting}
+        >
+          {RESULT_SORT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {t(option.labelKey)}
+            </option>
+          ))}
+        </Select>
 
         {mode === "exam" ? (
-          <div>
-            <label htmlFor="builder-time-limit" className="mb-2 block text-meta font-medium text-text-secondary">
-              {t("builder.timeLimit")}
-            </label>
-            <select
-              id="builder-time-limit"
-              value={timeLimitSeconds === null ? "" : String(timeLimitSeconds / 60)}
-              onChange={(event) => {
-                timeTouchedRef.current = true;
-                setTimeLimitSeconds(event.target.value === "" ? null : Number(event.target.value) * 60);
-              }}
-              disabled={isStarting}
-              className={selectClass}
-            >
-              {TIME_LIMIT_VALUES_MINUTES.map((value) => (
-                <option key={value ?? "none"} value={value ?? ""}>
-                  {timeLimitLabel(value, t)}
-                </option>
-              ))}
-            </select>
-            {!timeTouchedRef.current &&
-            (parseSittingYear(examYear) !== undefined || sittingLabel.trim() !== "") &&
-            liveTotal !== undefined &&
-            liveTotal > 0 ? (
-              <p className="mt-1 text-caption text-text-tertiary">
-                {t(liveTotal === 1 ? "builder.timeBasisOne" : "builder.timeBasisMany", {
-                  count: liveTotal,
-                  per: EXAM_SECONDS_PER_QUESTION,
-                })}
-              </p>
-            ) : null}
-          </div>
+          <Select
+            id="builder-time-limit"
+            label={t("builder.timeLimit")}
+            value={timeLimitSeconds === null ? "" : String(timeLimitSeconds / 60)}
+            onChange={(event) => {
+              setTimeTouched(true);
+              setTimeLimitSeconds(event.target.value === "" ? null : Number(event.target.value) * 60);
+            }}
+            disabled={isStarting}
+            hint={
+              !timeTouched &&
+              (parseSittingYear(examYear) !== undefined || sittingLabel.trim() !== "") &&
+              liveTotal !== undefined &&
+              liveTotal > 0
+                ? t(liveTotal === 1 ? "builder.timeBasisOne" : "builder.timeBasisMany", {
+                    count: liveTotal,
+                    per: EXAM_SECONDS_PER_QUESTION,
+                  })
+                : undefined
+            }
+          >
+            {TIME_LIMIT_VALUES_MINUTES.map((value) => (
+              <option key={value ?? "none"} value={value ?? ""}>
+                {timeLimitLabel(value, t)}
+              </option>
+            ))}
+          </Select>
         ) : null}
       </div>
 
-      {startError ? (
-        <p role="alert" className="rounded-control border border-danger bg-surface-1 px-3 py-2 text-meta text-danger">
-          {startError}
-        </p>
-      ) : null}
+      {startError ? <ErrorState message={startError} /> : null}
 
       {/* Live counter: exact match count for the current filters, before starting. */}
       <div
@@ -867,8 +824,10 @@ export function SessionBuilder({
         )}
       </div>
 
-      <button
+      <Button
         type="submit"
+        width="full"
+        accent="qcm"
         disabled={isStarting || questionTypes.length === 0 || size <= 0 || emptyResult}
         title={
           emptyResult
@@ -877,10 +836,9 @@ export function SessionBuilder({
               ? t("builder.needType")
               : undefined
         }
-        className="inline-flex min-h-touch-target w-full items-center justify-center gap-2 rounded-control bg-accent-qcm px-5 text-body font-semibold text-on-accent shadow-glow-qcm transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none"
       >
         {isStarting ? t("builder.starting") : mode === "practice" ? t("builder.startPractice") : t("builder.startExam")}
-      </button>
+      </Button>
     </form>
   );
 }

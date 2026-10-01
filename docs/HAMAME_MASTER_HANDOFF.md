@@ -1931,3 +1931,21 @@ endpoints and validation flows unchanged (`PUT /users/me`,
 `POST /auth/change-password`, push + preferences). Standing rule going
 forward: every batch ends with commit + push, no gate.
 
+---
+
+## 21. SessionBuilder primitives — SHIPPED to main (2026-09-30)
+
+The last big hand-rolled form (886-line QCM session builder) moved to the
+shared primitives with zero logic change: all selects/inputs through
+`Field` `Select`/`Input` (the local `LabeledSelect` now wraps the shared
+`Select`, keeping its loading-placeholder and disabled-reason `title`;
+`selectClass` deleted), All/None + submit through `Button` (`accent="qcm"`
+submit is the exact previous fill/glow), faculty/start errors through
+`ErrorState`. Bespoke survivors, deliberately: unit/type/source
+`has-[:checked]` tiles, both `SwitchRow`s, and the live-counter retry link
+(inside its `aria-live` region). Two correctness-adjacent fixes inside the
+touched lines: the P17 `timeTouched` flag is state instead of a render-read
+ref (identical proposal behavior), and the time-basis note moved from
+`text-caption` to the `Field` hint style. Cascade, counts queries, sitting
+derivation, and the emitted `SessionConfig` are untouched.
+
