@@ -1974,3 +1974,14 @@ exactly the old salmon fill + near-black text pair), reject comment through
 buttons gain touch-target height, reject textarea/hint render at body/meta
 instead of meta/caption.
 
+---
+
+## 24. StudyTimer buttons — SHIPPED to main (2026-09-30)
+
+The floating Pomodoro widget keeps its compact bespoke shell (fixed
+positioning, `role="group"`, preset tiles, number inputs — full-size
+primitives would harm the w-64 layout) with start/pause/resume/reset moved
+to `Button` (`accent="qcm"` start is the exact previous fill/glow).
+Deadline-timestamp timekeeping, clamp-at-derivation, phase effects, and
+localStorage selection persistence are untouched.
+

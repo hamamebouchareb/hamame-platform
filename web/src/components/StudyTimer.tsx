@@ -12,6 +12,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { cx } from "@/lib/cx";
 import { useLanguage } from "@/context/LanguageContext";
 import type { I18nKey } from "@/lib/i18n";
+import { Button } from "@/components/Button";
 
 type PresetId = "pomodoro" | "52-17" | "90-20" | "custom";
 type Phase = "idle" | "study" | "pause";
@@ -310,30 +311,34 @@ export function StudyTimer() {
               </label>
             </div>
           )}
-          <button
+          <Button
             type="button"
+            width="full"
+            accent="qcm"
             onClick={handleStart}
-            className="mt-3 inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-qcm px-4 text-body font-semibold text-on-accent transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none"
+            className="mt-3"
           >
             {t("timer.start", { s: studyMinutes, p: pauseMinutes })}
-          </button>
+          </Button>
         </fieldset>
       ) : (
         <div className="mt-3 flex gap-2">
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={handlePauseResume}
-            className="inline-flex min-h-touch-target flex-1 items-center justify-center rounded-control border border-border px-3 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+            className="flex-1"
           >
             {isPaused ? t("timer.resume") : t("timer.suspend")}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="outline"
             onClick={handleReset}
-            className="inline-flex min-h-touch-target flex-1 items-center justify-center rounded-control border border-border px-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+            className="flex-1"
           >
             {t("timer.reset")}
-          </button>
+          </Button>
         </div>
       )}
     </div>
