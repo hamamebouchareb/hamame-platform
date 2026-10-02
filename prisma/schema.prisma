@@ -329,7 +329,7 @@ model LessonVersion {
 model LessonAttachment {
   id              String @id @default(uuid()) @db.Uuid
   lessonVersionId String @map("lesson_version_id") @db.Uuid
-  fileUrl           String
+  fileUrl         String @map("file_url")
   type            String // 'image' | 'pdf' | 'video' -- video later
 
   lessonVersion LessonVersion @relation(fields: [lessonVersionId], references: [id])
