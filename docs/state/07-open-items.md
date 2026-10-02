@@ -34,9 +34,9 @@ Tags: BLOCKED-ON-OWNER (needs credentials/money/account), DECISION-GATED
   or correct. Next: owner ruling.
 - Draft faculty `beta` vs `live` — DECISION-GATED. Visible either way;
   `live` is the graduation call. Next: owner.
-- `LessonAttachment.fileUrl` vs live `file_url` — KNOWN-BUG (do not fix
-  without a decision: rename column via migration vs `@map` the field).
-  Next: owner picks direction.
+- `LessonAttachment.fileUrl` vs live `file_url` — RESOLVED 2026-10-02 by
+  one-line `@map("file_url")` (commit `9eb8361`; evidence batch 08).
+  Removed from the open list.
 - Unused `notImplemented`/stub helper (`src/lib/stub.ts`, `src/lib/errors.ts:14`)
   — TECH-DEBT. Zero live 501 stubs (verified: no route imports it). Next:
   delete the helper or leave it.

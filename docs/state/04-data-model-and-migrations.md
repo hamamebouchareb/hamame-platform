@@ -73,8 +73,8 @@ schema doc.
 
 ## Remaining schema flags (do NOT fix per task rules)
 
-1. `LessonAttachment.fileUrl` vs live `file_url` (above) — attachments
-   read/write the wrong column name.
+1. `LessonAttachment.fileUrl` vs live `file_url` — RESOLVED 2026-10-02 by
+   one-line `@map("file_url")` (commit `9eb8361`; evidence batch 08).
 2. `LessonVersion.status` comment lists 4 values; `'rejected'` is used by
    review flows (comment stale, harmless).
 3. `notifications`/`reports`/`auth` payloads omit `profilePhotoUrl`-style

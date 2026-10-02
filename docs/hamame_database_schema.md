@@ -166,7 +166,7 @@ lesson_versions (                   -- FR-12, NFR-11 versioning/rollback
 lesson_attachments (
   id UUID PK,
   lesson_version_id UUID FK -> lesson_versions.id,
-  file_url TEXT,                    -- live column is snake_case; schema.prisma declares camelCase fileUrl (drift, see decisions) [UNVERIFIED live]
+  file_url TEXT,                    -- verified live via findMany + before/after migrate diff (2026-10-02); schema.prisma maps it with @map
   type TEXT                          -- 'image','pdf','video' -- video later
 )
 ```
@@ -552,10 +552,11 @@ notifications (
    user — corrected to the composite before build, matching the schema header);
    `theme` accepts `'system'` since the 2026-09-30 theme build; `Year.track`
    (`medecine` | `dentaire` | `pharmacie`, nullable) scopes years to onboarding
-   tracks. Two known drifts, flagged not fixed: `lesson_attachments` is
-   `file_url` live while `schema.prisma` declares camelCase `fileUrl` (runtime
-   reads the wrong name — needs a decision), and the `LessonVersion.status`
-   comment lists four values while `'rejected'` is used by review flows.
+   tracks. One known drift left, flagged not fixed: the
+   `LessonVersion.status` comment lists four values while `'rejected'` is
+   used by review flows. (A second drift — `lesson_attachments.file_url`
+   vs schema `fileUrl` — was fixed 2026-10-02 with `@map("file_url")`,
+   proven by live read + before/after diff; see state file 08.)
 8. **Onboarding taxonomy (2026-09-30):** 15 wilaya faculties are DRAFT
    (owner to confirm) and staged `beta`; final year per track is Internat
    (no exams — honest empty bank states), then Résidanat. No `User` change:

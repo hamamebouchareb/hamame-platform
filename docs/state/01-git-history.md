@@ -1,6 +1,6 @@
-# 01 — Git history (verified 2026-10-02, HEAD `1d0ccf1`)
+# 01 — Git history (verified 2026-10-02, HEAD `9eb8361`)
 
-Source: `git log --format='%h %ad %an %s' --date=short` (64 commits, oldest
+Source: `git log --format='%h %ad %an %s' --date=short` (65 commits, oldest
 first at the bottom). Branches: `main` (tracks `origin/main`),
 `ui/design-system-primitives` (merged, kept as checkpoint),
 `origin/main`, `origin/ui/design-system-primitives`. `git status`: clean
@@ -12,6 +12,7 @@ trailer were produced in OpenCode sessions (per the handoff record). Older
 commits with author `Hamame` and no trailer are marked unknown.
 
 ```
+9eb8361 2026-10-02 Hamame Fix: map LessonAttachment.fileUrl to file_url [OpenCode]
 1d0ccf1 2026-10-02 Hamame Docs: reconcile database schema doc with schema plus migrations [OpenCode]
 c7e8d72 2026-10-01 Hamame Docs: fix section ordering 30 before 31 [OpenCode]
 6641fcc 2026-10-01 Hamame Web: header theme cycler beside notifications [OpenCode]
@@ -93,3 +94,4 @@ b78aca7 2026-08-24 Hamame Update HAMAME_MASTER_HANDOFF.md: re-verified ground tr
 - `d706d9c` (OpenCode, 2026-10-01) — onboarding: `Year.track` migration + seed + `/bienvenue` wizard.
 - `1ae2f20` (OpenCode) — removed tracked phone-camera scans.
 - `1d0ccf1` (OpenCode) — schema-doc reconciliation against schema + 24 migrations.
+- `9eb8361` (OpenCode) — one-line `@map("file_url")` fix with generate/tsc/build + live-read + before/after diff evidence.
