@@ -36,12 +36,12 @@ users (
   full_name TEXT NULL,             -- explicit null clears the field
   faculty_id UUID FK -> faculties.id NULL,
   year_id UUID FK -> years.id NULL,
-  university TEXT,                 -- vestigial free text, superseded by university_id; kept for shape stability
+  university TEXT NULL,               -- vestigial free text, superseded by university_id; kept for shape stability
   university_id UUID FK -> universities.id NULL,  -- FR-10a layered scoping; null = global-only visibility
-  wilaya TEXT,                     -- city/province, per FR-4
+  wilaya TEXT NULL,                  -- city/province, per FR-4
   profile_photo_url TEXT NULL,
   ui_language TEXT DEFAULT 'fr',   -- 'fr' | 'en'  -- NFR-6 (was 'fr' | 'ar'; Arabic UI never shipped, EN/FR toggle built 2026-09-28)
-  theme TEXT DEFAULT 'light',      -- 'light' | 'dark' | 'system' ('system' added 2026-09-30; stored default still 'light')
+  theme TEXT DEFAULT 'light',      -- 'light' | 'dark' | 'system' ('system' added 2026-09-30; stored default still 'light') [UNVERIFIED live]
   email_verified_at TIMESTAMPTZ NULL,
   phone_verified_at TIMESTAMPTZ NULL,
   google_sub TEXT NULL UNIQUE,      -- Google OAuth stable identity (M9); matched before email, never reassigned
@@ -121,7 +121,7 @@ years (
   id UUID PK,
   faculty_id UUID FK -> faculties.id,
   label TEXT,                      -- 'Year 1', ..., 'Résidanat Prep'
-  track TEXT NULL,                 -- 'medecine' | 'dentaire' | 'pharmacie' (2026-09-30, onboarding); null on pre-track rows
+  track TEXT NULL,                 -- 'medecine' | 'dentaire' | 'pharmacie' (2026-09-30, onboarding); null on pre-track rows [UNVERIFIED live]
   order_index INT,
   created_at TIMESTAMPTZ
 )
@@ -166,7 +166,7 @@ lesson_versions (                   -- FR-12, NFR-11 versioning/rollback
 lesson_attachments (
   id UUID PK,
   lesson_version_id UUID FK -> lesson_versions.id,
-  file_url TEXT,                    -- live column is snake_case; schema.prisma declares camelCase fileUrl (drift, see decisions)
+  file_url TEXT,                    -- live column is snake_case; schema.prisma declares camelCase fileUrl (drift, see decisions) [UNVERIFIED live]
   type TEXT                          -- 'image','pdf','video' -- video later
 )
 ```
@@ -310,34 +310,34 @@ review_queue_items (                  -- LIVE engine (lessons, questions, flashc
 )
 ```
 
-## 5. Gamification & Social (FR-36 to FR-40 — V1 streaks only, rest V2/V3)
+## 5. Gamification & Social (FR-36 to FR-40)
 
 ```sql
-badges (                              -- V2
+badges (
   id UUID PK,
   name TEXT,
   criteria JSONB
 )
 
-user_badges (                         -- V2
+user_badges (
   user_id UUID FK -> users.id,
   badge_id UUID FK -> badges.id,
   earned_at TIMESTAMPTZ,
   PRIMARY KEY (user_id, badge_id)
 )
 
-leaderboard_snapshots (               -- V2 -- BR-12 scoped by faculty+year
+leaderboard_snapshots (               -- BR-12 scoped by faculty+year
   id UUID PK,
   faculty_id UUID FK -> faculties.id,
   year_id UUID FK -> years.id,
-  period TEXT,                        -- 'monthly'
+  period TEXT,                        -- 'monthly' (scores) | 'monthly_contributors' (participation)
   user_id UUID FK -> users.id,
   rank INT,
   score NUMERIC,
   generated_at TIMESTAMPTZ
 )
 
-friendships (                         -- V2/V3
+friendships (
   user_id_a UUID FK -> users.id,
   user_id_b UUID FK -> users.id,
   status TEXT,                        -- 'pending','accepted'
@@ -345,10 +345,10 @@ friendships (                         -- V2/V3
 )
 ```
 
-## 6. AI Tools (V2 — FR-29 to FR-35; schema included now per FR-60/61 extensibility)
+## 6. AI Tools (FR-29 to FR-35; credit tables + interaction log are live)
 
 ```sql
-ai_interactions (                     -- V2
+ai_interactions (
   id UUID PK,
   user_id UUID FK -> users.id,
   feature TEXT,                       -- 'chat','hint','note_maker','answer_locator',
@@ -361,7 +361,7 @@ ai_interactions (                     -- V2
   created_at TIMESTAMPTZ
 )
 
-ai_credit_balances (                  -- V2 -- BR-6 governance
+ai_credit_balances (                  -- BR-6 governance (live: hints + /ai/credits)
   user_id UUID FK -> users.id PK,
   daily_allowance INT,
   monthly_allowance INT,
@@ -404,7 +404,7 @@ payments (
   created_at TIMESTAMPTZ
 )
 
-promo_codes (                         -- V2
+promo_codes (
   id UUID PK,
   code TEXT UNIQUE,
   type TEXT,                          -- 'referral','discount'
@@ -434,12 +434,15 @@ activation_codes (                    -- FR-65/BR-18 -- MedSparkDZ-confirmed
   year_id UUID FK -> years.id,
   issued_by UUID FK -> users.id,      -- Support Agent/Admin who issued it (BR-18)
   redeemed_by UUID FK -> users.id NULL,
-  payment_id UUID FK -> payments.id NULL,  -- links back to the manually-confirmed payment
+  payment_id UUID FK -> payments.id NULL,  -- zero-amount succeeded manual_assisted payment, created AT redemption (money moved off-platform)
   status TEXT DEFAULT 'active',       -- 'active','redeemed','expired','revoked'
   expires_at TIMESTAMPTZ NULL,
   redeemed_at TIMESTAMPTZ NULL,
   created_at TIMESTAMPTZ
 )
+-- NOTE: the grant is blanket premium — subscriptions has no faculty/year
+-- columns, so the faculty-year scope lives only on the code + notification,
+-- not on the entitlement itself.
 ```
 
 ## 8. Moderation, Reporting & Trust (FR-53 to FR-55, BR-5)
@@ -503,7 +506,7 @@ simulation_registrations (
 ```
 
 Status (`scheduled`/`live`/`completed`/`cancelled`) is derived from
-`scheduled_at`/`duration_minutes`/`cancelledAt` at read time — never stored,
+`scheduled_at`/`duration_minutes`/`cancelled_at` at read time — never stored,
 so no cron job is needed for transitions.
 
 ## 10. Notifications (FR-41 to FR-43)
@@ -531,8 +534,9 @@ notifications (
 2. **`session_questions.option_order` stores a snapshot**, not a live shuffle, so a
    student's exam-mode session is reproducible for dispute resolution (NFR-10) even
    though answers are randomized per attempt (BR-4).
-3. **AI tables are included now, even though V2**, so Cursor doesn't have to bolt them
-   on awkwardly later — this follows FR-60/61's extensibility requirement literally.
+3. **AI tables are included now, even though V2**, so later builds don't have to bolt them
+   on awkwardly later — this follows FR-60/61's extensibility requirement literally
+   (and the credit + interaction tables are live since the hints build).
 4. **`is_minor` on `users`** exists to make BR-11 enforceable in code (e.g., stricter
    data-retention defaults), not just a policy statement.
 5. Not yet modeled: **institution-level aggregated analytics views** (BR-17) — these
