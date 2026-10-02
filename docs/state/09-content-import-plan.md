@@ -49,25 +49,31 @@ All R except orders (default append). Faculty by slug (must exist and be
 visible to the owner). Year matched by (faculty, label, track) — created
 if missing. Module/unit matched by (parent, name) — created if missing.
 
+Scope decision (owner-ruled): v1 targets the live `medicine` faculty only,
+one year first — not the 15 beta rows.
+
 Example — lesson (body = paragraphs → blocks):
 
 ```json
-{ "unit": "fac-alger/Year 1/Cardiology/Cardiac Physiology",
+{ "faculty": "medicine", "year": "Year 1", "track": "medecine",
+  "module": "Cardiology", "unit": "Cardiac Physiology",
   "title": "La circulation coronaire",
   "contentTier": "official",
   "body": ["Le coeur est vascularisé par…", "Les coronaires naissent…"],
   "university": null }
 ```
 
-`unit` is the R path string `faculty-slug/year label/module/unit`
-(labels must match exactly — validator resolves each level or rejects
-with the missing level). `title` R, `contentTier` R, `body` R (≥1
-non-empty paragraph), `university` O (name → id, else reject).
+Scope fields are separate (faculty slug, year label, track, module name,
+unit name — never a slash-delimited path, so labels containing `/` cannot
+break resolution). Each level resolves or the row rejects with the missing
+level. `title` R, `contentTier` R, `body` R (≥1 non-empty paragraph),
+`university` O (name → id, else reject).
 
 Example — QCM question:
 
 ```json
-{ "unit": "fac-alger/Year 1/Cardiology/Cardiac Physiology",
+{ "faculty": "medicine", "year": "Year 1", "track": "medecine",
+  "module": "Cardiology", "unit": "Cardiac Physiology",
   "type": "QCM", "source": "official_exam", "difficulty": "moyen",
   "body": "Quelle artère vascularise… ?",
   "options": [
@@ -78,17 +84,22 @@ Example — QCM question:
   "examYear": 2023, "sittingLabel": "EMD", "university": null }
 ```
 
-`unit, type, source, body, options, explanation` R. `difficulty` O
-(free string or null). `examYear` O (4-digit int). `sittingLabel` O
-(free text — no enum by decision). QCS: same with exactly 1 correct.
-QROC: no `options`; `answer` R (stored as `freeTextAnswer`-compatible
-reference — NOT auto-graded, stays null-graded like all QROC). Clinical
-case: `parts: [{ "order": 0, "prompt": "…", "expected": "…" }]` R (≥1),
-options optional per part design (open question for the owner, §7).
+`faculty/year/track/module/unit` R (separate fields, §1 decision).
+`type, source, body, options, explanation` R. `difficulty` O but fixed
+vocabulary when present: `facile|moyen|difficile` or null (owner-ruled).
+`examYear` O (4-digit int). `sittingLabel` O free text, with a warning
+when outside the configurable list file (`sitting-labels.json`,
+owner-maintained — warn, not reject). QCS: same with exactly 1 correct.
+QROC: no `options`; `answer` R (NOT auto-graded, stays null-graded).
+Clinical cases: OUT of v1 (owner-ruled) — validator rejects
+`type: CLINICAL_CASE` with a dedicated reason. Attachments: OUT of v1 —
+and `questions` has NO attachment table, so image-based questions are
+unsupported by the schema, not just deferred.
 
-CSV columns (questions only): unit, type, source, difficulty, body,
-option1..option6, correct_idx (1-based, comma list for QCM),
-explanation, exam_year, sitting_label, university. Encoding: UTF-8 only —
+CSV columns (questions only): faculty, year, track, module, unit, type,
+source, difficulty, body, option1..option6, correct_idx (1-based, comma
+list for QCM), explanation, exam_year, sitting_label, university.
+Encoding: UTF-8 only —
 Excel Arabic exports in cp1256/cp1252 MUST be re-saved as UTF-8 first;
 the script sniffs BOM/byte patterns and aborts with the offending row
 rather than mojibaking the bank.
@@ -98,7 +109,7 @@ rather than mojibaking the bank.
 `src/scripts/import-content.ts` (excluded from the tsc build like every
 script — a broken importer can never fail Railway). Run locally:
 `npx tsx src/scripts/import-content.ts --file batch.json [--apply]
-[--author <user-id>] [--batch 50]`. Default is `--dry-run`; `--apply`
+[--author <user-id>] [--batch 25]`. Default is `--dry-run`; `--apply`
 must be explicit; without `--author` the script aborts (every row needs
 `authored_by`). Why CLI: (1) reads multi-MB UTF-8/CSV files from disk —
 no HTTP payload limits or timeouts; (2) long run with progress + dry-run;
@@ -111,15 +122,16 @@ op — no new public surface, no role-gating to maintain, no UI to translate.
 - Status: questions land `pending_review`; lesson versions land
   `pending_review` (versionNumber 1); `authored_by` = `--author`.
 - Idempotency without schema change: canonical sha256 over
-  `unitId|type|canonical-body|canonical-options` (canonical = stable
-  key-order JSON + NFC + trimmed). Pre-check per row against existing rows
-  in the same unit (one SELECT per unit, in-memory compare); duplicates
+  `unitId|type|canonical-body|canonical-options|examYear|sittingLabel`
+  (canonical = stable key-order JSON + NFC + trimmed). Sitting metadata is
+  IN the hash by decision: the same stem appearing in two sittings is two
+  distinct bank rows (re-asking across years is normal); re-importing the
+  same file hashes identically and skips. Pre-check per row against existing
+  rows in the same unit (one SELECT per unit, in-memory compare); duplicates
   reported-skipped, never inserted. Documented limit: body edits after
   import hash differently (by design — edited rows are new content).
-  Alternative requiring a migration (open question §7): `import_batches`
-  table with stored hashes.
 - Transactions: one `$transaction` per chunk of `--batch` rows (default
-  50; nested option/parts creates included). Chunk ranges printed, so a
+  25; nested option creates included). Chunk ranges printed, so a
   failed chunk reports its exact row span and prior chunks stay (re-run
   skips them via the hash check — the rollback story is re-run, not
   whole-file abort, because whole-file transactions time out on the pooler).
@@ -128,15 +140,20 @@ op — no new public surface, no role-gating to maintain, no UI to translate.
 
 ## 4. Validation (reject + report file:row:reason, continue on next row)
 
-- Unknown unit path (any level unresolvable) → reject row.
+- Unknown scope (any of faculty/year/track/module/unit unresolvable) → reject row.
 - QCM: zero correct options → reject; QCS: ≠1 correct → reject;
   options < 2 or duplicate option texts (NFC-compared) → reject.
-- Empty explanation when present-but-blank → reject (PRD FR-18 requires
-  the baseline explanation on every question).
-- QROC without `answer` → reject. Clinical case with zero parts, empty
-  prompt, or duplicate `order` → reject.
+- Missing or blank explanation → reject. Checked: the player and results
+  tolerate absent explanations (hidden toggles), but `explanation_richtext`
+  is non-null in the schema and required by the draft contract — so the
+  column, not the UI, decides. `explanation` stays REQUIRED.
+- QROC without `answer` → reject. `type: CLINICAL_CASE` → reject with
+  `clinical-out-of-v1` (owner-ruled, not a validation failure of the row).
+- `difficulty` present but not `facile|moyen|difficile` → reject.
 - Body/explanation not matching the §0 render shapes → reject.
-- Unknown `source`/`contentTier`/`track`/faculty slug → reject.
+- Unknown `source`/`contentTier`/faculty slug → reject. `sittingLabel`
+  outside `sitting-labels.json` → warn only (row still imports).
+- Unknown `track` → reject.
 - Text over 5,000 chars (body) / 200 chars (option) → reject for review.
 - `examYear` not a 4-digit int, or unknown university name → reject.
 - Summary table at end: rows read / created (per type) / skipped-duplicate
@@ -146,16 +163,23 @@ op — no new public surface, no role-gating to maintain, no UI to translate.
 ## 5. Review step (bulk approve, audit-safe)
 
 Second script `src/scripts/review-approve.ts`: `--status pending_review
-[--track medecine] [--faculty fac-alger] [--limit N] [--reviewer <user-id>]
-[--apply]`. Same dry-run-first rule. Approval replicates
-`review.routes.ts:157-215` semantics per item over HTTP with the reviewer's
-JWT (not direct DB): only `pending_review` rows (409 otherwise), writes
-`reviewed_by` + `reviewed_at`, and for lessons sets `currentVersionId`
-(publishes). HTTP (not direct writes) so the BR-2 gates, the
-post-approval AI hook, and validation run exactly as in the UI. Sequential
-requests (pooler rule). The existing `/api/review` queue UI is untouched
-and remains the spot-check path: reviewers sample the queue, bulk script
-handles the volume.
+[--track medecine] [--faculty medicine] [--limit N] [--reviewer-email E]
+[--apply]`. Same dry-run-first rule. It logs in via `POST /api/auth/login`
+with `REVIEWER_EMAIL` + `REVIEWER_PASSWORD` from the environment (never
+logged, never committed, never in the file) and reuses the JWT for the
+loop. Approval replicates `review.routes.ts:157-215` semantics per item
+over HTTP with that JWT (not direct DB): only `pending_review` rows (409
+otherwise), writes `reviewed_by` + `reviewed_at`, and for lessons sets
+`currentVersionId` (publishes). HTTP (not direct writes) so the BR-2 gates,
+the post-approval AI hook, and validation run exactly as in the UI.
+Sequential requests (pooler rule). AI-hook truth, stated plainly: approve
+fires the server-side explanation hook per question — no CLI flag can skip
+server code. Bulk approval must run with `ANTHROPIC_API_KEY` unset (hook
+warns + skips, zero cost); a future `--no-ai`-equivalent needs a server
+flag first (proposed: `REVIEW_APPROVE_SKIP_AI` env read in the approve
+handler — implementation step, not this plan). The existing `/api/review`
+queue UI is untouched and remains the spot-check path: reviewers sample the
+queue, bulk script handles the volume.
 
 ## 6. Verification (raw logs the implementation must produce)
 
@@ -167,21 +191,25 @@ units/lessons/questions-by-status), re-run log proving zero new rows
 `GET /api/questions` as a student (BR-2 proof) plus its lesson via
 `GET /api/lessons/:id` (published-version proof).
 
-## 7. Risks and open questions (decided before implementation)
+## 7. Owner rulings (decided — implementation unlocked)
 
-1. Faculty source of truth: the 15 `fac-*` beta rows (DRAFT list) vs the
-   legacy `medicine`/`dentistry` rows — which faculties do batches target?
-2. Official exam metadata codebook: allowed `sittingLabel` values and
-   `examYear` ranges per track (free text today — constrain or not?).
-3. Clinical-case structure: multi-part grading display, option-less parts,
-   expected-answer rendering in the player.
-4. Attachments: lesson images/PDFs live where? (`lesson_attachments.fileUrl`
-   needs hosted URLs — Drive, Supabase Storage, or skip v1?)
-5. University scoping per row: which batches are global vs university-tagged?
-6. Difficulty vocabulary: free string vs fixed scale (facile/moyen/difficile?).
-7. Idempotency key: canonical-hash check (no schema change) vs new
-   `import_batches` table (migration)?
-8. Batch size/timeout tuning against the session pooler on first large run.
+1. Faculty scope: the live `medicine` faculty only, one year first — not
+   the 15 beta rows.
+2. `sittingLabel` stays free text; the importer warns (not rejects) on
+   values outside the configurable `sitting-labels.json` list file.
+3. Clinical cases: OUT of v1 (`CLINICAL_CASE` rows reject).
+4. Attachments: OUT of v1 — and `questions` has NO attachment table, so
+   image-based questions are unsupported by the schema, not just deferred.
+5. University: null by default (global content); named universities resolve
+   or reject.
+6. Difficulty: fixed `facile|moyen|difficile` or null.
+7. Idempotency: canonical hash INCLUDING examYear/sittingLabel, no
+   migration, no `import_batches` table. Same stem in two sittings = two
+   rows; same file re-imported = zero new rows.
+8. Default batch size 25.
+9. Source rights: only content the owner wrote or is licensed to use may
+   be imported — the scripts perform no rights check and must not be
+   mistaken for one.
 
 ## Implementation checklist (small, separately committable)
 

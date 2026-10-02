@@ -1,0 +1,169 @@
+{
+  "lessons": [
+    {
+      "faculty": "medicine",
+      "year": "Year 1",
+      "track": "medecine",
+      "module": "Cardiology",
+      "unit": "Cardiac Physiology",
+      "title": "La pompe cardiaque (démo)",
+      "contentTier": "hamame_plus",
+      "body": ["Exemple de leçon fictive pour tester le validateur.", "Deuxième paragraphe fictif."],
+      "university": null
+    }
+  ],
+  "questions": [
+    {
+      "faculty": "medicine", "year": "Year 1", "track": "medecine",
+      "module": "Cardiology", "unit": "Cardiac Physiology",
+      "type": "QCM", "source": "hamame_authored", "difficulty": "facile",
+      "body": "Quelle cavité éjecte le sang dans l'aorte ? (question fictive)",
+      "options": [
+        { "text": "Ventricule gauche", "correct": true },
+        { "text": "Ventricule droit", "correct": false },
+        { "text": "Oreillette gauche", "correct": false }
+      ],
+      "explanation": "Le ventricule gauche éjecte dans l'aorte. (fictif)",
+      "examYear": 2023, "sittingLabel": "EMD", "university": null
+    },
+    {
+      "faculty": "medicine", "year": "Year 1", "track": "medecine",
+      "module": "Cardiology", "unit": "Cardiac Physiology",
+      "type": "QCM", "source": "hamame_authored", "difficulty": "moyen",
+      "body": "Quelles valves sont des valves auriculo-ventriculaires ? (fictif)",
+      "options": [
+        { "text": "Mitrale", "correct": true },
+        { "text": "Tricuspide", "correct": true },
+        { "text": "Aortique", "correct": false }
+      ],
+      "explanation": "Mitrale et tricuspide. (fictif)",
+      "university": null
+    },
+    {
+      "faculty": "medicine", "year": "Year 1", "track": "medecine",
+      "module": "Cardiology", "unit": "Cardiac Physiology",
+      "type": "QCM", "source": "official_exam", "difficulty": "difficile",
+      "body": "Noeud sinusal : où se situe-t-il ? (fictif)",
+      "options": [
+        { "text": "Oreillette droite", "correct": true },
+        { "text": "Septum", "correct": false }
+      ],
+      "explanation": "Paroi de l'oreillette droite. (fictif)",
+      "examYear": 2024, "university": null
+    },
+    {
+      "faculty": "medicine", "year": "Year 1", "track": "medecine",
+      "module": "Cardiology", "unit": "Cardiac Physiology",
+      "type": "QCM", "source": "hamame_authored",
+      "body": "Durée approximative de la systole ? (fictif)",
+      "options": [
+        { "text": "0,3 s", "correct": true },
+        { "text": "0,8 s", "correct": false }
+      ],
+      "explanation": "Environ un tiers du cycle. (fictif)",
+      "difficulty": null, "university": null
+    },
+    {
+      "faculty": "medicine", "year": "Year 1", "track": "medecine",
+      "module": "Cardiology", "unit": "Cardiac Physiology",
+      "type": "QCM", "source": "ai_generated", "difficulty": "facile",
+      "body": "Le péricarde entoure : (fictif)",
+      "options": [
+        { "text": "Le coeur", "correct": true },
+        { "text": "Le foie", "correct": false }
+      ],
+      "explanation": "Sac fibreux péricardique. (fictif)",
+      "university": null
+    },
+    {
+      "faculty": "medicine", "year": "Year 1", "track": "medecine",
+      "module": "Cardiology", "unit": "Cardiac Physiology",
+      "type": "QCS", "source": "official_exam", "difficulty": "moyen",
+      "body": "Le faisceau de His conduit vers : (fictif)",
+      "options": [
+        { "text": "Les branches et le Purkinje", "correct": true },
+        { "text": "Le noeud sinusal", "correct": false },
+        { "text": "Le myocarde auriculaire", "correct": false }
+      ],
+      "explanation": "Voie de conduction ventriculaire. (fictif)",
+      "examYear": 2022, "university": null
+    },
+    {
+      "faculty": "medicine", "year": "Year 1", "track": "medecine",
+      "module": "Cardiology", "unit": "Cardiac Physiology",
+      "type": "QCS", "source": "hamame_authored",
+      "body": "Fréquence cardiaque normale au repos : (fictif)",
+      "options": [
+        { "text": "60-100 bpm", "correct": true },
+        { "text": "120-140 bpm", "correct": false }
+      ],
+      "explanation": "Norme adulte. (fictif)",
+      "university": null
+    },
+    {
+      "faculty": "medicine", "year": "Year 1", "track": "medecine",
+      "module": "Cardiology", "unit": "Cardiac Physiology",
+      "type": "QCS", "source": "hamame_authored", "difficulty": "facile",
+      "body": "L'ECG explore : (fictif)",
+      "options": [
+        { "text": "L'activité électrique", "correct": true },
+        { "text": "Le débit sanguin", "correct": false }
+      ],
+      "explanation": "Tracé électrique. (fictif)",
+      "university": null
+    },
+    {
+      "faculty": "medicine", "year": "Year 1", "track": "medecine",
+      "module": "Cardiology", "unit": "Cardiac Physiology",
+      "type": "QROC", "source": "hamame_authored",
+      "body": "Citez une phase du cycle cardiaque. (fictif)",
+      "answer": "Systole ventriculaire",
+      "explanation": "Réponse courte attendue. (fictif)",
+      "university": null
+    },
+    {
+      "faculty": "medicine", "year": "Year 1", "track": "medecine",
+      "module": "Cardiology", "unit": "Cardiac Physiology",
+      "type": "QROC", "source": "official_exam", "difficulty": "moyen",
+      "body": "Définissez la diastole. (fictif)",
+      "answer": "Phase de relâchement et remplissage",
+      "explanation": "Définition courte. (fictif)",
+      "examYear": 2021, "university": null
+    },
+    {
+      "faculty": "medicine", "year": "Year 1", "track": "medecine",
+      "module": "Cardiology", "unit": "Cardiac Physiology",
+      "type": "QCM", "source": "hamame_authored",
+      "body": "LIGNE INVALIDE : aucune bonne réponse (fictif)",
+      "options": [
+        { "text": "Choix A", "correct": false },
+        { "text": "Choix B", "correct": false }
+      ],
+      "explanation": "Ne doit jamais passer.",
+      "university": null
+    },
+    {
+      "faculty": "medicine", "year": "Year 1", "track": "medecine",
+      "module": "Cardiology", "unit": "Cardiac Physiology",
+      "type": "QCS", "source": "hamame_authored",
+      "body": "LIGNE INVALIDE : deux bonnes réponses en QCS (fictif)",
+      "options": [
+        { "text": "Choix A", "correct": true },
+        { "text": "Choix B", "correct": true }
+      ],
+      "explanation": "Ne doit jamais passer.",
+      "university": null
+    },
+    {
+      "faculty": "medicine", "year": "Year 1", "track": "medecine",
+      "module": "Cardiology", "unit": "Cardiac Physiology",
+      "type": "QCM", "source": "hamame_authored",
+      "body": "LIGNE INVALIDE : explication manquante (fictif)",
+      "options": [
+        { "text": "Choix A", "correct": true },
+        { "text": "Choix B", "correct": false }
+      ],
+      "university": null
+    }
+  ]
+}
