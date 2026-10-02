@@ -54,8 +54,17 @@ period `monthly` + `monthly_contributors` (jobs + route comments confirm).
 Deliberately kept as live-column: `lesson_attachments.file_url`
 (snake_case). Evidence: init migration creates `"file_url" TEXT NOT NULL`;
 schema.prisma line 332 declares `fileUrl String` with NO `@map` (drift —
-runtime reads column `fileUrl`, which does not exist live). FLAGGED, not
-fixed (docs task is read-only on schema).
+runtime reads column `fileUrl`, which does not exist live). RESOLVED
+2026-10-02 by one-line `@map("file_url")` (commit `9eb8361`; batch 08).
+
+## Resources drift (constraint/index-level only — never applied)
+
+The live-vs-schema diff always carries exactly 8 statements: 3
+DropForeignKey (`added_by`, `faculty_id`, `year_id`), 3 DropIndex, 2
+AddForeignKey (faculty/year re-added; `added_by` is a plain schema column,
+so its FK is not re-added). No column ADD/DROP anywhere: resource reads
+and writes behave identically either way. Full output in batch 08. This
+diff must never be applied as a migration.
 
 `cancelledAt` typo: the schema-doc simulations note said `cancelledAt`
 camelCase; live column is `cancelled_at` (fixed in doc).

@@ -121,7 +121,7 @@ years (
   id UUID PK,
   faculty_id UUID FK -> faculties.id,
   label TEXT,                      -- 'Year 1', ..., 'Résidanat Prep'
-  track TEXT NULL,                 -- 'medecine' | 'dentaire' | 'pharmacie' (2026-09-30, onboarding); null on pre-track rows [UNVERIFIED live]
+  track TEXT NULL,                 -- 'medecine' | 'dentaire' | 'pharmacie' (2026-09-30, onboarding); null on pre-track rows
   order_index INT,
   created_at TIMESTAMPTZ
 )
