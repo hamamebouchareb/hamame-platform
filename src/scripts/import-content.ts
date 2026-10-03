@@ -205,22 +205,34 @@ function canonical(value: unknown): string {
   return JSON.stringify(value) ?? "null";
 }
 
-/** Canonical dedup hash (INCLUDES sitting metadata — same stem in two
- *  sittings is two distinct bank rows). */
+/** Canonical dedup hash (INCLUDES sitting metadata and the explanation —
+ *  same stem in two sittings is distinct bank content; the reference answer
+ *  CANNOT join the hash because Question has no answer column (answers only
+ *  survive inside explanation text, which IS hashed — so keep answers in the
+ *  explanation). Same file re-imported hashes identically and skips. */
 export function questionHash(
   unitId: string,
   type: string,
   body: string,
   options: { text: string; correct: boolean }[],
   examYear: number | null,
-  sittingLabel: string | null
+  sittingLabel: string | null,
+  explanation: string | null
 ): string {
   const normalizedOptions = [...options]
     .map((o) => ({ text: o.text.trim().normalize("NFC"), correct: o.correct }))
     .sort((a, b) => (a.text < b.text ? -1 : a.text > b.text ? 1 : 0));
   return createHash("sha256")
     .update(
-      canonical({ unitId, type, body: body.trim().normalize("NFC"), options: normalizedOptions, examYear, sittingLabel })
+      canonical({
+        unitId,
+        type,
+        body: body.trim().normalize("NFC"),
+        options: normalizedOptions,
+        examYear,
+        sittingLabel,
+        explanation: explanation === null ? null : explanation.trim().normalize("NFC"),
+      })
     )
     .digest("hex");
 }
@@ -432,15 +444,18 @@ async function main(): Promise<void> {
     if (cached) return cached;
     const existing = await prisma.question.findMany({
       where: { unitId },
-      select: { type: true, bodyRichtext: true, examYear: true, sittingLabel: true, options: { select: { bodyText: true, isCorrect: true } } },
+      select: { type: true, bodyRichtext: true, examYear: true, sittingLabel: true, explanationRichtext: true, options: { select: { bodyText: true, isCorrect: true } } },
     });
     const set = new Set<string>();
     for (const q of existing) {
       const body = typeof (q.bodyRichtext as { text?: unknown })?.text === "string"
         ? ((q.bodyRichtext as { text: string }).text)
         : JSON.stringify(q.bodyRichtext);
+      const explanation = typeof (q.explanationRichtext as { text?: unknown })?.text === "string"
+        ? ((q.explanationRichtext as { text: string }).text)
+        : null;
       const opts = q.options.map((o) => ({ text: o.bodyText, correct: o.isCorrect }));
-      set.add(questionHash(unitId, q.type, body, opts, q.examYear, q.sittingLabel));
+      set.add(questionHash(unitId, q.type, body, opts, q.examYear, q.sittingLabel, explanation));
     }
     fingerprints.set(unitId, set);
     return set;
@@ -471,7 +486,15 @@ async function main(): Promise<void> {
     const body = typeof q.body === "string" ? q.body : "";
     const examYear = typeof q.examYear === "number" ? q.examYear : null;
     const sittingLabel = typeof q.sittingLabel === "string" && q.sittingLabel.trim() ? q.sittingLabel.trim() : null;
-    const hash = questionHash(resolved.unitId, String(q.type), body, opts, examYear, sittingLabel);
+    const hash = questionHash(
+      resolved.unitId,
+      String(q.type),
+      body,
+      opts,
+      examYear,
+      sittingLabel,
+      typeof q.explanation === "string" ? q.explanation : null
+    );
     const known = await unitHashes(resolved.unitId);
     if (known.has(hash)) {
       skipped++;

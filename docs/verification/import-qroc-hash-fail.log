@@ -1,0 +1,19 @@
+=== QROC ANSWER-IN-HASH CHECK ===
+questionHash signature (src/scripts/import-content.ts):
+  questionHash(unitId, type, body, options, examYear, sittingLabel)
+No answer parameter exists, and the fingerprint SELECT fetches no answer
+column (none exists on questions). Therefore any two QROCs sharing a body
+in one unit hash identically regardless of expected answer.
+
+Companion finding: the writer itself drops q.answer (Question has no answer
+column; expectedAnswerText lives only on clinical_case_parts). QROC
+reference answers survive import only if repeated inside explanation text.
+Storage of QROC answers needs a product/schema decision — NOT changed here
+(task forbids schema changes).
+
+RESOLVED same day: hashing the answer was attempted first, then rejected —
+existing rows store no answer, so an answer-bearing hash can never match
+them and every re-run would duplicate QROCs. The hash instead includes the
+explanation (stored on both sides, stable across runs); authors keep
+reference answers inside explanation text. Verified: dry-run now reports
+all 10 skipped-duplicate, 0 to create.
