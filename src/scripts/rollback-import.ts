@@ -9,20 +9,20 @@
 import { readFileSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
 
-function parseArgs(argv: string[]): { manifest: string; apply: boolean; allowRemote: boolean } {
-  const args = { manifest: "", apply: false, allowRemote: false };
+function parseArgs(argv: string[]): { manifest: string; apply: boolean; allowProduction: boolean } {
+  const args = { manifest: "", apply: false, allowProduction: false };
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i];
     if (flag === "--manifest") args.manifest = argv[++i] ?? "";
     else if (flag === "--apply") args.apply = true;
-    else if (flag === "--allow-remote") args.allowRemote = true;
+    else if (flag === "--allow-production") args.allowProduction = true;
     else {
       console.error(`unknown flag: ${flag}`);
       process.exit(2);
     }
   }
   if (!args.manifest) {
-    console.error("usage: rollback-import.ts --manifest <docs/verification/import-manifest-*.json> [--apply] [--allow-remote]");
+    console.error("usage: rollback-import.ts --manifest <docs/verification/import-manifest-*.json> [--apply] [--allow-production]");
     process.exit(2);
   }
   return args;
@@ -30,10 +30,10 @@ function parseArgs(argv: string[]): { manifest: string; apply: boolean; allowRem
 
 /**
  * Host guard: prints host/port/database (NEVER credentials) on every run and
- * aborts --apply against anything but localhost, unless --allow-remote is
- * passed explicitly by the owner. Runs before any PrismaClient is created.
+ * aborts --apply on any non-local host unless --allow-production is passed
+ * explicitly by the owner. Runs before any PrismaClient is created.
  */
-function dbGuard(apply: boolean, allowRemote: boolean): void {
+function dbGuard(apply: boolean, allowProduction: boolean): void {
   const raw = process.env.DATABASE_URL ?? "";
   let host = "";
   let port = "";
@@ -47,11 +47,15 @@ function dbGuard(apply: boolean, allowRemote: boolean): void {
     host = "(unparseable)";
   }
   console.log(`db: host=${host} port=${port} database=${database}`);
-  if (apply && !(host === "localhost" || host === "127.0.0.1") && !allowRemote) {
-    console.error(`refusing --apply on non-local host ${host} without --allow-remote (no writes performed)`);
+  const local = host === "localhost" || host === "127.0.0.1";
+  if (apply && !local && !allowProduction) {
+    console.error(`refusing --apply on non-local host ${host} without --allow-production (no writes performed)`);
     process.exit(2);
   }
-  if (apply && (host === "localhost" || host === "127.0.0.1")) {
+  if (apply && allowProduction) {
+    console.log("db guard: --allow-production acknowledged by owner, --apply permitted");
+  }
+  if (apply && local && !allowProduction) {
     console.log("db guard: local host confirmed, --apply permitted");
   }
 }
@@ -70,7 +74,7 @@ function ids(manifest: Manifest, table: string): string[] {
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
-  dbGuard(args.apply, args.allowRemote);
+  dbGuard(args.apply, args.allowProduction);
   const manifest = JSON.parse(readFileSync(args.manifest, "utf8")) as Manifest;
   if (!manifest.created || typeof manifest.created !== "object") {
     console.error("refusing: manifest has no created-id map");
