@@ -9,22 +9,51 @@
 import { readFileSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
 
-function parseArgs(argv: string[]): { manifest: string; apply: boolean } {
-  const args = { manifest: "", apply: false };
+function parseArgs(argv: string[]): { manifest: string; apply: boolean; allowRemote: boolean } {
+  const args = { manifest: "", apply: false, allowRemote: false };
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i];
     if (flag === "--manifest") args.manifest = argv[++i] ?? "";
     else if (flag === "--apply") args.apply = true;
+    else if (flag === "--allow-remote") args.allowRemote = true;
     else {
       console.error(`unknown flag: ${flag}`);
       process.exit(2);
     }
   }
   if (!args.manifest) {
-    console.error("usage: rollback-import.ts --manifest <docs/verification/import-manifest-*.json> [--apply]");
+    console.error("usage: rollback-import.ts --manifest <docs/verification/import-manifest-*.json> [--apply] [--allow-remote]");
     process.exit(2);
   }
   return args;
+}
+
+/**
+ * Host guard: prints host/port/database (NEVER credentials) on every run and
+ * aborts --apply against anything but localhost, unless --allow-remote is
+ * passed explicitly by the owner. Runs before any PrismaClient is created.
+ */
+function dbGuard(apply: boolean, allowRemote: boolean): void {
+  const raw = process.env.DATABASE_URL ?? "";
+  let host = "";
+  let port = "";
+  let database = "";
+  try {
+    const url = new URL(raw);
+    host = url.hostname;
+    port = url.port || "(default)";
+    database = url.pathname.replace(/^\//, "") || "(none)";
+  } catch {
+    host = "(unparseable)";
+  }
+  console.log(`db: host=${host} port=${port} database=${database}`);
+  if (apply && !(host === "localhost" || host === "127.0.0.1") && !allowRemote) {
+    console.error(`refusing --apply on non-local host ${host} without --allow-remote (no writes performed)`);
+    process.exit(2);
+  }
+  if (apply && (host === "localhost" || host === "127.0.0.1")) {
+    console.log("db guard: local host confirmed, --apply permitted");
+  }
 }
 
 interface Manifest {
@@ -41,6 +70,7 @@ function ids(manifest: Manifest, table: string): string[] {
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
+  dbGuard(args.apply, args.allowRemote);
   const manifest = JSON.parse(readFileSync(args.manifest, "utf8")) as Manifest;
   if (!manifest.created || typeof manifest.created !== "object") {
     console.error("refusing: manifest has no created-id map");
