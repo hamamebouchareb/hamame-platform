@@ -1,0 +1,29 @@
+=== APPLY (demo-testimport.json --apply --allow-production) ===
+db: host=aws-0-eu-west-1.pooler.supabase.com port=5432 database=postgres
+db guard: --allow-production acknowledged by owner, --apply permitted
+file: docs/state/samples/demo-testimport.json
+rows: lessons=1 questions=13
+valid: lessons=1 QCM=5 QCS=3 QROC=2 other=0
+resolution plan (0 lines):
+skipped-duplicate=0 rejected=3
+  - questions:11: QCM with no correct option
+  - questions:12: QCS with 2 correct options (need exactly 1)
+  - questions:13: missing explanation (required: schema non-null)
+chunk 1/1: wrote 10 questions
+manifest: docs/verification/import-manifest-1791053368258.json
+created: lessons=1 questions=10 options=19 years=0 modules=0 units=0
+counts-after: years=1 modules=1 units=1 lessons=8 questions=19 testRows=10
+
+=== RE-RUN (identical command — FOUND BUG, see below) ===
+skipped-duplicate=2 rejected=3
+  - questions:9: skipped-duplicate (canonical hash already in unit)
+  - questions:10: skipped-duplicate (canonical hash already in unit)
+chunk 1/1: wrote 8 questions
+manifest: docs/verification/import-manifest-1791053421102.json
+created: lessons=0 questions=8 options=19 years=0 modules=0 units=0
+counts-after-rerun: years=1 modules=1 units=1 lessons=8 questions=27 testRows=18
+
+BUG: only the option-less QROC rows skipped. The fingerprint query did not
+select is_correct and hashed every existing option as correct:false, so no
+QCM/QCS hash could ever match. 8 duplicate questions were created and must
+be rolled back via the second manifest.

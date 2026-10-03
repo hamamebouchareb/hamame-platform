@@ -432,14 +432,14 @@ async function main(): Promise<void> {
     if (cached) return cached;
     const existing = await prisma.question.findMany({
       where: { unitId },
-      select: { type: true, bodyRichtext: true, examYear: true, sittingLabel: true, options: { select: { bodyText: true } } },
+      select: { type: true, bodyRichtext: true, examYear: true, sittingLabel: true, options: { select: { bodyText: true, isCorrect: true } } },
     });
     const set = new Set<string>();
     for (const q of existing) {
       const body = typeof (q.bodyRichtext as { text?: unknown })?.text === "string"
         ? ((q.bodyRichtext as { text: string }).text)
         : JSON.stringify(q.bodyRichtext);
-      const opts = q.options.map((o) => ({ text: o.bodyText, correct: false }));
+      const opts = q.options.map((o) => ({ text: o.bodyText, correct: o.isCorrect }));
       set.add(questionHash(unitId, q.type, body, opts, q.examYear, q.sittingLabel));
     }
     fingerprints.set(unitId, set);
