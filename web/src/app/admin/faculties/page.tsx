@@ -36,7 +36,7 @@ export default function AdminFacultiesPage() {
   const allowed = canManageFaculties(user?.roles);
 
   const { data, error, isLoading, refetch } = useApiResource<{ faculties: FacultyRow[] }>(
-    allowed && canFetch ? "/api/faculties" : null
+    allowed && canFetch ? "/faculties" : null
   );
   const rows = useMemo(() => data?.faculties ?? [], [data]);
 
@@ -49,7 +49,7 @@ export default function AdminFacultiesPage() {
     setSaveError(null);
     setSaving(true);
     try {
-      await apiFetch(`/api/admin/faculties/${pending.id}/rollout-status`, {
+      await apiFetch(`/admin/faculties/${pending.id}/rollout-status`, {
         method: "PUT",
         body: JSON.stringify({ rolloutStatus: pending.status }),
       });

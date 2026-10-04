@@ -48,7 +48,7 @@ export default function AdminRolesPage() {
   const [searched, setSearched] = useState(false);
   const searchPath =
     allowed && canFetch && searched && query.trim().length >= 3
-      ? `/api/users/search?q=${encodeURIComponent(query.trim())}`
+      ? `/users/search?q=${encodeURIComponent(query.trim())}`
       : null;
   const { data: searchData, error: searchError, isLoading: searchLoading } = useApiResource<{
     users: FoundUser[];
@@ -81,7 +81,7 @@ export default function AdminRolesPage() {
     setActionError(null);
     setWorking(true);
     try {
-      const res = await apiFetch<{ user: { id: string; roles: string[] } }>(`/api/admin/users/${userId}/roles`, {
+      const res = await apiFetch<{ user: { id: string; roles: string[] } }>(`/admin/users/${userId}/roles`, {
         method: "POST",
         body: JSON.stringify({ roleName: grantName }),
       });
@@ -100,7 +100,7 @@ export default function AdminRolesPage() {
     setWorking(true);
     try {
       const res = await apiFetch<{ user: { id: string; roles: string[] } }>(
-        `/api/admin/users/${userId}/roles/${revokeName}`,
+        `/admin/users/${userId}/roles/${revokeName}`,
         { method: "DELETE" }
       );
       setRoles(res.user.roles);

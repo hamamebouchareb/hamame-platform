@@ -52,7 +52,7 @@ export default function AdminCodesPage() {
   const [facultyFilter, setFacultyFilter] = useState<string>("");
 
   const listPath = canFetch
-    ? `/api/admin/activation-codes?${new URLSearchParams({
+    ? `/admin/activation-codes?${new URLSearchParams({
         ...(statusFilter ? { status: statusFilter } : {}),
         ...(facultyFilter ? { facultyId: facultyFilter } : {}),
         limit: "20",
@@ -72,7 +72,7 @@ export default function AdminCodesPage() {
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [revokeError, setRevokeError] = useState<string | null>(null);
 
-  const yearsPath = facultyId ? `/api/faculties/${facultyId}/years` : null;
+  const yearsPath = facultyId ? `/faculties/${facultyId}/years` : null;
   const { data: yearsData } = useApiResource<{ years: Year[] }>(canFetch && facultyId ? yearsPath : null);
   const faculties = useMemo(() => facultiesData?.faculties ?? [], [facultiesData]);
   const years = useMemo(() => yearsData?.years ?? [], [yearsData]);
@@ -83,7 +83,7 @@ export default function AdminCodesPage() {
     setIssuedCode(null);
     setIssuing(true);
     try {
-      const res = await apiFetch<{ activationCode: { code: string } }>("/api/admin/activation-codes", {
+      const res = await apiFetch<{ activationCode: { code: string } }>("/admin/activation-codes", {
         method: "POST",
         body: JSON.stringify({
           facultyId,
@@ -105,7 +105,7 @@ export default function AdminCodesPage() {
   async function handleRevoke(id: string) {
     setRevokeError(null);
     try {
-      await apiFetch(`/api/admin/activation-codes/${id}/revoke`, { method: "POST" });
+      await apiFetch(`/admin/activation-codes/${id}/revoke`, { method: "POST" });
       setRevokingId(null);
       refetch();
     } catch (err) {
