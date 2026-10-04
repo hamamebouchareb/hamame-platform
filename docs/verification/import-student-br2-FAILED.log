@@ -1,0 +1,13 @@
+=== STUDENT BR-2 CHECK (against throwaway server, student JWT, in-process) ===
+questions: status=200 total=8 testVisible=0
+lessons: status=200 total=8 testVisible=1
+BR2: FAIL
+
+FINDING: GET /api/questions correctly hides the 10 pending [TEST-IMPORT]
+questions (8 approved rows only). BUT GET /api/units/:id/lessons returns the
+pending [TEST-IMPORT] lesson: listLessonsForUnit
+(src/routes/curriculum.routes.ts) filters by university scope only, with no
+published-version gate, while GET /api/lessons/:id 404s on
+currentVersionId null. Students see a phantom row that opens to not-found.
+Any author draft (UI authoring included, not just the importer) leaks into
+student lists the same way.

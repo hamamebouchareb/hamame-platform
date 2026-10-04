@@ -66,3 +66,8 @@ prisma/*.db
 # OS/editor
 .DS_Store
 Thumbs.db
+
+# bulk-import run debris — manifests list created ids per apply; export/ is a
+# stale plan copy. Both stay on disk, never committed.
+docs/verification/import-manifest-*.json
+/export/
