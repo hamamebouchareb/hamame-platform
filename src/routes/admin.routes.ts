@@ -168,6 +168,27 @@ const rolloutStatusSchema = z.object({
   rolloutStatus: z.enum(["planned", "beta", "live"]),
 });
 
+// GET /api/admin/faculties — every faculty regardless of rolloutStatus.
+//
+// The public GET /api/faculties only returns beta/live rows, so an admin UI
+// built on it could never see (or graduate) a `planned` faculty, and a row
+// flipped to `planned` would vanish from the list with no confirmation. This
+// endpoint returns all rows (id/name/slug/rolloutStatus, name-ordered) for the
+// admin UI. Role-gated to Admins/Super Admins like everything else here.
+async function listAllFacultiesForAdmin(req: Request, res: Response, next: NextFunction) {
+  try {
+    const faculties = await prisma.faculty.findMany({
+      select: { id: true, name: true, slug: true, rolloutStatus: true },
+      orderBy: { name: "asc" },
+    });
+    res.status(200).json({ faculties });
+  } catch (err) {
+    next(err);
+  }
+}
+
+router.get("/faculties", requireAdmin, listAllFacultiesForAdmin);
+
 // PUT /api/admin/faculties/:id/rollout-status — FR-64, BR-15.
 //
 // Can flip a faculty's public visibility (curriculum.routes.ts only shows
