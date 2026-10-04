@@ -60,9 +60,11 @@ export function NotificationsBell() {
     }
   }, []);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- initial unread-count refresh on mount, refresh fans out to setState */
   useEffect(() => {
     void refreshUnread();
   }, [refreshUnread]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const loadList = useCallback(
     async (nextTab: NotificationTab) => {
@@ -85,9 +87,11 @@ export function NotificationsBell() {
     [t]
   );
 
+  /* eslint-disable react-hooks/set-state-in-effect -- dropdown list load on open/tab change, loader fans out to setState */
   useEffect(() => {
     if (open) void loadList(tab);
   }, [open, tab, loadList]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!open) return;
