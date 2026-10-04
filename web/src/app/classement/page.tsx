@@ -6,7 +6,6 @@ import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { localeFor } from "@/lib/i18n";
 import { useRequireAuth } from "@/lib/useRequireAuth";
-import { apiFetch, ApiError } from "@/lib/api";
 import { useApiResource } from "@/lib/useApiResource";
 import { AppHeader, BackLink, EmptyState, Footer, LoadingSkeleton, Modal } from "@/components";
 import type { Faculty, LeaderboardEntry, Year } from "@/lib/types";
