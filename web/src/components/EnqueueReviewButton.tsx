@@ -50,6 +50,7 @@ export function EnqueueReviewButton({ variant = "full", ...target }: EnqueueRevi
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- initial queued-state probe from GET /reviews/due, results fan out to setState */
   useEffect(() => {
     let cancelled = false;
     setChecking(true);
@@ -75,6 +76,7 @@ export function EnqueueReviewButton({ variant = "full", ...target }: EnqueueRevi
       cancelled = true;
     };
   }, [lessonId, questionId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleAdd = useCallback(async () => {
     if (queued || adding || checking) return;
