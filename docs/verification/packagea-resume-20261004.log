@@ -1,0 +1,164 @@
+=== PACKAGE A RESUME 2026-10-04 (production only, safe half) ===
+Known before (verified read-only 07:44 UTC): 27 questions (9 original + 18 [TEST-IMPORT], all pending_review, none approved, no attempts), 8 lessons (1 marked), 64 options, 1 module, 1 unit.
+Known after (this run): 9 questions, 7 lessons, 26 options, 1 module, 1 unit. Zero [TEST-IMPORT] rows.
+Idempotency fix committed: 8f1654c (fingerprint must include isCorrect) + 8332dc1 (hash explanation instead of unstored answer).
+Failing idempotency log kept: docs/verification/import-cycle-apply-rerun.log (not modified).
+Auth for review-approve: REVIEWER_JWT passthrough or REVIEWER_EMAIL + REVIEWER_PASSWORD via POST /api/auth/login, Bearer token for GET /review/queue and POST /review/:type/:id/approve, sequential, no direct DB writes. No credential printed or committed. NEVER --apply.
+
+=== STEP 0: git status ===
+On branch main
+Your branch is ahead of 'origin/main' by 2 commits.
+Changes not staged for commit:
+	modified:   src/routes/curriculum.routes.ts
+Untracked files:
+	docs/verification/import-manifest-1791053368258.json
+	docs/verification/import-manifest-1791053421102.json
+	docs/verification/import-manifest-1791056130016.json
+	docs/verification/import-student-br2-fail.log
+	export/
+=== STEP 0: git rev-parse HEAD ===
+8332dc1626ccfa253aeb14aea147b3b7c10b14c1
+=== STEP 0: node processes (Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Select ProcessId, CommandLine) ===
+(no output — zero node.exe at start)
+=== STEP 0: guard refusal (rollback-import --manifest docs/verification/import-manifest-1791053421102.json --apply WITHOUT --allow-production) ===
+db: host=aws-0-eu-west-1.pooler.supabase.com port=5432 database=postgres
+refusing --apply on non-local host aws-0-eu-west-1.pooler.supabase.com without --allow-production (no writes performed)
+EXIT:2
+
+=== STEP 1: dry-run TEST-IMPORT copy with fixed fingerprint (npx tsx src/scripts/import-content.ts --file docs/state/samples/demo-testimport.json) ===
+db: host=aws-0-eu-west-1.pooler.supabase.com port=5432 database=postgres
+file: docs/state/samples/demo-testimport.json
+rows: lessons=1 questions=13
+valid: lessons=1 QCM=5 QCS=3 QROC=2 other=0
+resolution plan (0 lines):
+skipped-duplicate=10 rejected=3
+  - questions:11: QCM with no correct option
+  - questions:12: QCS with 2 correct options (need exactly 1)
+  - questions:13: missing explanation (required: schema non-null)
+  - questions:1: skipped-duplicate (canonical hash already in unit)
+  - questions:2: skipped-duplicate (canonical hash already in unit)
+  - questions:3: skipped-duplicate (canonical hash already in unit)
+  - questions:4: skipped-duplicate (canonical hash already in unit)
+  - questions:5: skipped-duplicate (canonical hash already in unit)
+  - questions:6: skipped-duplicate (canonical hash already in unit)
+  - questions:7: skipped-duplicate (canonical hash already in unit)
+  - questions:8: skipped-duplicate (canonical hash already in unit)
+  - questions:9: skipped-duplicate (canonical hash already in unit)
+  - questions:10: skipped-duplicate (canonical hash already in unit)
+mode: dry-run (reads: curriculum lookups + unit fingerprint SELECTs; no writes)
+EXIT:1
+
+=== STEP 2a: rollback dry-run manifest 1791053421102 (8 duplicates) ===
+db: host=aws-0-eu-west-1.pooler.supabase.com port=5432 database=postgres
+would delete questions:b5eaee82-6d8a-49ed-8fb5-fe06d16339cc
+would delete questions:51b89126-787e-42db-a62d-e8f9423d20bd
+would delete questions:09330a25-2e25-41d9-9fec-7faf8d8b5771
+would delete questions:ec16265a-2b76-43b7-8efb-19e2cc90cee2
+would delete questions:9e0ca476-e950-47bf-8e24-d7c8d0661c8c
+would delete questions:2c054be3-119e-434c-9729-561c801f1aaa
+would delete questions:57ff208f-7184-4a85-bfcf-3705dd117e47
+would delete questions:a3a1acf8-d4e6-472b-98bd-ca4e8da64f64
+would delete options=19 (scoped to doomed questions)
+dry-run (no deletes):
+skipped=0
+EXIT:0
+=== STEP 2b: rollback apply manifest 1791053421102 (8 duplicates, --apply --allow-production) ===
+db: host=aws-0-eu-west-1.pooler.supabase.com port=5432 database=postgres
+db guard: --allow-production acknowledged by owner, --apply permitted
+applied:
+  deleted options=19
+  deleted questions=8
+skipped=0
+EXIT:0
+
+=== STEP 3a: rollback dry-run manifest 1791053368258 (10 originals) ===
+db: host=aws-0-eu-west-1.pooler.supabase.com port=5432 database=postgres
+would delete questions:abc0fc14-213b-40e2-8f80-e754bff5c906
+would delete questions:eedfe172-b1f8-4fa2-a2c7-452d26a21631
+would delete questions:47f06243-abef-481a-9796-b836006cef60
+would delete questions:bca5d802-4035-4509-ad1b-843a428d9552
+would delete questions:8b273600-13ee-463a-9786-139f9c96fc11
+would delete questions:ccea1b80-a0fb-4b54-8c10-71a77642454a
+would delete questions:e5b2b080-1fd2-4074-b4fe-81c2cb331309
+would delete questions:99559310-8023-49f6-89f3-636828e16f13
+would delete questions:9735aa62-a4aa-4855-b9be-63033f2c5bb8
+would delete questions:4cc9d033-0332-4d13-b01c-ba645c515918
+would delete options=19 (scoped to doomed questions)
+would delete lessonVersions:0d353535-3a41-48a4-a251-c4cbb51043a9
+would delete lessons:57c98cac-2c7f-47d4-9dfe-aea1150be39f
+dry-run (no deletes):
+skipped=0
+EXIT:0
+=== STEP 3b: rollback apply manifest 1791053368258 (10 originals, --apply --allow-production) ===
+db: host=aws-0-eu-west-1.pooler.supabase.com port=5432 database=postgres
+db guard: --allow-production acknowledged by owner, --apply permitted
+applied:
+  deleted options=19
+  deleted questions=10
+  deleted lessonVersions=1
+  deleted lessons=1
+skipped=0
+EXIT:0
+
+=== STEP 4a: re-run rollback 1791053421102 (--apply --allow-production, expect already gone) ===
+db: host=aws-0-eu-west-1.pooler.supabase.com port=5432 database=postgres
+db guard: --allow-production acknowledged by owner, --apply permitted
+applied:
+skipped=8
+  - questions:b5eaee82-6d8a-49ed-8fb5-fe06d16339cc: already gone
+  - questions:51b89126-787e-42db-a62d-e8f9423d20bd: already gone
+  - questions:09330a25-2e25-41d9-9fec-7faf8d8b5771: already gone
+  - questions:ec16265a-2b76-43b7-8efb-19e2cc90cee2: already gone
+  - questions:9e0ca476-e950-47bf-8e24-d7c8d0661c8c: already gone
+  - questions:2c054be3-119e-434c-9729-561c801f1aaa: already gone
+  - questions:57ff208f-7184-4a85-bfcf-3705dd117e47: already gone
+  - questions:a3a1acf8-d4e6-472b-98bd-ca4e8da64f64: already gone
+EXIT:0
+=== STEP 4b: re-run rollback 1791053368258 (--apply --allow-production, expect already gone) ===
+db: host=aws-0-eu-west-1.pooler.supabase.com port=5432 database=postgres
+db guard: --allow-production acknowledged by owner, --apply permitted
+applied:
+skipped=12
+  - questions:abc0fc14-213b-40e2-8f80-e754bff5c906: already gone
+  - questions:eedfe172-b1f8-4fa2-a2c7-452d26a21631: already gone
+  - questions:47f06243-abef-481a-9796-b836006cef60: already gone
+  - questions:bca5d802-4035-4509-ad1b-843a428d9552: already gone
+  - questions:8b273600-13ee-463a-9786-139f9c96fc11: already gone
+  - questions:ccea1b80-a0fb-4b54-8c10-71a77642454a: already gone
+  - questions:e5b2b080-1fd2-4074-b4fe-81c2cb331309: already gone
+  - questions:99559310-8023-49f6-89f3-636828e16f13: already gone
+  - questions:9735aa62-a4aa-4855-b9be-63033f2c5bb8: already gone
+  - questions:4cc9d033-0332-4d13-b01c-ba645c515918: already gone
+  - lessonVersions:0d353535-3a41-48a4-a251-c4cbb51043a9: already gone
+  - lessons:57c98cac-2c7f-47d4-9dfe-aea1150be39f: already gone
+EXIT:0
+
+=== STEP 5: final read-only counts (tmp-final-counts.ts, one PrismaClient, sequential) ===
+questions=9
+lessons=7
+options=26
+modules=1
+units=1
+test-questions=0
+test-lessons=0
+test-versions=0
+EXIT:0
+=== STEP 5b: pending check (read-only) ===
+pending-questions=1
+pending-versions=0
+pending-ids=1
+  pending:00000000-0000-0000-0000-000000000095
+(test-questions=0 above proves the single pending row is genuine, not fictional.)
+
+=== STEP 6: review-approve dry-run only (NEVER --apply) ===
+command: npx tsx src/scripts/review-approve.ts
+output:
+refusing: set REVIEWER_JWT or REVIEWER_EMAIL + REVIEWER_PASSWORD (never logged, never committed)
+EXIT:2
+harness: throwaway tmp-packagea-harness.ts via Start-Process -WindowStyle Hidden on port 3000, RESEND_API_KEY + TWILIO_* + ANTHROPIC_API_KEY unset, pid recorded in untracked tmp-packagea-api.pid, probed via GET /api/plans (200), stopped via taskkill /PID <pid> /T /F. No console window left open. server.ts never started.
+auth description: REVIEWER_JWT passthrough (same token the API mints) or REVIEWER_EMAIL + REVIEWER_PASSWORD via POST /api/auth/login to obtain accessToken; Bearer token for GET /review/queue then POST /review/lesson|question/:id/approve, sequential only, no direct DB writes so BR-2 gates and post-approval hooks run as in UI. No credential printed, logged, or committed.
+
+=== STEP 7: NUL-check + commit ===
+NUL-check: every file written below scanned for 0x00, none found.
+Kept: docs/verification/import-cycle-apply-rerun.log unmodified.
+Redacted: ids (UUIDs) and counts only. No URLs with credentials, tokens, keys, or emails.
