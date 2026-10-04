@@ -37,6 +37,14 @@ function getStoredToken(): string | null {
 }
 
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+  // API_BASE_URL already ends in /api — a path starting with /api/ would
+  // produce /api/api/... and 404. Fail fast outside production so the bad
+  // call site is found at click time, not as a mystery 404 in the logs.
+  if (process.env.NODE_ENV !== "production" && path.startsWith("/api/")) {
+    throw new Error(
+      `apiFetch path must not start with "/api/" (got "${path}"): API_BASE_URL already includes /api.`
+    );
+  }
   const token = getStoredToken();
 
   const headers = new Headers(options.headers);
