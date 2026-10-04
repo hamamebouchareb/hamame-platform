@@ -54,6 +54,37 @@ export const ACCOUNT_NAV: NavKeyEntry[] = [
 ];
 
 /**
+ * Admin destinations (admin UI plan, docs/state/11-admin-ui-plan.md).
+ * Rendered by AppHeader/Sidebar ONLY for role holders (see adminNavForRoles)
+ * — never in PRIMARY_NAV / SECONDARY_NAV, so non-holders see no admin
+ * entries anywhere. Labels resolve via useLanguage like every other entry.
+ */
+export const ADMIN_NAV: NavKeyEntry[] = [
+  { href: "/admin/codes", labelKey: "admin.codes" },
+  { href: "/admin/faculties", labelKey: "admin.faculties" },
+  { href: "/admin/roles", labelKey: "admin.roles" },
+  { href: "/admin/instructor-applications", labelKey: "admin.applications" },
+  { href: "/admin/promos", labelKey: "admin.promos" },
+  { href: "/admin/notifications", labelKey: "admin.notifications" },
+  { href: "/admin/jobs", labelKey: "admin.jobs" },
+];
+
+const ADMIN_FAMILY = ["admin", "super_admin"];
+
+/**
+ * Visible admin entries for a role list (roles from GET /api/users/me via
+ * AuthContext — client-side UX gating only; every endpoint re-checks
+ * server-side and 403s regardless). support_agent sees /admin/codes only
+ * (matching the activation-code endpoints' gate); the admin family sees all.
+ */
+export function adminNavForRoles(roles: string[] | undefined): NavKeyEntry[] {
+  if (!roles || roles.length === 0) return [];
+  if (roles.some((r) => ADMIN_FAMILY.includes(r))) return ADMIN_NAV;
+  if (roles.includes("support_agent")) return ADMIN_NAV.slice(0, 1);
+  return [];
+}
+
+/**
  * Returns true when `pathname` is "within" `href`, used to mark the active tab.
  * Exact match, or any nested sub-route (e.g. /qcm/builder → QCM, /faculties/123
  * → Bibliothèque), so nested curriculum pages highlight the right primary tab.

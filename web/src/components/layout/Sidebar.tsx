@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cx } from "@/lib/cx";
 import { useLanguage } from "@/context/LanguageContext";
-import { PRIMARY_NAV, SECONDARY_NAV, isNavActive } from "@/lib/nav";
+import { PRIMARY_NAV, SECONDARY_NAV, isNavActive, type NavKeyEntry } from "@/lib/nav";
 
 const STORAGE_KEY = "hamame_sidebar";
 
@@ -26,7 +26,7 @@ function readSidebarState(): SidebarState {
  * the lg breakpoint up. Phones keep the bottom tab bar. Same PRIMARY_NAV /
  * SECONDARY_NAV sources as the header — no route or label drift.
  */
-export function Sidebar() {
+export function Sidebar({ adminNav = [] }: { adminNav?: NavKeyEntry[] }) {
   const pathname = usePathname();
   const { t } = useLanguage();
   const [state, setState] = useState<SidebarState>("open");
@@ -137,6 +137,43 @@ export function Sidebar() {
           );
         })}
       </nav>
+
+      {adminNav.length > 0 ? (
+        <>
+          <p
+            className={cx(
+              "mt-4 w-full text-caption font-medium uppercase tracking-wide text-text-tertiary",
+              collapsed ? "sr-only" : "px-3"
+            )}
+          >
+            {t("admin.section")}
+          </p>
+          <nav className="mt-1 flex w-full flex-col gap-1">
+            {adminNav.map((item) => {
+              const label = t(item.labelKey);
+              const active = isNavActive(pathname, item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  aria-label={collapsed ? label : undefined}
+                  title={collapsed ? label : undefined}
+                  className={cx(linkClasses(active), "text-meta")}
+                >
+                  <span
+                    aria-hidden
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-pill bg-surface-2 font-display text-caption font-bold text-text-secondary"
+                  >
+                    {label.charAt(0).toUpperCase()}
+                  </span>
+                  {collapsed ? null : <span className="min-w-0 truncate">{label}</span>}
+                </Link>
+              );
+            })}
+          </nav>
+        </>
+      ) : null}
     </aside>
   );
 }

@@ -63,6 +63,20 @@ const fr = {
   "nav.mobileAria": "Navigation mobile",
   "nav.openMenu": "Ouvrir le menu",
   "nav.closeMenu": "Fermer le menu",
+  // ── Admin area (plan: docs/state/11-admin-ui-plan.md; entries from ADMIN_NAV in nav.ts) ──
+  "admin.section": "Administration",
+  "admin.title": "Administration",
+  "admin.denied": "Accès restreint",
+  "admin.deniedDesc": "Cette page est réservée aux administrateurs et aux agents concernés.",
+  "admin.codes": "Codes d'activation",
+  "admin.faculties": "Facultés",
+  "admin.roles": "Rôles",
+  "admin.applications": "Candidatures instructeurs",
+  "admin.promos": "Codes promo",
+  "admin.notifications": "Notifications",
+  "admin.jobs": "Tâches planifiées",
+  "admin.codesScopeNote":
+    "Ce code débloque le Premium pour TOUS les contenus, quelle que soit la faculté/l'année affichée (l'abonnement ne porte aucune restriction de périmètre).",
   // ── Footer ──
   "footer.tagline": "plateforme de préparation aux examens médicaux",
   "footer.navAria": "Pied de page",
@@ -1108,6 +1122,20 @@ const en: Record<I18nKey, string> = {
   "nav.mobileAria": "Mobile navigation",
   "nav.openMenu": "Open menu",
   "nav.closeMenu": "Close menu",
+  // ── Admin area ──
+  "admin.section": "Administration",
+  "admin.title": "Administration",
+  "admin.denied": "Restricted access",
+  "admin.deniedDesc": "This page is reserved for administrators and relevant agents.",
+  "admin.codes": "Activation codes",
+  "admin.faculties": "Faculties",
+  "admin.roles": "Roles",
+  "admin.applications": "Instructor applications",
+  "admin.promos": "Promo codes",
+  "admin.notifications": "Notifications",
+  "admin.jobs": "Scheduled jobs",
+  "admin.codesScopeNote":
+    "This code unlocks Premium for ALL content regardless of the faculty/year shown (the subscription carries no scope restriction).",
   // ── Footer ──
   "footer.tagline": "medical exam prep platform",
   "footer.navAria": "Footer",

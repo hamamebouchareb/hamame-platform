@@ -9,7 +9,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useTheme, type ThemeChoice } from "@/context/ThemeContext";
 import { UserMenu } from "@/components/UserMenu";
 import { NotificationsBell } from "@/components/NotificationsBell";
-import { ACCOUNT_NAV, PRIMARY_NAV, SECONDARY_NAV, isNavActive, type NavKeyEntry } from "@/lib/nav";
+import { ACCOUNT_NAV, PRIMARY_NAV, SECONDARY_NAV, adminNavForRoles, isNavActive, type NavKeyEntry } from "@/lib/nav";
 import { Sidebar } from "@/components/layout/Sidebar";
 
 export interface AppHeaderNavItem {
@@ -86,6 +86,14 @@ export function AppHeader({
   const resolvedSecondaryNav: AppHeaderNavItem[] = SECONDARY_NAV.map((item) =>
     "labelKey" in item ? { href: item.href, label: t(item.labelKey) } : item
   );
+  // Admin destinations: visible only to role holders (support_agent sees
+  // /admin/codes only, admin family sees all, everyone else sees none).
+  // Server-side role checks stay the source of truth — this is UX only.
+  const visibleAdminNav = adminNavForRoles(user.roles);
+  const resolvedAdminNav: AppHeaderNavItem[] = visibleAdminNav.map((item) => ({
+    href: item.href,
+    label: t(item.labelKey),
+  }));
   const resolvedMenuLinks: { href: string; label: string }[] = menuLinks.map((link) =>
     "labelKey" in link ? { href: link.href, label: t(link.labelKey) } : link
   );
@@ -254,6 +262,30 @@ export function AppHeader({
                 </Link>
               );
             })}
+            {resolvedAdminNav.length > 0 ? (
+              <>
+                <div className="mx-4 my-2 border-t border-border" aria-hidden />
+                {resolvedAdminNav.map((item) => {
+                  const active = isNavActive(pathname, item.href);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      aria-current={active ? "page" : undefined}
+                      onClick={() => setDrawerOpen(false)}
+                      className={cx(
+                        "inline-flex min-h-touch-target items-center rounded-control px-4 text-meta font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+                        active
+                          ? "bg-surface-3 text-accent-soft"
+                          : "text-text-secondary hover:bg-surface-2 hover:text-text-primary active:bg-surface-2"
+                      )}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </>
+            ) : null}
           </nav>
         </div>
       ) : null}
@@ -270,7 +302,7 @@ export function AppHeader({
       />
     ) : null}
 
-    {resolvedNav.length > 0 ? <Sidebar /> : null}
+    {resolvedNav.length > 0 ? <Sidebar adminNav={visibleAdminNav} /> : null}
 
     {resolvedNav.length > 0 ? (
       <nav
