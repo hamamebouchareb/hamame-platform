@@ -1,8 +1,8 @@
 import { randomBytes } from "crypto";
 import { NextFunction, Request, Response, Router } from "express";
 import { z } from "zod";
-import { paginationQuery } from "../lib/common-schemas";
-import { validateBody, validateQuery } from "../middleware/validate";
+import { paginationQuery, uuidParam } from "../lib/common-schemas";
+import { validateBody, validateParams, validateQuery } from "../middleware/validate";
 import { requireAuth } from "../middleware/auth";
 import { requireRole } from "../middleware/requireRole";
 import { ApiError } from "../lib/errors";
@@ -302,6 +302,61 @@ async function listActivationCodes(req: Request, res: Response, next: NextFuncti
 }
 
 adminActivationCodesRouter.get("/", requireSupportAgentOrAdmin, validateQuery(LIST_QUERY_SCHEMA), listActivationCodes);
+
+// POST /api/admin/activation-codes/:id/revoke — kill an issued code (typos,
+// duplicate issues). Transition `active` → `revoked` ONLY via a conditional
+// updateMany (`WHERE id AND status = 'active'`, count-checked — same atomic
+// discipline as the redeem claim above), so a concurrent redemption wins the
+// race instead of silently revoking a just-claimed code. Never a delete: the
+// audit row survives. No migration: `status` is a plain String column and
+// `'revoked'` is already anticipated by the list filter and the redeem path.
+async function revokeActivationCode(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+
+    const existing = await prisma.activationCode.findUnique({
+      where: { id },
+      select: { id: true, status: true, expiresAt: true },
+    });
+    if (!existing) {
+      throw new ApiError(404, "ACTIVATION_CODE_NOT_FOUND", "No activation code exists with this id.");
+    }
+    if (existing.status === "redeemed") {
+      throw new ApiError(409, "ACTIVATION_CODE_ALREADY_REDEEMED", "This code has already been redeemed.");
+    }
+    if (existing.status === "revoked") {
+      throw new ApiError(409, "ACTIVATION_CODE_ALREADY_REVOKED", "This code has already been revoked.");
+    }
+    if (existing.expiresAt && existing.expiresAt < new Date()) {
+      throw new ApiError(409, "ACTIVATION_CODE_EXPIRED", "This code has expired.");
+    }
+
+    const revoked = await prisma.activationCode.updateMany({
+      where: { id, status: "active" },
+      data: { status: "revoked" },
+    });
+    if (revoked.count !== 1) {
+      // Lost a race (redeemed between the checks above) — re-read and report
+      // the now-true state rather than a stale one.
+      const current = await prisma.activationCode.findUnique({ where: { id }, select: { status: true } });
+      if (current?.status === "redeemed") {
+        throw new ApiError(409, "ACTIVATION_CODE_ALREADY_REDEEMED", "This code has already been redeemed.");
+      }
+      throw new ApiError(409, "ACTIVATION_CODE_ALREADY_REVOKED", "This code has already been revoked.");
+    }
+
+    res.status(200).json({ activationCode: { id, status: "revoked" } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+adminActivationCodesRouter.post(
+  "/:id/revoke",
+  requireSupportAgentOrAdmin,
+  validateParams(uuidParam("id")),
+  revokeActivationCode
+);
 
 export { adminActivationCodesRouter };
 export default router;
