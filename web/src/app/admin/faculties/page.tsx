@@ -35,8 +35,10 @@ export default function AdminFacultiesPage() {
   const canFetch = isHydrated && !!user;
   const allowed = canManageFaculties(user?.roles);
 
+  // Admin list endpoint (all rollout statuses — the public one hides `planned`
+  // rows, which would make a flipped row vanish and planned rows unflippable).
   const { data, error, isLoading, refetch } = useApiResource<{ faculties: FacultyRow[] }>(
-    allowed && canFetch ? "/faculties" : null
+    allowed && canFetch ? "/admin/faculties" : null
   );
   const rows = useMemo(() => data?.faculties ?? [], [data]);
 

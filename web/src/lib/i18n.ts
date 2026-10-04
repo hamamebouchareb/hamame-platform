@@ -94,7 +94,7 @@ const fr = {
   "admin.codesEmpty": "Aucun code pour ces filtres.",
   "admin.rolloutStatus": "Statut de déploiement",
   "admin.rolloutNote":
-    "« planned » masque la faculté partout ; « beta » et « live » sont visibles. Seules les facultés visibles sont listées ici — une faculté « planned » n'apparaît pas dans cette liste.",
+    "« planned » masque la faculté partout ; « beta » et « live » sont visibles. Toutes les facultés sont listées ici, y compris les « planned ».",
   "admin.rolloutConfirm": "Passer « {name} » en « {status} » ?",
   "admin.facEmpty": "Aucune faculté visible.",
   "admin.rolesLookup": "Rechercher un utilisateur",
@@ -1192,7 +1192,7 @@ const en: Record<I18nKey, string> = {
   "admin.codesEmpty": "No codes for these filters.",
   "admin.rolloutStatus": "Rollout status",
   "admin.rolloutNote":
-    "“planned” hides the faculty everywhere; “beta” and “live” are visible. Only visible faculties are listed here — a “planned” faculty does not appear in this list.",
+    "“planned” hides the faculty everywhere; “beta” and “live” are visible. Every faculty is listed here, including “planned” ones.",
   "admin.rolloutConfirm": "Switch “{name}” to “{status}”?",
   "admin.facEmpty": "No visible faculties.",
   "admin.rolesLookup": "Find a user",
