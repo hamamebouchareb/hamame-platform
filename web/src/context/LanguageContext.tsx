@@ -42,6 +42,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLang] = useState<UiLanguage>(DEFAULT_LANGUAGE);
 
   // Guest preference, read once on mount (localStorage is unavailable during SSR).
+  /* eslint-disable react-hooks/set-state-in-effect -- localStorage unavailable during SSR, must match server first render to avoid hydration mismatch */
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
@@ -50,10 +51,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       // Storage unavailable (private mode) — stay on the default.
     }
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Adopt the server value whenever the authenticated profile (re)loads —
   // this covers login, registration, and cross-device consistency.
   const serverLang = user?.uiLanguage;
+  /* eslint-disable react-hooks/set-state-in-effect -- server language wins on profile (re)load, adoption fans out to setState */
   useEffect(() => {
     if (isUiLanguage(serverLang)) {
       setLang(serverLang);
@@ -64,6 +67,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       }
     }
   }, [serverLang]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Keep the document language in sync for screen readers and SEO.
   useEffect(() => {
