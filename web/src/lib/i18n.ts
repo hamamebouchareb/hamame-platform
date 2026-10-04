@@ -77,6 +77,21 @@ const fr = {
   "admin.jobs": "Tâches planifiées",
   "admin.codesScopeNote":
     "Ce code débloque le Premium pour TOUS les contenus, quelle que soit la faculté/l'année affichée (l'abonnement ne porte aucune restriction de périmètre).",
+  "admin.codesList": "Codes émis",
+  "admin.codesStatus": "Statut",
+  "admin.codesAll": "Tous",
+  "admin.codesFaculty": "Faculté",
+  "admin.codesIssue": "Émettre un code",
+  "admin.codesYear": "Année",
+  "admin.codesExpiry": "Expiration (optionnel)",
+  "admin.codesChoose": "Choisir…",
+  "admin.codesIssueConfirm": "Émettre",
+  "admin.codesIssueSummary":
+    "Émettre un code pour la faculté et l'année choisies ? Vérifiez la date d'expiration avant de confirmer.",
+  "admin.codesIssuedOnce": "Code émis — copiez-le maintenant, il ne sera plus affiché.",
+  "admin.codesRevoke": "Révoquer",
+  "admin.codesRevokeConfirm": "Révoquer ce code ? Il deviendra inutilisable même s'il n'a pas été utilisé.",
+  "admin.codesEmpty": "Aucun code pour ces filtres.",
   // ── Footer ──
   "footer.tagline": "plateforme de préparation aux examens médicaux",
   "footer.navAria": "Pied de page",
@@ -86,6 +101,7 @@ const fr = {
   "common.loadingMore": "Chargement...",
   "common.retry": "Réessayer",
   "common.total": "au total",
+  "common.cancel": "Annuler",
   // ── Suivi ──
   "suivi.heroKicker": "Progression",
   "suivi.heroTitle": "Suivi de progression",
@@ -1136,6 +1152,21 @@ const en: Record<I18nKey, string> = {
   "admin.jobs": "Scheduled jobs",
   "admin.codesScopeNote":
     "This code unlocks Premium for ALL content regardless of the faculty/year shown (the subscription carries no scope restriction).",
+  "admin.codesList": "Issued codes",
+  "admin.codesStatus": "Status",
+  "admin.codesAll": "All",
+  "admin.codesFaculty": "Faculty",
+  "admin.codesIssue": "Issue a code",
+  "admin.codesYear": "Year",
+  "admin.codesExpiry": "Expiry (optional)",
+  "admin.codesChoose": "Choose…",
+  "admin.codesIssueConfirm": "Issue",
+  "admin.codesIssueSummary":
+    "Issue a code for the chosen faculty and year? Check the expiry date before confirming.",
+  "admin.codesIssuedOnce": "Code issued — copy it now, it will not be shown again.",
+  "admin.codesRevoke": "Revoke",
+  "admin.codesRevokeConfirm": "Revoke this code? It becomes unusable even if unredeemed.",
+  "admin.codesEmpty": "No codes for these filters.",
   // ── Footer ──
   "footer.tagline": "medical exam prep platform",
   "footer.navAria": "Footer",
@@ -1145,6 +1176,7 @@ const en: Record<I18nKey, string> = {
   "common.loadingMore": "Loading...",
   "common.retry": "Retry",
   "common.total": "total",
+  "common.cancel": "Cancel",
   // ── Suivi ──
   "suivi.heroKicker": "Progress",
   "suivi.heroTitle": "Progress tracking",
