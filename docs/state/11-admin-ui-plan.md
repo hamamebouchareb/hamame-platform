@@ -103,15 +103,16 @@ caller built only from existing primitives.
   admin-gated POST endpoints per level (parent-scoped, orderIndex handling) —
   new API surface with validation, then UI. Out of v1; the importer remains the
   curriculum path.
-- Look up a user by email/name (for role assignment) — admin user endpoints
-  are id-addressed only (`/users/:id/roles`, `/users/:id/badges`); there is no
-  admin user-search. v1 works around it with a paste-UUID field (the owner gets
-  ids from the database or logs today). A search endpoint is a small backend
-  addition if the owner wants it later.
-- Revoke/delete an activation code, delete a promo code — neither router has
-  it (activation codes: issue + list only; promo codes: create + list + expiry
-  patch only). Would require new endpoints with audit semantics decided first
-  (money-adjacent rows). Out of v1; expiry-nulling covers promo deactivation.
+- Look up a user by email/name (for role assignment) — `GET /api/users/search`
+  (`users.routes.ts:103`, impl `:80-101`) returns ids, but matching is EXACT
+  email or fullName PREFIX (startsWith, case-insensitive, min 3 chars, cap 10 —
+  `users.routes.ts:89-92`); it does NOT do email-prefix or substring search
+  (deliberate enumeration resistance). Ruling: v1 reuses it with that limitation
+  stated in helper text, and keeps a paste-UUID fallback field for exact-id
+  cases. No new endpoint.
+- Revoke an activation code — no endpoint existed (issue + list only); step 2b
+  below specs the minimal one (active → revoked, never delete). Promo-code
+  delete stays out (expiry-nulling covers deactivation).
 - Per-code redemption detail beyond counts — list returns `redemptionCount`
   per code only. Fine for v1.
 
@@ -125,9 +126,11 @@ only — `support_agent`).
 
 1. `/admin/codes` (FIRST — the manual payment path): list issued codes
    (status/faculty filter, `GET /api/admin/activation-codes`) + issue form
-   (faculty, year, expiresAt → `POST`). Accessible to `support_agent` and
-   `admin`/`super_admin`, matching the endpoint gate. Shows the returned code
-   once for copy-paste; no code value ever persists client-side beyond display.
+   (faculty, year, expiresAt → `POST`) carrying the scope helper text
+   (`admin.codesScopeNote`, §5) + Revoke action per active row (§2b).
+   Accessible to `support_agent` and `admin`/`super_admin`, matching the
+   endpoint gate. Shows the returned code once for copy-paste; no code value
+   ever persists client-side beyond display.
 2. `/admin/faculties`: faculty list with rollout badge + status changer
    (`PUT .../rollout-status`, confirm dialog stating the visibility effect:
    `planned` hides everywhere, `beta`/`live` visible). Admin-only.
@@ -176,7 +179,7 @@ anything bulk-approving content.
 ## 5. i18n and nav change
 
 - New keys under an `admin.*` namespace, e.g. `admin.title`, `admin.codes`,
-  `admin.codesIssue`, `admin.codesScopeNote`, `admin.faculties`,
+  `admin.codesIssue`, `admin.faculties`,
   `admin.rolloutNote`, `admin.roles`, `admin.rolesLookupHint`,
   `admin.selfRevokeBlocked`, `admin.applications`, `admin.rejectComment`,
   `admin.promos`, `admin.promoImmutableNote`, `admin.notifications`,
@@ -185,6 +188,13 @@ anything bulk-approving content.
   in both — `tsc` fails the build on any gap
   (`web/src/lib/i18n.ts:8,1076-1078`). `{var}` interpolation only; plurals via
   caller-selected key pairs.
+- `admin.codesScopeNote` (helper text on the issue form, exact copy): FR —
+  « Ce code débloque le Premium pour TOUS les contenus, quelle que soit la
+  faculté/l'année affichée (l'abonnement ne porte aucune restriction de
+  périmètre). » EN — "This code unlocks Premium for ALL content regardless of
+  the faculty/year shown (the subscription carries no scope restriction)."
+  Rationale: `subscriptions` has no faculty/year columns (blanket premium by
+  design) — the faculty/year on the code row is the audit record only.
 - `nav.ts`: add `ADMIN_NAV: NavKeyEntry[]` (hrefs `/admin/codes`,
   `/admin/faculties`, `/admin/roles`, `/admin/instructor-applications`,
   `/admin/promos`, `/admin/notifications`, `/admin/jobs`) with `labelKey`s
@@ -198,10 +208,22 @@ anything bulk-approving content.
    keys (FR+EN). Verify: `npx tsc --noEmit -p web/tsconfig.json` exit 0 and
    `npm run lint --prefix web` 0 problems; non-holder sees no admin entries
    (DOM assertion in a throwaway check, then delete it).
-2. `/admin/codes` list + issue against the real endpoints via throwaway
-   harness (never `server.ts`): `GET /api/admin/activation-codes` 200 with a
-   support-agent JWT minted locally, `POST` issue 201, response code displayed
-   once. Paste statuses + redacted ids only.
+2. `/admin/codes` list + issue + revoke against the real endpoints via
+   throwaway harness (never `server.ts`): `GET /api/admin/activation-codes`
+   200 with a support-agent JWT minted locally; issue ONE code with the
+   shortest allowed future expiry (a near-future `expiresAt` datetime — the
+   schema takes any future ISO datetime, so hours-out is valid); NEVER print
+   or log the full code (last 4 characters only in every output and log);
+   verify the list shows it `active`; revoke it (`POST .../:id/revoke` 200,
+   list shows `revoked`); redeem it → 409 rejected; revoke again → 409.
+   Paste statuses only, never the full code. Leave no live code behind.
+   Expiry guarantee (read, not trialled — no code is left to expire on
+   production): `redeemActivationCode` rejects past-`expiresAt` codes with
+   409 `ACTIVATION_CODE_EXPIRED` (`activationCodes.routes.ts:85-88`) before
+   any grant write, checked live against the row's own date — no cron sets or
+   clears activation-code status (the five cron jobs cover subscriptions,
+   unsuspension, leaderboards, and push only). An expired code is therefore
+   rejected by its date even if its status still reads `active`.
 3. `/admin/faculties` flip on a throwaway faculty row (never a real one):
    snapshot row, `PUT` to `beta` and back, byte-identical restore diff,
    `GET /api/faculties` visibility before/after pasted.
@@ -224,18 +246,42 @@ anything bulk-approving content.
    exit 0, `npm run lint --prefix web` 0 problems, `next build` exit 0,
    Playwright smoke against `next start` 2 passed. Push, report hashes.
 
+## Owner rulings (decided 2026-10-04 — implementation unlocked)
+
+1. `support_agent` sees ONLY `/admin/codes`. All other admin pages are
+   admin-family (`admin`, `super_admin`).
+2. Role lookup reuses `GET /api/users/search` with its documented limitation
+   (exact email, name-prefix only — `users.routes.ts:89-92`) plus a paste-UUID
+   fallback field. No new search endpoint.
+3. The rollout-flip test uses one of the 15 draft `beta` `fac-*` faculties
+   (live-verified 2026-10-04: 15 beta rows, plus `dentistry` planned and
+   `medicine` live) — never Medicine — and restores the original value
+   byte-identical in the same run.
+4. Promo creation stays admin-family (`admin`, `super_admin`); no further
+   restriction.
+5. Notifications use a confirm dialog naming the audience (scope warning in
+   the dialog, no maker-checker).
+6. Analytics overview AFTER the seven v1 pages prove themselves.
+7. Revoke is specced as step 2b below (active → revoked, never delete).
+
+## 2b. Revoke endpoint (minimal)
+
+`POST /api/admin/activation-codes/:id/revoke` — same gate as issue
+(`requireSupportAgentOrAdmin`, `activationCodes.routes.ts:190`). Transition
+`active` → `revoked` ONLY, via conditional `updateMany`
+(`WHERE id AND status='active'`, count check — same atomic discipline as the
+redeem claim at `activationCodes.routes.ts:100-103`); never a delete, so the
+audit row survives. No migration needed: `ActivationCode.status` is a plain
+`String` column (`prisma/schema.prisma`, `// 'active' | 'redeemed' |
+'expired' | 'revoked'`), and both the list filter and the redeem path already
+anticipate the `'revoked'` value. Response: `200 {activationCode: {id,
+status: "revoked"}}` (no code value echoed — the list already shows it).
+409 cases: already `redeemed` (`ACTIVATION_CODE_ALREADY_REDEEMED`), already
+`revoked` (`ACTIVATION_CODE_ALREADY_REVOKED`), past `expiresAt`
+(`ACTIVATION_CODE_EXPIRED` — revoking an expired code is meaningless); 404
+when the id is missing. UI: a Revoke action per active row with `ConfirmDialog`
+stating the code dies immediately even if unredeemed.
+
 ## Open questions for the owner
 
-1. Is `support_agent` allowed only the codes page, or should agents also see
-   applications/promos read-only?
-2. Paste-UUID role lookup for v1, or build admin user-search first?
-3. May tests use a throwaway faculty row for the rollout flip, or is even that
-   off-limits in production?
-4. Should promo creation be restricted further (e.g. `super_admin` only) since
-   codes grant premium time?
-5. Broadcast notifications from the UI — confirm scope warnings suffice, or
-   require a second pair of eyes (maker-checker)?
-6. Analytics overview now (cheap `MetricCard` page on existing endpoint) or
-   after the seven v1 pages prove themselves?
-7. Activation-code revoke for typos: accept "no remedy" for v1, or spec the
-   audit semantics now?
+(none open — all seven answered above as rulings.)
