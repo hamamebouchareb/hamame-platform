@@ -174,6 +174,26 @@ export function AppHeader({
                 </Link>
               );
             })}
+            {/* Mid-size screens have no sidebar (lg+) and no drawer (<md),
+                so admin entries ride this row too — same links, same style. */}
+            {resolvedAdminNav.map((item) => {
+              const active = isNavActive(pathname, item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={cx(
+                    "inline-flex min-h-touch-target shrink-0 items-center rounded-pill px-4 text-body font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+                    active
+                      ? "bg-surface-3 text-accent-soft"
+                      : "text-text-secondary hover:bg-surface-2 hover:text-text-primary active:bg-surface-2"
+                  )}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
         ) : (
           <div className="min-w-0 flex-1" />
