@@ -224,8 +224,7 @@
       "type": "QROC",
       "source": "hamame_authored",
       "body": "[TEST-IMPORT] Citez une phase du cycle cardiaque. (fictif)",
-      "answer": "Systole ventriculaire",
-      "explanation": "Réponse courte attendue. (fictif)",
+      "explanation": "Réponse attendue : Systole ventriculaire. Réponse courte attendue. (fictif)",
       "university": null
     },
     {
@@ -238,8 +237,7 @@
       "source": "official_exam",
       "difficulty": "moyen",
       "body": "[TEST-IMPORT] Définissez la diastole. (fictif)",
-      "answer": "Phase de relâchement et remplissage",
-      "explanation": "Définition courte. (fictif)",
+      "explanation": "Réponse attendue : Phase de relâchement et remplissage. Définition courte. (fictif)",
       "examYear": 2021,
       "university": null
     },

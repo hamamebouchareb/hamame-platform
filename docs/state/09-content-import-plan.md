@@ -90,7 +90,7 @@ vocabulary when present: `facile|moyen|difficile` or null (owner-ruled).
 `examYear` O (4-digit int). `sittingLabel` O free text, with a warning
 when outside the configurable list file (`sitting-labels.json`,
 owner-maintained — warn, not reject). QCS: same with exactly 1 correct.
-QROC: no `options`; `answer` R (NOT auto-graded, stays null-graded).
+QROC: no `options` and no `answer` field (rejected if present); the reference answer goes in `explanation` (no column stores a separate answer; NOT auto-graded, stays null-graded).
 Clinical cases: OUT of v1 (owner-ruled) — validator rejects
 `type: CLINICAL_CASE` with a dedicated reason. Attachments: OUT of v1 —
 and `questions` has NO attachment table, so image-based questions are
@@ -147,7 +147,7 @@ op — no new public surface, no role-gating to maintain, no UI to translate.
   tolerate absent explanations (hidden toggles), but `explanation_richtext`
   is non-null in the schema and required by the draft contract — so the
   column, not the UI, decides. `explanation` stays REQUIRED.
-- QROC without `answer` → reject. `type: CLINICAL_CASE` → reject with
+- QROC carrying an `answer` field → reject (`QROC must not carry answer (put reference answer in explanation; no column stores a separate answer)`). `type: CLINICAL_CASE` → reject with
   `clinical-out-of-v1` (owner-ruled, not a validation failure of the row).
 - `difficulty` present but not `facile|moyen|difficile` → reject.
 - Body/explanation not matching the §0 render shapes → reject.

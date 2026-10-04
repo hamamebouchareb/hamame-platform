@@ -110,7 +110,9 @@ export function validateQuestion(
 
   if (type === "QROC") {
     if (options.length > 0) fail("QROC must not carry options");
-    if (isBlank(raw.answer)) fail("QROC missing answer");
+    if (raw.answer !== undefined && raw.answer !== null && String(raw.answer).trim().length > 0) {
+      fail("QROC must not carry answer (put reference answer in explanation; no column stores a separate answer)");
+    }
   } else {
     if (options.length < 2) fail("fewer than 2 options");
     const correct = options.filter((o) => o.correct).length;
