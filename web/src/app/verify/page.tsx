@@ -59,6 +59,7 @@ function VerifyForm() {
   }
 
   // Auto-submit once on mount when the email link carried the token.
+  /* eslint-disable react-hooks/set-state-in-effect -- one-time auto-submit from the URL token on mount, submit fans out to setState */
   useEffect(() => {
     const fromUrl = searchParams.get("token") ?? "";
     if (fromUrl.trim().length > 0) {
@@ -66,6 +67,7 @@ function VerifyForm() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
