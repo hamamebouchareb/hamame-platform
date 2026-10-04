@@ -206,8 +206,12 @@ async function listLessonsForUnit(req: Request, res: Response, next: NextFunctio
     // university set) resolves to null, meaning global lessons only.
     const viewerUniversityId = await resolveViewerUniversityId(prisma, req.auth?.userId);
 
+    // BR-2 for lessons: only rows with a published (approved) version are
+    // visible to students — a draft/pending lesson must not appear as a
+    // phantom row (its detail 404s on null currentVersionId). currentVersionId
+    // is set exclusively by the approve handler, so non-null ⟺ published.
     const lessons = await prisma.lesson.findMany({
-      where: { unitId: id, AND: [universityScopeFilter(viewerUniversityId)] },
+      where: { unitId: id, currentVersionId: { not: null }, AND: [universityScopeFilter(viewerUniversityId)] },
       select: { id: true, title: true, contentTier: true },
     });
 
