@@ -82,9 +82,11 @@ export default function NotificationsPage() {
     [t]
   );
 
+  /* eslint-disable react-hooks/set-state-in-effect -- initial notification page load on hydrate/tab change, loader fans out to setState */
   useEffect(() => {
     if (isHydrated && user) void loadPage(1, tab);
   }, [isHydrated, user, tab, loadPage]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   async function markRead(item: NotificationItem) {
     if (item.isRead) return;
