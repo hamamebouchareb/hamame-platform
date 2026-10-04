@@ -1,6 +1,6 @@
-# 01 — Git history (verified 2026-10-02, HEAD `9eb8361`)
+# 01 — Git history (verified 2026-10-04, HEAD `9a6c8e3`)
 
-Source: `git log --format='%h %ad %an %s' --date=short` (65 commits, oldest
+Source: `git log --format='%h %ad %an %s' --date=short` (79 commits through `9a6c8e3`, oldest
 first at the bottom). Branches: `main` (tracks `origin/main`),
 `ui/design-system-primitives` (merged, kept as checkpoint),
 `origin/main`, `origin/ui/design-system-primitives`. `git status`: clean
@@ -95,3 +95,18 @@ b78aca7 2026-08-24 Hamame Update HAMAME_MASTER_HANDOFF.md: re-verified ground tr
 - `1ae2f20` (OpenCode) — removed tracked phone-camera scans.
 - `1d0ccf1` (OpenCode) — schema-doc reconciliation against schema + 24 migrations.
 - `9eb8361` (OpenCode) — one-line `@map("file_url")` fix with generate/tsc/build + live-read + before/after diff evidence.
+- `cba9a52` — Docs state: evidence batch 08 plus file_url follow-ups (cutoff; everything below is new since).
+- `ac8dcad` 2026-10-02 — Docs state: evidence batch A steps 4-8.
+- `4750714` 2026-10-02 — Docs state package: 09 content import plan.
+- `5e9ade0` 2026-10-02 — Docs state package: 09 content import plan complete.
+- `1e35701` 2026-10-02 — Content import: plan rulings plus skeleton validator samples.
+- `b43b949` 2026-10-02 — Content import: resolver writers rollback tool.
+- `2da49dc` 2026-10-03 — Import scripts: localhost-only apply guard.
+- `1b0503a` 2026-10-03 — Import scripts: guard allows production only with explicit flag.
+- `0fc843d` 2026-10-03 — Import infra: review-approve script plus TEST-IMPORT sample.
+- `8f1654c` 2026-10-03 — Import: fingerprint must include isCorrect for dedup.
+- `8332dc1` 2026-10-03 — Import: hash explanation instead of unstored answer.
+- `c1d2f95` 2026-10-04 — Package A resume: rollback 18 TEST-IMPORT rows, verify 9/7/26/1/1.
+- `7c9f265` 2026-10-04 — BR-2: hide unpublished lessons from unit lesson list.
+- `8eee180` 2026-10-04 — Importer: reject QROC answer field, reference answer lives in explanation.
+- `9a6c8e3` 2026-10-04 — Housekeeping: archive BR-2 FAIL log, ignore import manifests and export/.

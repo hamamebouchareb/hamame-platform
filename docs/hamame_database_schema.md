@@ -9,7 +9,10 @@ Notation: PostgreSQL-flavored pseudo-DDL. Reconciled 2026-09-30 against
 migration SQL contents (live-DB spot checks were blocked that day by pooler
 saturation — `EMAXCONNSESSION` on three attempts — so `information_schema`
 cells below are marked UNVERIFIED where they rest on schema+migrations
-alone; nothing here is guessed, only sourced).
+alone; nothing here is guessed, only sourced). Structure was verified against
+the live database with `prisma migrate diff` on 2026-10-02 (only resources FK
+and index drift, never apply); CHECK constraints and allowed text values are
+not covered by that diff.
 
 ---
 
@@ -185,7 +188,7 @@ questions (
   difficulty TEXT NULL,
   body_richtext JSONB,
   explanation_richtext JSONB,         -- validated baseline explanation (FR-18)
-  ai_enhanced_explanation JSONB NULL, -- V2 -- layered, never replaces baseline
+  ai_enhanced_explanation JSONB NULL, -- live (approve hook + backfill) -- layered, never replaces baseline
   authored_by UUID FK -> users.id NULL,
   reviewed_by UUID FK -> users.id NULL,
   reviewed_at TIMESTAMPTZ NULL,
@@ -534,9 +537,7 @@ notifications (
 2. **`session_questions.option_order` stores a snapshot**, not a live shuffle, so a
    student's exam-mode session is reproducible for dispute resolution (NFR-10) even
    though answers are randomized per attempt (BR-4).
-3. **AI tables are included now, even though V2**, so later builds don't have to bolt them
-   on awkwardly later — this follows FR-60/61's extensibility requirement literally
-   (and the credit + interaction tables are live since the hints build).
+3. **AI tables were included early and are now live** — per-option MCQ justifications (`questions.ai_enhanced_explanation` via the approve hook + backfill script), hint/note/answer-locator interactions (`ai_interactions`) and daily/monthly allowances (`ai_credit_balances`) all run in production; no future bolt-on needed.
 4. **`is_minor` on `users`** exists to make BR-11 enforceable in code (e.g., stricter
    data-retention defaults), not just a policy statement.
 5. Not yet modeled: **institution-level aggregated analytics views** (BR-17) — these

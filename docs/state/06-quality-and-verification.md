@@ -1,4 +1,4 @@
-# 06 — Quality and verification (measured 2026-10-02)
+# 06 — Quality and verification (measured 2026-10-02; importer + BR-2 re-measured 2026-10-04)
 
 ## Gate outputs (real, this session)
 
@@ -12,7 +12,10 @@
   `LanguageContext` (×2). Warnings: unused imports in `classement` (×2:
   apiFetch, ApiError), `resources` (×2: useEffect, useState). Backend has NO
   lint setup (no root eslint config/script — running eslint at root errors).
-- Backend `npm run build` (`prisma generate && tsc`) → exit 0, client v6.19.3.
+- Backend `npm run build` (`prisma generate && tsc`) → exit 0, client v6.19.3 (re-run 2026-10-04 after BR-2 gate + QROC validator change → exit 0 both times).
+- Bulk importer dry-run on `docs/state/samples/demo-testimport.json` (2026-10-04, production reads only) → `valid lessons=1 QCM=5 QCS=3 QROC=2`, `rejected=3` (rows 11-13), `skipped-duplicate=0` on the clean bank; QROC `answer` field rejects with `QROC must not carry answer (put reference answer in explanation; no column stores a separate answer)`.
+- BR-2 lesson gate (2026-10-04, hidden throwaway harness, student JWT minted locally) → unit lesson list `total=3` (3 approved shown, 4 drafts hidden), draft details `404` ×4, published details `200` ×3 → `BR2: PASS`.
+- Production import rollback (2026-10-04) → deleted 8 + 10 questions, 19 + 19 options, 1 lesson + 1 version; re-run both manifests → all `already gone`; final counts `questions=9 lessons=7 options=26 modules=1 units=1`, zero `[TEST-IMPORT]` rows (see `docs/verification/packagea-resume-20261004.log`).
 - Web `next build` → exit 0, 28 routes (27 static + dynamic as marked).
 - Playwright smoke (`web/e2e/smoke.spec.ts`, chromium, browsers installed) →
   **2 passed** (login serves over HTTP; renders in chromium). Side notes from

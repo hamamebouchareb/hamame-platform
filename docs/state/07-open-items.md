@@ -1,4 +1,4 @@
-# 07 — Open items (consolidated 2026-10-02)
+# 07 — Open items (consolidated 2026-10-02; importer + review status updated 2026-10-04)
 
 Tags: BLOCKED-ON-OWNER (needs credentials/money/account), DECISION-GATED
 (needs a product call), KNOWN-BUG, TECH-DEBT, PARKED (deliberately deferred).
@@ -37,6 +37,12 @@ Tags: BLOCKED-ON-OWNER (needs credentials/money/account), DECISION-GATED
 - `LessonAttachment.fileUrl` vs live `file_url` — RESOLVED 2026-10-02 by
   one-line `@map("file_url")` (commit `9eb8361`; evidence batch 08).
   Removed from the open list.
+- Bulk importer — LIVE, production-verified 2026-10-04. Dry-run + chunked `--apply` + manifest + rollback scripts work; production verification passed with the bank restored to `questions=9 lessons=7 options=26 modules=1 units=1` and zero `[TEST-IMPORT]` rows (see `docs/verification/packagea-resume-20261004.log`). Next: real content batches, one faculty/year at a time.
+- Import bugs found and fixed (2026-10-03/04): (1) fingerprint omitted `isCorrect` so QCM/QCS re-imports duplicated — fixed, re-import now skips; (2) QROC `answer` has no column — hashing an unstored answer can never match, so the hash covers `explanation` and the validator now rejects any `answer` field (reference answer lives in `explanation`); (3) student unit lesson list leaked pending lessons as phantom rows (detail 404s) — fixed with a `currentVersionId not null` gate (commit `7c9f265`, harness `BR2: PASS`).
+- Resources importer — MISSING. No bulk path for `resources`; only manual authoring/UI exists. Next: product call whether a resources importer is needed.
+- Image questions — UNSUPPORTED. `questions` has no attachment table, so image-based questions cannot be imported or stored; not just deferred. Next: product call + schema decision if ever needed.
+- Clinical cases — OUT of v1. Validator rejects `type: CLINICAL_CASE` with `clinical-out-of-v1`. Next: product call to scope v2.
+- Bulk review-approve — CODE-COMPLETE, never run with `--apply`. Needs a `REVIEWER_JWT` or `REVIEWER_EMAIL` + `REVIEWER_PASSWORD` env (never logged, never committed); dry-run lists the pending queue over HTTP so BR-2 gates and hooks run as in the UI. Next: owner provides reviewer env and runs dry-run first on real batches.
 - Unused `notImplemented`/stub helper (`src/lib/stub.ts`, `src/lib/errors.ts:14`)
   — TECH-DEBT. Zero live 501 stubs (verified: no route imports it). Next:
   delete the helper or leave it.
