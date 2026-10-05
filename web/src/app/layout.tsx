@@ -18,7 +18,23 @@ const fraunces = Fraunces({
 
 export const metadata: Metadata = {
   title: "Hamame",
-  description: "Hamame — Algerian educational platform",
+  // Default locale is French (html lang="fr"); English copy lives beside it
+  // wherever the object allows alternates. Per-locale titles would need
+  // generateMetadata per route — LATER, not this change.
+  description: "Hamame — plateforme algérienne de préparation aux examens médicaux",
+  openGraph: {
+    title: "Hamame",
+    description: "Hamame — plateforme algérienne de préparation aux examens médicaux",
+    type: "website",
+    siteName: "Hamame",
+    locale: "fr_DZ",
+    alternateLocale: ["en_US"],
+  },
+  twitter: {
+    card: "summary",
+    title: "Hamame",
+    description: "Hamame — Algerian medical exam prep platform",
+  },
 };
 
 export default function RootLayout({

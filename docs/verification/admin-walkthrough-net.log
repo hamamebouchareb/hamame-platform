@@ -1,29 +1,30 @@
 --- codes ---
-PUT http://localhost:3000/api/users/me/preferences -> 200
 GET http://localhost:3000/api/notifications/unread-count -> 200
 GET http://localhost:3000/api/faculties -> 200
+PUT http://localhost:3000/api/users/me/preferences -> 200
 GET http://localhost:3000/api/admin/activation-codes?limit=20 -> 200
 GET http://localhost:3000/api/faculties/b37b039e-2208-4837-b5d5-28b1c338a2cf/years -> 200
 GET http://localhost:3000/api/notifications/unread-count -> 200
-GET http://localhost:3000/api/faculties -> 200
 PUT http://localhost:3000/api/users/me/preferences -> 200
+GET http://localhost:3000/api/faculties -> 200
 GET http://localhost:3000/api/admin/activation-codes?limit=20 -> 200
 --- faculties ---
 GET http://localhost:3000/api/notifications/unread-count -> 200
 PUT http://localhost:3000/api/users/me/preferences -> 200
 GET http://localhost:3000/api/admin/faculties -> 200
-GET http://localhost:3000/api/faculties -> 200
-PUT http://localhost:3000/api/admin/faculties/d2fc110b-cafd-49b4-9e7f-3e6a77cde9e0/rollout-status -> 200
 GET http://localhost:3000/api/admin/faculties -> 200
 PUT http://localhost:3000/api/admin/faculties/d2fc110b-cafd-49b4-9e7f-3e6a77cde9e0/rollout-status -> 200
 GET http://localhost:3000/api/admin/faculties -> 200
-GET http://localhost:3000/api/faculties -> 200
+PUT http://localhost:3000/api/admin/faculties/d2fc110b-cafd-49b4-9e7f-3e6a77cde9e0/rollout-status -> 200
+GET http://localhost:3000/api/admin/faculties -> 200
+GET http://localhost:3000/api/admin/faculties -> 200
 --- roles ---
 GET http://localhost:3000/api/notifications/unread-count -> 200
 PUT http://localhost:3000/api/users/me/preferences -> 200
-GET http://localhost:3000/api/users/search?q=WalkDisposablemuub8wuj -> 200
-POST http://localhost:3000/api/admin/users/79cc5181-1ca6-4b70-8b95-9066c7965ce9/roles -> 201
-DELETE http://localhost:3000/api/admin/users/79cc5181-1ca6-4b70-8b95-9066c7965ce9/roles/instructor -> 200
+GET http://localhost:3000/api/users/search?q=WalkDisposablemuv2mgsq -> 200
+POST http://localhost:3000/api/admin/users/56313130-b9d5-43a5-98a2-5f8631d7a58c/roles -> 201
+DELETE http://localhost:3000/api/admin/users/56313130-b9d5-43a5-98a2-5f8631d7a58c/roles/instructor -> 200
 --- denial ---
 GET http://localhost:3000/api/notifications/unread-count -> 200
 GET http://localhost:3000/api/notifications/unread-count -> 200
+PUT http://localhost:3000/api/users/me/preferences -> 200
