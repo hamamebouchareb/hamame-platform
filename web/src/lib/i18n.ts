@@ -92,6 +92,12 @@ const fr = {
   "admin.codesRevoke": "Révoquer",
   "admin.codesRevokeConfirm": "Révoquer ce code ? Il deviendra inutilisable même s'il n'a pas été utilisé.",
   "admin.codesEmpty": "Aucun code pour ces filtres.",
+  // ── Error pages (not-found.tsx, error.tsx) ──
+  "errors.notFound": "Page introuvable",
+  "errors.notFoundDesc": "Cette page n'existe pas ou a été déplacée.",
+  "errors.crash": "Quelque chose s'est mal passé",
+  "errors.crashDesc": "Réessayez — si le problème persiste, revenez plus tard.",
+  "errors.backHome": "Accueil",
   "admin.rolloutStatus": "Statut de déploiement",
   "admin.rolloutNote":
     "« planned » masque la faculté partout ; « beta » et « live » sont visibles. Toutes les facultés sont listées ici, y compris les « planned ».",
@@ -1190,6 +1196,12 @@ const en: Record<I18nKey, string> = {
   "admin.codesRevoke": "Revoke",
   "admin.codesRevokeConfirm": "Revoke this code? It becomes unusable even if unredeemed.",
   "admin.codesEmpty": "No codes for these filters.",
+  // ── Error pages ──
+  "errors.notFound": "Page not found",
+  "errors.notFoundDesc": "This page does not exist or was moved.",
+  "errors.crash": "Something went wrong",
+  "errors.crashDesc": "Try again — if the problem persists, come back later.",
+  "errors.backHome": "Home",
   "admin.rolloutStatus": "Rollout status",
   "admin.rolloutNote":
     "“planned” hides the faculty everywhere; “beta” and “live” are visible. Every faculty is listed here, including “planned” ones.",
