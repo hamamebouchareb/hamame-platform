@@ -1,4 +1,5 @@
-import { Router } from "express";
+import { NextFunction, Request, Response, Router } from "express";
+import { prisma } from "../lib/prisma";
 import authRoutes from "./auth.routes";
 import usersRoutes from "./users.routes";
 import curriculumRoutes from "./curriculum.routes";
@@ -32,6 +33,29 @@ import aiRoutes from "./ai.routes";
 // Deliberately NOT mounted here (still out of scope):
 //   - /api/admin/ai-credits [AI credit governance admin surface]
 const router = Router();
+
+// GET /api/health — public liveness probe (no auth). Returns process uptime
+// plus a cheap database check (`SELECT 1` through Prisma, 2s cap). Never
+// exposes versions, env values, or row contents: the body is three fixed
+// strings/numbers. 200 when the database answers, 503 otherwise.
+async function getHealth(req: Request, res: Response, next: NextFunction) {
+  try {
+    const uptime = Math.floor(process.uptime());
+    const dbOk = await Promise.race([
+      prisma.$queryRaw`SELECT 1`.then(() => true),
+      new Promise<false>((resolve) => setTimeout(() => resolve(false), 2000)),
+    ]);
+    if (!dbOk) {
+      res.status(503).json({ status: "degraded", uptime, database: "unreachable" });
+      return;
+    }
+    res.status(200).json({ status: "ok", uptime, database: "ok" });
+  } catch (err) {
+    next(err);
+  }
+}
+
+router.get("/health", getHealth);
 
 router.use("/auth", authRoutes);
 router.use("/users", usersRoutes);
