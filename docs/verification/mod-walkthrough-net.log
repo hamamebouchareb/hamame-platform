@@ -1,0 +1,23 @@
+--- resolve ---
+PUT http://localhost:3000/api/users/me/preferences -> 200
+GET http://localhost:3000/api/notifications/unread-count -> 200
+GET http://localhost:3000/api/moderation/queue?limit=20 -> 200
+POST http://localhost:3000/api/moderation/reports/04ad0d29-faff-4078-9ea9-35bd53f38574/resolve -> 200
+GET http://localhost:3000/api/moderation/queue?limit=20 -> 200
+--- denial ---
+GET http://localhost:3000/api/notifications/unread-count -> 200
+PUT http://localhost:3000/api/users/me/preferences -> 200
+--- resolve ---
+GET http://localhost:3000/api/notifications/unread-count -> 200
+PUT http://localhost:3000/api/users/me/preferences -> 200
+GET http://localhost:3000/api/moderation/queue?limit=20 -> 200
+POST http://localhost:3000/api/moderation/reports/0f7e8a2c-6655-443b-b32c-ac91fd4f3af7/resolve -> 200
+GET http://localhost:3000/api/moderation/queue?limit=20 -> 200
+--- restrict ---
+GET http://localhost:3000/api/notifications/unread-count -> 200
+GET http://localhost:3000/api/moderation/queue?limit=20 -> 200
+PUT http://localhost:3000/api/users/me/preferences -> 200
+POST http://localhost:3000/api/moderation/users/03621b11-ee08-474a-a078-2057d45c642d/restrict -> 200
+--- denial ---
+GET http://localhost:3000/api/notifications/unread-count -> 200
+PUT http://localhost:3000/api/users/me/preferences -> 200
