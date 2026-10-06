@@ -63,6 +63,7 @@ export const ADMIN_NAV: NavKeyEntry[] = [
   { href: "/admin/codes", labelKey: "admin.codes" },
   { href: "/admin/faculties", labelKey: "admin.faculties" },
   { href: "/admin/roles", labelKey: "admin.roles" },
+  { href: "/admin/reports", labelKey: "admin.reports" },
 ];
 // NOTE: admin.applications / admin.promos / admin.notifications / admin.jobs
 // keys stay in i18n for the pages when they are built; only entries with a
@@ -73,14 +74,18 @@ const ADMIN_FAMILY = ["admin", "super_admin"];
 /**
  * Visible admin entries for a role list (roles from GET /api/users/me via
  * AuthContext — client-side UX gating only; every endpoint re-checks
- * server-side and 403s regardless). support_agent sees /admin/codes only
- * (matching the activation-code endpoints' gate); the admin family sees all.
+ * server-side and 403s regardless). The admin family sees all;
+ * support_agent sees /admin/codes only (matching the activation-code
+ * endpoints' gate); moderator sees /admin/reports only (matching the
+ * moderation endpoints' gate, which support_agent cannot call).
  */
 export function adminNavForRoles(roles: string[] | undefined): NavKeyEntry[] {
   if (!roles || roles.length === 0) return [];
   if (roles.some((r) => ADMIN_FAMILY.includes(r))) return ADMIN_NAV;
-  if (roles.includes("support_agent")) return ADMIN_NAV.slice(0, 1);
-  return [];
+  const entries: NavKeyEntry[] = [];
+  if (roles.includes("support_agent")) entries.push(...ADMIN_NAV.filter((e) => e.href === "/admin/codes"));
+  if (roles.includes("moderator")) entries.push(...ADMIN_NAV.filter((e) => e.href === "/admin/reports"));
+  return entries;
 }
 
 /**
