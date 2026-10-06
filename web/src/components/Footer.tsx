@@ -15,8 +15,15 @@ export interface FooterProps {
   className?: string;
 }
 
-export function Footer({ links = [], className }: FooterProps) {
+export function Footer({ links, className }: FooterProps) {
   const { t } = useLanguage();
+  // Legal links on every footer by default (Terms + Privacy); callers may
+  // still pass an explicit list (including []) to override.
+  const legalLinks: FooterLink[] =
+    links ?? [
+      { href: "/terms", label: t("nav.terms") },
+      { href: "/privacy", label: t("nav.privacy") },
+    ];
   return (
     <footer className={cx("mt-auto border-t border-border bg-surface-1", className)}>
       <div className="mx-auto flex max-w-6xl flex-col items-start gap-3 px-card-padding py-6 sm:flex-row sm:items-center sm:justify-between">
@@ -24,9 +31,9 @@ export function Footer({ links = [], className }: FooterProps) {
           <span className="font-display font-semibold text-text-secondary">Hamame</span> — {t("footer.tagline")}
         </p>
         <div className="flex flex-wrap items-center gap-3">
-          {links.length > 0 ? (
+          {legalLinks.length > 0 ? (
             <nav aria-label={t("footer.navAria")} className="flex flex-wrap gap-4">
-              {links.map((link) => (
+              {legalLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}

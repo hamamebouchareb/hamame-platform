@@ -16,6 +16,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -96,6 +97,34 @@ export default function RegisterPage() {
             <p className="text-caption text-text-tertiary">{t("settings.minLength")}</p>
           </div>
 
+          <label htmlFor="acceptLegal" className="flex min-h-touch-target cursor-pointer items-start gap-3 text-sm text-text-secondary">
+            <input
+              id="acceptLegal"
+              name="acceptLegal"
+              type="checkbox"
+              required
+              checked={acceptedLegal}
+              onChange={(e) => setAcceptedLegal(e.target.checked)}
+              className="mt-1 h-5 w-5 shrink-0 accent-accent-primary"
+            />
+            <span>
+              {t("auth.acceptLegalStart")}{" "}
+              <Link
+                href="/terms"
+                className="font-medium text-accent-soft underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+              >
+                {t("nav.terms")}
+              </Link>{" "}
+              {t("auth.acceptLegalAnd")}{" "}
+              <Link
+                href="/privacy"
+                className="font-medium text-accent-soft underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+              >
+                {t("nav.privacy")}
+              </Link>
+            </span>
+          </label>
+
           {error && (
             <p role="alert" className="rounded-control border border-danger/40 bg-surface-2 px-3 py-2 text-sm text-danger">
               {error}
@@ -104,7 +133,7 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || !acceptedLegal}
             className="mt-2 w-full min-h-touch-target rounded-control bg-accent-primary px-4 py-3 text-body font-medium text-on-accent transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-60"
           >
             {isSubmitting ? t("auth.creating") : t("auth.registerCta")}
