@@ -63,11 +63,10 @@ export const ADMIN_NAV: NavKeyEntry[] = [
   { href: "/admin/codes", labelKey: "admin.codes" },
   { href: "/admin/faculties", labelKey: "admin.faculties" },
   { href: "/admin/roles", labelKey: "admin.roles" },
-  { href: "/admin/instructor-applications", labelKey: "admin.applications" },
-  { href: "/admin/promos", labelKey: "admin.promos" },
-  { href: "/admin/notifications", labelKey: "admin.notifications" },
-  { href: "/admin/jobs", labelKey: "admin.jobs" },
 ];
+// NOTE: admin.applications / admin.promos / admin.notifications / admin.jobs
+// keys stay in i18n for the pages when they are built; only entries with a
+// real page.tsx may appear here (every href below must resolve to a page).
 
 const ADMIN_FAMILY = ["admin", "super_admin"];
 
