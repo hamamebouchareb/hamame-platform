@@ -1,0 +1,12 @@
+--- guest-fr ---
+
+--- links ---
+GET http://localhost:3000/api/auth/providers -> 200
+GET http://localhost:3000/api/auth/providers -> 200
+--- register ---
+GET http://localhost:3000/api/auth/providers -> 200
+POST http://localhost:3000/api/auth/register -> 201
+GET http://localhost:3000/api/users/me -> 200
+PUT http://localhost:3000/api/users/me/preferences -> 200
+--- nogate ---
+
