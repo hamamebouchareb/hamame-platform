@@ -10,7 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "legal:check": "node scripts/legal-check.mjs"
   },
   "dependencies": {
     "next": "16.3.8",
