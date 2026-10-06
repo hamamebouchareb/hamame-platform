@@ -8,7 +8,7 @@ const SKIP_KEY = "hamame_onboarding_skip";
 
 // Routes where the onboarding gate must never fire (public auth flows plus
 // the wizard itself — bouncing there would loop).
-const GATE_EXEMPT_PREFIXES = ["/login", "/register", "/verify", "/forgot-password", "/reset-password", "/bienvenue"];
+const GATE_EXEMPT_PREFIXES = ["/login", "/register", "/verify", "/forgot-password", "/reset-password", "/bienvenue", "/terms", "/privacy"];
 
 function isSkipped(): boolean {
   if (typeof window === "undefined") return false;
