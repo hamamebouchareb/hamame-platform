@@ -112,12 +112,18 @@ async function redeemActivationCode(req: Request, res: Response, next: NextFunct
       // Extend from max(currentPeriodEnd, now) — same stacking rule as promo-code
       // redemption: a healthy future expiry extends from itself; a stale
       // still-'active' row still gets a full period instead of a negative one.
+      // When the active row is NOT on the premium plan (e.g. a free-plan row),
+      // switch it onto the premium plan as well — extending the date alone
+      // would leave the user on the wrong plan with Premium never granted.
       let subscriptionResult;
       if (activeSubscription) {
         const base = activeSubscription.currentPeriodEnd > now ? activeSubscription.currentPeriodEnd : now;
         subscriptionResult = await tx.subscription.update({
           where: { id: activeSubscription.id },
-          data: { currentPeriodEnd: addDays(base, ACTIVATION_GRANT_DAYS) },
+          data: {
+            ...(activeSubscription.planId !== premiumPlan.id ? { planId: premiumPlan.id } : {}),
+            currentPeriodEnd: addDays(base, ACTIVATION_GRANT_DAYS),
+          },
           include: { plan: true },
         });
       } else {

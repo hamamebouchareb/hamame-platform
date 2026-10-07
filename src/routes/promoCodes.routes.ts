@@ -127,8 +127,14 @@ async function redeemPromoCode(req: Request, res: Response, next: NextFunction) 
       if (activeSubscription) {
         const base = activeSubscription.currentPeriodEnd > now ? activeSubscription.currentPeriodEnd : now;
         subscriptionResult = await tx.subscription.update({
+          // Same plan-switch rule as activation-code redemption: an active
+          // row off the premium plan (e.g. free) moves onto it, otherwise
+          // the grant would only extend a non-premium row's dates.
           where: { id: activeSubscription.id },
-          data: { currentPeriodEnd: addDays(base, grantsDays) },
+          data: {
+            ...(activeSubscription.planId !== premiumPlan.id ? { planId: premiumPlan.id } : {}),
+            currentPeriodEnd: addDays(base, grantsDays),
+          },
           include: { plan: true },
         });
       } else {
