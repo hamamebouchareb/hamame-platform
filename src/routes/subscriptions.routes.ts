@@ -56,6 +56,20 @@ async function createSubscription(req: Request, res: Response, next: NextFunctio
       throw new ApiError(404, "PLAN_NOT_FOUND", "No active plan exists with this id.");
     }
 
+    // Paid plans are never self-subscribable: there is no payment gateway, so
+    // letting this endpoint mint a 'manual_assisted' payment for a priced plan
+    // would grant Premium for free (or fabricate a paid record). Paid access
+    // is granted exclusively through code redemption (activation/promo codes
+    // issued after off-platform payment). The free plan (price zero) stays
+    // directly subscribable.
+    if (plan.priceDzd !== null && plan.priceDzd.toNumber() > 0) {
+      throw new ApiError(
+        403,
+        "PAYMENT_REQUIRED",
+        "Paid plans require an activation code issued after payment. Redeem your code instead of subscribing directly."
+      );
+    }
+
     const existingActiveSubscription = await prisma.subscription.findFirst({
       where: { userId, status: "active" },
     });
