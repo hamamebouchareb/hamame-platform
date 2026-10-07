@@ -54,6 +54,24 @@ Tags: BLOCKED-ON-OWNER (needs credentials/money/account), DECISION-GATED
   (`academic_reviewer,admin`), activation codes (`support_agent,admin`).
   Proven in a real browser (screenshots + net log
   `docs/verification/susp-walk*`). Removed from the open list.
+- Free self-upgrade to paid plans — SEVERE, RESOLVED 2026-10-07.
+  `POST /api/subscriptions` minted a `manual_assisted` payment for ANY plan,
+  so anyone could self-grant Premium for free. Now 403 `PAYMENT_REQUIRED`
+  for any priced plan (free plan still direct); paid access flows only
+  through code redemption. UI: paid plan cards lost the Subscribe button
+  (explanation + activation/promo redeem cards instead).
+- Redemption extended the wrong plan — SEVERE, RESOLVED 2026-10-07. Both
+  activation and promo redemption only pushed `currentPeriodEnd`, so a
+  free-plan row stayed non-premium with stretched dates. Both now switch
+  `planId` onto the premium plan when the active row is off-plan.
+- Orphan paid `manual_assisted` payments — OWNER-CONFIRM. Read-only query
+  2026-10-07: 2 rows at 1500 DZD `succeeded` (July + August, ids only in the
+  session report), unlinked to any activation code — consistent with the
+  self-subscribe hole above. Next: owner confirms they are test data.
+- Raw single-use tokens in logs — SEVERE, RESOLVED 2026-10-07. Verification
+  and reset tokens printed in full on every registration/reset. Now full
+  tokens log only outside production; production logs a masked identifier +
+  "token issued". Delivery and the non-production response token unchanged.
 - Unused `notImplemented`/stub helper (`src/lib/stub.ts`, `src/lib/errors.ts:14`)
   — TECH-DEBT. Zero live 501 stubs (verified: no route imports it). Next:
   delete the helper or leave it.
