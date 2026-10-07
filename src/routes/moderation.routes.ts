@@ -14,7 +14,7 @@ import { prisma } from "../lib/prisma";
 const router = Router();
 router.use(requireAuth);
 
-const requireModeratorOrAdmin = requireRole("moderator", "admin");
+const requireModeratorOrAdmin = requireRole("moderator", "admin", "super_admin");
 
 // Fields safe to return to the client for a restricted user — mirrors safeUserSelect in
 // src/routes/auth.routes.ts exactly (that constant isn't exported, so it's duplicated
