@@ -6,7 +6,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { localeFor, type UiLanguage } from "@/lib/i18n";
 import { useApiResource } from "@/lib/useApiResource";
 import { apiFetch, ApiError } from "@/lib/api";
-import { Button, Card, ErrorState, LoadingSkeleton, PageShell } from "@/components";
+import { ActivationCodeCard, Button, Card, ErrorState, LoadingSkeleton, PageShell, PromoCodeCard } from "@/components";
 import type { Plan, Subscription } from "@/lib/types";
 
 interface SubscribeErrorState {
@@ -215,10 +215,12 @@ export default function SubscriptionPage() {
                 <Button variant="outline" width="full" disabled className="mt-3">
                   {t("billing.currentPlan")}
                 </Button>
-              ) : (
+              ) : plan.priceDzd === null || plan.priceDzd === 0 ? (
                 <Button width="full" onClick={() => handleSubscribe(plan)} disabled={isSubscribing} className="mt-3">
                   {isSubscribing ? t("billing.subscribing") : t("billing.subscribe")}
                 </Button>
+              ) : (
+                <p className="mt-3 text-meta text-text-secondary">{t("billing.paidNeedsCode")}</p>
               )}
 
               {subscribeError && subscribeError.planId === plan.id && (
@@ -228,6 +230,12 @@ export default function SubscriptionPage() {
           );
         })}
       </ul>
+
+      <h2 className="mt-section-gap font-display text-h3 font-semibold text-text-primary">{t("billing.redeemTitle")}</h2>
+      <div className="mt-4 flex flex-col gap-card-gap">
+        <ActivationCodeCard onRedeemed={loadSubscription} />
+        <PromoCodeCard onRedeemed={loadSubscription} />
+      </div>
     </PageShell>
   );
 }

@@ -25,6 +25,7 @@ export { ReviewCard } from "@/components/ReviewCard";
 export { RevisionCard } from "@/components/RevisionCard";
 export { FriendsPanel } from "@/components/FriendsPanel";
 export { ActivationCodeCard } from "@/components/ActivationCodeCard";
+export { PromoCodeCard } from "@/components/PromoCodeCard";
 export { BadgeShelf, type EarnedBadge } from "@/components/BadgeShelf";
 export { Modal } from "@/components/Modal";
 export { ConfirmDialog } from "@/components/ConfirmDialog";
