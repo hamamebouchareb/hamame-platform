@@ -4,18 +4,21 @@ export interface ApiErrorBody {
   error: {
     code: string;
     message: string;
+    details?: { suspendedUntil?: string | null };
   };
 }
 
 export class ApiError extends Error {
   code: string;
   status: number;
+  details?: { suspendedUntil?: string | null };
 
-  constructor(status: number, code: string, message: string) {
+  constructor(status: number, code: string, message: string, details?: { suspendedUntil?: string | null }) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
+    this.details = details;
   }
 }
 
@@ -68,7 +71,23 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     const body = data as ApiErrorBody | null;
     const code = body?.error?.code ?? "UNKNOWN_ERROR";
     const message = body?.error?.message ?? "Something went wrong. Please try again.";
-    throw new ApiError(response.status, code, message);
+    const details = body?.error?.details;
+    if (response.status === 403 && code === "ACCOUNT_SUSPENDED") {
+      // Suspended mid-session: drop the now-useless token and bounce to
+      // login with the message encoded in the query (end date when given).
+      // Skipped on /login itself, where the page shows the message inline.
+      try {
+        window.localStorage.removeItem("hamame_auth");
+      } catch {
+        // Storage unavailable — the redirect below still signs them out.
+      }
+      if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+        const until = details?.suspendedUntil ?? null;
+        const query = until ? `?suspended=1&until=${encodeURIComponent(until)}` : "?suspended=1";
+        window.location.assign(`/login${query}`);
+      }
+    }
+    throw new ApiError(response.status, code, message, details);
   }
 
   return data as T;

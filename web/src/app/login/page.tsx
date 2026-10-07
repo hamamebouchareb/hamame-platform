@@ -5,13 +5,24 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { localeFor, type UiLanguage } from "@/lib/i18n";
 import { ApiError } from "@/lib/api";
 import { GoogleSignInButton, LanguageToggle } from "@/components";
+
+function suspensionText(
+  t: (key: "auth.suspended" | "auth.suspendedUntil", vars?: Record<string, string>) => string,
+  lang: UiLanguage,
+  until: string | null
+): string {
+  if (!until) return t("auth.suspended");
+  const date = new Date(until).toLocaleDateString(localeFor(lang), { dateStyle: "medium" });
+  return `${t("auth.suspended")} ${t("auth.suspendedUntil", { date })}`;
+}
 
 export default function LoginPage() {
   const router = useRouter();
   const { login, loginWithToken } = useAuth();
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,10 +31,18 @@ export default function LoginPage() {
 
   // Google OAuth landing: the backend callback redirects here with
   // ?google_token=<jwt> (success) or ?google_error=<code> (failure).
-  // window.location (not useSearchParams) keeps this page Suspense-free.
+  // A suspended session lands here with ?suspended=1[&until=<iso>] via the
+  // apiFetch redirect. window.location (not useSearchParams) keeps this page
+  // Suspense-free.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const suspended = params.get("suspended");
+    if (suspended) {
+      setError(suspensionText(t, lang, params.get("until")));
+      router.replace("/login");
+      return;
+    }
     const googleToken = params.get("google_token");
     const googleError = params.get("google_error");
     if (!googleToken && !googleError) return;
@@ -51,7 +70,11 @@ export default function LoginPage() {
       await login({ email, password });
       router.push("/dashboard");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("auth.genericError"));
+      if (err instanceof ApiError && err.code === "ACCOUNT_SUSPENDED") {
+        setError(suspensionText(t, lang, err.details?.suspendedUntil ?? null));
+      } else {
+        setError(err instanceof ApiError ? err.message : t("auth.genericError"));
+      }
     } finally {
       setIsSubmitting(false);
     }
