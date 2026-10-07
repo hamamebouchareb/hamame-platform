@@ -8,6 +8,7 @@ import { limitEmailSends, limitLogins } from "../middleware/rateLimit";
 import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
 import { signAccessToken } from "../lib/jwt";
+import { isEffectivelySuspended } from "../lib/suspension";
 import { sendPasswordResetEmail, sendVerificationEmail } from "../lib/email";
 import { sendPasswordResetSms, sendVerificationSms } from "../lib/sms";
 
@@ -220,7 +221,7 @@ async function login(req: Request, res: Response, next: NextFunction) {
       where: {
         OR: [...(email ? [{ email }] : []), ...(phone ? [{ phone }] : [])],
       },
-      select: { ...safeUserSelect, passwordHash: true },
+      select: { ...safeUserSelect, passwordHash: true, suspendedUntil: true },
     });
 
     // Same 401 for "no such account" and "wrong password" to avoid leaking which
@@ -244,6 +245,15 @@ async function login(req: Request, res: Response, next: NextFunction) {
     }
     if (!passwordMatches) {
       throw invalidCredentials();
+    }
+
+    // BR-5: a suspended account gets 403 instead of a token — checked AFTER
+    // the password so a wrong password never reveals the suspension. The end
+    // date (or null for indefinite) rides in details for the client message.
+    if (isEffectivelySuspended(user.status, user.suspendedUntil)) {
+      throw new ApiError(403, "ACCOUNT_SUSPENDED", "This account is suspended.", {
+        suspendedUntil: user.suspendedUntil ? user.suspendedUntil.toISOString() : null,
+      });
     }
 
     const accessToken = signAccessToken({ userId: user.id });

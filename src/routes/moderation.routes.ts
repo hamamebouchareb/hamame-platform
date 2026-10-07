@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { validateBody, validateParams, validateQuery } from "../middleware/validate";
 import { paginationQuery, uuidParam } from "../lib/common-schemas";
-import { requireAuth } from "../middleware/auth";
+import { invalidateAccountState, requireAuth } from "../middleware/auth";
 import { requireRole } from "../middleware/requireRole";
 import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
@@ -231,6 +231,9 @@ async function restrictUser(req: Request, res: Response, next: NextFunction) {
       data: { status: "suspended", suspendedUntil },
       select: safeUserSelect,
     });
+
+    // Enforcement must apply to the very next request, not up to 30s later.
+    invalidateAccountState(id);
 
     res.status(200).json({ user: updated });
   } catch (err) {

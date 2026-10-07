@@ -3,7 +3,13 @@ import { ApiError } from "../lib/errors";
 
 export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   if (err instanceof ApiError) {
-    return res.status(err.statusCode).json({ error: { code: err.code, message: err.message } });
+    return res.status(err.statusCode).json({
+      error: {
+        code: err.code,
+        message: err.message,
+        ...(err.details !== undefined ? { details: err.details } : {}),
+      },
+    });
   }
 
   // body-parser classifies malformed JSON as a client error (entity.parse.failed,

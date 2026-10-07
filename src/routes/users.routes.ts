@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { NextFunction, Request, Response, Router } from "express";
 import { z } from "zod";
 import { validateBody, validateQuery } from "../middleware/validate";
-import { requireAuth } from "../middleware/auth";
+import { invalidateAccountState, requireAuth } from "../middleware/auth";
 import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
 
@@ -377,6 +377,10 @@ async function deleteCurrentUser(req: Request, res: Response, next: NextFunction
       },
       select: { id: true, status: true },
     });
+
+    // The token just used is now a deleted account's — drop the cached state
+    // so any in-flight retry 401s immediately instead of lingering as authed.
+    invalidateAccountState(userId);
 
     res.status(200).json({ id: anonymizedUser.id, status: anonymizedUser.status });
   } catch (err) {
