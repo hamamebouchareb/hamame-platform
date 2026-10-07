@@ -28,6 +28,25 @@ function sha256(input: string): string {
   return createHash("sha256").update(input).digest("hex");
 }
 
+// Production-safe token logging: raw single-use tokens must never reach
+// production logs (a log leak would be a credential leak). Outside
+// production the full token is logged for testability; in production only a
+// masked identifier plus the words "token issued".
+function maskIdentifier(identifier: string | null | undefined): string {
+  if (!identifier) return "unknown";
+  const at = identifier.indexOf("@");
+  if (at > 0) return `${identifier[0]}***@${identifier.slice(at + 1)}`;
+  return `***${identifier.slice(-2)}`;
+}
+
+function logTokenIssued(kind: string, identifier: string | null | undefined, rawToken: string): void {
+  if (process.env.NODE_ENV === "production") {
+    console.log(`[auth] ${kind} token issued for ${maskIdentifier(identifier)}`);
+    return;
+  }
+  console.log(`[DEV] ${kind} token for ${identifier ?? "unknown"}: ${rawToken}`);
+}
+
 // Fields safe to return to the client. Deliberately excludes passwordHash — callers
 // must select passwordHash separately (e.g. for login's comparison) and pass the full
 // row through toUserResponse, which strips it before it reaches any response body.
@@ -146,8 +165,7 @@ async function register(req: Request, res: Response, next: NextFunction) {
     // token is logged to the server console and additionally returned in the
     // response ONLY outside production, so FR-3 stays testable when no delivery
     // provider is configured. Never include it in production.
-    const verificationIdentifier = user.email ?? user.phone;
-    console.log(`[DEV] Verification token for ${verificationIdentifier}: ${rawVerificationToken}`);
+    logTokenIssued("Verification", user.email ?? user.phone, rawVerificationToken);
 
     // Every new registrant gets the default 'student_free' role (PRD Section 6). The
     // Role row is looked up by name rather than a hardcoded id since prisma/seed.ts
@@ -307,8 +325,7 @@ async function forgotPassword(req: Request, res: Response, next: NextFunction) {
       // real delivery. Never include it in the response when NODE_ENV === 'production'.
       // Delivery itself is best-effort (see above); when no provider is configured
       // the log is the only copy.
-      const identifier = user.email ?? user.phone;
-      console.log(`[DEV] Password reset token for ${identifier}: ${rawToken}`);
+      logTokenIssued("Password reset", user.email ?? user.phone, rawToken);
 
       // Best-effort reset delivery (same pattern as registration): email accounts
       // via Resend, phone-only accounts via SMS. The response stays generic
