@@ -42,7 +42,18 @@ Tags: BLOCKED-ON-OWNER (needs credentials/money/account), DECISION-GATED
 - Resources importer — MISSING. No bulk path for `resources`; only manual authoring/UI exists. Next: product call whether a resources importer is needed.
 - Image questions — UNSUPPORTED. `questions` has no attachment table, so image-based questions cannot be imported or stored; not just deferred. Next: product call + schema decision if ever needed.
 - Clinical cases — OUT of v1. Validator rejects `type: CLINICAL_CASE` with `clinical-out-of-v1`. Next: product call to scope v2.
-- Bulk review-approve — CODE-COMPLETE, never run with `--apply`. Needs a `REVIEWER_JWT` or `REVIEWER_EMAIL` + `REVIEWER_PASSWORD` env (never logged, never committed); dry-run lists the pending queue over HTTP so BR-2 gates and hooks run as in the UI. Next: owner provides reviewer env and runs dry-run first on real batches.
+- Bulk review-approve — CODE-COMPLETE, never run with `--apply`. Needs a `REVIEWER_JWT` or `REVIEWER_EMAIL` + `REVIEWER_PASSWORD` env (never logged, never committed); dry-run lists the pending queue over HTTP so BR-2 gates and   hooks run as in the UI. Next: owner provides reviewer env and runs dry-run first on real batches.
+- Unenforced suspensions — RESOLVED 2026-10-06. Restriction wrote
+  `status=suspended` but nothing read it (login 200, all endpoints open).
+  Now: `isEffectivelySuspended` (`src/lib/suspension.ts`, unit-tested, `npm
+  test`) gates login (403 `ACCOUNT_SUSPENDED` + end date) and every
+  `requireAuth` route (30s per-user cache, invalidated on restrict/delete;
+  optionals demote to anonymous); web signs out to `/login` with an FR/EN
+  message. Moderation gate now includes `super_admin`. Other
+  admin-without-super_admin gates left as-is: review
+  (`academic_reviewer,admin`), activation codes (`support_agent,admin`).
+  Proven in a real browser (screenshots + net log
+  `docs/verification/susp-walk*`). Removed from the open list.
 - Unused `notImplemented`/stub helper (`src/lib/stub.ts`, `src/lib/errors.ts:14`)
   — TECH-DEBT. Zero live 501 stubs (verified: no route imports it). Next:
   delete the helper or leave it.
