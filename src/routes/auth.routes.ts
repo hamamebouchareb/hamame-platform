@@ -9,6 +9,7 @@ import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
 import { signAccessToken } from "../lib/jwt";
 import { isEffectivelySuspended } from "../lib/suspension";
+import { normalizeEmail } from "../lib/normalize-email";
 import { shouldRotatePasswordOnGoogleLink } from "../lib/google-link";
 import { sendPasswordResetEmail, sendVerificationEmail } from "../lib/email";
 import { sendPasswordResetSms, sendVerificationSms } from "../lib/sms";
@@ -122,7 +123,7 @@ const identifierRefinement = <T extends { email?: string; phone?: string }>(data
 // POST /api/auth/register — FR-1: register via email or phone.
 const registerSchema = z
   .object({
-    email: z.string().email().optional(),
+    email: z.string().transform((s) => normalizeEmail(s)).pipe(z.string().email()).optional(),
     phone: z.string().min(6).optional(),
     password: z.string().min(8),
     fullName: z.string().min(1),
@@ -226,7 +227,7 @@ router.post("/register", limitEmailSends, validateBody(registerSchema), register
 // POST /api/auth/login
 const loginSchema = z
   .object({
-    email: z.string().email().optional(),
+    email: z.string().transform((s) => normalizeEmail(s)).pipe(z.string().email()).optional(),
     phone: z.string().min(6).optional(),
     password: z.string().min(1),
   })
@@ -287,7 +288,7 @@ router.post("/login", limitLogins, validateBody(loginSchema), login);
 // POST /api/auth/forgot-password
 const forgotPasswordSchema = z
   .object({
-    email: z.string().email().optional(),
+    email: z.string().transform((s) => normalizeEmail(s)).pipe(z.string().email()).optional(),
     phone: z.string().min(6).optional(),
   })
   .superRefine(identifierRefinement);
@@ -677,7 +678,7 @@ router.get("/google/callback", async (req: Request, res: Response, next: NextFun
 
     if (!user) {
       const byEmail = await prisma.user.findFirst({
-        where: { email: profile.email },
+        where: { email: normalizeEmail(profile.email) },
         select: safeUserSelect,
       });
       if (byEmail) {
