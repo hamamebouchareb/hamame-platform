@@ -1,0 +1,74 @@
+=== BATCH 1 HARDENING (production, throwaway harness, ephemeral port) ===
+Baseline counts: users=64 subscriptions=9 payments=7 promo-codes=2 promo-redemptions=2
+No secrets below: ids, statuses, counts, dates only. No emails, tokens, keys.
+
+=== TASK 1 (google-link) + TASK 2 (normalize-email) unit tests: npm test ===
+> hamame@0.1.0 test
+> node --import tsx --test src/lib/suspension.test.ts src/lib/google-link.test.ts src/lib/normalize-email.test.ts
+
+- shouldRotatePasswordOnGoogleLink
+  - rotates when the email was never verified: PASS
+  - leaves the password alone when the email was already verified: PASS
+- normalizeEmail
+  - trims padding and lowercases: PASS
+  - leaves an already-clean address alone: PASS
+- isEffectivelySuspended (5 pre-existing tests): PASS
+tests 9, pass 9, fail 0
+EXIT:0
+
+=== TASK 2 harness proof (mixed-case register, other-case login, dup 409, drift 0) ===
+drift-before=0
+register-mixed: status=201
+stored-is-lowercase=1
+login-other-casing: status=200
+second-register: status=409 code=ALREADY_REGISTERED
+delete-me: status=200
+drift-after=0
+EXIT:0
+
+=== TASK 3 pre-fix race (5 concurrent redeems, maxUsesPerAccount=1) ===
+register: status=201
+create-code: status=201
+successes=5 of=5
+  200:ok (x5)
+redemption-rows=5
+RACE REPRODUCED pre-fix: all 5 concurrent redemptions committed.
+
+=== TASK 3 intermediate (stale harness served pre-fix code): 5x500 ===
+successes=0 of=5, 5x 500:INTERNAL_ERROR, redemption-rows=0 for the new code.
+Cause found via probe: Prisma $queryRaw cannot deserialize void columns
+(`pg_advisory_xact_lock` returns void) — switched to $executeRaw (returns
+row count). Lesson: restart the throwaway harness after every backend edit;
+a stale harness serves pre-fix code and produces false signals.
+
+=== TASK 3 post-fix race (fresh harness, fixed code) ===
+register: status=201
+create-code: status=201
+successes=1 of=5
+  200:ok
+  400:PROMO_CODE_ALREADY_USED (x4)
+redemption-rows=1
+code-expired=1
+delete-me: status=200
+FIXED: exactly 1 success, 4 x 400, 1 redemption row.
+
+=== FIXTURE CLEANUP (test rows only, children first, sequential) ===
+verify-codes=4, redemptions-removed=11, subscriptions-removed=10,
+payments-removed=0, codes-removed=4.
+Final: users=69 (64 + 5 soft-deleted disposables, PII scrubbed by platform
+delete), subscriptions=9, payments=7, promo-codes=2, promo-redemptions=2.
+df0aacd2 subscription row predates this batch (prior task leftover) and was
+left untouched.
+NOTE: one 500-run left 5 redemptions + 5 subscriptions committed while all
+callers got 500 (writes landed, error surfaced at response; mechanism
+undetermined — possibly pooler/harness-state related). All such rows were
+identified (VERIFY-RACE-* codes + owning deleted disposables) and removed
+above; final counts prove it.
+
+=== GATES (final tree) ===
+npx tsc --noEmit -p tsconfig.json -> exit 0
+npm test (9 tests) -> exit 0
+npm run build (prisma generate + tsc) -> exit 0 (first attempt hit an EPERM
+rename on the Prisma engine DLL held by the running harness; stopped the
+harness and rebuilt green — environmental file lock, not a code failure)
+Web untouched.

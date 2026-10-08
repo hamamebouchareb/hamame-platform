@@ -20,9 +20,9 @@ Tags: BLOCKED-ON-OWNER (needs credentials/money/account), DECISION-GATED
   blanket premium (subscriptions has no faculty/year columns); zero-amount
   `manual_assisted` payment created at redemption. Next: accept or scope
   subscriptions (migration + gating rewrite).
-- Lint errors — TECH-DEBT. Current full measure: 7 errors (all
-  set-state-in-effect) + 4 warnings (unused imports), files listed in 06.
-  Backend has no lint setup at all. Next: per-file convention fixes.
+- Lint errors — TECH-DEBT (stale measure corrected 2026-10-08). Web lint is
+  0 errors, 0 warnings (per-file convention fixes landed); backend still has
+  no lint setup at all. Next: decide whether backend needs one.
 - Parked features (need backend + product decision each): social feed,
   groups, messages, Sparx balance, bookstore, "Créer une page", ECOS
   session types, shared sessions, per-mode scoring, real scheduled-sim
@@ -80,6 +80,30 @@ Tags: BLOCKED-ON-OWNER (needs credentials/money/account), DECISION-GATED
   Next: owner-managed rotation; no test-password commits ever.
 - Code grep 2026-10-02: zero TODO/FIXME hits in src/ and web/src; the only
   501s are the env-gated OAuth paths (by design) plus the unused stub above.
+- Google link hijack — RESOLVED 2026-10-08. Linking by verified email now
+  rotates the password when the stored email was never verified
+  (`shouldRotatePasswordOnGoogleLink`, unit-tested, `npm test`); verified
+  addresses keep their password. Live OAuth round-trip UNVERIFIED (no
+  console credentials).
+- Email case duplicates — RESOLVED 2026-10-08. `normalizeEmail`
+  (trim + lowercase, unit-tested) runs in Zod before `.email()` on register,
+  login, and forgot-password, plus the Google profile-email lookup; phones
+  untouched. Harness proof: mixed-case register stores lowercase,
+  other-casing login 200, different-casing re-register 409; drift query 0
+  before and after. Note: the Google create path stores `profile.email`
+  as-is (lookup is normalized) — follow-up if mixed-case Google addresses
+  ever appear.
+- Promo redemption race — RESOLVED 2026-10-08. Five concurrent redeems on a
+  maxUsesPerAccount=1 code committed 5 rows pre-fix (reproduced). Now a
+  transaction-scoped `pg_advisory_xact_lock` per (code, user) serializes with
+  an in-lock recount: exactly 1 success + 4 x 400 post-fix, 1 row.
+  Implementation note: the lock must go through `$executeRaw` — `$queryRaw`
+  cannot deserialize the void return. Evidence
+  `docs/verification/batch1-hardening.log`. Fixtures expired/removed; counts
+  restored.
+- Health route and legal pages — LIVE (were missing from this list).
+  `GET /api/health` (public, DB check, no versions/secrets); branded
+  404/crash/loading pages and `/terms` + `/privacy` with FR+EN keys.
 
 UNVERIFIED by raw log (carried from 06): onboarding wizard end-to-end,
 themes + header cycler, all UI shell migrations, heading tiers, token
