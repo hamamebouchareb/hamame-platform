@@ -9,6 +9,7 @@ import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
 import { signAccessToken } from "../lib/jwt";
 import { isEffectivelySuspended } from "../lib/suspension";
+import { shouldRotatePasswordOnGoogleLink } from "../lib/google-link";
 import { sendPasswordResetEmail, sendVerificationEmail } from "../lib/email";
 import { sendPasswordResetSms, sendVerificationSms } from "../lib/sms";
 
@@ -683,11 +684,18 @@ router.get("/google/callback", async (req: Request, res: Response, next: NextFun
         if (byEmail.status === "deleted") {
           return fail("account_deleted");
         }
+        // Link hijack guard: when the stored email was never verified, the
+        // pre-link password may predate proof of ownership, so replace it
+        // with an unusable random hash (same construction as new accounts).
+        // An already-verified address keeps its password untouched.
         user = await prisma.user.update({
           where: { id: byEmail.id },
           data: {
             googleSub: profile.sub,
             emailVerifiedAt: byEmail.emailVerifiedAt ?? new Date(),
+            ...(shouldRotatePasswordOnGoogleLink(byEmail.emailVerifiedAt)
+              ? { passwordHash: await bcrypt.hash(randomBytes(32).toString("hex"), BCRYPT_SALT_ROUNDS) }
+              : {}),
           },
           select: safeUserSelect,
         });
