@@ -108,6 +108,22 @@ async function redeemPromoCode(req: Request, res: Response, next: NextFunction) 
     }
 
     const { subscription, redemption } = await prisma.$transaction(async (tx) => {
+      // Race guard: concurrent redemptions of the same code by the same user
+      // all passed the outer pre-check before any committed (proven: 5/5
+      // successes on a maxUsesPerAccount=1 code). Serialize per (code, user)
+      // with a transaction-scoped advisory lock, then re-count inside the
+      // lock — losers throw before writing anything.
+      // $executeRaw, not $queryRaw: the lock function returns void, which
+      // Prisma cannot deserialize as a result column ($executeRaw only
+      // reports the affected-row count and never touches columns).
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${promoCode.id + userId}))`;
+      const lockedCount = await tx.promoCodeRedemption.count({
+        where: { promoCodeId: promoCode.id, userId },
+      });
+      if (lockedCount >= promoCode.maxUsesPerAccount) {
+        throw new ApiError(400, "PROMO_CODE_ALREADY_USED", "You've already used this code.");
+      }
+
       const createdRedemption = await tx.promoCodeRedemption.create({
         data: { promoCodeId: promoCode.id, userId },
       });
