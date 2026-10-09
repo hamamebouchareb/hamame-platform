@@ -704,7 +704,7 @@ router.get("/google/callback", async (req: Request, res: Response, next: NextFun
         const passwordHash = await bcrypt.hash(randomBytes(32).toString("hex"), BCRYPT_SALT_ROUNDS);
         const created = await prisma.user.create({
           data: {
-            email: profile.email,
+            email: normalizeEmail(profile.email),
             passwordHash,
             fullName: profile.fullName,
             googleSub: profile.sub,
