@@ -7,6 +7,7 @@ import { requireAuth } from "../middleware/auth";
 import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
 import { buildQuestionWhere } from "../lib/question-filters";
+import { isExamAnswerExpired } from "../lib/exam-deadline";
 import { shuffle } from "../lib/shuffle";
 import { createFlashcardFromQuestion, findFlashcardSourceQuestion } from "../lib/flashcard-from-question";
 import { resolveViewerUniversityId } from "../lib/university-scope";
@@ -583,6 +584,12 @@ async function submitAnswer(req: Request, res: Response, next: NextFunction) {
 
     if (session.completedAt) {
       throw new ApiError(409, "SESSION_ALREADY_COMPLETED", "This session has already been submitted.");
+    }
+
+    // Server-side exam clock: late answers are rejected and stored nowhere
+    // (submit itself stays ungated and scores what arrived in time).
+    if (isExamAnswerExpired(session.mode, session.timeLimitSeconds, session.startedAt)) {
+      throw new ApiError(409, "SESSION_TIME_EXPIRED", "The exam time limit has passed.");
     }
 
     const sessionQuestion = await prisma.sessionQuestion.findFirst({
