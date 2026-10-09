@@ -1,0 +1,46 @@
+=== 500-AFTER-COMMIT INVESTIGATION (current code, fresh harness, ephemeral port) ===
+Question: batch-1 run 2 returned 5x500 while 5 redemptions + subs committed.
+Method: 3 runs (A/B/C), each with a new disposable user + VERIFY- code
+(maxUsesPerAccount=1), 5 concurrent POST /api/promo-codes/redeem, then full
+fixture cleanup per run. Harness stdout/stderr captured; emails and raw
+tokens below are redacted (accounts deleted afterwards in every run).
+
+--- run A ---
+register: status=201
+create-code: status=201
+successes=1 of=5
+  200:ok
+  400:PROMO_CODE_ALREADY_USED (x4)
+redemption-rows=1, user-subscriptions=1
+cleanup: reds=1 subs=1 pays=0, delete-me: status=200
+
+--- run B ---
+successes=1 of=5, 200:ok + 4x 400:PROMO_CODE_ALREADY_USED,
+redemption-rows=1, cleanup full, delete-me: status=200
+
+--- run C ---
+successes=1 of=5, 200:ok + 4x 400:PROMO_CODE_ALREADY_USED,
+redemption-rows=1, cleanup full, delete-me: status=200
+
+--- harness console (redacted; 3 boot+register cycles, same shape each) ---
+throwaway listening port=<ephemeral>
+[DEV] Verification token for <redacted-email>: <redacted-token>
+[email] RESEND_API_KEY not set — skipping verification email to <redacted-email>
+(no stacks, no error lines in stdout or stderr across all 3 runs)
+
+--- timeout/maxWait config ---
+No explicit timeout/maxWait on the promo $transaction
+(src/routes/promoCodes.routes.ts) or the Prisma client (src/lib/prisma.ts);
+engine defaults apply. Not implicated: no timeout error surfaced anywhere.
+
+=== CONCLUSION: NOT REPRODUCED on current code ===
+15 concurrent redemptions across 3 runs: zero 500s, zero stacks, exact
+1+4x400 + 1 row every time. The batch-1 500-after-commit mechanism is
+UNDETERMINED: pre-fix race proven separately (5/5 + 5 rows, run 1), the
+run-2 500s hit pre-fix code served by a stale harness (restarted only
+afterwards) with writes demonstrably committed, so the throw site was after
+commit (response path) or pooler/harness-state related — but no evidence
+remains to pin it, and the void-column $queryRaw theory is excluded (that
+edit never executed on any harness; the probe that found it ran standalone).
+All batch-1 fixture rows were identified and removed; counts restored
+(users aside: soft-deleted disposables retained by design).
