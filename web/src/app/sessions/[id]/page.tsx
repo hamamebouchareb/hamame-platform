@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { useLanguage } from "@/context/LanguageContext";
@@ -98,6 +98,19 @@ export default function SessionQuestionPage() {
   const [finishError, setFinishError] = useState<string | null>(null);
   const [exitOpen, setExitOpen] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  // Exam-expiry state: set when a timed exam hits remainingSeconds === 0 or an
+  // answer call comes back SESSION_TIME_EXPIRED / SESSION_ALREADY_COMPLETED.
+  // Locks every answer control (see the mutators + isSubmitting below) and
+  // shows the banner; practice and untimed sessions never touch it.
+  const [timeUp, setTimeUp] = useState(false);
+  const autoFinishRef = useRef(false);
+
+  // Fresh session id = fresh expiry state (the component itself is not
+  // remounted when navigating between sessions).
+  useEffect(() => {
+    setTimeUp(false);
+    autoFinishRef.current = false;
+  }, [sessionId]);
 
   // A completed session has nothing left to answer here — drop the resume marker and
   // send the user straight to its results instead of showing (now-frozen) question UI.
@@ -165,7 +178,7 @@ export default function SessionQuestionPage() {
   }
 
   function toggleQcmOption(optionId: string) {
-    if (currentAnswer.submitted) return;
+    if (currentAnswer.submitted || timeUp) return;
     setCurrentAnswer((prev) => ({
       ...prev,
       selectedOptionIds: prev.selectedOptionIds.includes(optionId)
@@ -175,12 +188,12 @@ export default function SessionQuestionPage() {
   }
 
   function selectQcsOption(optionId: string) {
-    if (currentAnswer.submitted) return;
+    if (currentAnswer.submitted || timeUp) return;
     setCurrentAnswer((prev) => ({ ...prev, selectedOptionIds: [optionId] }));
   }
 
   function setFreeText(value: string) {
-    if (currentAnswer.submitted) return;
+    if (currentAnswer.submitted || timeUp) return;
     setCurrentAnswer((prev) => ({ ...prev, freeText: value }));
   }
 
@@ -251,6 +264,19 @@ export default function SessionQuestionPage() {
         }
       }
     } catch (err) {
+      // Late answer on an expired exam (or a double submit): never a generic
+      // error — show the banner and finish once, exactly like the timer path.
+      if (
+        err instanceof ApiError &&
+        (err.code === "SESSION_TIME_EXPIRED" || err.code === "SESSION_ALREADY_COMPLETED")
+      ) {
+        setTimeUp(true);
+        if (!autoFinishRef.current) {
+          autoFinishRef.current = true;
+          void handleFinishSession();
+        }
+        return;
+      }
       setCurrentAnswer((prev) => ({
         ...prev,
         submitError: err instanceof ApiError ? err.message : t("player.submitError"),
@@ -291,6 +317,54 @@ export default function SessionQuestionPage() {
     clearActiveSession();
     router.push("/dashboard");
   }
+
+  const isTimedExam = !!session && session.mode === "exam" && timed && !session.completedAt;
+
+  // Timed-exam auto-finish: when the countdown hits zero, lock the controls,
+  // flush a pending selection/text once (the server still accepts it inside
+  // its 30 s grace — failures, including late grace, are ignored), then run
+  // the exact same finalize path as a manual submit. The ref guard makes
+  // re-renders and double ticks unable to fire twice; practice and untimed
+  // sessions never enter (isTimedExam).
+  useEffect(() => {
+    if (!isTimedExam || remainingSeconds !== 0 || autoFinishRef.current) return;
+    if (!session || !currentEntry) return;
+    autoFinishRef.current = true;
+    setTimeUp(true);
+    const entry = currentEntry;
+    const pending =
+      entry.question.type === "QCM" || entry.question.type === "QCS"
+        ? currentAnswer.selectedOptionIds.length > 0 && !currentAnswer.submitted
+        : currentAnswer.freeText.trim().length > 0 && !currentAnswer.submitted;
+    void (async () => {
+      try {
+        if (pending) {
+          const isChoiceType = entry.question.type === "QCM" || entry.question.type === "QCS";
+          await apiFetch<{ attempt: AnswerAttemptResponse }>(`/sessions/${sessionId}/answers`, {
+            method: "POST",
+            body: JSON.stringify({
+              questionId: entry.question.id,
+              ...(isChoiceType
+                ? { selectedOptionIds: currentAnswer.selectedOptionIds }
+                : { freeTextAnswer: currentAnswer.freeText }),
+            }),
+          });
+          setAnswers((prev) => ({
+            ...prev,
+            [entry.sessionQuestionId]: {
+              ...(prev[entry.sessionQuestionId] ?? emptyAnswerState()),
+              submitted: true,
+            },
+          }));
+        }
+      } catch {
+        // Late or failed flush (grace passed, offline, …) — finishing with
+        // whatever was stored in time is the correct outcome, not an error.
+      }
+      await handleFinishSession();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTimedExam, remainingSeconds, sessionId]);
 
   // Fullscreen toggle state (mirrors the reference "Plein écran" control).
   // Synced from the fullscreenchange event so Esc-exits update the icon too.
@@ -526,6 +600,15 @@ export default function SessionQuestionPage() {
 
         {session && !session.completedAt && currentEntry && (
           <>
+            {timeUp ? (
+              <div
+                role="alert"
+                className="mx-auto mb-4 max-w-xl rounded-card border border-danger bg-surface-2 p-card-padding"
+              >
+                <p className="font-display text-h3 font-semibold text-danger">{t("player.timeUp")}</p>
+                <p className="mt-1 text-body text-text-secondary">{t("player.timeUpDesc")}</p>
+              </div>
+            ) : null}
             {/* P4 numbered rail: jump between questions with answered/current
                 states. Horizontal strip (not a sidebar) for the single-column
                 layout — same states and behavior as the reference rail. */}
@@ -585,7 +668,7 @@ export default function SessionQuestionPage() {
             onFreeTextChange={setFreeText}
             onSubmit={handleSubmitAnswer}
             onRetrySubmit={handleSubmitAnswer}
-            isSubmitting={isSubmittingAnswer}
+            isSubmitting={isSubmittingAnswer || timeUp}
           />
           </>
         )}

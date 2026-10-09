@@ -786,6 +786,8 @@ const fr = {
   "auth.registerNote": "Un email de vérification vous sera envoyé à cette adresse.",
   "auth.suspended": "Ce compte est suspendu.",
   "auth.suspendedUntil": "Fin de suspension : {date}.",
+  "player.timeUp": "Temps écoulé",
+  "player.timeUpDesc": "Vos réponses enregistrées sont notées. Passage aux résultats…",
   "auth.acceptLegalStart": "J'accepte les",
   "auth.acceptLegalAnd": "et la",
   "billing.paidNeedsCode":
@@ -1924,6 +1926,8 @@ const en: Record<I18nKey, string> = {
   "auth.registerNote": "A verification email will be sent to this address.",
   "auth.suspended": "This account is suspended.",
   "auth.suspendedUntil": "Suspension ends: {date}.",
+  "player.timeUp": "Time is up",
+  "player.timeUpDesc": "Your saved answers are being scored. Taking you to the results…",
   "auth.acceptLegalStart": "I accept the",
   "auth.acceptLegalAnd": "and the",
   "billing.paidNeedsCode":
