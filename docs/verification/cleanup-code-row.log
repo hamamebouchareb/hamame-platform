@@ -1,0 +1,16 @@
+=== STEP 0: leftover activation_codes row (read-only proof, then delete) ===
+
+Ownership proof (ids + timestamps only, no emails/codes):
+code=4ebfd7c7-9a73-42c8-8bb9-0d3632d34396 status=redeemed
+  created=2026-10-10T16:25:18.669Z redeemed=2026-10-10T16:25:19.643Z (<1 s)
+  redeemer=8c7422ad-a162-4744-ab38-6db6a1e089ac status=deleted
+  redeemer-created=2026-10-10T16:25:15.039Z (~4 s before the code)
+  payment=null redeemer-subs=0 redeemer-payments=0
+Matches the step-2 proof transcript (same last4, same run window). The three
+older redeemed rows (prior tasks + one real August row, owner active) were
+listed and left untouched.
+
+activation_codes by status before: revoked=8 redeemed=4
+deleted=1 (row above only)
+activation_codes by status after: revoked=8 redeemed=3
+total=11
