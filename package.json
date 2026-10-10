@@ -5,7 +5,7 @@
   "description": "Hamame — Algerian digital learning platform. Backend API and database schema.",
   "main": "dist/server.js",
   "scripts": {
-    "test": "node --import tsx --test src/lib/suspension.test.ts src/lib/google-link.test.ts src/lib/normalize-email.test.ts src/lib/exam-deadline.test.ts",
+    "test": "node --import tsx --test src/lib/suspension.test.ts src/lib/google-link.test.ts src/lib/normalize-email.test.ts src/lib/exam-deadline.test.ts src/lib/question-filters.test.ts src/lib/scoring.test.ts src/scripts/import-validate.test.ts",
     "dev": "tsx watch src/server.ts",
     "build": "prisma generate && tsc -p tsconfig.json",
     "postinstall": "prisma generate",
