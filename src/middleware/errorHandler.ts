@@ -1,4 +1,5 @@
 import { ErrorRequestHandler, Request, Response } from "express";
+import { Prisma } from "@prisma/client";
 import { ApiError } from "../lib/errors";
 
 export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
@@ -20,8 +21,18 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     });
   }
 
-  // eslint-disable-next-line no-console
-  console.error(err);
+  // Unexpected-error forensics: Prisma known-request errors carry a short
+  // code (P2002, P2028, P2034, …) plus driver metadata — log both, plus a
+  // short per-request id for correlation. Never request bodies, tokens, or
+  // emails: err objects can nest any of those (e.g. failed-query arguments).
+  const requestId = Math.random().toString(36).slice(2, 10);
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    // eslint-disable-next-line no-console
+    console.error(`[${requestId}]`, err.code, JSON.stringify(err.meta ?? null));
+  } else {
+    // eslint-disable-next-line no-console
+    console.error(`[${requestId}]`, err);
+  }
   return res.status(500).json({
     error: { code: "INTERNAL_ERROR", message: "Something went wrong." },
   });
