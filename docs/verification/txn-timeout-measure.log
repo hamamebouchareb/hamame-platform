@@ -1,0 +1,43 @@
+=== TRANSACTION TIMEOUT MEASUREMENT (no code change; harness, ephemeral port) ===
+
+--- every prisma.$transaction in src/ (interactive callback vs batch array) ---
+BATCH (array form):
+- src/jobs/generateLeaderboardSnapshots.ts:68 (batched writes)
+- src/jobs/generateContributorsLeaderboardSnapshots.ts:75 (batched writes)
+INTERACTIVE (callback form; awaited DB statements approx, helpers included):
+- src/routes/sessions.routes.ts:832 finalizeSession (~6-10: questions read,
+  session update, streak upsert, badge evaluation, review-settings read,
+  per-miss enqueue loop)
+- src/routes/activationCodes.routes.ts:98 redeem (~5: claim, sub read,
+  sub write/create, payment create, code update)
+- src/routes/promoCodes.routes.ts:110 redeem (~4: redemption create, sub
+  read, sub write/create, + advisory lock)
+- src/routes/review.routes.ts:175 approve (~2)
+- src/routes/admin.routes.ts:743 instructor approve (~4)
+- src/routes/authoring.routes.ts:70 draft create (~3), :287 submit (~5)
+- src/routes/subscriptions.routes.ts:94 subscribe (~2)
+- src/routes/sessions.routes.ts:358 buildSessionForUser (~6+: pool reads,
+  session/question/option creates)
+- src/scripts/import-content.ts:531 chunk writer, :575 lesson writer
+  (importer scripts, --apply only)
+No timeout/maxWait override exists anywhere in src/ (grep clean).
+
+--- installed Prisma defaults (verified in runtime, not from memory) ---
+node_modules/@prisma/client/runtime/library.js: maxWait default `?? 2e3`
+(2 s), timeout default `?? 5e3` (5 s). Client 6.19.3.
+
+--- finalizeSession submit latency, 5-question exam, this machine ---
+submit-1: status=200 ms=2939
+submit-2: status=200 ms=3859
+submit-3: status=200 ms=1115
+submit-4: status=200 ms=1101
+submit-5: status=200 ms=1061
+Fixtures removed (5 sessions + children), disposable soft-deleted.
+
+=== READING ===
+Worst quiet-machine run (3.9 s) sits inside a 5 s default timeout with
+~1 s of headroom; the browser-observed 8.5 s stall exceeds it and matches a
+P2034 rollback surfacing as 500. Hypothesis SUPPORTED: occasional 500s are
+the default 5 s interactive-transaction timeout under latency, not a logic
+bug. Fix direction: explicit { maxWait: 10000, timeout: 20000 } on the two
+long user-facing transactions (finalize + promo redeem), nothing blanket.
