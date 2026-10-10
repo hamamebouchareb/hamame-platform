@@ -918,7 +918,9 @@ async function finalizeSession(req: Request, res: Response, next: NextFunction) 
       }
 
       return updated;
-    });
+      // Explicit budget (measured 1.1-3.9 s quiet, 8.5 s stalled → P2034 at
+      // the 5 s default): submit must survive latency spikes.
+    }, { maxWait: 10000, timeout: 20000 });
 
     // Badge-earned push (V1 push feature) — fired here, after the transaction has
     // committed, using the plain `prisma` client (not `tx`, which is now closed). Best-

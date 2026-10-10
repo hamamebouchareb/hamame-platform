@@ -168,7 +168,9 @@ async function redeemPromoCode(req: Request, res: Response, next: NextFunction) 
       }
 
       return { subscription: subscriptionResult, redemption: createdRedemption };
-    });
+      // Explicit budget (same P2034-under-latency class as submit): the
+      // losers of the advisory-lock race wait inside this transaction.
+    }, { maxWait: 10000, timeout: 20000 });
 
     res.status(200).json({
       message: "Promo code redeemed successfully. Premium access has been granted.",
