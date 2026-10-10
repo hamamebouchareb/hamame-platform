@@ -846,7 +846,7 @@ async function finalizeSession(req: Request, res: Response, next: NextFunction) 
     // network call must happen outside the transaction, not inside it).
     let newlyAwardedBadgeIds: string[] = [];
 
-    const updatedSession = await prisma.$transaction(async (tx) => {
+    const completedResult = await prisma.$transaction(async (tx) => {
       const sessionQuestions = await tx.sessionQuestion.findMany({
         where: { sessionId: id },
         select: {
@@ -869,10 +869,18 @@ async function finalizeSession(req: Request, res: Response, next: NextFunction) 
       // as "ungraded", not coerce it to 0.
       const score = gradableQuestions.length > 0 ? (correctCount / gradableQuestions.length) * 100 : null;
 
-      const updated = await tx.studySession.update({
-        where: { id },
+      // Conditional completion: exactly one concurrent submit wins the
+      // completedAt flip; losers skip ALL side-effect work below and return
+      // the stored row (same payload as the idempotent pre-check branch).
+      // Same atomic-claim discipline as the activation-code redeem path.
+      const claimed = await tx.studySession.updateMany({
+        where: { id, completedAt: null },
         data: { completedAt: new Date(), score },
       });
+      if (claimed.count !== 1) {
+        const current = await tx.studySession.findUnique({ where: { id } });
+        return { session: current!, first: false };
+      }
 
       const streak = await updateStreakForUser(tx, session.userId);
 
@@ -934,10 +942,15 @@ async function finalizeSession(req: Request, res: Response, next: NextFunction) 
         console.error(`[sessions:submit] review-queue auto-enqueue failed for session ${id}`, err);
       }
 
-      return updated;
+      const completed = await tx.studySession.findUniqueOrThrow({ where: { id } });
+      return { session: completed, first: true };
       // Explicit budget (measured 1.1-3.9 s quiet, 8.5 s stalled → P2034 at
       // the 5 s default): submit must survive latency spikes.
     }, { maxWait: 10000, timeout: 20000 });
+
+    // first=false (lost the conditional claim above) implies
+    // newlyAwardedBadgeIds is empty — no pushes fire for a loser.
+    const finalSession = completedResult.session;
 
     // Badge-earned push (V1 push feature) — fired here, after the transaction has
     // committed, using the plain `prisma` client (not `tx`, which is now closed). Best-
@@ -949,14 +962,14 @@ async function finalizeSession(req: Request, res: Response, next: NextFunction) 
 
     res.status(200).json({
       session: {
-        id: updatedSession.id,
-        name: updatedSession.name,
-        mode: updatedSession.mode,
-        showStats: updatedSession.showStats,
-        resultSort: updatedSession.resultSort,
-        startedAt: updatedSession.startedAt,
-        completedAt: updatedSession.completedAt,
-        score: serializeScore(updatedSession.score),
+        id: finalSession.id,
+        name: finalSession.name,
+        mode: finalSession.mode,
+        showStats: finalSession.showStats,
+        resultSort: finalSession.resultSort,
+        startedAt: finalSession.startedAt,
+        completedAt: finalSession.completedAt,
+        score: serializeScore(finalSession.score),
       },
     });
   } catch (err) {
