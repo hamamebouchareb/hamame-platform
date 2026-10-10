@@ -386,7 +386,8 @@ export async function buildSessionForUser(userId: string, params: BuildSessionPa
     }
 
     return createdSession;
-  });
+    // Explicit budget (same P2034-under-latency class as submit/redeem).
+  }, { maxWait: 10000, timeout: 20000 });
 
   const fullSession = await loadSessionWithQuestions(session.id);
   return formatSessionForResponse(fullSession!);

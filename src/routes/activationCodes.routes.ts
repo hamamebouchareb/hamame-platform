@@ -158,7 +158,8 @@ async function redeemActivationCode(req: Request, res: Response, next: NextFunct
       });
 
       return { subscription: subscriptionResult, payment: createdPayment };
-    });
+      // Explicit budget (same P2034-under-latency class as submit/redeem).
+    }, { maxWait: 10000, timeout: 20000 });
 
     // Billing notification for the redeemer (best-effort, never fails redemption).
     await createNotificationBestEffort({
