@@ -34,7 +34,7 @@ Grounded in the PRD's FRs and the database schema (v0.1). Auth via Bearer JWT un
 | POST | /api/sessions | Create session (mode, filters, size, `sort`: `by_year`\|`by_course`\|`random`, `examMode`, `showStats`) — FR-15/16 |
 | GET | /api/sessions/:id | Session detail + questions |
 | POST | /api/sessions/:id/answers | Submit answer(s) for a question in-session |
-| POST | /api/sessions/:id/submit | Finalize session, compute score |
+| POST | /api/sessions/:id/submit | Finalize session, compute score (idempotent: re-submit returns 200 with the stored score, no re-award) |
 | GET | /api/sessions/:id/results | Results + explanations |
 | POST | /api/questions/:id/report | Report an error (FR-17, feeds `reports`) |
 | GET | /api/notes | List user's notes |

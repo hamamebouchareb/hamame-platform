@@ -815,8 +815,24 @@ async function finalizeSession(req: Request, res: Response, next: NextFunction) 
     const { id } = req.params;
     const session = await requireOwnedSession(id, req.auth!.userId);
 
+    // Retry-safe submit: an already-completed session returns 200 with the
+    // stored score (same payload shape as a first submit) and performs zero
+    // writes — no streak/badge re-award, no double counting. Retried requests
+    // after a timeout'd-but-committed first submit stay green instead of 409.
     if (session.completedAt) {
-      throw new ApiError(409, "SESSION_ALREADY_COMPLETED", "This session has already been submitted.");
+      res.status(200).json({
+        session: {
+          id: session.id,
+          name: session.name,
+          mode: session.mode,
+          showStats: session.showStats,
+          resultSort: session.resultSort,
+          startedAt: session.startedAt,
+          completedAt: session.completedAt,
+          score: serializeScore(session.score),
+        },
+      });
+      return;
     }
 
     // Resolved before the transaction opens (and reused by the auto-flashcard hook inside
