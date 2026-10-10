@@ -8,6 +8,7 @@ import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
 import { buildQuestionWhere } from "../lib/question-filters";
 import { isExamAnswerExpired } from "../lib/exam-deadline";
+import { computeSessionScore, isAutoGradableType } from "../lib/scoring";
 import { shuffle } from "../lib/shuffle";
 import { createFlashcardFromQuestion, findFlashcardSourceQuestion } from "../lib/flashcard-from-question";
 import { resolveViewerUniversityId } from "../lib/university-scope";
@@ -33,12 +34,6 @@ import {
 const router = Router();
 
 router.use(requireAuth);
-
-const AUTO_GRADABLE_TYPES = ["QCM", "QCS"] as const;
-
-function isAutoGradableType(type: string): boolean {
-  return (AUTO_GRADABLE_TYPES as readonly string[]).includes(type);
-}
 
 // StudySession.score is a Prisma Decimal — left un-converted, it serializes to a JSON
 // string rather than a number, which is surprising for a percentage. Normalize to a
@@ -861,13 +856,12 @@ async function finalizeSession(req: Request, res: Response, next: NextFunction) 
       // not: an unanswered gradable question counts as incorrect, so a student can't
       // inflate their score by skipping ones they're unsure of (BR-4 score integrity,
       // matters most for exam-mode/official-mock sessions).
+      // Scoring rule lives in src/lib/scoring.ts (moved verbatim, unit-tested);
+      // the comment block there documents the null-vs-0 and denominator rules.
+      // The gradable traversal stays here too: the review-queue loop below
+      // needs the rows (not just the number).
       const gradableQuestions = sessionQuestions.filter((sq) => isAutoGradableType(sq.question.type));
-      const correctCount = gradableQuestions.filter((sq) => sq.attempts[0]?.isCorrect === true).length;
-      // null (not 0) when there's nothing gradable at all — 0 would incorrectly imply
-      // "answered everything wrong" rather than "nothing to grade". Every reader of
-      // score (serializeScore, and the response bodies below) must keep treating null
-      // as "ungraded", not coerce it to 0.
-      const score = gradableQuestions.length > 0 ? (correctCount / gradableQuestions.length) * 100 : null;
+      const score = computeSessionScore(sessionQuestions);
 
       // Conditional completion: exactly one concurrent submit wins the
       // completedAt flip; losers skip ALL side-effect work below and return
