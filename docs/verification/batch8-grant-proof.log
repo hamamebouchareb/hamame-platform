@@ -1,0 +1,32 @@
+=== BATCH 8 STEP 2 PROOF: redemption-grant extraction is behavior-identical ===
+One disposable account (oc8 tag, soft-deleted at the end). No emails, codes,
+or tokens below: ids, statuses, day-offsets only.
+
+--- BEFORE (routes at 597c3bc, pre-extraction) ---
+register: status=201
+issue-B1: status=201
+redeem-activation-B1: status=200 offset-days=30.0000
+create-promo-B1: status=201
+redeem-promo-B1: status=200 offset-days=37.0000
+(30-day activation grant; 7-day promo stacked on top: 30 + 7 = 37.)
+
+--- AFTER (routes with decideRedemptionGrant) ---
+issue-A1: status=201
+redeem-activation-A1: status=200 offset-days=30.0000
+create-promo-A1: status=201
+redeem-promo-A1: status=200 offset-days=37.0000
+IDENTICAL: 30.0000 / 37.0000 on both runs, to the second.
+
+--- route diffs (behavior: decision lines replaced by helper call) ---
+promoCodes.routes.ts: extend/create block now calls
+  decideRedemptionGrant({active, premiumPlanId, now, grantsDays}) and writes
+  grant.planId / grant.periodEnd; local addDays removed (now in the helper).
+activationCodes.routes.ts: same replacement with grantsDays:
+  ACTIVATION_GRANT_DAYS; local addDays removed.
+Unit decision table pinned by src/lib/redemption-grant.test.ts (5 tests).
+
+--- cleanup (after-phase only) ---
+removed-tracked-codes=3 (both runs' activation codes, exact ids)
+cleanup: subs=1 redemptions=1 promo-codes=1 (VERIFY-OC8- prefix only)
+delete-me: status=200
+Final counts prove the restore (see task report table).
