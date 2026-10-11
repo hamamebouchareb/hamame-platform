@@ -74,13 +74,20 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     const details = body?.error?.details;
     if (response.status === 401 && code === "TOKEN_REVOKED") {
       // Own older token died to a password/reset/link/restrict bump: drop it
-      // and bounce to login with an expiry message. Skipped on /login itself,
-      // where the page shows the message inline — same shape as the
-      // ACCOUNT_SUSPENDED redirect below.
+      // and bounce to login with an expiry message — but ONLY if storage still
+      // holds the token this request sent. A newer token swapped in meanwhile
+      // (e.g. a password change completing while an old request was in flight)
+      // must survive; clearing blindly would sign out the fresh session.
+      // Skipped on /login itself, where the page shows the message inline —
+      // same shape as the ACCOUNT_SUSPENDED redirect below.
       try {
-        window.localStorage.removeItem("hamame_auth");
+        const raw = window.localStorage.getItem("hamame_auth");
+        const stored = raw ? ((JSON.parse(raw) as { token?: string | null }).token ?? null) : null;
+        if (stored === null || stored === token) {
+          window.localStorage.removeItem("hamame_auth");
+        }
       } catch {
-        // Storage unavailable — the redirect below still signs them out.
+        // Storage unavailable or unparseable — the redirect below still signs them out.
       }
       if (typeof window !== "undefined" && window.location.pathname !== "/login") {
         window.location.assign("/login?session=expired");
