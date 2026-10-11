@@ -5,6 +5,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useTheme, type ThemeChoice } from "@/context/ThemeContext";
 import type { I18nKey } from "@/lib/i18n";
 import { useAuthedPage } from "@/lib/useAuthedPage";
+import { useAuth } from "@/context/AuthContext";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useApiResource } from "@/lib/useApiResource";
 import { usePushSubscription } from "@/lib/usePushSubscription";
@@ -83,6 +84,9 @@ interface FieldErrors {
 
 export default function SettingsPage() {
   const { user, isHydrated, handleLogout } = useAuthedPage();
+  // Reuses loginWithToken (the existing OAuth token-staging setter) to swap in
+  // the fresh change-password token without logging out — reported per plan.
+  const { loginWithToken } = useAuth();
   const { t } = useLanguage();
   const { theme, setTheme } = useTheme();
   const toast = useToast();
@@ -132,10 +136,15 @@ export default function SettingsPage() {
 
     setChangingPassword(true);
     try {
-      await apiFetch("/auth/change-password", {
+      const data = await apiFetch<{ accessToken?: string }>("/auth/change-password", {
         method: "POST",
         body: JSON.stringify({ currentPassword, newPassword }),
       });
+      // The backend bumped the token version with the password: adopt the
+      // returned token so this session keeps working past the next request.
+      if (data.accessToken) {
+        await loginWithToken(data.accessToken);
+      }
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
