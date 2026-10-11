@@ -43,6 +43,11 @@ export default function LoginPage() {
       router.replace("/login");
       return;
     }
+    if (params.get("session") === "expired") {
+      setError(t("auth.sessionExpired"));
+      router.replace("/login");
+      return;
+    }
     const googleToken = params.get("google_token");
     const googleError = params.get("google_error");
     if (!googleToken && !googleError) return;

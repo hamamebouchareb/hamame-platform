@@ -72,6 +72,20 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     const code = body?.error?.code ?? "UNKNOWN_ERROR";
     const message = body?.error?.message ?? "Something went wrong. Please try again.";
     const details = body?.error?.details;
+    if (response.status === 401 && code === "TOKEN_REVOKED") {
+      // Own older token died to a password/reset/link/restrict bump: drop it
+      // and bounce to login with an expiry message. Skipped on /login itself,
+      // where the page shows the message inline — same shape as the
+      // ACCOUNT_SUSPENDED redirect below.
+      try {
+        window.localStorage.removeItem("hamame_auth");
+      } catch {
+        // Storage unavailable — the redirect below still signs them out.
+      }
+      if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+        window.location.assign("/login?session=expired");
+      }
+    }
     if (response.status === 403 && code === "ACCOUNT_SUSPENDED") {
       // Suspended mid-session: drop the now-useless token and bounce to
       // login with the message encoded in the query (end date when given).
