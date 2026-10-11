@@ -95,6 +95,12 @@ model User {
   // durationDays): null means indefinite. Once this timestamp passes,
   // src/jobs/unsuspendUsers.ts flips status back to 'active' and clears it.
   suspendedUntil              DateTime? @map("suspended_until") @db.Timestamptz
+  // Token security epoch (docs/state/14-token-invalidation-plan.md): every
+  // JWT carries this version; password change/reset, Google-link rotation
+  // and restrict bump it, instantly revoking older tokens. Default 1 doubles
+  // as the backfill — existing rows read as v1 and pre-plan tokens are
+  // grandfathered as v1.
+  tokenVersion                Int       @default(1) @map("token_version")
   createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt                   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
