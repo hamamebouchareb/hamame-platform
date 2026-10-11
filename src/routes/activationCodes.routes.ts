@@ -7,6 +7,7 @@ import { requireAuth } from "../middleware/auth";
 import { requireRole } from "../middleware/requireRole";
 import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
+import { decideRedemptionGrant } from "../lib/redemption-grant";
 import { createNotificationBestEffort } from "./notifications.routes";
 
 // FR-65/BR-18 — activation codes: the MVP's manual-payment bridge. A Support
@@ -35,12 +36,6 @@ router.use(requireAuth);
 // casing works via the same normalization the admin issue path applies.
 function normalizeCode(code: string): string {
   return code.trim().toUpperCase();
-}
-
-function addDays(date: Date, days: number): Date {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
 }
 
 function serializeDecimal(value: { toNumber: () => number } | null): number | null {
@@ -109,20 +104,24 @@ async function redeemActivationCode(req: Request, res: Response, next: NextFunct
         where: { userId, status: "active" },
       });
 
-      // Extend from max(currentPeriodEnd, now) — same stacking rule as promo-code
-      // redemption: a healthy future expiry extends from itself; a stale
-      // still-'active' row still gets a full period instead of a negative one.
-      // When the active row is NOT on the premium plan (e.g. a free-plan row),
-      // switch it onto the premium plan as well — extending the date alone
-      // would leave the user on the wrong plan with Premium never granted.
+      // Grant math lives in src/lib/redemption-grant.ts (moved verbatim,
+      // unit-tested) — same shared shape as promo-code redemption. This block
+      // only writes.
+      const grant = decideRedemptionGrant({
+        active: activeSubscription
+          ? { planId: activeSubscription.planId, currentPeriodEnd: activeSubscription.currentPeriodEnd }
+          : null,
+        premiumPlanId: premiumPlan.id,
+        now,
+        grantsDays: ACTIVATION_GRANT_DAYS,
+      });
       let subscriptionResult;
-      if (activeSubscription) {
-        const base = activeSubscription.currentPeriodEnd > now ? activeSubscription.currentPeriodEnd : now;
+      if (!grant.create && activeSubscription) {
         subscriptionResult = await tx.subscription.update({
           where: { id: activeSubscription.id },
           data: {
-            ...(activeSubscription.planId !== premiumPlan.id ? { planId: premiumPlan.id } : {}),
-            currentPeriodEnd: addDays(base, ACTIVATION_GRANT_DAYS),
+            ...(grant.planId !== activeSubscription.planId ? { planId: grant.planId } : {}),
+            currentPeriodEnd: grant.periodEnd,
           },
           include: { plan: true },
         });
@@ -130,10 +129,10 @@ async function redeemActivationCode(req: Request, res: Response, next: NextFunct
         subscriptionResult = await tx.subscription.create({
           data: {
             userId,
-            planId: premiumPlan.id,
+            planId: grant.planId,
             status: "active",
             startedAt: now,
-            currentPeriodEnd: addDays(now, ACTIVATION_GRANT_DAYS),
+            currentPeriodEnd: grant.periodEnd,
             autoRenew: true,
           },
           include: { plan: true },

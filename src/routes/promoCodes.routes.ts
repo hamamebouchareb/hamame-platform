@@ -4,6 +4,7 @@ import { validateBody } from "../middleware/validate";
 import { requireAuth } from "../middleware/auth";
 import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
+import { decideRedemptionGrant } from "../lib/redemption-grant";
 
 // V2 monetization: promo-code redemption (PromoCode + PromoCodeRedemption in
 // prisma/schema.prisma).
@@ -43,12 +44,6 @@ function serializeDecimal(value: { toNumber: () => number } | null): number | nu
 
 function serializePlan(plan: { priceDzd: { toNumber: () => number } | null }) {
   return { ...plan, priceDzd: serializeDecimal(plan.priceDzd) };
-}
-
-function addDays(date: Date, days: number): Date {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
 }
 
 // POST /api/promo-codes/redeem — validate a code, then grant/extend Premium.
@@ -132,24 +127,24 @@ async function redeemPromoCode(req: Request, res: Response, next: NextFunction) 
         where: { userId, status: "active" },
       });
 
-      // Extend from the CURRENT expiry, never from today, so stacking codes doesn't waste
-      // days. max(currentPeriodEnd, now) is a strict improvement over a bare "extend from
-      // currentPeriodEnd": for a healthy future-dated expiry it is identical, and for a
-      // stale row whose currentPeriodEnd is already in the past while status is still
-      // 'active' (the known gap where no job flips expired subscriptions yet — see
-      // subscriptions.routes.ts) it still grants a full period instead of a
-      // negative-length extension.
+      // Grant math lives in src/lib/redemption-grant.ts (moved verbatim,
+      // unit-tested): extend from max(currentPeriodEnd, now), switch off-plan
+      // rows onto premium, create when none is active. This block only writes.
+      const grant = decideRedemptionGrant({
+        active: activeSubscription
+          ? { planId: activeSubscription.planId, currentPeriodEnd: activeSubscription.currentPeriodEnd }
+          : null,
+        premiumPlanId: premiumPlan.id,
+        now,
+        grantsDays,
+      });
       let subscriptionResult;
-      if (activeSubscription) {
-        const base = activeSubscription.currentPeriodEnd > now ? activeSubscription.currentPeriodEnd : now;
+      if (!grant.create && activeSubscription) {
         subscriptionResult = await tx.subscription.update({
-          // Same plan-switch rule as activation-code redemption: an active
-          // row off the premium plan (e.g. free) moves onto it, otherwise
-          // the grant would only extend a non-premium row's dates.
           where: { id: activeSubscription.id },
           data: {
-            ...(activeSubscription.planId !== premiumPlan.id ? { planId: premiumPlan.id } : {}),
-            currentPeriodEnd: addDays(base, grantsDays),
+            ...(grant.planId !== activeSubscription.planId ? { planId: grant.planId } : {}),
+            currentPeriodEnd: grant.periodEnd,
           },
           include: { plan: true },
         });
@@ -157,10 +152,10 @@ async function redeemPromoCode(req: Request, res: Response, next: NextFunction) 
         subscriptionResult = await tx.subscription.create({
           data: {
             userId,
-            planId: premiumPlan.id,
+            planId: grant.planId,
             status: "active",
             startedAt: now,
-            currentPeriodEnd: addDays(now, grantsDays),
+            currentPeriodEnd: grant.periodEnd,
             autoRenew: true,
           },
           include: { plan: true },
