@@ -2,10 +2,9 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { buildQuestionWhere, type QuestionFilterInput } from "./question-filters";
 
-// BR-2: only approved questions reach students. The `status` input field is
-// internal-only — verified by grep, no route passes user input into it, so
-// the default below is what every student caller gets. The explicit-status
-// cases pin the pass-through shape so a future caller cannot silently widen it.
+// BR-2: only approved questions reach students. There is no `status` input
+// field anymore — the gate is structural, so no caller (present or future)
+// can override or widen it; passing one is a type error.
 const base: QuestionFilterInput = { viewerUniversityId: null };
 
 function facultyStatuses(where: ReturnType<typeof buildQuestionWhere>): unknown {
@@ -39,9 +38,9 @@ describe("buildQuestionWhere (BR-2)", () => {
     assert.equal(where.status, "approved");
   });
 
-  it("passes an explicit status through unchanged (internal-only field)", () => {
-    assert.equal(buildQuestionWhere({ ...base, status: "pending_review" }).status, "pending_review");
-    assert.equal(buildQuestionWhere({ ...base, status: "approved" }).status, "approved");
+  it("ignores a smuggled status value (cast past the type)", () => {
+    const hostile = { ...base, status: "pending_review" } as unknown as QuestionFilterInput;
+    assert.equal(buildQuestionWhere(hostile).status, "approved");
   });
 
   it("scopes guests to global-only content", () => {

@@ -30,9 +30,9 @@ export interface QuestionFilterInput {
   examYearFrom?: number;
   examYearTo?: number;
   sittingLabel?: string;
-  // Defaults to 'approved' — per BR-2, non-approved questions must never be surfaced to
-  // students through any of these callers.
-  status?: string;
+  // No status field on purpose (BR-2): the approved gate below is structural,
+  // not a default any caller could override. Verified by grep, no route ever
+  // passed user input into it.
   // FR-10a per-university scoping. REQUIRED, not optional, on purpose: making it optional
   // is exactly how a call site ends up silently skipping the visibility gate. Callers must
   // resolve it via resolveViewerUniversityId, and null (guest, or student with no
@@ -41,7 +41,7 @@ export interface QuestionFilterInput {
 }
 
 export function buildQuestionWhere(input: QuestionFilterInput): Prisma.QuestionWhereInput {
-  const where: Prisma.QuestionWhereInput = { status: input.status ?? "approved" };
+  const where: Prisma.QuestionWhereInput = { status: "approved" };
 
   if (input.unitId) {
     where.unitId = input.unitId;
