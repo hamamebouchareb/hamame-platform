@@ -1,6 +1,7 @@
 # Hamame — REST API Contract (Draft v0.1)
 
 Grounded in the PRD's FRs and the database schema (v0.1). Auth via Bearer JWT unless noted.
+Tokens carry a numeric version claim; a request whose version no longer matches the account row fails 401 `TOKEN_REVOKED` ("sign in again").
 `[V2]` = build the endpoint stub now (per FR-60/61 extensibility) but feature is inactive until V2.
 
 ## Auth & Account
@@ -11,6 +12,7 @@ Grounded in the PRD's FRs and the database schema (v0.1). Auth via Bearer JWT un
 | POST | /api/auth/forgot-password | Request reset |
 | POST | /api/auth/reset-password | Reset with token |
 | POST | /api/auth/verify | Verify email/phone (FR-3) |
+| POST | /api/auth/change-password | Change password (returns additive `accessToken` on the new token version) |
 | GET | /api/users/me | Current profile |
 | PUT | /api/users/me | Update profile (faculty, year, university, wilaya, photo) |
 | PUT | /api/users/me/preferences | Language (`fr`/`en`), theme, notification prefs |
