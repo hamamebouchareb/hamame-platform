@@ -2,7 +2,9 @@ import jwt from "jsonwebtoken";
 
 export interface AccessTokenPayload {
   userId: string;
-  tokenVersion?: number;
+  // Required (no default): every sign site must pass the user's current
+  // version, so a site that forgets fails tsc instead of minting a v1 token.
+  tokenVersion: number;
 }
 
 export interface VerifiedAccessToken {
@@ -24,11 +26,11 @@ function getSecret(): string {
 }
 
 // Used by POST /api/auth/register and POST /api/auth/login (auth.routes.ts).
-// Embeds the user's tokenVersion as the numeric "tv" claim (default 1 for
-// callers that don't pass one); see docs/state/14-token-invalidation-plan.md.
+// Embeds the user's tokenVersion as the numeric "tv" claim; see
+// docs/state/14-token-invalidation-plan.md.
 export function signAccessToken(payload: AccessTokenPayload): string {
   return jwt.sign(
-    { tv: payload.tokenVersion ?? 1 },
+    { tv: payload.tokenVersion },
     getSecret(),
     { subject: payload.userId, expiresIn: ACCESS_TOKEN_TTL }
   );
