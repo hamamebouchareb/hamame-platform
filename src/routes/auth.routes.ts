@@ -148,7 +148,7 @@ async function register(req: Request, res: Response, next: NextFunction) {
 
     const user = await prisma.user.create({
       data: { email, phone, passwordHash, fullName },
-      select: safeUserSelect,
+      select: { ...safeUserSelect, tokenVersion: true },
     });
 
     // FR-3: mint a single-use verification token right after creation so the new account
@@ -185,7 +185,7 @@ async function register(req: Request, res: Response, next: NextFunction) {
       );
     }
 
-    const accessToken = signAccessToken({ userId: user.id });
+    const accessToken = signAccessToken({ userId: user.id, tokenVersion: user.tokenVersion });
 
     // Warn-only verification: the email/SMS send is best-effort and never fails
     // registration. Phone-only accounts get the token by SMS; email accounts by
@@ -241,7 +241,7 @@ async function login(req: Request, res: Response, next: NextFunction) {
       where: {
         OR: [...(email ? [{ email }] : []), ...(phone ? [{ phone }] : [])],
       },
-      select: { ...safeUserSelect, passwordHash: true, suspendedUntil: true },
+      select: { ...safeUserSelect, passwordHash: true, suspendedUntil: true, tokenVersion: true },
     });
 
     // Same 401 for "no such account" and "wrong password" to avoid leaking which
@@ -276,7 +276,7 @@ async function login(req: Request, res: Response, next: NextFunction) {
       });
     }
 
-    const accessToken = signAccessToken({ userId: user.id });
+    const accessToken = signAccessToken({ userId: user.id, tokenVersion: user.tokenVersion });
     res.status(200).json({ accessToken, user: toUserResponse(user) });
   } catch (err) {
     next(err);
@@ -673,7 +673,7 @@ router.get("/google/callback", async (req: Request, res: Response, next: NextFun
 
     let user = await prisma.user.findUnique({
       where: { googleSub: profile.sub },
-      select: safeUserSelect,
+      select: { ...safeUserSelect, tokenVersion: true },
     });
 
     if (!user) {
@@ -698,7 +698,7 @@ router.get("/google/callback", async (req: Request, res: Response, next: NextFun
               ? { passwordHash: await bcrypt.hash(randomBytes(32).toString("hex"), BCRYPT_SALT_ROUNDS) }
               : {}),
           },
-          select: safeUserSelect,
+          select: { ...safeUserSelect, tokenVersion: true },
         });
       } else {
         const passwordHash = await bcrypt.hash(randomBytes(32).toString("hex"), BCRYPT_SALT_ROUNDS);
@@ -710,7 +710,7 @@ router.get("/google/callback", async (req: Request, res: Response, next: NextFun
             googleSub: profile.sub,
             emailVerifiedAt: new Date(),
           },
-          select: safeUserSelect,
+          select: { ...safeUserSelect, tokenVersion: true },
         });
         const studentFreeRole = await prisma.role.findUnique({ where: { name: "student_free" } });
         if (studentFreeRole) {
@@ -724,7 +724,7 @@ router.get("/google/callback", async (req: Request, res: Response, next: NextFun
       return fail("account_deleted");
     }
 
-    const accessToken = signAccessToken({ userId: user.id });
+    const accessToken = signAccessToken({ userId: user.id, tokenVersion: user.tokenVersion });
     return res.redirect(frontendLoginRedirect(accessToken));
   } catch (err) {
     next(err);

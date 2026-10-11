@@ -3,12 +3,13 @@ import { ApiError } from "../lib/errors";
 import { verifyAccessToken } from "../lib/jwt";
 import { prisma } from "../lib/prisma";
 import { isEffectivelySuspended } from "../lib/suspension";
+import { isTokenCurrent } from "../lib/token-version";
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
-      auth?: { userId: string };
+      auth?: { userId: string; tokenVersion: number | null };
     }
   }
 }
@@ -54,6 +55,13 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
         })
       );
     }
+    // Token security epoch (docs/state/14-token-invalidation-plan.md): a
+    // token whose version no longer matches the row was revoked by a password
+    // change, reset, Google-link rotation, or restriction.
+    if (!isTokenCurrent(req.auth.tokenVersion, state.tokenVersion)) {
+      delete req.auth;
+      return next(new ApiError(401, "TOKEN_REVOKED", "Your session is no longer valid. Please sign in again."));
+    }
   } catch (err) {
     return next(err);
   }
@@ -84,7 +92,8 @@ export async function optionalAuth(req: Request, _res: Response, next: NextFunct
       if (
         state === null ||
         state.status === "deleted" ||
-        isEffectivelySuspended(state.status, state.suspendedUntil)
+        isEffectivelySuspended(state.status, state.suspendedUntil) ||
+        !isTokenCurrent(req.auth.tokenVersion, state.tokenVersion)
       ) {
         delete req.auth;
       }
@@ -111,6 +120,7 @@ const MAX_ACCOUNT_STATE_ENTRIES = 5000;
 interface AccountState {
   status: string;
   suspendedUntil: Date | null;
+  tokenVersion: number;
 }
 
 const accountStateCache = new Map<string, { at: number; state: AccountState }>();
@@ -121,21 +131,26 @@ async function accountState(userId: string): Promise<AccountState | null> {
   if (cached && now - cached.at < ACCOUNT_STATE_TTL_MS) return cached.state;
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { status: true, suspendedUntil: true },
+    select: { status: true, suspendedUntil: true, tokenVersion: true },
   });
   if (!user) {
     accountStateCache.delete(userId);
     return null;
   }
   if (accountStateCache.size >= MAX_ACCOUNT_STATE_ENTRIES) accountStateCache.clear();
-  const state: AccountState = { status: user.status, suspendedUntil: user.suspendedUntil };
+  const state: AccountState = {
+    status: user.status,
+    suspendedUntil: user.suspendedUntil,
+    tokenVersion: user.tokenVersion,
+  };
   accountStateCache.set(userId, { at: now, state });
   return state;
 }
 
 /** Drop one user's cached account state immediately (call after writes that
- *  change status/suspendedUntil — restrict, self-delete — so enforcement
- *  applies to the very next request, not up to 30s later). */
+ *  change status/suspendedUntil/tokenVersion — restrict, self-delete,
+ *  password change/reset, Google-link rotation — so enforcement applies to
+ *  the very next request, not up to 30s later). */
 export function invalidateAccountState(userId: string): void {
   accountStateCache.delete(userId);
 }
