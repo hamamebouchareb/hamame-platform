@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { NextFunction, Request, Response, Router } from "express";
 import { z } from "zod";
 import { validateBody } from "../middleware/validate";
-import { requireAuth } from "../middleware/auth";
+import { invalidateAccountState, requireAuth } from "../middleware/auth";
 import { limitEmailSends, limitLogins } from "../middleware/rateLimit";
 import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
@@ -387,15 +387,18 @@ async function resetPassword(req: Request, res: Response, next: NextFunction) {
     const passwordHash = await bcrypt.hash(newPassword, BCRYPT_SALT_ROUNDS);
 
     // Single-use: consuming the token clears both reset fields so it can't be replayed.
+    // The version bump rides the same write, revoking every older session at once.
     const updated = await prisma.user.update({
       where: { id: user.id },
       data: {
         passwordHash,
         passwordResetTokenHash: null,
         passwordResetTokenExpiresAt: null,
+        tokenVersion: { increment: 1 },
       },
       select: safeUserSelect,
     });
+    invalidateAccountState(user.id);
 
     // Deliberately no accessToken here — resetting a password must not also log the user
     // in; they authenticate again via /login with the new password.
@@ -592,11 +595,19 @@ async function changePassword(req: Request, res: Response, next: NextFunction) {
     const passwordHash = await bcrypt.hash(newPassword, BCRYPT_SALT_ROUNDS);
     const updated = await prisma.user.update({
       where: { id: user.id },
-      data: { passwordHash },
-      select: safeUserSelect,
+      // Bump the token version in the SAME write that changes the password,
+      // so no request can slip between the two (atomic revocation).
+      data: { passwordHash, tokenVersion: { increment: 1 } },
+      select: { ...safeUserSelect, tokenVersion: true },
     });
+    invalidateAccountState(user.id);
 
-    res.status(200).json({ message: "Password updated.", user: toUserResponse(updated) });
+    // Fresh token on the new version (additive field — message and user stay
+    // exactly as before), so the changer stays signed in on this device while
+    // every older token dies on its next request.
+    const accessToken = signAccessToken({ userId: updated.id, tokenVersion: updated.tokenVersion });
+
+    res.status(200).json({ message: "Password updated.", user: toUserResponse(updated), accessToken });
   } catch (err) {
     next(err);
   }
@@ -689,17 +700,24 @@ router.get("/google/callback", async (req: Request, res: Response, next: NextFun
         // pre-link password may predate proof of ownership, so replace it
         // with an unusable random hash (same construction as new accounts).
         // An already-verified address keeps its password untouched.
+        // Rotation (when the helper says so) also bumps the token version in
+        // the same write, killing password-era sessions at the link moment.
+        const rotates = shouldRotatePasswordOnGoogleLink(byEmail.emailVerifiedAt);
         user = await prisma.user.update({
           where: { id: byEmail.id },
           data: {
             googleSub: profile.sub,
             emailVerifiedAt: byEmail.emailVerifiedAt ?? new Date(),
-            ...(shouldRotatePasswordOnGoogleLink(byEmail.emailVerifiedAt)
-              ? { passwordHash: await bcrypt.hash(randomBytes(32).toString("hex"), BCRYPT_SALT_ROUNDS) }
+            ...(rotates
+              ? {
+                  passwordHash: await bcrypt.hash(randomBytes(32).toString("hex"), BCRYPT_SALT_ROUNDS),
+                  tokenVersion: { increment: 1 },
+                }
               : {}),
           },
           select: { ...safeUserSelect, tokenVersion: true },
         });
+        if (rotates) invalidateAccountState(byEmail.id);
       } else {
         const passwordHash = await bcrypt.hash(randomBytes(32).toString("hex"), BCRYPT_SALT_ROUNDS);
         const created = await prisma.user.create({

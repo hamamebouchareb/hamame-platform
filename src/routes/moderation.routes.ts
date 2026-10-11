@@ -228,7 +228,9 @@ async function restrictUser(req: Request, res: Response, next: NextFunction) {
 
     const updated = await prisma.user.update({
       where: { id },
-      data: { status: "suspended", suspendedUntil },
+      // The version bump rides the same write as the suspension, so every
+      // pre-restriction token dies atomically with the status flip.
+      data: { status: "suspended", suspendedUntil, tokenVersion: { increment: 1 } },
       select: safeUserSelect,
     });
 
