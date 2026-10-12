@@ -1,0 +1,62 @@
+batch9b STEP 4 — real-browser session walkthrough (next start :3001 + dev API :3000)
+date: 2026-10-12 (UTC approx 10:5x)
+harness: tmp-9b-sess.ts (register oc9b-* fixture -> pre-bump change-password PW->PW1, row tv=2 -> playwright.walk.config.ts, 1 worker, chromium, real backend, NO fetch mocks)
+NOTE: tokens/JWTs never printed; fixture emails redacted to <oc9b>. Full UUIDs trimmed to 8 chars.
+
+--- final GREEN run (playwright-exit=0) ---
+register: status=201 id=37389822...
+email-file=written
+pre-bump: status=200
+Running 3 tests using 1 worker
+still-logged-in=1
+  ok 1 [chromium] settings password change keeps the session, dashboard and profile load (12.3s)
+expired-param-seen=1 urls=http://localhost:3001/dashboard | http://localhost:3001/dashboard | http://localhost:3001/login?session=expired | http://localhost:3001/login?session=expired | http://localhost:3001/login
+storage-cleared=1
+  ok 2 [chromium] stale token redirects with the expired message (2.6s)
+seed-visible=1
+stale-direct=401
+fresh-survives=1
+clear-calls=0
+  ok 3 [chromium] newer swapped-in token survives a stale 401 (3.2s)
+  3 passed (23.1s)
+playwright-exit=0 error=none
+WRAPPER-EXIT:0
+
+--- required evidence rows ---
+settings-stay: still-logged-in=1 (in-browser change-password v2->v3 kept session; /dashboard + /profile loaded, no /login bounce)
+stale-redirect: expired-param-seen=1 (framenavigated history shows .../login?session=expired twice, then param consumed to bare /login); storage-cleared=1; expired message visible (toHaveURL /login/ + session-expired text assertion passed)
+swap: seed-visible=1; stale-direct=401 (raw fetch, no apiFetch involved); fresh-survives=1; clear-calls=0 (removeItem/clear trap installed pre-app-code recorded zero calls)
+clean-net: assertCleanNet passed all 3 tests (no ->404, no /api/api/)
+
+--- disclosed harness/test bugs (no app changes resulted) ---
+H1 harness minted FRESH locally at tv=3 while row was tv=2 (wrong comment assumption). Effect: every app request with FRESH 401'd and apiFetch correctly cleared it (fresh-survives=0, 1 trapped removeItem from app bundle). Fixed: wrapper asserts row tv==2 post-pre-bump, mints stale=1/fresh=2.
+H2 login page consumes ?session=expired on mount (sets message, router.replace("/login") strips param). Effect: toHaveURL(/login?session=expired) was racy (2 flaky passes, 1 bare-/login fail). Not an app bug. Fixed: test records framenavigated history, asserts param-seen + message + cleared storage.
+H3 shared-disposable ordering: test 1 green moves row v2->v3, revoking wrapper-minted FRESH(tv=2) for test 3 (proven both directions). Fixed: test 3 mints a live token at test time via /auth/login (tries NEW_PW then PW1), order-independent.
+H4 settings button gate was backwards (button enables only after all 3 fields filled); fixed fill-first-then-gate. Plus onboarding-skip init flag (fresh disposables lack faculty/year -> /bienvenue bounce) and networkidle before login fill (pre-hydration click no-op flake).
+
+--- pre-cleanup counts (tmp-9b-counts.ts, sequential) ---
+mine-active=13 (all oc9b-*@example.invalid, tv 2/3/4; includes Step-3 proof account tv=4 from 2026-10-11)
+userRoles=13 notificationPreferences=0 pushSubscriptions=0 pushPreferences=0 streaks=0 studySessions=0 notes=0 flashcards=0 progress=0 reviewQueue=0 userBadges=0 aiCreditBalances=6 subscriptions=0 friendships=0 reports=0 simRegs=0 notifications=0
+users-total=111 users-active=44
+Pre-existing 67 deleted-*@hamame.invalid rows from earlier sessions left untouched (out of scope).
+
+--- post-cleanup counts (tmp-9b-counts.ts re-query, sequential) ---
+mine-active=0
+users-total=111 (unchanged: soft-delete keeps rows per user-deletion policy)
+users-active=31 (44-13 exact)
+--- cleanup method ---
+12/13 via platform DELETE /api/users/me (login, then DELETE; passwords tried NEW_PW/PW1/PW)
+1/13 (Step-3 proof account, password lost to proof's own forgot/reset) via platform forgot/reset-to-known + login + DELETE (dev resetToken fallback, non-production)
+4 mid-cleanup logins hit 429 RATE_LIMITED (limitLogins 20/10min); waited out fixed window (Retry-After 371s), resumed, zero SQL writes.
+Pre-existing 67 deleted-* rows untouched.
+--- residual state ---
+userRoles/aiCreditBalances rows for the 13 soft-deleted fixtures remain attached to deleted users (platform soft-delete semantics; same pattern as prior sessions). All other fixture tables 0.
+--- scratch removed ---
+tmp-9b-sess/me/tv/login/counts/clean/retry/probe/last.ts, web/e2e/tmp-sess-walk.spec.ts, web/e2e/tmp-9b-email.txt, web/playwright.walk.config.ts, web/test-results/, web/docs/, sess-*.png, sess-walkthrough-net.log, stale pid files
+backend tsc --noEmit exit 0 on final tree; web/src and src/ untouched this batch (scratch-only), W-gates stand as recorded.
+NO commit/push performed (out of scope for this task step).
+
+--- post-report corrections (2026-10-12, follow-up sweep) ---
+Missed in first sweep, deleted now: tmp-9b-colcheck.ts, tmp-9b-colverify.ts, tmp-9b-harness.ts, tmp-9b-proof.ts, tmp-9b-unsusp.ts (Step 1-3 scratch), web/next-prod.pid (stale). Verified all gitignored+untracked before deletion. Zero tmp-9b-*.ts remain.
+PERMANENT GAP: Step-3 harness raw terminal output was reported in chat but never saved to a file; it cannot be regenerated without DB writes (forbidden). Step-3 statuses rest on the chat record only.
+
