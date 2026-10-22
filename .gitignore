@@ -26,6 +26,7 @@ web/tmp-*.mjs
 tmp-*.ts
 tmp-*.mjs
 tmp-*.js
+tmp-*.ps1
 
 # one-off verification harnesses + local process/debris (untracked scratch only —
 # NOTE: 4 older src/scripts/verify-*.ts files are already TRACKED (committed long

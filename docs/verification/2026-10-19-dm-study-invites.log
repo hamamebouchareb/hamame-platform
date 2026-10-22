@@ -1,0 +1,417 @@
+﻿=== VERIFY-DM harness run 2026-10-19 20:36:28 ===
+
+STEP 1a register A -> HTTP 0
+The operation has timed out
+
+STEP 1b register B -> HTTP 0
+The operation has timed out
+
+STEP 1c register C (non-friend negative probe) -> HTTP 201
+{"accessToken":"[REDACTED]","user":{"id":"946d7c0a-0027-4c49-a6b0-00c9aa2029ef","email":"verify-dm-c@hamame.invalid","phone":null,"fullName":"VERIFY-DM-C","facultyId":null,"yearId":null,"university":null,"wilaya":null,"profilePhotoUrl":null,"uiLanguage":"fr","theme":"light","status":"active","emailVerifiedAt":null,"phoneVerifiedAt":null,"createdAt":"2026-10-19T19:37:43.610Z"},"verificationEmailSent":false,"verificationSmsSent":false,"verificationToken":"[REDACTED]"}
+
+IDS a= b= c=946d7c0a-0027-4c49-a6b0-00c9aa2029ef
+
+STEP 2 verify C -> HTTP 200
+{"user":{"id":"946d7c0a-0027-4c49-a6b0-00c9aa2029ef","email":"verify-dm-c@hamame.invalid","phone":null,"fullName":"VERIFY-DM-C","facultyId":null,"yearId":null,"university":null,"wilaya":null,"profilePhotoUrl":null,"uiLanguage":"fr","theme":"light","status":"active","emailVerifiedAt":"2026-10-19T19:37:49.738Z","phoneVerifiedAt":null,"createdAt":"2026-10-19T19:37:43.610Z"}}
+
+STEP 3 login A -> HTTP 200 ; login B -> HTTP 200 ; login C -> HTTP 200
+
+STEP 4 DM-before-friendship (expect 403 NOT_FRIENDS) -> HTTP 400
+
+
+STEP 5 self-conversation (expect 400) -> HTTP 400
+
+
+STEP 6a A sends friend request to B -> HTTP 400
+
+
+STEP 6b B accepts -> HTTP 404
+
+
+STEP 6c B lists friends -> HTTP 200
+{"friends":[]}
+
+STEP 7a A opens conversation with B (idempotent open) -> HTTP 400
+
+
+STEP 7b A sends message -> HTTP 404
+
+
+STEP 7c B lists conversations (expect unreadCount 1) -> HTTP 200
+{"conversations":[],"pagination":{"page":1,"limit":20,"total":0}}
+
+STEP 7d B reads messages -> HTTP 404
+
+
+STEP 7e B marks read -> HTTP 404
+
+
+STEP 7f B lists conversations again (expect unreadCount 0) -> HTTP 200
+{"conversations":[],"pagination":{"page":1,"limit":20,"total":0}}
+
+STEP 7g B replies -> HTTP 404
+
+
+STEP 8 A polls with after=
+STEP 8 A incremental poll (expect only B's reply) -> HTTP 404
+
+
+STEP 9 oversized message (expect 400) -> HTTP 404
+
+
+STEP 10 C DM to A (expect 403 NOT_FRIENDS) -> HTTP 400
+
+
+STEP 11a A invites B -> HTTP 400
+
+
+STEP 11b A re-invites B (expect idempotent same id) -> HTTP 400
+
+
+STEP 11c B lists invites (expect incoming 1) -> HTTP 200
+{"incoming":[],"outgoing":[]}
+
+STEP 11d B accepts -> HTTP 404
+
+
+STEP 11e B re-accepts (expect 409 INVITE_ALREADY_DECIDED) -> HTTP 404
+
+
+STEP 11f A invites B again, B declines -> HTTP 404
+
+
+STEP 11g A invites B again, A cancels -> HTTP 404
+
+
+STEP 11h A invites C (non-friend, expect 403 NOT_FRIENDS) -> HTTP 403
+
+
+STEP 12 A notifications (social) -> HTTP 200
+{"notifications":[],"unreadCount":0,"pagination":{"page":1,"limit":20,"total":0}}
+
+STEP 12b B notifications (social) -> HTTP 200
+{"notifications":[],"unreadCount":0,"pagination":{"page":1,"limit":20,"total":0}}
+
+STEP 13a delete A -> HTTP 200
+{"id":"805dc5b6-1d6e-47b6-a8ed-ba2c933de7eb","status":"deleted"}
+
+STEP 13b delete B -> HTTP 200
+{"id":"121905a2-de7a-45d4-a385-8abec2815ed5","status":"deleted"}
+
+STEP 13c delete C -> HTTP 200
+{"id":"946d7c0a-0027-4c49-a6b0-00c9aa2029ef","status":"deleted"}
+
+=== API flow complete -- run tmp-verify-dm-cleanup.ts next ===
+=== VERIFY-DM harness run 2026-10-19 20:40:53 ===
+
+STEP 1a register A -> HTTP 201
+{"accessToken":"[REDACTED]","user":{"id":"064d578b-f421-4e29-ad64-751372bf0bfa","email":"verify-dm-a@hamame.invalid","phone":null,"fullName":"VERIFY-DM-A","facultyId":null,"yearId":null,"university":null,"wilaya":null,"profilePhotoUrl":null,"uiLanguage":"fr","theme":"light","status":"active","emailVerifiedAt":null,"phoneVerifiedAt":null,"createdAt":"2026-10-19T19:41:04.006Z"},"verificationEmailSent":false,"verificationSmsSent":false,"verificationToken":"[REDACTED]"}
+
+STEP 1b register B -> HTTP 201
+{"accessToken":"[REDACTED]","user":{"id":"eedf996c-137b-42f5-898f-cf85cc7dd2ad","email":"verify-dm-b@hamame.invalid","phone":null,"fullName":"VERIFY-DM-B","facultyId":null,"yearId":null,"university":null,"wilaya":null,"profilePhotoUrl":null,"uiLanguage":"fr","theme":"light","status":"active","emailVerifiedAt":null,"phoneVerifiedAt":null,"createdAt":"2026-10-19T19:41:06.478Z"},"verificationEmailSent":false,"verificationSmsSent":false,"verificationToken":"[REDACTED]"}
+
+STEP 1c register C (non-friend negative probe) -> HTTP 429
+
+
+IDS a=064d578b-f421-4e29-ad64-751372bf0bfa b=eedf996c-137b-42f5-898f-cf85cc7dd2ad c=
+
+STEP 2 verify A -> HTTP 200
+{"user":{"id":"064d578b-f421-4e29-ad64-751372bf0bfa","email":"verify-dm-a@hamame.invalid","phone":null,"fullName":"VERIFY-DM-A","facultyId":null,"yearId":null,"university":null,"wilaya":null,"profilePhotoUrl":null,"uiLanguage":"fr","theme":"light","status":"active","emailVerifiedAt":"2026-10-19T19:41:08.960Z","phoneVerifiedAt":null,"createdAt":"2026-10-19T19:41:04.006Z"}}
+
+STEP 2 verify B -> HTTP 200
+{"user":{"id":"eedf996c-137b-42f5-898f-cf85cc7dd2ad","email":"verify-dm-b@hamame.invalid","phone":null,"fullName":"VERIFY-DM-B","facultyId":null,"yearId":null,"university":null,"wilaya":null,"profilePhotoUrl":null,"uiLanguage":"fr","theme":"light","status":"active","emailVerifiedAt":"2026-10-19T19:41:09.192Z","phoneVerifiedAt":null,"createdAt":"2026-10-19T19:41:06.478Z"}}
+
+STEP 3 login A -> HTTP 200 ; login B -> HTTP 200 ; login C -> HTTP 401
+IDS a=064d578b-f421-4e29-ad64-751372bf0bfa b=eedf996c-137b-42f5-898f-cf85cc7dd2ad c=
+
+STEP 4 DM-before-friendship (expect 403 NOT_FRIENDS) -> HTTP 403
+
+
+STEP 5 self-conversation (expect 400) -> HTTP 400
+
+
+STEP 6a A sends friend request to B -> HTTP 201
+{"friendship":{"userIdA":"064d578b-f421-4e29-ad64-751372bf0bfa","userIdB":"eedf996c-137b-42f5-898f-cf85cc7dd2ad","status":"pending"}}
+
+STEP 6b B accepts -> HTTP 404
+
+
+STEP 6c B lists friends -> HTTP 200
+{"friends":[]}
+
+STEP 7a A opens conversation with B (idempotent open) -> HTTP 403
+
+
+STEP 7b A sends message -> HTTP 404
+
+
+STEP 7c B lists conversations (expect unreadCount 1) -> HTTP 200
+{"conversations":[],"pagination":{"page":1,"limit":20,"total":0}}
+
+STEP 7d B reads messages -> HTTP 404
+
+
+STEP 7e B marks read -> HTTP 404
+
+
+STEP 7f B lists conversations again (expect unreadCount 0) -> HTTP 200
+{"conversations":[],"pagination":{"page":1,"limit":20,"total":0}}
+
+STEP 7g B replies -> HTTP 404
+
+
+STEP 8 A polls with after=
+STEP 8 A incremental poll (expect only B's reply) -> HTTP 404
+
+
+STEP 9 oversized message (expect 400) -> HTTP 404
+
+
+STEP 10 C DM to A (expect 403 NOT_FRIENDS) -> HTTP 401
+
+
+STEP 11a A invites B -> HTTP 403
+
+
+STEP 11b A re-invites B (expect idempotent same id) -> HTTP 403
+
+
+STEP 11c B lists invites (expect incoming 1) -> HTTP 200
+{"incoming":[],"outgoing":[]}
+
+STEP 11d B accepts -> HTTP 404
+
+
+STEP 11e B re-accepts (expect 409 INVITE_ALREADY_DECIDED) -> HTTP 404
+
+
+STEP 11f A invites B again, B declines -> HTTP 404
+
+
+STEP 11g A invites B again, A cancels -> HTTP 404
+
+
+STEP 11h A invites C (non-friend, expect 403 NOT_FRIENDS) -> HTTP 400
+
+
+STEP 12 A notifications (social) -> HTTP 200
+{"notifications":[],"unreadCount":0,"pagination":{"page":1,"limit":20,"total":0}}
+
+STEP 12b B notifications (social) -> HTTP 200
+{"notifications":[],"unreadCount":0,"pagination":{"page":1,"limit":20,"total":0}}
+
+STEP 13a delete A -> HTTP 200
+{"id":"064d578b-f421-4e29-ad64-751372bf0bfa","status":"deleted"}
+
+STEP 13b delete B -> HTTP 200
+{"id":"eedf996c-137b-42f5-898f-cf85cc7dd2ad","status":"deleted"}
+
+STEP 13c delete C -> HTTP 401
+
+
+=== API flow complete -- run tmp-verify-dm-cleanup.ts next ===
+=== VERIFY-DM harness run 2026-10-22 18:53:51 ===
+
+RETRY POST /auth/register (attempt 1 got HTTP 0)
+RETRY POST /auth/register (attempt 2 got HTTP 0)
+RETRY POST /auth/register (attempt 3 got HTTP 0)
+STEP 1a register A -> HTTP 0
+Unable to connect to the remote server
+
+RETRY POST /auth/register (attempt 1 got HTTP 0)
+STEP 1b register B -> HTTP 201
+{"accessToken":"[REDACTED]","user":{"id":"ac34e000-aadc-484f-b620-e63e21c4de03","email":"verify-dm-b@hamame.invalid","phone":null,"fullName":"VERIFY-DM-B","facultyId":null,"yearId":null,"university":null,"wilaya":null,"profilePhotoUrl":null,"uiLanguage":"fr","theme":"light","status":"active","emailVerifiedAt":null,"phoneVerifiedAt":null,"createdAt":"2026-10-22T17:54:34.391Z"},"verificationEmailSent":false,"verificationSmsSent":false,"verificationToken":"[REDACTED]"}
+
+IDS a= b=ac34e000-aadc-484f-b620-e63e21c4de03
+
+STEP 2 verify B -> HTTP 200
+{"user":{"id":"ac34e000-aadc-484f-b620-e63e21c4de03","email":"verify-dm-b@hamame.invalid","phone":null,"fullName":"VERIFY-DM-B","facultyId":null,"yearId":null,"university":null,"wilaya":null,"profilePhotoUrl":null,"uiLanguage":"fr","theme":"light","status":"active","emailVerifiedAt":"2026-10-22T17:54:41.129Z","phoneVerifiedAt":null,"createdAt":"2026-10-22T17:54:34.391Z"}}
+
+STEP 3 login A -> HTTP 401 ; login B -> HTTP 200
+IDS a= b=ac34e000-aadc-484f-b620-e63e21c4de03
+
+STEP 4 DM-before-friendship (expect 403 NOT_FRIENDS) -> HTTP 401
+
+
+STEP 5 self-conversation (expect 400) -> HTTP 401
+
+
+STEP 6a A sends friend request to B -> HTTP 401
+
+
+STEP 6b B accepts (path = A's id, B's token) -> HTTP 404
+
+
+STEP 6c B lists friends -> HTTP 200
+{"friends":[]}
+
+STEP 7a A opens conversation with B (idempotent open) -> HTTP 401
+
+
+STEP 7b A sends message -> HTTP 401
+
+
+STEP 7c B lists conversations (expect unreadCount 1) -> HTTP 200
+{"conversations":[],"pagination":{"page":1,"limit":20,"total":0}}
+
+STEP 7d B reads messages -> HTTP 404
+
+
+STEP 7e B marks read -> HTTP 404
+
+
+STEP 7f B lists conversations again (expect unreadCount 0) -> HTTP 200
+{"conversations":[],"pagination":{"page":1,"limit":20,"total":0}}
+
+STEP 7g B replies -> HTTP 404
+
+
+STEP 8 A polls with after=
+STEP 8 A incremental poll (expect only B's reply) -> HTTP 401
+
+
+STEP 9 oversized message (expect 400) -> HTTP 401
+
+
+STEP 11a A invites B -> HTTP 401
+
+
+STEP 11b A re-invites B (expect idempotent same id) -> HTTP 401
+
+
+STEP 11c B lists invites (expect incoming 1) -> HTTP 200
+{"incoming":[],"outgoing":[]}
+
+STEP 11d B accepts -> HTTP 404
+
+
+STEP 11e B re-accepts (expect 409 INVITE_ALREADY_DECIDED) -> HTTP 404
+
+
+STEP 11f A invites B again, B declines -> HTTP 404
+
+
+STEP 11g A invites B again, A cancels -> HTTP 401
+
+
+STEP 12 A notifications (social) -> HTTP 401
+
+
+STEP 12b B notifications (social) -> HTTP 200
+{"notifications":[],"unreadCount":0,"pagination":{"page":1,"limit":20,"total":0}}
+
+STEP 13a delete A -> HTTP 401
+
+
+STEP 13b delete B -> HTTP 200
+{"id":"ac34e000-aadc-484f-b620-e63e21c4de03","status":"deleted"}
+
+=== API flow complete -- run tmp-verify-dm-cleanup.ts next ===
+=== VERIFY-DM harness run 2026-10-22 18:59:34 ===
+
+STEP 1a register A -> HTTP 201
+{"accessToken":"[REDACTED]","user":{"id":"83819058-6159-4954-a3ac-d8894b89a93b","email":"verify-dm-a@hamame.invalid","phone":null,"fullName":"VERIFY-DM-A","facultyId":null,"yearId":null,"university":null,"wilaya":null,"profilePhotoUrl":null,"uiLanguage":"fr","theme":"light","status":"active","emailVerifiedAt":null,"phoneVerifiedAt":null,"createdAt":"2026-10-22T17:59:36.864Z"},"verificationEmailSent":false,"verificationSmsSent":false,"verificationToken":"[REDACTED]"}
+
+STEP 1b register B -> HTTP 201
+{"accessToken":"[REDACTED]","user":{"id":"1e894dd3-f0d0-4fa1-acb1-b14b1f96e60e","email":"verify-dm-b@hamame.invalid","phone":null,"fullName":"VERIFY-DM-B","facultyId":null,"yearId":null,"university":null,"wilaya":null,"profilePhotoUrl":null,"uiLanguage":"fr","theme":"light","status":"active","emailVerifiedAt":null,"phoneVerifiedAt":null,"createdAt":"2026-10-22T17:59:37.923Z"},"verificationEmailSent":false,"verificationSmsSent":false,"verificationToken":"[REDACTED]"}
+
+IDS a=83819058-6159-4954-a3ac-d8894b89a93b b=1e894dd3-f0d0-4fa1-acb1-b14b1f96e60e
+
+STEP 2 verify A -> HTTP 200
+{"user":{"id":"83819058-6159-4954-a3ac-d8894b89a93b","email":"verify-dm-a@hamame.invalid","phone":null,"fullName":"VERIFY-DM-A","facultyId":null,"yearId":null,"university":null,"wilaya":null,"profilePhotoUrl":null,"uiLanguage":"fr","theme":"light","status":"active","emailVerifiedAt":"2026-10-22T17:59:38.896Z","phoneVerifiedAt":null,"createdAt":"2026-10-22T17:59:36.864Z"}}
+
+STEP 2 verify B -> HTTP 200
+{"user":{"id":"1e894dd3-f0d0-4fa1-acb1-b14b1f96e60e","email":"verify-dm-b@hamame.invalid","phone":null,"fullName":"VERIFY-DM-B","facultyId":null,"yearId":null,"university":null,"wilaya":null,"profilePhotoUrl":null,"uiLanguage":"fr","theme":"light","status":"active","emailVerifiedAt":"2026-10-22T17:59:39.162Z","phoneVerifiedAt":null,"createdAt":"2026-10-22T17:59:37.923Z"}}
+
+STEP 3 login A -> HTTP 200 ; login B -> HTTP 200
+IDS a=83819058-6159-4954-a3ac-d8894b89a93b b=1e894dd3-f0d0-4fa1-acb1-b14b1f96e60e
+
+STEP 4 DM-before-friendship (expect 403 NOT_FRIENDS) -> HTTP 403
+
+
+STEP 5 self-conversation (expect 400) -> HTTP 400
+
+
+STEP 6a A sends friend request to B -> HTTP 201
+{"friendship":{"userIdA":"83819058-6159-4954-a3ac-d8894b89a93b","userIdB":"1e894dd3-f0d0-4fa1-acb1-b14b1f96e60e","status":"pending"}}
+
+STEP 6b B accepts (path = A's id, B's token) -> HTTP 200
+{"friendship":{"userIdA":"83819058-6159-4954-a3ac-d8894b89a93b","userIdB":"1e894dd3-f0d0-4fa1-acb1-b14b1f96e60e","status":"accepted"}}
+
+STEP 6c B lists friends -> HTTP 200
+{"friends":[{"id":"83819058-6159-4954-a3ac-d8894b89a93b","fullName":"VERIFY-DM-A"}]}
+
+STEP 7a A opens conversation with B (idempotent open) -> HTTP 200
+{"conversation":{"id":"4340b971-4ca6-48d1-b131-fa2ab56139ee","userAId":"1e894dd3-f0d0-4fa1-acb1-b14b1f96e60e","userBId":"83819058-6159-4954-a3ac-d8894b89a93b","createdAt":"2026-10-22T17:59:42.390Z"}}
+
+STEP 7b A sends message -> HTTP 201
+{"message":{"id":"59d22fef-fdfb-43b1-8d16-57a4323a38fa","senderId":"83819058-6159-4954-a3ac-d8894b89a93b","body":"VERIFY-DM hello from A","readAt":null,"createdAt":"2026-10-22T17:59:43.364Z"}}
+
+STEP 7c B lists conversations (expect unreadCount 1) -> HTTP 200
+{"conversations":[{"id":"4340b971-4ca6-48d1-b131-fa2ab56139ee","otherUser":{"id":"83819058-6159-4954-a3ac-d8894b89a93b","fullName":"VERIFY-DM-A"},"lastMessage":{"body":"VERIFY-DM hello from A","fromMe":false,"createdAt":"2026-10-22T17:59:43.364Z"},"unreadCount":1,"lastMessageAt":"2026-10-22T17:59:43.360Z"}],"pagination":{"page":1,"limit":20,"total":1}}
+
+STEP 7d B reads messages -> HTTP 200
+{"messages":[{"id":"59d22fef-fdfb-43b1-8d16-57a4323a38fa","senderId":"83819058-6159-4954-a3ac-d8894b89a93b","body":"VERIFY-DM hello from A","readAt":null,"createdAt":"2026-10-22T17:59:43.364Z"}]}
+
+STEP 7e B marks read -> HTTP 200
+{"markedRead":1}
+
+STEP 7f B lists conversations again (expect unreadCount 0) -> HTTP 200
+{"conversations":[{"id":"4340b971-4ca6-48d1-b131-fa2ab56139ee","otherUser":{"id":"83819058-6159-4954-a3ac-d8894b89a93b","fullName":"VERIFY-DM-A"},"lastMessage":{"body":"VERIFY-DM hello from A","fromMe":false,"createdAt":"2026-10-22T17:59:43.364Z"},"unreadCount":0,"lastMessageAt":"2026-10-22T17:59:43.360Z"}],"pagination":{"page":1,"limit":20,"total":1}}
+
+STEP 7g B replies -> HTTP 201
+{"message":{"id":"ad50a15e-06fa-44a4-856b-d51ecbbfafe6","senderId":"1e894dd3-f0d0-4fa1-acb1-b14b1f96e60e","body":"VERIFY-DM reply from B","readAt":null,"createdAt":"2026-10-22T17:59:46.251Z"}}
+
+STEP 8 A polls with after=2026-10-22T17:59:43.364Z
+STEP 8 A incremental poll (expect only B's reply) -> HTTP 200
+{"messages":[{"id":"ad50a15e-06fa-44a4-856b-d51ecbbfafe6","senderId":"1e894dd3-f0d0-4fa1-acb1-b14b1f96e60e","body":"VERIFY-DM reply from B","readAt":null,"createdAt":"2026-10-22T17:59:46.251Z"}]}
+
+STEP 9 oversized message (expect 400) -> HTTP 400
+
+
+STEP 11a A invites B -> HTTP 201
+{"invite":{"id":"c81b50c0-1a2d-495a-bccd-d443a2106825","senderId":"83819058-6159-4954-a3ac-d8894b89a93b","recipientId":"1e894dd3-f0d0-4fa1-acb1-b14b1f96e60e","moduleId":null,"status":"pending","createdAt":"2026-10-22T17:59:47.622Z","decidedAt":null,"sender":{"id":"83819058-6159-4954-a3ac-d8894b89a93b","fullName":"VERIFY-DM-A"},"recipient":{"id":"1e894dd3-f0d0-4fa1-acb1-b14b1f96e60e","fullName":"VERIFY-DM-B"},"module":null}}
+
+STEP 11b A re-invites B (expect idempotent same id) -> HTTP 200
+{"invite":{"id":"c81b50c0-1a2d-495a-bccd-d443a2106825","senderId":"83819058-6159-4954-a3ac-d8894b89a93b","recipientId":"1e894dd3-f0d0-4fa1-acb1-b14b1f96e60e","moduleId":null,"status":"pending","createdAt":"2026-10-22T17:59:47.622Z","decidedAt":null}}
+
+STEP 11c B lists invites (expect incoming 1) -> HTTP 200
+{"incoming":[{"id":"c81b50c0-1a2d-495a-bccd-d443a2106825","sender":{"id":"83819058-6159-4954-a3ac-d8894b89a93b","fullName":"VERIFY-DM-A"},"module":null,"createdAt":"2026-10-22T17:59:47.622Z"}],"outgoing":[]}
+
+STEP 11d B accepts -> HTTP 200
+{"invite":{"id":"c81b50c0-1a2d-495a-bccd-d443a2106825","senderId":"83819058-6159-4954-a3ac-d8894b89a93b","recipientId":"1e894dd3-f0d0-4fa1-acb1-b14b1f96e60e","moduleId":null,"status":"accepted","createdAt":"2026-10-22T17:59:47.622Z","decidedAt":"2026-10-22T17:59:49.388Z","sender":{"id":"83819058-6159-4954-a3ac-d8894b89a93b","fullName":"VERIFY-DM-A"},"recipient":{"id":"1e894dd3-f0d0-4fa1-acb1-b14b1f96e60e","fullName":"VERIFY-DM-B"},"module":null}}
+
+STEP 11e B re-accepts (expect 409 INVITE_ALREADY_DECIDED) -> HTTP 409
+
+
+STEP 11f A invites B again, B declines -> HTTP 200
+{"invite":{"id":"2512d110-7379-430f-9f4c-2458079ad188","senderId":"83819058-6159-4954-a3ac-d8894b89a93b","recipientId":"1e894dd3-f0d0-4fa1-acb1-b14b1f96e60e","moduleId":null,"status":"declined","createdAt":"2026-10-22T17:59:51.661Z","decidedAt":"2026-10-22T17:59:54.112Z","sender":{"id":"83819058-6159-4954-a3ac-d8894b89a93b","fullName":"VERIFY-DM-A"},"recipient":{"id":"1e894dd3-f0d0-4fa1-acb1-b14b1f96e60e","fullName":"VERIFY-DM-B"},"module":null}}
+
+STEP 11g A invites B again, A cancels -> HTTP 200
+{"invite":{"id":"d4b842ac-b512-4a9b-a341-8ea6cd02f0df","senderId":"83819058-6159-4954-a3ac-d8894b89a93b","recipientId":"1e894dd3-f0d0-4fa1-acb1-b14b1f96e60e","moduleId":null,"status":"cancelled","createdAt":"2026-10-22T17:59:55.310Z","decidedAt":"2026-10-22T17:59:55.990Z"}}
+
+STEP 12 A notifications (social) -> HTTP 200
+{"notifications":[{"id":"445924ff-dcbd-4c95-a875-8b8b2a88229c","category":"social","title":"Invitation d'étude","body":"VERIFY-DM-B a décliné votre invitation d'étude.","isRead":false,"readAt":null,"createdAt":"2026-10-22T17:59:54.994Z"},{"id":"0ff7f81a-0858-4522-b259-125392f46481","category":"social","title":"Invitation d'étude","body":"VERIFY-DM-B a accepté votre invitation d'étude.","isRead":false,"readAt":null,"createdAt":"2026-10-22T17:59:50.052Z"},{"id":"c8cfbf46-64d7-4763-bd59-7f0b2bb6555d","category":"social","title":"VERIFY-DM-B vous a écrit","body":"VERIFY-DM reply from B","isRead":false,"readAt":null,"createdAt":"2026-10-22T17:59:46.606Z"},{"id":"c7aeadf2-5186-4bca-b69d-a9ab2903689f","category":"social","title":"Nouvel ami","body":"VERIFY-DM-B a accepté votre demande d'ami.","isRead":false,"readAt":null,"createdAt":"2026-10-22T17:59:41.482Z"}],"unreadCount":4,"pagination":{"page":1,"limit":20,"total":4}}
+
+STEP 12b B notifications (social) -> HTTP 200
+{"notifications":[{"id":"d79469e8-f7a3-46a1-a58a-b5f733adecef","category":"social","title":"Invitation d'étude","body":"VERIFY-DM-A vous invite à étudier.","isRead":false,"readAt":null,"createdAt":"2026-10-22T17:59:55.776Z"},{"id":"48ee297a-cfe4-4312-aa5c-00a0fc66425b","category":"social","title":"Invitation d'étude","body":"VERIFY-DM-A vous invite à étudier.","isRead":false,"readAt":null,"createdAt":"2026-10-22T17:59:53.215Z"},{"id":"11d46d17-84c4-4738-9658-3fe87f7b5ae9","category":"social","title":"Invitation d'étude","body":"VERIFY-DM-A vous invite à étudier.","isRead":false,"readAt":null,"createdAt":"2026-10-22T17:59:48.302Z"},{"id":"a4c9dc3e-bfb1-45c5-a429-e50761f151ca","category":"social","title":"VERIFY-DM-A vous a écrit","body":"VERIFY-DM hello from A","isRead":false,"readAt":null,"createdAt":"2026-10-22T17:59:43.847Z"}],"unreadCount":4,"pagination":{"page":1,"limit":20,"total":4}}
+
+STEP 13a delete A -> HTTP 200
+{"id":"83819058-6159-4954-a3ac-d8894b89a93b","status":"deleted"}
+
+STEP 13b delete B -> HTTP 200
+{"id":"1e894dd3-f0d0-4fa1-acb1-b14b1f96e60e","status":"deleted"}
+
+=== API flow complete -- run tmp-verify-dm-cleanup.ts next ===
+=== VERIFY-DM cleanup: before ===
+{"targetUsers":["83819058-6159-4954-a3ac-d8894b89a93b","1e894dd3-f0d0-4fa1-acb1-b14b1f96e60e","805dc5b6-1d6e-47b6-a8ed-ba2c933de7eb","121905a2-de7a-45d4-a385-8abec2815ed5","946d7c0a-0027-4c49-a6b0-00c9aa2029ef","064d578b-f421-4e29-ad64-751372bf0bfa","eedf996c-137b-42f5-898f-cf85cc7dd2ad"],"usersPresent":0,"conversationsTotal":0,"directMessagesTotal":0,"studyInvitesTotal":0}
+user 83819058-6159-4954-a3ac-d8894b89a93b: not present (skipped)
+user 1e894dd3-f0d0-4fa1-acb1-b14b1f96e60e: not present (skipped)
+user 805dc5b6-1d6e-47b6-a8ed-ba2c933de7eb: not present (skipped)
+user 121905a2-de7a-45d4-a385-8abec2815ed5: not present (skipped)
+user 946d7c0a-0027-4c49-a6b0-00c9aa2029ef: not present (skipped)
+user 064d578b-f421-4e29-ad64-751372bf0bfa: not present (skipped)
+user eedf996c-137b-42f5-898f-cf85cc7dd2ad: not present (skipped)
+=== VERIFY-DM cleanup: after (fresh queries) ===
+{"usersPresent":0,"conversationsTotal":0,"directMessagesTotal":0,"studyInvitesTotal":0}
+CLEANUP COMPLETE: 0 VERIFY- users, 0 conversations, 0 messages, 0 invites remain
