@@ -37,6 +37,7 @@ export const SECONDARY_NAV: NavKeyEntry[] = [
   { href: "/messages", labelKey: "nav.messages" },
   { href: "/points", labelKey: "nav.points" },
   { href: "/groups", labelKey: "nav.groups" },
+  { href: "/ai-chat", labelKey: "nav.assistant" },
   { href: "/subscription", labelKey: "nav.subscription" },
   { href: "/resources", labelKey: "nav.resources" },
   { href: "/profile", labelKey: "nav.profile" },

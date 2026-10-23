@@ -1,0 +1,45 @@
+=== preflight AFTER (users must be 0; study_chat logs must be 0) ===
+{"users":0,"studyChatLogs":0}
+OK unauth POST /ai/study-chat -> 401 (got 401)
+OK register -> 201 (got 201)
+OK empty messages -> 400 VALIDATION (got 400)
+OK message > 2000 chars -> 400 VALIDATION (got 400)
+OK role "system" -> 400 VALIDATION (got 400)
+OK unknown unitId -> 404 UNIT_NOT_FOUND (got 404)
+OK 404 code UNIT_NOT_FOUND
+OK POST /ai/study-chat without key -> 503 (got 503)
+OK 503 code AI_NOT_CONFIGURED (got AI_NOT_CONFIGURED)
+OK GET /ai/credits -> 200 (got 200)
+credits snapshot: {"dailyAllowance":5,"usedToday":0,"remainingToday":5,"resetAt":"2026-10-24T00:00:00.000Z","lowBalance":false}
+OK usedToday === 0 (got 0)
+OK study_chat ai_interactions rows === 0 (got 0)
+=== cleanup BEFORE ===
+HARNESS FAILURE: TypeError: Cannot read properties of undefined (reading 'count')
+    at main (C:\dev\hamame1\tmp-verify-aichat.ts:128:43)
+=== preflight AFTER (users must be 0; study_chat logs must be 0) ===
+{"users":0,"studyChatLogs":0}
+OK unauth POST /ai/study-chat -> 401 (got 401)
+OK register -> 201 (got 201)
+OK empty messages -> 400 VALIDATION (got 400)
+OK message > 2000 chars -> 400 VALIDATION (got 400)
+OK role "system" -> 400 VALIDATION (got 400)
+OK unknown unitId -> 404 UNIT_NOT_FOUND (got 404)
+OK 404 code UNIT_NOT_FOUND
+OK POST /ai/study-chat without key -> 503 (got 503)
+OK 503 code AI_NOT_CONFIGURED (got AI_NOT_CONFIGURED)
+OK GET /ai/credits -> 200 (got 200)
+credits snapshot: {"dailyAllowance":5,"usedToday":0,"remainingToday":5,"resetAt":"2026-10-24T00:00:00.000Z","lowBalance":false}
+OK usedToday === 0 (got 0)
+OK study_chat ai_interactions rows === 0 (got 0)
+=== cleanup BEFORE ===
+{"users":1,"credits":1,"logs":0}
+=== cleanup AFTER (fresh queries, must be zeros) ===
+{"users":0,"entries":0,"logs":0}
+CLEANUP COMPLETE
+
+HARNESS NOTES (post-run disclosure):
+- run 1: all degrade/guard asserts green, then crashed at cleanup on a harness naming bug (aICreditBalance -> aiCreditBalance accessor); run 2 fully green with CLEANUP COMPLETE; both runs kept
+- NOT live-proven here (deliberate): real model turns (ANTHROPIC_API_KEY is absent by owner decision — adding it is a separate gated choice; the 503 AI_NOT_CONFIGURED degrade IS the live evidence), the 429 AI_CREDITS_EXHAUSTED branch (identical reserve gate to the hint feature, whose 429 is live-proven by the existing credits/hint harnesses), and the paid-turn path end-to-end (same reason)
+- credits view: registered user got dailyAllowance 5 / usedToday 0 (student_free plan baseline) — untouched after all failed turns
+- awaiting the key: a happy-path redrive against a real model can be added once the key decision is made; not part of this log
+- the /ai-chat page renders the conversation, credits card, suggestion chips, and maps AI_NOT_CONFIGURED / AI_CREDITS_EXHAUSTED / AI_GENERATION_FAILED to translated banners; only this backend surface is live-evidenced here
