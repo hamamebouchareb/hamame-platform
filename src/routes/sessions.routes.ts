@@ -10,6 +10,7 @@ import { buildQuestionWhere } from "../lib/question-filters";
 import { isExamAnswerExpired } from "../lib/exam-deadline";
 import { computeSessionScore, isAutoGradableType } from "../lib/scoring";
 import { shuffle } from "../lib/shuffle";
+import { awardSessionPoints } from "../lib/points";
 import { createFlashcardFromQuestion, findFlashcardSourceQuestion } from "../lib/flashcard-from-question";
 import { resolveViewerUniversityId } from "../lib/university-scope";
 import { checkAndAwardBadges, notifyBadgeEarned } from "../lib/badge-awards";
@@ -877,6 +878,26 @@ async function finalizeSession(req: Request, res: Response, next: NextFunction) 
       }
 
       const streak = await updateStreakForUser(tx, session.userId);
+
+      // Points-award hook (Points economy, src/lib/points.ts): session-complete
+      // + first-submit-of-day daily bonus + retroactive streak milestones — one
+      // ledger claim per trigger, idempotent via (user, reason, ref) unique
+      // keys, so a replayed submit can never double-award. Same best-effort
+      // discipline as the badge hook below: a points failure must never block
+      // or roll back session completion.
+      try {
+        const correctCount = gradableQuestions.filter(
+          (sq) => sq.attempts[0]?.isCorrect === true
+        ).length;
+        await awardSessionPoints(tx, {
+          userId: session.userId,
+          sessionId: id,
+          streakDays: streak.currentStreakDays,
+          correctCount,
+        });
+      } catch (err) {
+        console.error(`[sessions:submit] points-award failed for session ${id}`, err);
+      }
 
       // Automatic badge-award triggers (Section 9 item 5 of the handoff — previously
       // manual-award-only by design). Evaluates streak/session-count/accuracy criteria

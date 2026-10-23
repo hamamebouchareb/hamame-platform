@@ -147,6 +147,9 @@ model User {
   directMessagesSent             DirectMessage[]
   studyInvitesSent               StudyInvite[]            @relation("StudyInviteSender")
   studyInvitesReceived           StudyInvite[]            @relation("StudyInviteRecipient")
+  pointsAccount                  PointsAccount?
+  pointsLedger                   PointsLedger[]
+  pointsRedemptions              PointsRedemption[]
 
   @@map("users")
 }
@@ -611,6 +614,7 @@ model Badge {
   criteria Json   @db.JsonB
 
   userBadges UserBadge[]
+  pointsShopItems PointsShopItem[]
 
   @@map("badges")
 }
@@ -773,6 +777,7 @@ model Plan {
   isActive      Boolean  @default(true) @map("is_active")
 
   subscriptions Subscription[]
+  pointsShopItems PointsShopItem[]
 
   @@map("plans")
 }
@@ -862,6 +867,94 @@ model PromoCodeRedemption {
   user      User      @relation(fields: [userId], references: [id])
 
   @@map("promo_code_redemptions")
+}
+
+// ---------------------------------------------------------------------------
+// 7.5 Points economy (medspark.online-parity: its Sparx currency, rebuilt with
+// Hamame's own mechanics — no real-money deposits/payouts, which remain an
+// explicit deferral; points are EARNED from study activity, ADMIN-granted, and
+// SPENT in an admin-managed shop whose catalog maps onto existing mechanisms:
+// plan-day grants (the same Subscription path activation codes use) and badge
+// grants (the existing Badge/UserBadge catalog). Nothing buyable with DZD.)
+// ---------------------------------------------------------------------------
+
+// One per user, created lazily on first touch. balance must always equal
+// SUM(points_ledger.delta) for that user — the ledger is the source of truth
+// and every mutation writes a ledger row in the same transaction.
+model PointsAccount {
+  userId      String   @id @map("user_id") @db.Uuid
+  balance     Int      @default(0)
+  earnedTotal Int      @default(0) @map("earned_total")
+  spentTotal  Int      @default(0) @map("spent_total")
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("points_accounts")
+}
+
+// Append-only ledger. MedSpark tracks "earned vs purchased" — Hamame expresses
+// the same split as poster-classified rows ('admin_grant' = granted, everything
+// else = earned; 'shop_redeem' = spend). balanceAfter is stored for audit so a
+// balance drift can be localized without summing the world.
+// refId is the (userId, reason)-scoped idempotency key: e.g. the UTC date for
+// daily bonuses, the session id for session-completion awards, 'm<streak>'
+// for streak milestones. A retried hook simply loses the unique conflict.
+model PointsLedger {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  delta        Int // negative = spend
+  reason       String // 'daily_bonus' | 'session_complete' | 'streak_milestone' | 'admin_grant' | 'shop_redeem'
+  refId        String?  @map("ref_id")
+  balanceAfter Int      @map("balance_after")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, reason, refId])
+  @@index([userId, createdAt])
+  @@map("points_ledger")
+}
+
+// Admin-managed redeemables. kind='plan_days' requires planId and grants
+// `amount` days on that plan (extend-or-create Subscription — the identical
+// path activation codes take, so no parallel gating system); kind='badge'
+// requires badgeId and grants the badge once (UserBadge's composite PK makes
+// a duplicate award impossible; the route treats already-owned as 409). An
+// 'ai_credits' kind was considered and REJECTED: the AI allowance is
+// re-asserted by ensureAiCreditBalance on every AI call, which would silently
+// overwrite any purchased top-up.
+model PointsShopItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String // admin-facing label (plain text, shown as authored)
+  description String?
+  kind        String // 'plan_days' (planId + amount days, Subscription grant) | 'badge' (badgeId, one-time UserBadge grant)
+  costPoints  Int      @map("cost_points")
+  amount      Int // plan_days: day count; badge: unused (validated route-side)
+  planId      String?  @map("plan_id") @db.Uuid
+  badgeId     String?  @map("badge_id") @db.Uuid
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  plan Plan?           @relation(fields: [planId], references: [id])
+  badge Badge?         @relation(fields: [badgeId], references: [id])
+  redemptions PointsRedemption[]
+
+  @@map("points_shop_items")
+}
+
+// One redemption — audit trail and the join for "what did my points buy".
+model PointsRedemption {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  itemId     String   @map("item_id") @db.Uuid
+  costPoints Int      @map("cost_points")
+  grantedAt  DateTime @default(now()) @map("granted_at") @db.Timestamptz
+
+  user User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item PointsShopItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
+
+  @@map("points_redemptions")
 }
 
 // V2/V3
