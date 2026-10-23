@@ -1,0 +1,85 @@
+=== VERIFY-TELEGRAM phaseA run 807cedf4 ===
+HARNESS NOTES (upfront disclosure):
+- the real Telegram bot list side of this API must be registered by the owner; live bot round-trip untested (same OAuth-style caveat as the Google round-trip in handoff §16)
+- webhook secret/bot token exercised with dummy values; outbound Bot API send results depend on egress — recorded raw
+- contents sent in-app; email/SMS channels untouched
+register verify-telegram-student-807cedf4@hamame.invalid -> HTTP 201
+{"accessToken":"REDACTED","user":{"id":"7be5cc51-6e54-40dd-893e-7f3db0bce882","email":"verify-telegram-student-807cedf4@hamame.invalid","phone":null,"fullName":"VERIFY-TG-S-807cedf4","facultyId":null,"yearId":null,"university":null,"wilaya":null,"profilePhotoUrl":null,"uiLanguage":"fr","theme":"light","status":"active","emailVerifiedAt":null,"phoneVerifiedAt":null,"createdAt":"2026-10-23T11:44:45.573Z"},"verificationEmailSent":false,"verificationSmsSent":false,"verificationToken":"REDACTED"}
+verify -> HTTP 200
+{"user":{"id":"7be5cc51-6e54-40dd-893e-7f3db0bce882","email":"verify-telegram-student-807cedf4@hamame.invalid","phone":null,"fullName":"VERIFY-TG-S-807cedf4","facultyId":null,"yearId":null,"university":null,"wilaya":null,"profilePhotoUrl":null,"uiLanguage":"fr","theme":"light","status":"active","emailVerifiedAt":"2026-10-23T11:44:46.643Z","phoneVerifiedAt":null,"createdAt":"2026-10-23T11:44:45.573Z"}}
+login -> HTTP 200
+{"accessToken":"REDACTED","user":{"id":"7be5cc51-6e54-40dd-893e-7f3db0bce882","email":"verify-telegram-student-807cedf4@hamame.invalid","phone":null,"fullName":"VERIFY-TG-S-807cedf4","facultyId":null,"yearId":null,"university":null,"wilaya":null,"profilePhotoUrl":null,"uiLanguage":"fr","theme":"light","status":"active","emailVerifiedAt":"2026-10-23T11:44:46.643Z","phoneVerifiedAt":null,"createdAt":"2026-10-23T11:44:45.573Z"}}
+register verify-telegram-student2-807cedf4@hamame.invalid -> HTTP 201
+{"accessToken":"REDACTED","user":{"id":"f881bc47-c2d1-4975-870a-2997dccbd96c","email":"verify-telegram-student2-807cedf4@hamame.invalid","phone":null,"fullName":"VERIFY-TG-S2-807cedf4","facultyId":null,"yearId":null,"university":null,"wilaya":null,"profilePhotoUrl":null,"uiLanguage":"fr","theme":"light","status":"active","emailVerifiedAt":null,"phoneVerifiedAt":null,"createdAt":"2026-10-23T11:44:47.271Z"},"verificationEmailSent":false,"verificationSmsSent":false,"verificationToken":"REDACTED"}
+verify -> HTTP 200
+{"user":{"id":"f881bc47-c2d1-4975-870a-2997dccbd96c","email":"verify-telegram-student2-807cedf4@hamame.invalid","phone":null,"fullName":"VERIFY-TG-S2-807cedf4","facultyId":null,"yearId":null,"university":null,"wilaya":null,"profilePhotoUrl":null,"uiLanguage":"fr","theme":"light","status":"active","emailVerifiedAt":"2026-10-23T11:44:47.660Z","phoneVerifiedAt":null,"createdAt":"2026-10-23T11:44:47.271Z"}}
+login -> HTTP 200
+{"accessToken":"REDACTED","user":{"id":"f881bc47-c2d1-4975-870a-2997dccbd96c","email":"verify-telegram-student2-807cedf4@hamame.invalid","phone":null,"fullName":"VERIFY-TG-S2-807cedf4","facultyId":null,"yearId":null,"university":null,"wilaya":null,"profilePhotoUrl":null,"uiLanguage":"fr","theme":"light","status":"active","emailVerifiedAt":"2026-10-23T11:44:47.660Z","phoneVerifiedAt":null,"createdAt":"2026-10-23T11:44:47.271Z"}}
+register verify-telegram-admin-807cedf4@hamame.invalid -> HTTP 201
+{"accessToken":"REDACTED","user":{"id":"f5758e14-a542-4956-9b8b-c847f7577f41","email":"verify-telegram-admin-807cedf4@hamame.invalid","phone":null,"fullName":"VERIFY-TG-A-807cedf4","facultyId":null,"yearId":null,"university":null,"wilaya":null,"profilePhotoUrl":null,"uiLanguage":"fr","theme":"light","status":"active","emailVerifiedAt":null,"phoneVerifiedAt":null,"createdAt":"2026-10-23T11:44:48.738Z"},"verificationEmailSent":false,"verificationSmsSent":false,"verificationToken":"REDACTED"}
+verify -> HTTP 200
+{"user":{"id":"f5758e14-a542-4956-9b8b-c847f7577f41","email":"verify-telegram-admin-807cedf4@hamame.invalid","phone":null,"fullName":"VERIFY-TG-A-807cedf4","facultyId":null,"yearId":null,"university":null,"wilaya":null,"profilePhotoUrl":null,"uiLanguage":"fr","theme":"light","status":"active","emailVerifiedAt":"2026-10-23T11:44:49.774Z","phoneVerifiedAt":null,"createdAt":"2026-10-23T11:44:48.738Z"}}
+login -> HTTP 200
+{"accessToken":"REDACTED","user":{"id":"f5758e14-a542-4956-9b8b-c847f7577f41","email":"verify-telegram-admin-807cedf4@hamame.invalid","phone":null,"fullName":"VERIFY-TG-A-807cedf4","facultyId":null,"yearId":null,"university":null,"wilaya":null,"profilePhotoUrl":null,"uiLanguage":"fr","theme":"light","status":"active","emailVerifiedAt":"2026-10-23T11:44:49.774Z","phoneVerifiedAt":null,"createdAt":"2026-10-23T11:44:48.738Z"}}
+GET /users/me/telegram (student fresh) -> HTTP 200
+{"linked":false,"pendingCode":false,"deployed":true}
+POST /users/me/telegram/link -> HTTP 201
+{"code":"hmg-bac0bf87656708b3f14ed09c7df5ff45bc835884eb6045b6","expiresAt":"2026-10-23T11:59:53.371Z","botCommand":"/start hmg-bac0bf87656708b3f14ed09c7df5ff45bc835884eb6045b6"}
+POST /telegram/webhook (wrong secret expect 401) -> HTTP 401
+{"ok":false,"error":"bad_secret"}
+POST /telegram/webhook (unknown code expect 200 ok) -> HTTP 200
+{"ok":true}
+POST /telegram/webhook (student code + chat 555777001 expect 200) -> HTTP 200
+{"ok":true}
+db check -> {"telegramChatId":"555777001","telegramLinkCode":null}
+GET /users/me/telegram (student linked) -> HTTP 200
+{"linked":true,"pendingCode":false,"deployed":true}
+POST /users/me/telegram/link (linked user expect 409) -> HTTP 409
+{"error":{"code":"ALREADY_LINKED","message":"Your account is already linked to a Telegram chat."}}
+GET /notifications?category=systeme -> HTTP 200
+{"notifications":[{"id":"a5c4aaf6-1056-4283-aef3-f173c3c9dcc8","category":"systeme","title":"Telegram lié","body":"Votre compte est maintenant lié au bot Telegram de Hamame.","isRead":false,"readAt":null,"createdAt":"2026-10-23T11:44:55.976Z"}],"unreadCount":1,"pagination":{"page":1,"limit":20,"total":1}}
+POST /users/me/telegram/link (student2) -> HTTP 201
+{"code":"hmg-d30b27298ec7b54e4ddc271112348353b5d4f5ec4367f63f","expiresAt":"2026-10-23T11:59:56.910Z","botCommand":"/start hmg-d30b27298ec7b54e4ddc271112348353b5d4f5ec4367f63f"}
+POST /telegram/webhook (student2 code + chat 555777002) -> HTTP 200
+{"ok":true}
+student2 db check -> {"telegramChatId":"555777002"}
+POST /users/me/telegram/link (admin) -> HTTP 201
+{"code":"hmg-6bd7d7cce6e43117a02ef9d5ee59a7262d66159a04b0fa8f","expiresAt":"2026-10-23T11:59:57.829Z","botCommand":"/start hmg-6bd7d7cce6e43117a02ef9d5ee59a7262d66159a04b0fa8f"}
+POST /telegram/webhook (admin code FROM student1 chat expect 200 + no stamp) -> HTTP 200
+{"ok":true}
+admin db check (must stay null) -> {"telegramChatId":null}
+POST /telegram/admin/broadcast (student expect 403) -> HTTP 403
+{"error":{"code":"FORBIDDEN","message":"This action requires one of the following roles: admin"}}
+POST /telegram/admin/broadcast (admin) -> HTTP 201
+{"broadcast":{"id":"4b079119-6907-4493-b899-66ff8af2b377","recipientCount":2,"deliveredCount":0,"telegramError":"http_401","sentAt":"2026-10-23T11:44:59.552Z"}}
+broadcast delivered probe (raw, depends on egress + dummy token) -> {"id":"4b079119-6907-4493-b899-66ff8af2b377","recipientCount":2,"deliveredCount":0,"telegramError":"http_401","sentAt":"2026-10-23T11:44:59.552Z"}
+GET /telegram/admin/broadcasts (admin) -> HTTP 200
+{"broadcasts":[{"id":"4b079119-6907-4493-b899-66ff8af2b377","text":"VERIFY-TG-BROADCAST-807cedf4","recipientCount":2,"deliveredCount":0,"telegramError":"http_401","sentAt":"2026-10-23T11:44:59.552Z","adminName":"VERIFY-TG-A-807cedf4"}]}
+DELETE /users/me/telegram/link (student2) -> HTTP 200
+{"unlinked":true}
+student2 after unlink -> {"telegramChatId":null,"telegramLinkCode":null}
+POST /telegram/admin/broadcast (admin, after unlink) -> HTTP 201
+{"broadcast":{"id":"8c3313e3-6b97-4f35-87f1-5548b30f0a6f","recipientCount":1,"deliveredCount":0,"telegramError":"http_401","sentAt":"2026-10-23T11:45:00.618Z"}}
+=== cleanup BEFORE ===
+{"users":3,"broadcasts":2,"notifications":2,"roles":2}
+=== cleanup AFTER (fresh queries, must be zeros) ===
+{"users":0,"broadcasts":0,"notifications":0,"roles":0}
+CLEANUP COMPLETE
+=== VERIFY-TELEGRAM phaseB run 5e49dc77 ===
+HARNESS NOTES (upfront disclosure):
+- the real Telegram bot list side of this API must be registered by the owner; live bot round-trip untested (same OAuth-style caveat as the Google round-trip in handoff §16)
+- webhook secret/bot token exercised with dummy values; outbound Bot API send results depend on egress — recorded raw
+- contents sent in-app; email/SMS channels untouched
+=== phaseB: warn-only degradation probes (no TELEGRAM_* env) ===
+POST /telegram/admin/broadcast (no token env expect 400 TELEGRAM_NOT_CONFIGURED) -> HTTP 401
+{"error":{"code":"UNAUTHENTICATED","message":"A Bearer token is required for this endpoint."}}
+no-token broadcast status probe -> 401 UNAUTHENTICATED
+POST /telegram/webhook (no secret env expect 200 ok) -> HTTP 200
+{"ok":true}
+phaseB SEQUENCE COMPLETE
+
+HARNESS NOTES (post-run disclosure):
+- phase A started the server with dummy TELEGRAM_BOT_TOKEN (123456:dum-hamame-verify) + TELEGRAM_WEBHOOK_SECRET (verify-telegram-webhook-secret) set in-shell; outbund Bot API sends reached api.telegram.org and were rejected http_401 — outbound path exercised for real, but delivery semantics (a REAL chat receiving the message) not proven; live bot registration remains an owner step, same round-trip-unproven class as the Google OAuth note (handoff doc)
+- phase B: TELEGRAM_NOT_CONFIGURED 400 branch never driven live (phase B had no authed admin; the bearer gate 401 UNAUTHENTICATED answers first) — branch is code-reviewed only; the inert webhook (200 {ok:true} without the secret env) and the bad-secret 401 ARE live evidence
+- GET /users/me/telegram deployed flag is the composed isTelegramConfigured+isWebhookSecretSet check; both phases exercised it through the link flow (deployed:true) and locally (deployed:false not directly asserted)
+- relink-after-unlink re-issue (201) not re-probed post-unlink; the unlink-preflight assert (ALREADY_LINKED 409) comes from the still-linked state only

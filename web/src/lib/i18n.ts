@@ -1299,6 +1299,19 @@ const fr = {
   "grp.ownerCannotLeave": "Le propriétaire doit supprimer le groupe plutôt que le quitter.",
   "grp.requestApprovedNotice": "Votre demande a été acceptée.",
   "grp.requestRejectedNotice": "Votre demande a été refusée.",
+  "tg.title": "Telegram",
+  "tg.desc": "Reliez votre compte au bot Telegram pour recevoir les annonces de la plateforme.",
+  "tg.linked": "Compte lié à Telegram.",
+  "tg.notLinked": "Compte non lié.",
+  "tg.notDeployed": "Le relais Telegram n'est pas configuré sur ce déploiement.",
+  "tg.linkButton": "Lier mon compte",
+  "tg.unlinkButton": "Délier",
+  "tg.linkedCode": "Envoyez cette commande au bot dans Telegram :",
+  "tg.codePending": "Un code est déjà en attente. Relancez-le ou générez-en un nouveau.",
+  "tg.codeIssued": "Code généré ! Valide 15 minutes.",
+  "tg.linkFailed": "Échec de la liaison. Réessayez.",
+  "tg.unlinkFailed": "Échec du déliement. Réessayez.",
+  "tg.loadFailed": "Chargement de l'état Telegram impossible.",
 } as const;
 
 export type I18nKey = keyof typeof fr;
@@ -2572,6 +2585,19 @@ const en: Record<I18nKey, string> = {
   "grp.ownerCannotLeave": "The owner must delete the group instead of leaving it.",
   "grp.requestApprovedNotice": "Your request was approved.",
   "grp.requestRejectedNotice": "Your request was rejected.",
+  "tg.title": "Telegram",
+  "tg.desc": "Link your account to the bot to receive platform announcements.",
+  "tg.linked": "Account linked to Telegram.",
+  "tg.notLinked": "Account not linked.",
+  "tg.notDeployed": "The Telegram relay is not configured on this deployment.",
+  "tg.linkButton": "Link my account",
+  "tg.unlinkButton": "Unlink",
+  "tg.linkedCode": "Send this command to the bot in Telegram:",
+  "tg.codePending": "A code is already pending. Redeem it or generate a new one.",
+  "tg.codeIssued": "Code generated! Valid for 15 minutes.",
+  "tg.linkFailed": "Linking failed. Try again.",
+  "tg.unlinkFailed": "Unlinking failed. Try again.",
+  "tg.loadFailed": "Could not load the Telegram state.",
 };
 
 export function translate(

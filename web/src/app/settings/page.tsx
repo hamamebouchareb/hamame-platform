@@ -111,6 +111,56 @@ export default function SettingsPage() {
     }
   }, [t]);
 
+  /* ── Telegram relay ── */
+  const [telegram, setTelegram] = useState<{ linked: boolean; pendingCode: boolean; deployed: boolean } | null>(null);
+  const [telegramError, setTelegramError] = useState<string | null>(null);
+  const [telegramBusy, setTelegramBusy] = useState(false);
+  const [telegramCode, setTelegramCode] = useState<string | null>(null);
+  const [telegramActionError, setTelegramActionError] = useState<string | null>(null);
+
+  const loadTelegram = useCallback(async () => {
+    setTelegramError(null);
+    try {
+      const data = await apiFetch<{ linked: boolean; pendingCode: boolean; deployed: boolean }>(
+        "/users/me/telegram"
+      );
+      setTelegram(data);
+    } catch (err) {
+      setTelegramError(err instanceof ApiError ? err.message : t("tg.loadFailed"));
+    }
+  }, [t]);
+
+  async function linkTelegram() {
+    setTelegramActionError(null);
+    setTelegramBusy(true);
+    try {
+      const data = await apiFetch<{ code: string; expiresAt: string; botCommand: string }>(
+        "/users/me/telegram/link",
+        { method: "POST" }
+      );
+      setTelegramCode(data.botCommand);
+      await loadTelegram();
+    } catch (err) {
+      setTelegramActionError(err instanceof ApiError ? err.message : t("tg.linkFailed"));
+    } finally {
+      setTelegramBusy(false);
+    }
+  }
+
+  async function unlinkTelegram() {
+    setTelegramActionError(null);
+    setTelegramBusy(true);
+    try {
+      await apiFetch("/users/me/telegram/link", { method: "DELETE" });
+      setTelegramCode(null);
+      await loadTelegram();
+    } catch (err) {
+      setTelegramActionError(err instanceof ApiError ? err.message : t("tg.unlinkFailed"));
+    } finally {
+      setTelegramBusy(false);
+    }
+  }
+
   /* ── Password change ── */
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -164,7 +214,10 @@ export default function SettingsPage() {
     if (canFetch && !preferencesLoaded) {
       loadPreferences();
     }
-  }, [canFetch, preferencesLoaded, loadPreferences]);
+    if (canFetch) {
+      void loadTelegram();
+    }
+  }, [canFetch, preferencesLoaded, loadPreferences, loadTelegram]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   async function updatePreference(key: keyof PushPreferences, value: boolean) {
@@ -420,6 +473,52 @@ export default function SettingsPage() {
             </div>
           </Card>
         </div>
+
+        {/* ── Telegram relay (full width) ── */}
+        <Card as="section" aria-label={t("tg.title")} className="mt-section-gap">
+          <h2 className="font-display text-h2 font-semibold text-text-primary">{t("tg.title")}</h2>
+          <p className="mt-1 text-body text-text-secondary">{t("tg.desc")}</p>
+
+          {telegramError ? (
+            <ErrorState message={telegramError} onRetry={loadTelegram} className="mt-4" />
+          ) : !telegram ? (
+            <div className="mt-4">
+              <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loadingMore")} />
+            </div>
+          ) : telegram.deployed ? (
+            <div className="mt-4">
+              <p className="text-body text-text-secondary">
+                {telegram.linked ? t("tg.linked") : t("tg.notLinked")}
+              </p>
+              {telegramCode ? (
+                <div className="mt-3 rounded-2xl border border-border bg-surface-2 p-4">
+                  <p className="text-meta font-medium text-text-primary">{t("tg.codeIssued")}</p>
+                  <p className="mt-1 text-body text-text-secondary">{t("tg.linkedCode")}</p>
+                  <code className="mt-2 block break-all rounded-lg bg-surface-3 px-3 py-2 font-mono text-meta text-text-primary select-all">
+                    {telegramCode}
+                  </code>
+                  {telegram.pendingCode ? (
+                    <p className="mt-2 text-meta text-text-secondary">{t("tg.codePending")}</p>
+                  ) : null}
+                </div>
+              ) : null}
+              <div className="mt-3 flex gap-3">
+                {!telegram.linked ? (
+                  <Button variant="primary" onClick={linkTelegram} disabled={telegramBusy}>
+                    {t("tg.linkButton")}
+                  </Button>
+                ) : (
+                  <Button variant="outline" onClick={unlinkTelegram} disabled={telegramBusy}>
+                    {t("tg.unlinkButton")}
+                  </Button>
+                )}
+              </div>
+              {telegramActionError ? <ErrorState message={telegramActionError} className="mt-2" /> : null}
+            </div>
+          ) : (
+            <p className="mt-4 text-body text-text-secondary">{t("tg.notDeployed")}</p>
+          )}
+        </Card>
 
         {/* ── Notification settings (full width) ── */}
         <Card as="section" aria-label={t("settings.notifications")} className="mt-section-gap">

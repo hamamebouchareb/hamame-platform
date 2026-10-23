@@ -89,6 +89,15 @@ model User {
   // their Google email; sub cannot be reassigned). Unique so two accounts can
   // never claim the same Google identity.
   googleSub                   String?   @unique @map("google_sub")
+  // Telegram relay (medspark.online GroupSpace parity, approved gap list): chat id
+  // stamped when the user links their account through the bot webhook
+  // (`/start hmg-<code>`). Nullable: only linked accounts carry it. Unique —
+  // one chat links one account; relinking moves the id.
+  telegramChatId              String?   @unique @map("telegram_chat_id")
+  // Single-use 15-minute link code issued by POST /api/users/me/telegram/link,
+  // consumed + cleared by the bot webhook. Null between issuances.
+  telegramLinkCode            String?   @unique @map("telegram_link_code")
+  telegramLinkExpiresAt       DateTime? @map("telegram_link_expires_at") @db.Timestamptz
   isMinor                     Boolean   @default(false) @map("is_minor") // BR-11 data-handling awareness
   status                      String    @default("active") // 'active' | 'suspended' | 'deleted'
   // For time-based suspensions (POST /api/moderation/users/:id/restrict with
@@ -156,8 +165,27 @@ model User {
   groupAnnouncementsPosted       GroupAnnouncement[]      @relation("GroupAnnouncementAuthor")
   groupAttachmentsUploaded       GroupAttachment[]        @relation("GroupAttachmentUploader")
   groupJoinRequestsSent          GroupJoinRequest[]       @relation("GroupJoinRequestUser")
+  telegramBroadcastsSent         TelegramBroadcast[]      @relation("TelegramBroadcastAdmin")
 
   @@map("users")
+}
+
+// Audit record of every admin Telegram broadcast (who sent what, to how many
+// linked chats, how many the Bot API actually accepted). The relay is
+// warn-only: with TELEGRAM_BOT_TOKEN unset nothing is sent and rows still
+// record the attempt outcome for evidence.
+model TelegramBroadcast {
+  id             String   @id @default(uuid()) @db.Uuid
+  adminId        String   @map("admin_id") @db.Uuid
+  text           String
+  recipientCount Int      @map("recipient_count") // users with a stamped telegramChatId at send time
+  deliveredCount Int      @default(0) @map("delivered_count") // Bot API ok:true acceptances
+  telegramError  String?  @map("telegram_error") // top-level error when the send aborted early
+  sentAt         DateTime @default(now()) @map("sent_at") @db.Timestamptz
+
+  admin User @relation("TelegramBroadcastAdmin", fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@map("telegram_broadcasts")
 }
 
 // Many-to-many; roles are additive (PRD Section 6)
