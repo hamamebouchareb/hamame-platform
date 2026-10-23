@@ -150,6 +150,12 @@ model User {
   pointsAccount                  PointsAccount?
   pointsLedger                   PointsLedger[]
   pointsRedemptions              PointsRedemption[]
+  ownedStudyGroups               StudyGroup[]             @relation("StudyGroupCreator")
+  groupMemberships               GroupMember[]            @relation("GroupMemberUser")
+  groupMessagesSent              GroupMessage[]           @relation("GroupMessageUser")
+  groupAnnouncementsPosted       GroupAnnouncement[]      @relation("GroupAnnouncementAuthor")
+  groupAttachmentsUploaded       GroupAttachment[]        @relation("GroupAttachmentUploader")
+  groupJoinRequestsSent          GroupJoinRequest[]       @relation("GroupJoinRequestUser")
 
   @@map("users")
 }
@@ -220,6 +226,7 @@ model University {
   users     User[]
   lessons   Lesson[]
   questions Question[]
+  studyGroups StudyGroup[]
 
   @@map("universities")
 }
@@ -238,6 +245,7 @@ model Faculty {
   activationCodes      ActivationCode[]
   resources            Resource[]
   simulations          Simulation[]
+  studyGroups          StudyGroup[]
 
   @@map("faculties")
 }
@@ -259,6 +267,7 @@ model Year {
   activationCodes      ActivationCode[]
   resources            Resource[]
   simulations          Simulation[]
+  studyGroups          StudyGroup[]
 
   @@map("years")
 }
@@ -955,6 +964,118 @@ model PointsRedemption {
   item PointsShopItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
 
   @@map("points_redemptions")
+}
+
+// ---------------------------------------------------------------------------
+// 7.6 Study groups (medspark.online-parity: GroupSpace, reduced to Hamame's
+// shape: faculty/year-scoped small cohorts with open- or request-gated joins,
+// chat, announcements, and shared attachments. No Telegram relay, no drive
+// quota, no stage reviews inside groups — those live elsewhere or in V2.)
+// ---------------------------------------------------------------------------
+
+model StudyGroup {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String
+  description   String?
+  facultyId     String   @map("faculty_id") @db.Uuid
+  yearId        String   @map("year_id") @db.Uuid
+  // FR-10a layered scoping, same semantics as Lesson/Question: null = global,
+  // value = that university's students only. Groups are written with the
+  // creator's university attached.
+  universityId  String?  @map("university_id") @db.Uuid
+  joinPolicy    String   @default("open") @map("join_policy") // 'open' | 'request'
+  isActive      Boolean  @default(true) @map("is_active")
+  createdBy     String   @map("created_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  faculty   Faculty          @relation(fields: [facultyId], references: [id])
+  year      Year             @relation(fields: [yearId], references: [id])
+  university University?     @relation(fields: [universityId], references: [id], onDelete: Restrict)
+  creator   User             @relation("StudyGroupCreator", fields: [createdBy], references: [id])
+  members   GroupMember[]
+  messages  GroupMessage[]
+  announcements GroupAnnouncement[]
+  attachments GroupAttachment[]
+  joinRequests  GroupJoinRequest[]
+
+  @@index([facultyId, yearId])
+  @@map("study_groups")
+}
+
+model GroupMember {
+  groupId  String   @map("group_id") @db.Uuid
+  userId   String   @map("user_id") @db.Uuid
+  role     String   @default("member") // 'owner' | 'member'
+  joinedAt DateTime @default(now()) @map("joined_at") @db.Timestamptz
+
+  group StudyGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade, name: "GroupMemberUser")
+
+  @@id([groupId, userId])
+  @@index([userId])
+  @@map("group_members")
+}
+
+// Group chat rows. Polling contract (`?after=` ISO cursor), same as DMs — no
+// WebSockets (zero-new-dependency precedent).
+model GroupMessage {
+  id        String   @id @default(uuid()) @db.Uuid
+  groupId   String   @map("group_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  body      String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  group StudyGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade, name: "GroupMessageUser")
+
+  @@index([groupId, createdAt])
+  @@map("group_messages")
+}
+
+model GroupAnnouncement {
+  id        String   @id @default(uuid()) @db.Uuid
+  groupId   String   @map("group_id") @db.Uuid
+  authorId  String   @map("author_id") @db.Uuid
+  title     String
+  body      String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  group  StudyGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  author User       @relation(fields: [authorId], references: [id], onDelete: Cascade, name: "GroupAnnouncementAuthor")
+
+  @@index([groupId, createdAt])
+  @@map("group_announcements")
+}
+
+// Shared "Cours & Drive" material: links/PDF pointers only (no bytes stored —
+// the existing Resource pipeline handles file uploads separately).
+model GroupAttachment {
+  id         String   @id @default(uuid()) @db.Uuid
+  groupId    String   @map("group_id") @db.Uuid
+  uploaderId String   @map("uploader_id") @db.Uuid
+  title      String
+  url        String   @map("url")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  group    StudyGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  uploader User       @relation(fields: [uploaderId], references: [id], onDelete: Cascade, name: "GroupAttachmentUploader")
+
+  @@index([groupId])
+  @@map("group_attachments")
+}
+
+// join_policy='request' gate. Merges into GroupMember on approval.
+model GroupJoinRequest {
+  groupId    String   @map("group_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  status     String   @default("pending") // 'pending' | 'approved' | 'rejected'
+  requestedAt DateTime @default(now()) @map("requested_at") @db.Timestamptz
+
+  group StudyGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade, name: "GroupJoinRequestUser")
+
+  @@id([groupId, userId])
+  @@map("group_join_requests")
 }
 
 // V2/V3
