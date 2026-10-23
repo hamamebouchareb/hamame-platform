@@ -67,6 +67,7 @@ export const ADMIN_NAV: NavKeyEntry[] = [
   { href: "/admin/faculties", labelKey: "admin.faculties" },
   { href: "/admin/roles", labelKey: "admin.roles" },
   { href: "/admin/reports", labelKey: "admin.reports" },
+  { href: "/admin/payouts", labelKey: "admin.payouts" },
 ];
 // NOTE: admin.applications / admin.promos / admin.notifications / admin.jobs
 // keys stay in i18n for the pages when they are built; only entries with a

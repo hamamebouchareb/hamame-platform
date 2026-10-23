@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useAuthedPage } from "@/lib/useAuthedPage";
 import { useLanguage } from "@/context/LanguageContext";
 import { useApiResource } from "@/lib/useApiResource";
@@ -399,6 +399,152 @@ function QuestionForm() {
   );
 }
 
+type PayoutStatusT = (
+  key: "pay.statusPending" | "pay.statusApproved" | "pay.statusRejected" | "pay.statusPaid"
+) => string;
+
+function payoutStatusLabel(status: string, t: PayoutStatusT): string {
+  switch (status) {
+    case "pending":
+      return t("pay.statusPending");
+    case "approved":
+      return t("pay.statusApproved");
+    case "rejected":
+      return t("pay.statusRejected");
+    case "paid":
+      return t("pay.statusPaid");
+    default:
+      return status;
+  }
+}
+
+interface PayoutRow {
+  id: string;
+  amountDzd: number;
+  method: string;
+  status: string;
+  note: string | null;
+  decisionNote: string | null;
+  createdAt: string;
+}
+
+function PayoutsCard() {
+  const { t } = useLanguage();
+  const [rows, setRows] = useState<PayoutRow[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [created, setCreated] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiFetch<{ requests: PayoutRow[] }>("/payouts/mine")
+      .then((d) => {
+        if (!cancelled) setRows(d.requests);
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(t("pay.loadFailed"));
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setActionError(null);
+    setCreated(null);
+    try {
+      await apiFetch("/payouts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amountDzd: Number(amount),
+          method: "manual",
+          note: note.trim() ? note.trim() : null,
+        }),
+      });
+      setCreated(t("pay.submitted"));
+      setAmount("");
+      setNote("");
+      const fresh = await apiFetch<{ requests: PayoutRow[] }>("/payouts/mine");
+      setRows(fresh.requests);
+    } catch (err) {
+      const code = err instanceof ApiError ? err.code : null;
+      setActionError(code === "PENDING_EXISTS" ? t("pay.pendingExists") : errorMessage(err, t));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <Card>
+      <h3 className="font-display text-h3 font-semibold text-text-primary">{t("pay.ledger")}</h3>
+      <p className="mt-1 text-caption text-text-tertiary">{t("pay.desc")}</p>
+
+      {loadError && <ErrorState message={loadError} className="mt-3" />}
+      {rows !== null && rows.length === 0 && (
+        <div className="mt-3 rounded-card border border-border bg-surface-2 px-4 py-3">
+          <p className="text-body font-medium text-text-primary">{t("pay.empty")}</p>
+          <p className="mt-1 text-caption text-text-secondary">{t("pay.emptyDesc")}</p>
+        </div>
+      )}
+      {rows !== null && rows.length > 0 && (
+        <ul className="mt-3 flex flex-col gap-2">
+          {rows.map((row) => (
+            <li key={row.id} className="rounded-card border border-border bg-surface-2 px-4 py-3">
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="text-body font-semibold text-text-primary">
+                  {row.amountDzd.toLocaleString("fr-DZ")} DZD
+                </p>
+                <p className="text-caption text-text-secondary">{payoutStatusLabel(row.status, t)}</p>
+              </div>
+              <p className="mt-1 text-caption text-text-tertiary">
+                {new Date(row.createdAt).toLocaleDateString()}
+                {row.decisionNote ? ` · ${row.decisionNote}` : ""}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <form className="mt-3 border-t border-border pt-3" onSubmit={handleSubmit}>
+        <p className="text-meta font-medium text-text-secondary">{t("pay.new")}</p>
+        <Input
+          id="payout-amount"
+          label={t("pay.amount")}
+          type="number"
+          min="500"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          className="mt-2"
+        />
+        <Textarea
+          id="payout-note"
+          label={t("pay.note")}
+          rows={2}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          className="mt-2 text-text-primary"
+        />
+        {created && (
+          <Card variant="elevated" className="mt-2 border-success">
+            <p className="text-meta font-medium text-text-primary">{created}</p>
+          </Card>
+        )}
+        {actionError && <ErrorState message={actionError} className="mt-2" />}
+        <Button type="submit" className="mt-3" disabled={isSubmitting || !amount}>
+          {isSubmitting ? t("billing.loading") : t("pay.submit")}
+        </Button>
+      </form>
+    </Card>
+  );
+}
+
 export default function AuthoringPage() {
   const { user, isHydrated, handleLogout } = useAuthedPage();
   const { t } = useLanguage();
@@ -459,6 +605,7 @@ export default function AuthoringPage() {
       <div className="mt-section-gap flex flex-col gap-card-gap">
         <LessonForm />
         <QuestionForm />
+        <PayoutsCard />
       </div>
     </PageShell>
   );

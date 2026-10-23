@@ -166,6 +166,8 @@ model User {
   groupAttachmentsUploaded       GroupAttachment[]        @relation("GroupAttachmentUploader")
   groupJoinRequestsSent          GroupJoinRequest[]       @relation("GroupJoinRequestUser")
   telegramBroadcastsSent         TelegramBroadcast[]      @relation("TelegramBroadcastAdmin")
+  payoutRequestsSubmitted        PayoutRequest[]          @relation("PayoutRequestUser")
+  payoutRequestsDecided          PayoutRequest[]          @relation("PayoutRequestDecider")
 
   @@map("users")
 }
@@ -186,6 +188,32 @@ model TelegramBroadcast {
   admin User @relation("TelegramBroadcastAdmin", fields: [adminId], references: [id], onDelete: Cascade)
 
   @@map("telegram_broadcasts")
+}
+
+// Creator payout queue (medspark.online SPARK-parity, approved gap list). The
+// ABSENT piece is earnings computation: Hamame has no per-course sales model,
+// so a payout request carries the author's own requested amount and the queue
+// is the manual bridge the owner reconciles by bank transfer. CIB/SATIM
+// self-service payment automation stays a deliberate product-deferral.
+model PayoutRequest {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  amountDzd    Int       @map("amount_dzd")
+  method       String    @default("manual") // 'manual' — the only sanctioned channel today
+  status       String    @default("pending") // 'pending' | 'approved' | 'rejected' | 'paid'
+  note         String? // author's own justification note (kept verbatim)
+  decidedBy    String?   @map("decided_by") @db.Uuid
+  decidedAt    DateTime? @map("decided_at") @db.Timestamptz
+  decisionNote String?   @map("decision_note")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  user          User @relation("PayoutRequestUser", fields: [userId], references: [id], onDelete: Cascade)
+  decidedByUser User? @relation("PayoutRequestDecider", fields: [decidedBy], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([userId])
+  @@map("payout_requests")
 }
 
 // Many-to-many; roles are additive (PRD Section 6)

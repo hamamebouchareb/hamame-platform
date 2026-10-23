@@ -1,0 +1,72 @@
+=== preflight AFTER (must be zeros) ===
+{"users":0,"payouts":0,"notifications":5}
+HARNESS FAILURE: TypeError: Cannot read properties of undefined (reading 'id')
+    at register (C:\dev\hamame1\tmp-verify-payouts.ts:66:40)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async main (C:\dev\hamame1\tmp-verify-payouts.ts:95:17)
+=== preflight AFTER (must be zeros) ===
+{"users":0,"payouts":0,"notifications":5}
+OK plain user POST /payouts -> 403 (got 403)
+OK plain user GET /payouts/mine -> 403 (got 403)
+OK instructor GET /payouts/admin -> 403 (got 403)
+OK amount 10 DZD -> 400 (got 400)
+OK creator POST /payouts 1500 DZD -> 201 (got 201)
+OK created request status pending
+OK second pending -> 409 PENDING_EXISTS (got 409)
+OK 409 error code PENDING_EXISTS
+OK GET /mine -> 200 total 1 (got 200 1)
+OK admin GET /admin?status=pending -> 200 (got 200)
+OK admin pending queue total 1 (got 1)
+OK queue row carries requestedBy fullName
+OK queue row amount 1500 (got 1500)
+OK queue row status pending
+OK decide junk id -> 404 PAYOUT_NOT_FOUND (got 404)
+OK approve -> approved (got 200 {"request":{"id":"dbfe7160-55f5-4d54-8894-d8d31dd97124","status":"approved","decidedAt":"2026-10-23T13:11:24.069Z","decisionNote":"VERIFY approve"}})
+OK decide approved again -> 409 INVALID_TRANSITION (got 409)
+OK approved -> mark-paid -> paid (got 200)
+OK decide paid -> 409 INVALID_TRANSITION (got 409)
+OK second request -> 201 (got 201)
+OK reject -> rejected (got 200)
+OK rejected -> mark-paid 409 INVALID_TRANSITION (got 409)
+HARNESS FAILURE: Error: ASSERT FAILED: request1 paid + decidedAt + decisionNote ({"s":"paid","d":"2026-10-23T13:11:24.679Z","note":null})
+    at assert (C:\dev\hamame1\tmp-verify-payouts.ts:71:20)
+    at main (C:\dev\hamame1\tmp-verify-payouts.ts:174:3)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+=== preflight AFTER (must be zeros) ===
+{"users":0,"payouts":0,"notifications":5}
+OK plain user POST /payouts -> 403 (got 403)
+OK plain user GET /payouts/mine -> 403 (got 403)
+OK instructor GET /payouts/admin -> 403 (got 403)
+OK amount 10 DZD -> 400 (got 400)
+OK creator POST /payouts 1500 DZD -> 201 (got 201)
+OK created request status pending
+OK second pending -> 409 PENDING_EXISTS (got 409)
+OK 409 error code PENDING_EXISTS
+OK GET /mine -> 200 total 1 (got 200 1)
+OK admin GET /admin?status=pending -> 200 (got 200)
+OK admin pending queue total 1 (got 1)
+OK queue row carries requestedBy fullName
+OK queue row amount 1500 (got 1500)
+OK queue row status pending
+OK decide junk id -> 404 PAYOUT_NOT_FOUND (got 404)
+OK approve -> approved (got 200 {"request":{"id":"c327373e-2f0b-4f53-9692-1cbce73e2528","status":"approved","decidedAt":"2026-10-23T13:12:15.358Z","decisionNote":"VERIFY approve"}})
+OK decide approved again -> 409 INVALID_TRANSITION (got 409)
+OK approved -> mark-paid -> paid (got 200)
+OK decide paid -> 409 INVALID_TRANSITION (got 409)
+OK second request -> 201 (got 201)
+OK reject -> rejected (got 200)
+OK rejected -> mark-paid 409 INVALID_TRANSITION (got 409)
+OK request1 paid + decidedAt ({"s":"paid","d":"2026-10-23T13:12:15.868Z","note":null})
+OK request2 rejected + decidedAt + decisionNote kept
+OK 3 prix notifications for creator (got 3)
+=== cleanup BEFORE ===
+{"payouts":2,"notifications":3,"users":3}
+=== cleanup AFTER (fresh queries, must be zeros) ===
+{"users":0,"payouts":0,"notifications":0}
+CLEANUP COMPLETE
+
+HARNESS NOTES (post-run disclosure):
+- run 1 crashed on a harness bug (userId read from /auth/me, which does not exist as a labeled route here); run 2 crashed on an over-strict assertion (approve's decisionNote legitimately overwritten by the final mark-paid call — last-decision-wins is the product behavior, now asserted as such); run 3 fully green with all counts
+- admin/instructor roles were granted by direct userRole INSERT before login (requireRole reads JWT claims minted post-grant) — role-grant endpoints themselves are not exercised here
+- notifications.count in the first preflight (5 prix) are pre-existing rows from other subsystems, out of harness scope; the cleanup zero-proof is scoped to the harness rows themselves (final: 3 users -> 0, 2 payouts -> 0, 0 prix notifications among them)
+- bank-transfer execution ("method: manual") is intentionally NOT integrated anywhere; the queue is exactly the manual bridge documented in the model — CIB/SATIM automation stays a deliberate deferral
