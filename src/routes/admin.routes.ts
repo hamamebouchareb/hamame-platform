@@ -1046,4 +1046,110 @@ async function deleteSimulation(req: Request, res: Response, next: NextFunction)
 
 router.delete("/simulations/:id", requireAdmin, validateParams(uuidParam("id")), deleteSimulation);
 
+// ---------------------------------------------------------------------------
+// /api/admin/associations — curation for the public association directory
+// (medspark.online community parity). Only admins create/edit rows; the
+// public group in associations.routes.ts is read-only. Same explicit-null-to-
+// clear convention as the nullable lesson fields. verifiedAt is stamped
+// server-side to NOW on verify-unverify:false clears it — a row the team has
+// actually contacted gets the stamp the moment an admin flips the toggle.
+// ---------------------------------------------------------------------------
+const associationInputSchema = z.object({
+  name: z.string().trim().min(2).max(120).optional(),
+  wilaya: z.string().trim().min(1).max(60).optional(),
+  type: z.enum(["student_union", "charity", "club", "network"]).optional(),
+  description: z.string().trim().max(1000).nullable().optional(),
+  contactEmail: z.string().trim().email().max(200).nullable().optional(),
+  contactPhone: z.string().trim().max(40).nullable().optional(),
+  socialUrl: z
+    .string()
+    .trim()
+    .max(300)
+    .regex(/^https:\/\//i, "Social URL must be https.")
+    .nullable()
+    .optional(),
+  verified: z.boolean().optional(),
+});
+
+async function createAssociation(req: Request, res: Response, next: NextFunction) {
+  try {
+    const body = req.body as {
+      name: string;
+      wilaya: string;
+      type: "student_union" | "charity" | "club" | "network";
+      description?: string | null;
+      contactEmail?: string | null;
+      contactPhone?: string | null;
+      socialUrl?: string | null;
+      verified?: boolean;
+    };
+    const duplicate = await prisma.studentAssociation.findUnique({ where: { name: body.name }, select: { id: true } });
+    if (duplicate) {
+      throw new ApiError(409, "ASSOCIATION_EXISTS", "An association with this name already exists.");
+    }
+    const row = await prisma.studentAssociation.create({
+      data: {
+        name: body.name,
+        wilaya: body.wilaya,
+        type: body.type,
+        description: body.description ?? null,
+        contactEmail: body.contactEmail ?? null,
+        contactPhone: body.contactPhone ?? null,
+        socialUrl: body.socialUrl ?? null,
+        verifiedAt: body.verified ? new Date() : null,
+      },
+    });
+    res.status(201).json({ association: { ...row, verified: row.verifiedAt !== null } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+type AssociationPatch = z.infer<typeof associationInputSchema>;
+
+async function updateAssociation(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params as { id: string };
+    const body = req.body as AssociationPatch;
+    const existing = await prisma.studentAssociation.findUnique({ where: { id }, select: { id: true, name: true } });
+    if (!existing) {
+      throw new ApiError(404, "ASSOCIATION_NOT_FOUND", "No association exists with this id.");
+    }
+    if (body.name !== undefined && body.name !== null && body.name !== existing.name) {
+      const duplicate = await prisma.studentAssociation.findUnique({ where: { name: body.name }, select: { id: true } });
+      if (duplicate) {
+        throw new ApiError(409, "ASSOCIATION_EXISTS", "An association with this name already exists.");
+      }
+    }
+    const row = await prisma.studentAssociation.update({
+      where: { id },
+      data: {
+        ...(body.name !== undefined ? { name: body.name } : {}),
+        ...(body.wilaya !== undefined ? { wilaya: body.wilaya } : {}),
+        ...(body.type !== undefined ? { type: body.type } : {}),
+        ...(body.description !== undefined ? { description: body.description } : {}),
+        ...(body.contactEmail !== undefined ? { contactEmail: body.contactEmail } : {}),
+        ...(body.contactPhone !== undefined ? { contactPhone: body.contactPhone } : {}),
+        ...(body.socialUrl !== undefined ? { socialUrl: body.socialUrl } : {}),
+        ...(body.verified !== undefined ? { verifiedAt: body.verified ? new Date() : null } : {}),
+      },
+    });
+    res.status(200).json({ association: { ...row, verified: row.verifiedAt !== null } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+router.post(
+  "/associations",
+  requireAdmin,
+  validateBody(associationInputSchema.extend({
+    name: z.string().trim().min(2).max(120),
+    wilaya: z.string().trim().min(1).max(60),
+    type: z.enum(["student_union", "charity", "club", "network"]),
+  })),
+  createAssociation
+);
+router.patch("/associations/:id", requireAdmin, validateParams(uuidParam("id")), validateBody(associationInputSchema), updateAssociation);
+
 export default router;

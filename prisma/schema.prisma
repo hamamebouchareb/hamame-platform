@@ -190,6 +190,31 @@ model TelegramBroadcast {
   @@map("telegram_broadcasts")
 }
 
+// Association directory (medspark.online community parity, approved gap list):
+// a public, admin-curated directory of Algerian health-sciences student
+// associations students can discover and contact. Federation content is NOT
+// free-form: only the admin creates/edits rows, and `verifiedAt` marks the
+// ones the team has actually contacted/validated — the public list orders
+// verified rows first. Contact columns are intentionally plain strings
+// (emails/phones/social URLs are directory data, not account credentials).
+model StudentAssociation {
+  id            String    @id @default(uuid()) @db.Uuid
+  name          String    @unique
+  wilaya        String // the 58-wilaya taxonomy (hand-maintained, untranslated label)
+  type          String // 'student_union' | 'charity' | 'club' | 'network'
+  description   String?
+  contactEmail  String?   @map("contact_email")
+  contactPhone  String?   @map("contact_phone")
+  socialUrl     String?   @map("social_url")
+  verifiedAt    DateTime? @map("verified_at") @db.Timestamptz
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([wilaya])
+  @@index([type])
+  @@map("student_associations")
+}
+
 // Creator payout queue (medspark.online SPARK-parity, approved gap list). The
 // ABSENT piece is earnings computation: Hamame has no per-course sales model,
 // so a payout request carries the author's own requested amount and the queue

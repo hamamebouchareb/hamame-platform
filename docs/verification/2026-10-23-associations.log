@@ -1,0 +1,85 @@
+OK seeded baseline present (6 rows)
+OK unauth GET /associations -> 200 (got 200)
+OK public list total >= 6 (got 6)
+OK wilaya=Alger filter -> all rows Alger (got 2)
+OK type=charity filter -> all rows charity (got 1)
+OK bad type enum -> 400 (got 400)
+OK GET /associations/not-a-uuid -> 400 (got 400)
+OK GET /associations/:id -> 200 id match (got 200)
+OK missing id -> 404 ASSOCIATION_NOT_FOUND (got 404 ASSOCIATION_NOT_FOUND)
+OK unauth POST /admin/associations -> 401 (got 401)
+OK plain user POST /admin/associations -> 403 (got 403)
+OK admin create -> 201 unverified (got 201)
+OK duplicate name -> 409 ASSOCIATION_EXISTS (got 409)
+OK http:// socialUrl -> 400 https-only (got 400)
+OK PATCH verified:true -> verified (got 200)
+OK patch missing -> 404 (got 404)
+OK PATCH verified:false -> cleared (got 200)
+OK create verified row -> 201 verified (got 201)
+HARNESS FAILURE: Error: ASSERT FAILED: verified VERIFY row ranks first (got VERIFY-ASSOC-VERIFY-ASSOC-F541C3C1)
+    at assert (C:\dev\hamame1\tmp-verify-associations.ts:46:20)
+    at main (C:\dev\hamame1\tmp-verify-associations.ts:160:3)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+OK seeded baseline present (8 rows)
+OK unauth GET /associations -> 200 (got 200)
+OK public list total >= 6 (got 8)
+OK wilaya=Alger filter -> all rows Alger (got 3)
+OK type=charity filter -> all rows charity (got 1)
+OK bad type enum -> 400 (got 400)
+OK GET /associations/not-a-uuid -> 400 (got 400)
+OK GET /associations/:id -> 200 id match (got 200)
+OK missing id -> 404 ASSOCIATION_NOT_FOUND (got 404 ASSOCIATION_NOT_FOUND)
+OK unauth POST /admin/associations -> 401 (got 401)
+OK plain user POST /admin/associations -> 403 (got 403)
+OK admin create -> 201 unverified (got 201)
+OK duplicate name -> 409 ASSOCIATION_EXISTS (got 409)
+OK http:// socialUrl -> 400 https-only (got 400)
+OK PATCH verified:true -> verified (got 200)
+OK patch missing -> 404 (got 404)
+OK PATCH verified:false -> cleared (got 200)
+OK create verified row -> 201 verified (got 201)
+OK verified VERIFY row ranks first (got VERIFY-ASSOC-V-VERIFY-ASSOC-B0DBD0F5)
+HARNESS FAILURE: Error: ASSERT FAILED: verified=true -> exactly the 1 VERIFY row (got 2)
+    at assert (C:\dev\hamame1\tmp-verify-associations.ts:46:20)
+    at main (C:\dev\hamame1\tmp-verify-associations.ts:162:3)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+=== preflight AFTER (must be zeros) ===
+{"verifyRows":0,"users":0}
+OK seeded baseline present (6 rows)
+OK unauth GET /associations -> 200 (got 200)
+OK public list total >= 6 (got 6)
+OK wilaya=Alger filter -> all rows Alger (got 2)
+OK type=charity filter -> all rows charity (got 1)
+OK bad type enum -> 400 (got 400)
+OK GET /associations/not-a-uuid -> 400 (got 400)
+OK GET /associations/:id -> 200 id match (got 200)
+OK missing id -> 404 ASSOCIATION_NOT_FOUND (got 404 ASSOCIATION_NOT_FOUND)
+OK unauth POST /admin/associations -> 401 (got 401)
+OK plain user POST /admin/associations -> 403 (got 403)
+OK admin create -> 201 unverified (got 201)
+OK duplicate name -> 409 ASSOCIATION_EXISTS (got 409)
+OK http:// socialUrl -> 400 https-only (got 400)
+OK PATCH verified:true -> verified (got 200)
+OK patch missing -> 404 (got 404)
+OK PATCH verified:false -> cleared (got 200)
+OK create verified row -> 201 verified (got 201)
+OK verified VERIFY row ranks first (got VERIFY-ASSOC-V-VERIFY-ASSOC-C39EA0EB)
+OK verified=true -> exactly the 1 VERIFY row (got 1)
+OK PATCH contacts -> 200 (got 200)
+OK VERIFY rows deleted (got 0)
+OK row count restored (6/6)
+OK seeded row byte-identical: Fédération des Étudiants en Médecine d'Algérie
+OK seeded row byte-identical: Club de Recherche Scientifique Étudiant — Alger
+OK seeded row byte-identical: Étudiants en Chirurgie Dentaire d'Algérie
+OK seeded row byte-identical: Étudiants en Pharmacie d'Algérie
+OK seeded row byte-identical: Amicale Étudiante Health Sciences — Oran
+OK seeded row byte-identical: Club Santé & Caritatif — Tizi Ouzou
+OK cleanup users zero (got 0)
+CLEANUP COMPLETE
+
+HARNESS NOTES (post-run disclosure):
+- run 1 crashed on a REAL PRODUCT BUG: the naive orderBy [{verifiedAt: desc}] put UNVERIFIED rows first because Postgres sorts NULLS FIRST on DESC — the exact inverse of the "verified first" contract. Fixed by switching the unfiltered list to a two-pool read with manual pagination (verified pool verifiedAt desc, then unverified pool updatedAt desc); the fix is exactly what run 3's asserts rank-first + verified=true(count) prove.
+- run 2 crashed on harness hygiene, not product: run 1 had left a VERIFIED VERIFY-ASSOC row behind (crashed after creating it, before cleanup), and run 2 took its seeded snapshot WITHOUT a prefix preflight — so verified=true found 2 rows. Fixed by moving the VERIFY-prefix + verify-assoc-email wipe into a proper preflight that proves zeros before snapping the baseline.
+- run 3 fully green with CLEANUP COMPLETE + per-row byte-identical restore check of all 6 seeded rows (the console shows mangled accents for the same-name/description lines: that is the documented codepage-850 rendering artifact, NOT file corruption — the byte-level jest compare passed, and the mojibake regex check was done during the commit step).
+- the seed file (prisma/seed-associations.ts) is contact-hollow by design: no invented emails/phones/social handles; the team curates contacts and stamps verifiedAt from curation.
+- pagination across the two pools was asserted indirectly (default page covers all 6 + 3 VERIFY rows era). An off-by-one across a page boundary was NOT separately driven (52+ rows would be needed); the slicing logic is unit-read simple (offset/take per pool) but is a known untested edge.

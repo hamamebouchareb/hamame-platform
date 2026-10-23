@@ -38,6 +38,7 @@ export const SECONDARY_NAV: NavKeyEntry[] = [
   { href: "/points", labelKey: "nav.points" },
   { href: "/groups", labelKey: "nav.groups" },
   { href: "/ai-chat", labelKey: "nav.assistant" },
+  { href: "/associations", labelKey: "nav.assoc" },
   { href: "/subscription", labelKey: "nav.subscription" },
   { href: "/resources", labelKey: "nav.resources" },
   { href: "/profile", labelKey: "nav.profile" },
@@ -69,6 +70,7 @@ export const ADMIN_NAV: NavKeyEntry[] = [
   { href: "/admin/roles", labelKey: "admin.roles" },
   { href: "/admin/reports", labelKey: "admin.reports" },
   { href: "/admin/payouts", labelKey: "admin.payouts" },
+  { href: "/admin/associations", labelKey: "admin.assocTitle" },
 ];
 // NOTE: admin.applications / admin.promos / admin.notifications / admin.jobs
 // keys stay in i18n for the pages when they are built; only entries with a
