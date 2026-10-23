@@ -10,6 +10,7 @@ export interface Faculty {
   slug: string;
   rolloutStatus: string;
   minCoverageYearsRequired: number;
+  trailerUrl?: string | null;
   createdAt: string;
 }
 

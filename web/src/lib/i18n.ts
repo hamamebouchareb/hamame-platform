@@ -101,6 +101,9 @@ const fr = {
   "errors.crashDesc": "Réessayez — si le problème persiste, revenez plus tard.",
   "errors.backHome": "Accueil",
   "admin.rolloutStatus": "Statut de déploiement",
+  "admin.trailerLabel": "URL de la bande-annonce (https)",
+  "admin.trailerSave": "Enregistrer",
+  "admin.trailerClear": "Effacer",
   "admin.rolloutNote":
     "« planned » masque la faculté partout ; « beta » et « live » sont visibles. Toutes les facultés sont listées ici, y compris les « planned ».",
   "admin.rolloutConfirm": "Passer « {name} » en « {status} » ?",
@@ -642,6 +645,8 @@ const fr = {
   "library.explore": "Explorer",
   "library.mineBadge": "Votre filière",
   "library.availableBadge": "Disponible",
+  "library.trailers": "Bandes-annonces des cours",
+  "library.trailersDesc": "Un avant-goût de la banque de cours pour chaque filière.",
   "library.footnote":
     "Le catalogue est entièrement gratuit pour tous les membres — aucun abonnement requis pour accéder aux cours.",
   // ── Années ──
@@ -1387,6 +1392,9 @@ const en: Record<I18nKey, string> = {
   "errors.crashDesc": "Try again — if the problem persists, come back later.",
   "errors.backHome": "Home",
   "admin.rolloutStatus": "Rollout status",
+  "admin.trailerLabel": "Trailer URL (https)",
+  "admin.trailerSave": "Save",
+  "admin.trailerClear": "Clear",
   "admin.rolloutNote":
     "“planned” hides the faculty everywhere; “beta” and “live” are visible. Every faculty is listed here, including “planned” ones.",
   "admin.rolloutConfirm": "Switch “{name}” to “{status}”?",
@@ -1928,6 +1936,8 @@ const en: Record<I18nKey, string> = {
   "library.explore": "Explore",
   "library.mineBadge": "Your track",
   "library.availableBadge": "Available",
+  "library.trailers": "Course trailers",
+  "library.trailersDesc": "A sneak peek of the course bank for each faculty.",
   "library.footnote":
     "The catalog is entirely free for all members — no subscription needed to access courses.",
   // ── Années ──

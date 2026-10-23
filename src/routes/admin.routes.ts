@@ -220,6 +220,49 @@ router.put(
   setFacultyRolloutStatus
 );
 
+// PUT /api/admin/faculties/:id/trailer — course trailer URL (medspark.online
+// hosts Bunny.net MP4 teasers per faculty; this is the Hamame shape). https
+// only; an explicit {"trailerUrl": null} clears it (same explicit-null-to-clear
+// rule as users/me nullable fields). Stored verbatim, rendered as <video>.
+const trailerSchema = z.object({
+  trailerUrl: z
+    .string()
+    .url()
+    .max(2000)
+    .regex(/^https:\/\//i)
+    .nullable(),
+});
+
+async function setFacultyTrailer(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+    const { trailerUrl } = req.body as z.infer<typeof trailerSchema>;
+
+    const faculty = await prisma.faculty.findUnique({ where: { id }, select: { id: true } });
+    if (!faculty) {
+      throw new ApiError(404, "FACULTY_NOT_FOUND", "No faculty exists with this id.");
+    }
+
+    const updated = await prisma.faculty.update({
+      where: { id },
+      data: { trailerUrl },
+      select: { id: true, trailerUrl: true },
+    });
+
+    res.status(200).json({ faculty: updated });
+  } catch (err) {
+    next(err);
+  }
+}
+
+router.put(
+  "/faculties/:id/trailer",
+  requireAdmin,
+  validateParams(uuidParam("id")),
+  validateBody(trailerSchema),
+  setFacultyTrailer
+);
+
 const updatePlanSchema = z.object({
   name: z.string().min(1).optional(),
   priceDzd: z.number().nonnegative().nullable().optional(),

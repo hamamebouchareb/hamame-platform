@@ -265,6 +265,10 @@ model Faculty {
   slug                     String   @unique
   rolloutStatus            String   @default("planned") @map("rollout_status") // 'planned' | 'beta' | 'live' -- FR-64, BR-15
   minCoverageYearsRequired Int      @default(2) @map("min_coverage_years_required") // BR-15 gating threshold
+  // Course trailer (medspark.online hosts Bunny.net MP4 teasers on faculty
+  // landing pages; Hamame stores the URL raw and renders a plain <video>).
+  // Nullable: admin-set only; null = no trailer.
+  trailerUrl               String?  @map("trailer_url")
   createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   years                Year[]

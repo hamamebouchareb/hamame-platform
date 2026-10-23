@@ -83,6 +83,31 @@ export default function FacultiesPage() {
           </section>
         )}
 
+        {faculties.some((f) => f.trailerUrl) ? (
+          <section aria-label={t("library.trailers")} className="mx-auto mt-section-gap max-w-4xl">
+            <h2 className="font-display text-h3 font-semibold text-text-primary">{t("library.trailers")}</h2>
+            <p className="mt-1 text-meta text-text-tertiary">{t("library.trailersDesc")}</p>
+            <ul className="mt-4 grid gap-card-gap sm:grid-cols-2">
+              {faculties
+                .filter((f) => Boolean(f.trailerUrl))
+                .map((f) => (
+                  <li key={f.id} className="rounded-card border border-border bg-surface-1 p-4">
+                    <p className="text-body font-semibold text-text-primary">{f.name}</p>
+                    {/* trailerUrl is https-validated server-side before it can be set */}
+                    <video
+                      controls
+                      preload="metadata"
+                      className="mt-2 w-full rounded-lg"
+                      src={f.trailerUrl ?? undefined}
+                    >
+                      <track kind="captions" />
+                    </video>
+                  </li>
+                ))}
+            </ul>
+          </section>
+        ) : null}
+
         <section aria-label={t("library.allFaculties")} className="mx-auto mt-section-gap max-w-4xl">
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-display text-h3 font-semibold text-text-primary">{t("library.allFaculties")}</h2>
