@@ -89,3 +89,9 @@ export const limitEmailSends = rateLimit(10 * 60 * 1000, 5);
 // to make online brute force impractical (bcrypt at 10 rounds already makes
 // each attempt expensive server-side).
 export const limitLogins = rateLimit(10 * 60 * 1000, 20);
+
+// Burst friction on AI generation endpoints (POST /api/ai/*). Complements, never
+// replaces, the per-user credit pool: the pool prices normal use per student, this
+// caps per-IP request BURSTS so a scripted client cannot burn the (free-tier) provider
+// quota with concurrent popups. 30 per 10 minutes per IP per endpoint.
+export const limitAiCalls = rateLimit(10 * 60 * 1000, 30);

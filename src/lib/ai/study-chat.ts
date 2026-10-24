@@ -1,6 +1,5 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
-import { getAnthropicClient } from "./anthropic";
+import { generateGeminiText, isGeminiConfigured } from "./gemini";
 
 // AI study chat (medspark.online ChatAI parity, approved gap list). V2 scope: a
 // one-POST chat turn under the same guard sequence as the contextual hint —
@@ -11,15 +10,18 @@ import { getAnthropicClient } from "./anthropic";
 // nothing to screen for leaks, unlike ./contextual-hint.ts. What IS enforced
 // structurally: bounded history, bounded message sizes, and a system prompt
 // that refuses to pretend to hold answer keys it was never given.
+//
+// Provider (approved decision): Google's official Gemini SDK, free-tier model
+// only (gemini-3.5-flash default; see ./gemini.ts for the evidence trail). The
+// Anthropic call this module previously made is fully replaced; callers' contract
+// (history, refund, provenance) is unchanged.
 
-export const STUDY_CHAT_MODEL = "claude-haiku-4-5-20251001";
-export const STUDY_CHAT_PROMPT_VERSION = "study-chat-v1";
+export const STUDY_CHAT_PROMPT_VERSION = "study-chat-v2-gemini";
 
 // Keep a full conversational thread short of the model's context and of abuse
 // (one turn = one charged credit, so history trimming is a cost decision too).
 export const MAX_HISTORY_MESSAGES = 10;
 export const MAX_MESSAGE_CHARS = 2000;
-const MAX_OUTPUT_TOKENS = 1000;
 
 // The system prompt speaks FR/EN (bank languages); the model answers in the
 // language the student wrote in, which the prompt makes explicit.
@@ -88,26 +90,22 @@ export async function generateStudyChatReply(
   history: StudyChatMessage[],
   context: StudyChatContext | null
 ): Promise<StudyChatResult> {
-  const message: Anthropic.Message = await getAnthropicClient().messages.create({
-    model: STUDY_CHAT_MODEL,
-    max_tokens: MAX_OUTPUT_TOKENS,
-    // Slightly above hint latency tolerance because a chat read is a
-    // conversational surface, below unbounded since one turn = one credit.
-    temperature: 0.4,
+  if (!isGeminiConfigured()) {
+    // Same degrade guard as ./anthropic.ts consumers: an unconfigured optional
+    // dependency is a 503 condition decided BEFORE any credit is reserved.
+    throw new Error("GEMINI_API_KEY is not set — see .env.example.");
+  }
+
+  const response = await generateGeminiText({
     system: buildStudyChatSystemPrompt(context),
-    messages: history,
+    messages: history.map((message) => ({ role: message.role, content: message.content })),
+    temperature: 0.4,
   });
 
-  const text = message.content
-    .filter((block): block is Anthropic.TextBlock => block.type === "text")
-    .map((block) => block.text)
-    .join("\n")
-    .trim();
-
   return {
-    replyText: text,
-    usage: { inputTokens: message.usage.input_tokens, outputTokens: message.usage.output_tokens },
-    model: STUDY_CHAT_MODEL,
+    replyText: response.text,
+    usage: { inputTokens: response.usage.inputTokens, outputTokens: response.usage.outputTokens },
+    model: response.model,
     promptVersion: STUDY_CHAT_PROMPT_VERSION,
   };
 }
