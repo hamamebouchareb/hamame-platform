@@ -31,6 +31,7 @@
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.6",
     "dotenv": "^16.4.5",
+    "ecc-universal": "^2.2.3",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "node-cron": "^4.6.0",
