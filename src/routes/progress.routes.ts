@@ -165,7 +165,10 @@ async function getExamReadiness(req: Request, res: Response, next: NextFunction)
       },
       orderBy: { answeredAt: "desc" },
       take: READINESS_RECENT_WINDOW,
-      select: { isCorrect: true },
+      select: {
+        isCorrect: true,
+        sessionQuestion: { select: { question: { select: { unitId: true } } } },
+      },
     });
 
     const gradableAttemptCount = recentAttempts.length;
@@ -205,6 +208,38 @@ async function getExamReadiness(req: Request, res: Response, next: NextFunction)
       (Math.min(currentStreakDays, READINESS_STREAK_CAP_DAYS) / READINESS_STREAK_CAP_DAYS) * 100
     );
 
+    // recommendedNextSession — the unit of the student's most recent incorrect
+    // gradable answer, the most actionable revisit target among data this handler
+    // already fetched. Deliberately re-validated against the same visibility gates
+    // (student's year, faculty rollout beta/live, approved questions only, FR-10a
+    // university layering) so a recommendation can never point at content the
+    // student can no longer see. null when there is nothing recent to remediate —
+    // never a guessed unit ("suggest less" over "suggest badly"). Sequential await
+    // per the pooler-concurrency rule above.
+    let recommendedNextSession:
+      | { unitId: string; unitName: string; moduleName: string; source: "recent_incorrect" }
+      | null = null;
+    const firstRecentMiss = recentAttempts.find((attempt) => attempt.isCorrect === false);
+    if (firstRecentMiss && user.yearId) {
+      const viewerUniversityId = await resolveViewerUniversityId(prisma, userId);
+      const unitRow = await prisma.unit.findFirst({
+        where: {
+          id: firstRecentMiss.sessionQuestion.question.unitId,
+          module: { yearId: user.yearId, year: { faculty: { rolloutStatus: { in: ["beta", "live"] } } } },
+          questions: { some: { status: "approved", AND: [universityScopeFilter(viewerUniversityId)] } },
+        },
+        select: { name: true, module: { select: { name: true } } },
+      });
+      if (unitRow) {
+        recommendedNextSession = {
+          unitId: firstRecentMiss.sessionQuestion.question.unitId,
+          unitName: unitRow.name,
+          moduleName: unitRow.module.name,
+          source: "recent_incorrect",
+        };
+      }
+    }
+
     // Not enough data for a meaningful accuracy signal — withhold the composite score
     // rather than return a misleading number built on a near-empty window. Coverage and
     // consistency are still returned so a future UI can show "open more questions" without
@@ -221,6 +256,7 @@ async function getExamReadiness(req: Request, res: Response, next: NextFunction)
         },
         gradableAttemptCount,
         minAttemptsRequired: READINESS_MIN_ATTEMPTS,
+        recommendedNextSession,
       });
       return;
     }
@@ -245,6 +281,7 @@ async function getExamReadiness(req: Request, res: Response, next: NextFunction)
       },
       gradableAttemptCount,
       minAttemptsRequired: READINESS_MIN_ATTEMPTS,
+      recommendedNextSession,
     });
   } catch (err) {
     next(err);

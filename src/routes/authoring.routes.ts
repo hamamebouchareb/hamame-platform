@@ -1,8 +1,9 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { validateBody, validateParams } from "../middleware/validate";
-import { jsonObject } from "../lib/common-schemas";
+import { validateBody, validateParams, validateQuery } from "../middleware/validate";
+import { jsonObject, paginationQuery } from "../lib/common-schemas";
+import { extractRichtextText } from "../lib/flashcard-from-question";
 import { requireAuth } from "../middleware/auth";
 import { requireRole } from "../middleware/requireRole";
 import { ApiError } from "../lib/errors";
@@ -234,7 +235,7 @@ router.post(
   submitForReview
 );
 
-// PUT /api/authoring/:type/:id — edit own draft/rejected content. Closes the lifecycle
+// See getMyDrafts below: the drafts list is deliberately requireAuth-only.// PUT /api/authoring/:type/:id — edit own draft/rejected content. Closes the lifecycle
 // gap flagged in the handoff: 'rejected' content was designed to be fixed and
 // resubmitted, but no edit path existed. Editing updates the content fields (same set as
 // the corresponding create-draft endpoint), resets status to 'draft' (whether it was
@@ -362,6 +363,117 @@ async function editContent(req: Request, res: Response, next: NextFunction) {
 }
 
 router.put("/:type/:id", requireInstructorOrReviewer, validateParams(submitParamsSchema), editContent);
+
+// GET /api/authoring/me/drafts — the author's own content list. requireAuth-only
+// like /me/stats: a user may always inspect their own rows, whatever roles they hold.
+//
+// This closes the tracked gap that only aggregate /me/stats existed — the authoring
+// UI could show counts but no list. `type` and `status` are optional filters;
+// status defaults to the SUBMITTABLE set ('draft' | 'rejected') because that is what
+// "my drafts" means in the lifecycle ('pending_review'/'approved' rows are reachable
+// with an explicit status filter). updatedAt is intentionally omitted — Question has
+// no updatedAt column (see prisma/schema.prisma), createdAt is the sort key until a
+// submittedAt column exists (prepared migration, not applied — deliberate).
+const draftsQuerySchema = paginationQuery.extend({
+  type: z.enum(["lesson", "question"]).optional(),
+  status: z.enum(["draft", "pending_review", "approved", "rejected"]).optional(),
+});
+
+async function getMyDrafts(req: Request, res: Response, next: NextFunction) {
+  try {
+    const userId = req.auth!.userId;
+    const { page, limit, type, status } = req.query as unknown as z.infer<typeof draftsQuerySchema>;
+    const statusFilter = status ? [status] : [...SUBMITTABLE_STATUSES];
+
+    // Study-question-style excerpt from the rich-text body (same extractor the
+    // flashcard flow uses) — keeps the list payload bounded.
+    function excerpt(value: unknown): string {
+      return extractRichtextText(value).slice(0, 160);
+    }
+
+    const lessonRows = await prisma.lessonVersion.findMany({
+      where: { authoredBy: userId, status: { in: statusFilter } },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        versionNumber: true,
+        status: true,
+        createdAt: true,
+        reviewComment: true,
+        lesson: { select: { title: true, unit: { select: { name: true, module: { select: { name: true } } } } } },
+      },
+    });
+
+    const questionRows = await prisma.question.findMany({
+      where: { authoredBy: userId, status: { in: statusFilter } },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        type: true,
+        status: true,
+        createdAt: true,
+        reviewComment: true,
+        bodyRichtext: true,
+        unit: { select: { name: true, module: { select: { name: true } } } },
+      },
+    });
+
+    const items: {
+      id: string;
+      type: "lesson" | "question";
+      title: string;
+      unitName: string | null;
+      moduleName: string | null;
+      status: string;
+      versionNumber: number | null;
+      reviewComment: string | null;
+      createdAt: Date;
+    }[] = [];
+
+    for (const row of lessonRows) {
+      if (type && type !== "lesson") continue;
+      items.push({
+        id: row.id,
+        type: "lesson",
+        title: row.lesson.title,
+        unitName: row.lesson.unit.name,
+        moduleName: row.lesson.unit.module.name,
+        status: row.status,
+        versionNumber: row.versionNumber,
+        // The reviewer's reason is what the author needs on a rejection — carried
+        // verbatim (deliberately untranslated, like the stored reason itself).
+        reviewComment: row.status === "rejected" ? row.reviewComment : null,
+        createdAt: row.createdAt,
+      });
+    }
+
+    for (const row of questionRows) {
+      if (type && type !== "question") continue;
+      items.push({
+        id: row.id,
+        type: "question",
+        title: excerpt(row.bodyRichtext),
+        unitName: row.unit.name,
+        moduleName: row.unit.module.name,
+        status: row.status,
+        versionNumber: null,
+        reviewComment: row.status === "rejected" ? row.reviewComment : null,
+        createdAt: row.createdAt,
+      });
+    }
+
+    // Merged recency order (two createdAt-desc sources), then one shared page window.
+    items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    const total = items.length;
+    const paged = items.slice((page - 1) * limit, page * limit);
+
+    res.status(200).json({ items: paged, pagination: { page, limit, total } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+router.get("/me/drafts", validateQuery(draftsQuerySchema), getMyDrafts);
 
 // GET /api/authoring/me/stats — contributor's aggregate stats, FR-51.
 async function getContributorStats(req: Request, res: Response, next: NextFunction) {
