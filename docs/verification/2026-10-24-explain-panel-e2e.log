@@ -1,0 +1,184 @@
+E2E VERIFICATION — AI EXPLAIN PANEL (REAL BROWSER, PRODUCTION SERVERS)
+Date: 2026-10-24
+Scope: "#"Expliquer cette réponse (IA)" panel end-to-end under `npx next start -p 3001`
+       + backend `npx tsx src/server.ts` (real .env, real Gemini free-tier call).
+Harness: web/tmp-e2e-explain.mjs (Playwright chromium) + tmp-e2e-fixtures.ts (Prisma fixture + cleanup).
+Fixture tag: "VERIFY-E2E" everywhere; examYear 1900 convention respected.
+All accounts: disposable `verify-e2e-panel-<ts>@verify.hamame.dz`, password "VerifyE2E!2026x".
+
+──────────────────────────────────────────────────────────────────────────────
+1. FIXTURE UP (tmp-e2e-fixtures.ts)
+──────────────────────────────────────────────────────────────────────────────
+First attempt FAILED — harness bug (missing required Faculty.slug):
+
+  FAIL
+  Invalid `prisma.faculty.create()` invocation in
+  C:\dev\hamame1\tmp-e2e-fixtures.ts:10:40
+     8 async function up() {
+     9   const ts = Date.now();
+  → 10   const faculty = await prisma.faculty.create({
+         data: {
+           name: "VERIFY-E2E Faculte 1792859757505",
+           rolloutStatus: "beta",
+       +   slug: String
+         }
+       })
+  Argument `slug` is missing.
+
+Fixed: `slug: \`verify-e2e-${ts}\`` added. Second attempt:
+
+  UP {"facultyId":"15fa38d1-987f-45ba-8579-bef7a674f74c","yearId":"7ec57d97-21a7-4893-b021-2f5a1d46142c","moduleId":"725ad99e-9eaf-44d1-8e24-5c59b4e04076","unitId":"eadd6816-be4e-47f8-ad1d-c94e4997ffbc","questionId":"af162bdf-dba8-40d4-83d5-27197965c322","correctOptionText":"VERIFY-E2E CORRECT"}
+
+Fixture question: approved, examYear 1900, options:
+  - "VERIFY-E2E CORRECT — Le poumon" (isCorrect)
+  - "VERIFY-E2E WRONG — Le foie"
+
+──────────────────────────────────────────────────────────────────────────────
+2. SERVERS (production mode, this machine)
+──────────────────────────────────────────────────────────────────────────────
+Backend log tail (C:\Users\imad\AppData\Local\Temp\opencode\e2e-backend.log):
+
+  Hamame API listening on port 3000
+  [cron] Unsuspended 0 users
+  [cron] Expired 0 subscriptions
+  [cron] Generated 2 contributor leaderboard snapshot rows
+  [cron] Generated 2 leaderboard snapshot rows
+  [DEV] Verification token for verify-e2e-panel-1792859867270@verify.hamame.dz: 038f9483...(dev-only)
+  [email] RESEND_API_KEY not set — skipping verification email to verify-e2e-panel-1792859867270@verify.hamame.dz
+  ... (one token line per disposable register; all accounts deleted below)
+
+Frontend log tail (e2e-frontend.log):
+
+  ▲ Next.js 16.3.8  (console shows mojibake for ▲ under codepage 850 — known console artifact, not app corruption)
+  - Local:         http://localhost:3001
+  - Network:       http://192.168.100.55:3001
+  ✓ Ready in 4.4s
+  ✓ Running next.config.ts took 3.4s
+
+Readiness probes: GET http://localhost:3000/api/plans → 200 ; GET http://localhost:3001/ → 200.
+
+──────────────────────────────────────────────────────────────────────────────
+3. RUNS 1–4 (failures, disclosed verbatim, root causes identified)
+──────────────────────────────────────────────────────────────────────────────
+RUN 1 (user e39a3690-b910-4559-ac9d-4ad35899eb6f, session bd70bf72-b736-4721-b628-e23556493d6c):
+  register 201; credits {dailyAllowance:5, usedToday:0, remainingToday:5};
+  session 201; /sessions/<id> timed out waiting for option button (30s).
+  Cause: fresh student redirected by the /bienvenue gate. (Harness had no
+  state write-back yet — this user+session later swept explicitly, see §6.)
+
+RUN 2 (cfe36efe-e981-4531-8c78-1e4d48e8c11c, session 143ef294-...):
+  Same arrival; DIAG DOM dump proved the app DID hydrate — onboarding step 1
+  ("Bienvenue sur Hamame", "Étape 1 sur 4", "Plus tard") rendered in place of
+  the player. "Plus tard" click did not clear the gate across navigations.
+
+RUN 3 (da322376-0291-485f-a6cb-ca74690cc4ca, session 0c626225-...):
+  Skip-loop retry also stuck at step 1.
+
+Root cause found in code:
+  web/src/lib/useRequireAuth.ts:42 — signed-in user missing faculty/year is
+  router.replace("/bienvenue")-ed; skip() only sets localStorage
+  "hamame_onboarding_skip" on the /bienvenue page itself. The /bienvenue
+  finish() flow does PUT /api/users/me {facultyId, yearId} (page.tsx:101-107).
+
+RUN 4 (ceb9f14e-76b1-4430-b0c3-6f60e5a377bb, session eb37bea3-...):
+  Added onboarding completion via API (PUT /users/me with fixture faculty/year)
+  before opening the browser. Failed at the response shape:
+
+    === 3b. finish onboarding via API (fixture faculty/year) ===
+    E2E-FAIL Cannot read properties of undefined (reading 'id')
+
+  Cause: PUT /api/users/me returns the user object DIRECTLY
+  (src/routes/users.routes.ts:176 res.status(200).json(user)) — the harness
+  destructured `{ user }`. Fixed.
+
+  HARNESS BUG (disclosed): because of how the 3b patch was anchored, the
+  state-file write-back ended up AFTER the 3b block in web/tmp-e2e-explain.mjs
+  — so RUN 4 (which threw at 3b) never persisted its user/session IDs into
+  the cleanup state file. Its session was still caught by cleanup's
+  sessionQuestion-join sweep (5 sessions deleted), but its USER ROW survived
+  the first cleanup — see §6 for the explicit audit + removal.
+
+──────────────────────────────────────────────────────────────────────────────
+4. RUN 5 — FULL PASS (raw output, user cd198e72-76cd-4cf3-8656-d1dcd486498d,
+   session 505d8a2e-422c-40c6-9ad0-f78fb3f18e94)
+──────────────────────────────────────────────────────────────────────────────
+  === 1. register disposable student === verify-e2e-panel-1792860398893@verify.hamame.dz
+  REGISTER status 201 user.id cd198e72-76cd-4cf3-8656-d1dcd486498d
+  === 2. credits before ===
+  CREDITS BEFORE {"dailyAllowance":5,"usedToday":0,"remainingToday":5,"resetAt":"2026-10-25T00:00:00.000Z","lowBalance":false}
+  === 3. create practice session (fixture unit, 1 QCM) ===
+  SESSION 201 505d8a2e-422c-40c6-9ad0-f78fb3f18e94
+  === 3b. finish onboarding via API (fixture faculty/year) ===
+  ONBOARDING SET faculty/year on cd198e72-76cd-4cf3-8656-d1dcd486498d 15fa38d1-987f-45ba-8579-bef7a674f74c 7ec57d97-21a7-4893-b021-2f5a1d46142c
+  === 4. open player at http://localhost:3001/sessions/505d8a2e-422c-40c6-9ad0-f78fb3f18e94
+  OPTION BUTTON VISIBLE
+  ANSWERS POST status 201
+  === 5. AI explain panel (practice post-submit) ===
+  CTA VISIBLE — clicking (one REAL free-tier Gemini call)
+  EXPLAIN POST status 200 dailyAllowance 5 creditsRemainingToday 4 directExplanation chars 84
+  CREDIT NOTE TEXT Crédit IA utilisé — 4 restant(s) aujourd'hui sur 5. Aucun crédit en cas d'échec.
+  === 6. credits after ===
+  CREDITS AFTER {"dailyAllowance":5,"usedToday":1,"remainingToday":4,"resetAt":"2026-10-25T00:00:00.000Z","lowBalance":false}
+  E2E-PASS all in-page + credit assertions met
+  === 7. soft-delete disposable account via platform API ===
+  DELETE /users/me status 200
+  REPROBE /ai/credits after delete 401 {"error":{"code":"ACCOUNT_DELETED","message":"This account has been deleted."}}
+
+Verified in the REAL production DOM under next start:
+  1. localStorage injection (hamame_auth + post-onboarding user) → /sessions/<id> loads player.
+  2. Option button "VERIFY-E2E CORRECT" clickable; "Valider la réponse" enabled → POST /answers → 201.
+  3. CTA "Expliquer cette réponse (IA)" appears only after submission (QuestionCard mount condition).
+  4. ONE REAL Gemini call: POST /ai/explain-answer → 200, explanation.directExplanation length 84.
+  5. Credit accounting end-to-end: client payload dailyAllowance 5 / creditsRemainingToday 4
+     + server truth GET /ai/credits usedToday 0→1. Math consistent exactly once per click.
+  6. Rendered FR credit note verbatim in the DOM:
+     "Crédit IA utilisé — 4 restant(s) aujourd'hui sur 5. Aucun crédit en cas d'échec."
+  7. Platform DELETE /api/users/me → 200; subsequent /ai/creds probe → 401 ACCOUNT_DELETED.
+
+──────────────────────────────────────────────────────────────────────────────
+5. FIXTURE CLEANUP (state-file driven + join sweep)
+──────────────────────────────────────────────────────────────────────────────
+  npx tsx tmp-e2e-fixtures.ts cleanup
+
+  CLEANUP {"before":1,"sessionsDeleted":5,"interactionsDeleted":1,"balancesDeleted":4,"usersDeleted":4,"optionsDeleted":2}
+  FRESH {"questionCount":0,"sessionCount":0,"unitCount":0,"facultyCount":0,"userCount":0}
+
+  before=1 (question still present). 5 sessions swept (runs 1–5, incl. the two
+  not written to state, via the sessionQuestion join on the fixture question).
+
+──────────────────────────────────────────────────────────────────────────────
+6. SURVIVOR AUDIT (harness bug in §3 RUN 4, disclosed) + REMOVAL
+──────────────────────────────────────────────────────────────────────────────
+probe over the 5 disposable IDs (tmp-probe-users.ts, Prisma):
+
+  FOUND [ { id: ceb9f14e-76b1-4430-b0c3-6f60e5a377bb,
+            email: verify-e2e-panel-1792860378244@verify.hamame.dz, status: active } ]
+  MISSING [e39a3690..., cfe36efe..., da322376..., cd198e72...]
+
+  → exactly one leaked row (RUN 4's; its never-executed state write-back, §3).
+
+Removal + fresh re-probe (same script, deleteMany + counts):
+
+  USERS_DELETED 1
+  FRESH userCount 0 interactions 0 balances 0 sessions 0 streaks 0
+
+All five disposable accounts gone, all child rows gone, fixture chain gone.
+Servers killed by port (Get-NetTCPConnection → Stop-Process):
+  KILL port 3000 pid 12368 / KILL port 3001 pid 12560 → PORTS 3000+3001 FREE.
+
+──────────────────────────────────────────────────────────────────────────────
+7. DISCLOSURES
+──────────────────────────────────────────────────────────────────────────────
+- Harness bugs hit and fixed during the session: Faculty.slug required;
+  PUT /api/users/me response unwrapped; state write-back anchored after the
+  3b block (run-4 user row leaked, then audited + removed — §6).
+- One REAL Gemini API credit consumed (free key, usedToday 0→1 on the
+  disposable account alone). No other paid calls; nothing else spent.
+- NODE_ENV=dev plaintext verification tokens appear in the local backend log
+  only; RESEND_API_KEY unset → no real emails. Tokens shown belong to already
+  deleted disposable accounts.
+- Console mojibake in frontend log ("▲" rendering) is the known codepage-850
+  artifact; files/DB/API are correct (handoff §12.2).
+- No claim above is conditional: every statement maps to a logged line in §1–§6.
+
+STATUS: E2E-PASS — smoke test of the 'Explain this answer (AI)' panel complete.
