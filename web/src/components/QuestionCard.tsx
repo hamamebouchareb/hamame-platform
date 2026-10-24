@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { cx } from "@/lib/cx";
 import { useLanguage } from "@/context/LanguageContext";
 import { AnswerOption } from "@/components/AnswerOption";
+import { AiExplainPanel } from "@/components/AiExplainPanel";
 import type { QuestionOptionRef, QuestionType } from "@/lib/types";
 
 export interface QuestionAnswerState {
@@ -34,6 +35,12 @@ export interface QuestionCardProps {
   moduleName?: string;
   examYear?: number | null;
   sittingLabel?: string | null;
+  /**
+   * Question + session ids enable the practice-mode post-submit AI explanation
+   * panel; omitted (or exam mode) → the panel never renders.
+   */
+  questionId?: string;
+  sessionId?: string;
   onToggleOption: (optionId: string) => void;
   onSelectOption: (optionId: string) => void;
   onFreeTextChange: (value: string) => void;
@@ -57,6 +64,8 @@ export function QuestionCard({
   moduleName,
   examYear,
   sittingLabel,
+  questionId,
+  sessionId,
   onToggleOption,
   onSelectOption,
   onFreeTextChange,
@@ -274,6 +283,12 @@ export function QuestionCard({
                   </div>
                 ) : null}
               </div>
+            ) : null}
+            {/* AI explanation (opt-in, one credit, retry-free): only with both ids
+                supplied; the player passes them. It stands alone from the authored
+                explanation — a question without one still gets the panel. */}
+            {questionId && sessionId && answer.submitted ? (
+              <AiExplainPanel questionId={questionId} sessionId={sessionId} />
             ) : null}
           </div>
         ) : (

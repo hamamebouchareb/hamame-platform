@@ -663,6 +663,8 @@ export default function SessionQuestionPage() {
             moduleName={currentEntry.question.moduleName}
             examYear={currentEntry.question.examYear}
             sittingLabel={currentEntry.question.sittingLabel}
+            questionId={currentEntry.question.id}
+            sessionId={sessionId}
             onToggleOption={toggleQcmOption}
             onSelectOption={selectQcsOption}
             onFreeTextChange={setFreeText}

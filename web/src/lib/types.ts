@@ -149,6 +149,25 @@ export interface AnswerAttemptResponse {
 }
 
 /**
+ * POST /api/ai/explain-answer — the explanation contract (zod-validated server
+ * side). `incorrectOptions` carries one entry per suggested incorrect option,
+ * and `limitations` is optional (omitted for gradable QCM/QCS).
+ */
+export interface AnswerExplanation {
+  directExplanation: string;
+  incorrectOptions: Array<{ optionLabel: string; optionText: string; whyIncorrect: string }>;
+  keyReasoning: string;
+  learningPoints: string[];
+  limitations?: string | null;
+}
+
+export interface ExplainAnswerResponse {
+  explanation: AnswerExplanation;
+  creditsRemainingToday: number;
+  dailyAllowance: number;
+}
+
+/**
  * GET /api/questions/:id/answer-stats — community pick-rates per option. * Aggregate-only: percentages are the share of past attempts selecting each
  * option (NOT correctness). `attempts` is always included so small samples are
  * visibly small; `options` is empty when there are no attempts yet.
