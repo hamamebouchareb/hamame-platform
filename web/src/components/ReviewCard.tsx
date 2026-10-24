@@ -22,7 +22,9 @@ export interface ReviewCardProps {
 }
 
 function itemTitle(item: ReviewQueueItem): string {
-  return item.contentType === "lesson" ? item.lessonTitle : `${item.type} question`;
+  if (item.contentType === "lesson") return item.lessonTitle;
+  if (item.contentType === "internship_review") return item.title;
+  return `${item.type} question`;
 }
 
 /** Review-queue item card with approve, inline reject (comment required), and per-item error. */
@@ -45,6 +47,9 @@ export function ReviewCard({
     <Card as="li" padded={false} className="px-card-padding py-4">
       <p className="text-caption font-medium uppercase tracking-wide text-text-tertiary">{item.contentType}</p>
       <p className="mt-1 text-body font-medium text-text-primary">{itemTitle(item)}</p>
+      {item.contentType === "internship_review" ? (
+        <p className="mt-1 text-caption text-text-tertiary">{item.category} · {"★".repeat(item.rating)}</p>
+      ) : null}
       {item.snippet ? <p className="mt-1 text-meta text-text-secondary">{item.snippet}</p> : null}
       <p className="mt-2 text-caption text-text-tertiary">
         {item.authorFullName ?? t("modcard.unknownAuthor")} · {new Date(item.createdAt).toLocaleString(localeFor(lang), { dateStyle: "medium", timeStyle: "short" })}

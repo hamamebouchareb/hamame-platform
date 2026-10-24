@@ -168,6 +168,7 @@ model User {
   telegramBroadcastsSent         TelegramBroadcast[]      @relation("TelegramBroadcastAdmin")
   payoutRequestsSubmitted        PayoutRequest[]          @relation("PayoutRequestUser")
   payoutRequestsDecided          PayoutRequest[]          @relation("PayoutRequestDecider")
+  internshipReviews              InternshipReview[]       @relation("InternshipReviewUser")
 
   @@map("users")
 }
@@ -197,6 +198,38 @@ model TelegramBroadcast {
 // ones the team has actually contacted/validated — the public list orders
 // verified rows first. Contact columns are intentionally plain strings
 // (emails/phones/social URLs are directory data, not account credentials).
+// Internship reviews (medspark.online stage/ECOS parity, approved gap list):
+// students share short structured reviews of their internship placements
+// (hospital site/service, category stage|garde|ecos). Reuses the review-queue
+// moderation pattern of lesson/question approvals: submitted rows start
+// 'pending_review' and are approved/rejected by Academic Reviewers/Admins via
+// /api/review/internship_review/:id/* — only approved rows are visible.
+// hospitalName/service are untranslated directory data (same convention as
+// wilaya/faculty labels); rating is 1-5; the review body is verbatim user text.
+model InternshipReview {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  category      String // 'stage' | 'garde' | 'ecos'
+  wilaya        String
+  hospitalName  String    @map("hospital_name")
+  serviceName   String?   @map("service_name")
+  rating        Int
+  content       String // the review body (kept verbatim)
+  status        String    @default("pending_review") // 'pending_review' | 'approved' | 'rejected'
+  reviewedBy    String?   @map("reviewed_by") @db.Uuid
+  reviewedAt    DateTime? @map("reviewed_at") @db.Timestamptz
+  reviewComment String?   @map("review_comment")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  user User @relation("InternshipReviewUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([wilaya])
+  @@index([userId])
+  @@map("internship_reviews")
+}
+
 model StudentAssociation {
   id            String    @id @default(uuid()) @db.Uuid
   name          String    @unique

@@ -1,0 +1,42 @@
+=== preflight AFTER (must be zeros) ===
+{"users":0,"reviews":0}
+OK unauth GET /internships/reviews -> 401 (got 401)
+OK unauth POST /internships/reviews -> 401 (got 401)
+OK register -> 201 (got 201)
+OK content < 50 chars -> 400 (got 400)
+OK rating 6 -> 400 (got 400)
+OK bad category enum -> 400 (got 400)
+OK submit -> 201 pending_review (got 201 {"review":{"id":"161827cf-bd90-466a-b1eb-cc80dcdf4b0e","status":"pending_review"}})
+OK same placement while pending -> 409 (got 409)
+OK different placement while pending -> 201 (got 201)
+OK GET /internships/reviews (auth) -> 200 (got 200)
+OK approved list empty before moderation (got 0)
+OK /mine total 2 (got 200 2)
+OK reviewer queue -> 200 (got 200)
+OK queue carries >= 2 internship_review items (got 2)
+OK our ecos review present in queue
+OK queue title = hospitalName (got CHU VERIFY VERIFY-INTERN-C089F6E5)
+OK approve junk id -> 404 (got 404)
+OK approve -> 200 approved (got 200 {"review":{"id":"161827cf-bd90-466a-b1eb-cc80dcdf4b0e","status":"approved"}})
+OK re-approve -> 409 INVALID_STATUS (got 409)
+OK reject -> 200 rejected (got 200)
+OK approve rejected row -> 409 INVALID_STATUS (got 409)
+OK approved list total 1 (got 1)
+OK approved row category ecos (got ecos)
+OK approved row hospital visible
+OK category=garde filter -> 0 (approved row is ecos) (got 0)
+OK wilaya=Alger -> 1 (got 1)
+OK 2 systeme stage notifications (approve + reject) (got 2)
+OK rejected row carries reviewer comment (got "VERIFY reject rationale")
+=== cleanup BEFORE ===
+{"reviews":2,"notifs":2,"users":2}
+=== cleanup AFTER (fresh queries, must be zeros) ===
+{"users":0,"reviews":0}
+CLEANUP COMPLETE
+
+HARNESS NOTES (post-run disclosure):
+- first run fully green, CLEANUP COMPLETE — no product or harness fixes needed this time
+- REA grounding: medspark.online's live ECOS surface ("Sessions ECOS", "Signaler une erreur ECOS", Alger-faculty ECOS source) motivates the stage|garde|ecos category set; the Hamame shape is reviews moderated through the shared review queue rather than a standalone ECOS-session marketplace
+- moderation goes through /api/review/internship_review/:id/approve|reject with parity contracts driven from the SAME queue the lesson/question reviewer uses (queue item shape verified: contentType 'internship_review', title = hospital[- service], snippet truncated)
+- approval notifications land in category systeme with "Avis de stage" FR copy (verified 2: approve + reject)
+- NOT driven here (disclosed): the reviewer UI click-path is unchanged review-page React rendering over the queue contract, not re-proven click-by-click; the pending-duplicate guard was asserted once and cross-run behavior is not covered

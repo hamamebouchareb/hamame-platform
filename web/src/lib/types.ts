@@ -386,6 +386,16 @@ export type ReviewQueueItem =
       snippet: string;
       authorFullName: string | null;
       createdAt: string;
+    }
+  | {
+      contentType: "internship_review";
+      id: string;
+      title: string;
+      category: string;
+      rating: number;
+      snippet: string;
+      authorFullName: string | null;
+      createdAt: string;
     };
 
 export interface ReviewQueueResponse {

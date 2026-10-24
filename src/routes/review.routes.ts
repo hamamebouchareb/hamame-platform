@@ -8,6 +8,7 @@ import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
 import { isAiConfigured } from "../lib/ai/anthropic";
 import { EXPLAINABLE_QUESTION_TYPES, generateAndStoreMcqExplanation } from "../lib/ai/mcq-explanation";
+import { createNotificationBestEffort } from "./notifications.routes";
 
 // docs/hamame_api_contract.md — "Content Authoring & Validation (Instructor/Reviewer)".
 // These act on the Academic Reviewer's queue (PRD Section 6, BR-2). Every route below
@@ -65,6 +66,19 @@ type QueueItem =
       snippet: string;
       authorFullName: string | null;
       createdAt: Date;
+    }
+  // Internship reviews reuse the same queue surface (approved gap list): the
+  // reviewer sees them as short moderated text entries alongside
+  // lessons/questions, described by hospital + category rather than a title.
+  | {
+      contentType: "internship_review";
+      id: string;
+      title: string;
+      category: string;
+      rating: number;
+      snippet: string;
+      authorFullName: string | null;
+      createdAt: Date;
     };
 
 // GET /api/review/queue — reviewer's pending queue. Role-gated to Academic Reviewers
@@ -77,7 +91,7 @@ async function getReviewQueue(req: Request, res: Response, next: NextFunction) {
     // in parallel, tagged with a contentType discriminator, then merged/sorted/paginated
     // in application code. Neither model has a dedicated "submittedAt" column (only
     // createdAt/reviewedAt), so createdAt is used as the recency signal.
-    const [pendingLessonVersions, pendingQuestions] = await Promise.all([
+    const [pendingLessonVersions, pendingQuestions, pendingInternshipReviews] = await Promise.all([
       prisma.lessonVersion.findMany({
         where: { status: "pending_review" },
         orderBy: { createdAt: "desc" },
@@ -92,6 +106,11 @@ async function getReviewQueue(req: Request, res: Response, next: NextFunction) {
         include: {
           author: { select: { fullName: true } },
         },
+      }),
+      prisma.internshipReview.findMany({
+        where: { status: "pending_review" },
+        orderBy: { createdAt: "desc" },
+        include: { user: { select: { fullName: true } } },
       }),
     ]);
 
@@ -113,6 +132,18 @@ async function getReviewQueue(req: Request, res: Response, next: NextFunction) {
         authorFullName: question.author?.fullName ?? null,
         createdAt: question.createdAt,
       })),
+      ...pendingInternshipReviews.map((review): QueueItem => ({
+        contentType: "internship_review",
+        id: review.id,
+        title: review.serviceName
+          ? `${review.hospitalName} — ${review.serviceName}`
+          : review.hospitalName,
+        category: review.category,
+        rating: review.rating,
+        snippet: truncate(review.content),
+        authorFullName: review.user.fullName,
+        createdAt: review.createdAt,
+      })),
     ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
     const total = items.length;
@@ -127,7 +158,7 @@ async function getReviewQueue(req: Request, res: Response, next: NextFunction) {
 router.get("/queue", requireReviewerOrAdmin, validateQuery(paginationQuery), getReviewQueue);
 
 const reviewTargetParamsSchema = z.object({
-  type: z.enum(["lesson", "question"]),
+  type: z.enum(["lesson", "question", "internship_review"]),
   id: z.string().uuid(),
 });
 
@@ -188,6 +219,28 @@ async function approveContent(req: Request, res: Response, next: NextFunction) {
       });
 
       return res.status(200).json({ version: updatedVersion, lesson: updatedLesson });
+    }
+
+    if (type === "internship_review") {
+      const review = await prisma.internshipReview.findUnique({ where: { id }, select: { id: true, status: true, userId: true } });
+      if (!review) {
+        throw new ApiError(404, "INTERNSHIP_REVIEW_NOT_FOUND", "No internship review exists with this id.");
+      }
+      if (review.status !== "pending_review") {
+        throw new ApiError(409, "INVALID_STATUS", `This internship review cannot be approved from status '${review.status}'.`);
+      }
+      const updated = await prisma.internshipReview.update({
+        where: { id },
+        data: { status: "approved", reviewedBy: userId, reviewedAt: new Date(), reviewComment: null },
+      });
+      res.status(200).json({ review: { id: updated.id, status: updated.status } });
+      void createNotificationBestEffort({
+        userId: review.userId,
+        category: "systeme",
+        title: "Avis de stage publié",
+        body: "Ton avis sur le stage a été approuvé et est maintenant visible dans la section Stages.",
+      });
+      return;
     }
 
     const question = await prisma.question.findUnique({ where: { id } });
@@ -255,6 +308,28 @@ async function rejectContent(req: Request, res: Response, next: NextFunction) {
         data: { status: "rejected", reviewedBy: userId, reviewedAt: new Date(), reviewComment },
       });
       return res.status(200).json({ version: updatedVersion });
+    }
+
+    if (type === "internship_review") {
+      const review = await prisma.internshipReview.findUnique({ where: { id }, select: { id: true, status: true, userId: true } });
+      if (!review) {
+        throw new ApiError(404, "INTERNSHIP_REVIEW_NOT_FOUND", "No internship review exists with this id.");
+      }
+      if (review.status !== "pending_review") {
+        throw new ApiError(409, "INVALID_STATUS", `This internship review cannot be rejected from status '${review.status}'.`);
+      }
+      const updated = await prisma.internshipReview.update({
+        where: { id },
+        data: { status: "rejected", reviewedBy: userId, reviewedAt: new Date(), reviewComment },
+      });
+      res.status(200).json({ review: { id: updated.id, status: updated.status } });
+      void createNotificationBestEffort({
+        userId: review.userId,
+        category: "systeme",
+        title: "Avis de stage refusé",
+        body: `Ton avis sur le stage n'a pas été publié. Motif : ${reviewComment}`,
+      });
+      return;
     }
 
     const question = await prisma.question.findUnique({ where: { id } });
