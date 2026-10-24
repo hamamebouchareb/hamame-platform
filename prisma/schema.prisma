@@ -221,6 +221,9 @@ model InternshipReview {
   reviewComment String?   @map("review_comment")
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  // When the student submitted this review for moderation (migration
+  // 20261024000000_add_submitted_at). Null while draft.
+  submittedAt   DateTime? @map("submitted_at") @db.Timestamptz
 
   user User @relation("InternshipReviewUser", fields: [userId], references: [id], onDelete: Cascade)
 
@@ -296,8 +299,8 @@ model InstructorApplication {
   status         String    @default("pending") // 'pending' | 'approved' | 'rejected'
   reviewedBy     String?   @map("reviewed_by") @db.Uuid
   reviewedAt     DateTime? @map("reviewed_at") @db.Timestamptz
-  reviewComment  String?   @map("review_comment")
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  reviewComment String?   @map("review_comment")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
   user     User  @relation("InstructorApplicant", fields: [userId], references: [id])
   reviewer User? @relation("InstructorApplicationReviewer", fields: [reviewedBy], references: [id])
@@ -458,6 +461,9 @@ model LessonVersion {
   // requested) — null while draft/pending_review/approved.
   reviewComment String?   @map("review_comment")
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  // When the author submitted this version for review (migration
+  // 20261024000000_add_submitted_at). Null while draft.
+  submittedAt   DateTime? @map("submitted_at") @db.Timestamptz
 
   lesson            Lesson             @relation("LessonVersions", fields: [lessonId], references: [id])
   currentForLessons Lesson[]           @relation("LessonCurrentVersion")
@@ -510,6 +516,10 @@ model Question {
   // status gate in src/lib/question-filters.ts.
   universityId          String?   @map("university_id") @db.Uuid
   createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  // When the author submitted this row for review (stamp written by the submit
+  // endpoints). Null while draft; meaningful chiefly while pending_review. Column
+  // added by migration 20261024000000_add_submitted_at.
+  submittedAt           DateTime? @map("submitted_at") @db.Timestamptz
 
   unit              Unit               @relation(fields: [unitId], references: [id])
   author            User?              @relation("QuestionAuthor", fields: [authoredBy], references: [id])

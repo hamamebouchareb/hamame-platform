@@ -58,6 +58,7 @@ type QueueItem =
       snippet: string;
       authorFullName: string | null;
       createdAt: Date;
+      submittedAt: Date | null;
     }
   | {
       contentType: "question";
@@ -66,6 +67,7 @@ type QueueItem =
       snippet: string;
       authorFullName: string | null;
       createdAt: Date;
+      submittedAt: Date | null;
     }
   // Internship reviews reuse the same queue surface (approved gap list): the
   // reviewer sees them as short moderated text entries alongside
@@ -79,6 +81,7 @@ type QueueItem =
       snippet: string;
       authorFullName: string | null;
       createdAt: Date;
+      submittedAt: Date | null;
     };
 
 // GET /api/review/queue — reviewer's pending queue. Role-gated to Academic Reviewers
@@ -87,14 +90,16 @@ async function getReviewQueue(req: Request, res: Response, next: NextFunction) {
   try {
     const { page, limit } = req.query as unknown as z.infer<typeof paginationQuery>;
 
-    // Prisma can't UNION LessonVersion and Question in one query, so both are fetched
-    // in parallel, tagged with a contentType discriminator, then merged/sorted/paginated
-    // in application code. Neither model has a dedicated "submittedAt" column (only
-    // createdAt/reviewedAt), so createdAt is used as the recency signal.
+    // Prisma can't UNION LessonVersion, Question and InternshipReview in one query, so
+    // the three are fetched in parallel, tagged with a contentType discriminator, then
+    // merged/sorted/paginated in application code. submittedAt (column added by
+    // migration 20261024000000_add_submitted_at, stamped by the submit endpoints) is the
+    // recency signal; createdAt is the fallback for any queued row without a stamp
+    // (e.g. legacy/imported rows) via Postgres NULLS-sorting + the app-level sort.
     const [pendingLessonVersions, pendingQuestions, pendingInternshipReviews] = await Promise.all([
       prisma.lessonVersion.findMany({
         where: { status: "pending_review" },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ submittedAt: "desc" }, { createdAt: "desc" }],
         include: {
           lesson: { select: { id: true, title: true } },
           author: { select: { fullName: true } },
@@ -102,14 +107,14 @@ async function getReviewQueue(req: Request, res: Response, next: NextFunction) {
       }),
       prisma.question.findMany({
         where: { status: "pending_review" },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ submittedAt: "desc" }, { createdAt: "desc" }],
         include: {
           author: { select: { fullName: true } },
         },
       }),
       prisma.internshipReview.findMany({
         where: { status: "pending_review" },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ submittedAt: "desc" }, { createdAt: "desc" }],
         include: { user: { select: { fullName: true } } },
       }),
     ]);
@@ -123,6 +128,7 @@ async function getReviewQueue(req: Request, res: Response, next: NextFunction) {
         snippet: extractSnippet(version.bodyRichtext),
         authorFullName: version.author.fullName,
         createdAt: version.createdAt,
+        submittedAt: version.submittedAt,
       })),
       ...pendingQuestions.map((question): QueueItem => ({
         contentType: "question",
@@ -131,6 +137,7 @@ async function getReviewQueue(req: Request, res: Response, next: NextFunction) {
         snippet: extractSnippet(question.bodyRichtext),
         authorFullName: question.author?.fullName ?? null,
         createdAt: question.createdAt,
+        submittedAt: question.submittedAt,
       })),
       ...pendingInternshipReviews.map((review): QueueItem => ({
         contentType: "internship_review",
@@ -143,8 +150,15 @@ async function getReviewQueue(req: Request, res: Response, next: NextFunction) {
         snippet: truncate(review.content),
         authorFullName: review.user.fullName,
         createdAt: review.createdAt,
+        submittedAt: review.submittedAt,
       })),
-    ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      // Unstampend rows sort last within their null group by createdAt; a stamp is
+      // always present for route-submitted rows (and backfilled by the migration).
+    ].sort(
+      (a, b) =>
+        (b.submittedAt?.getTime() ?? b.createdAt.getTime()) -
+        (a.submittedAt?.getTime() ?? a.createdAt.getTime())
+    );
 
     const total = items.length;
     const paged = items.slice((page - 1) * limit, (page - 1) * limit + limit);

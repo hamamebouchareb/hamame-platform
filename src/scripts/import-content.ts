@@ -550,6 +550,9 @@ async function main(): Promise<void> {
             examYear: typeof q.examYear === "number" ? q.examYear : null,
             sittingLabel:
               typeof q.sittingLabel === "string" && q.sittingLabel.trim() ? q.sittingLabel.trim() : null,
+            // Import lands rows directly at pending_review (route submit is bypassed),
+            // so the queue-recency column must be stamped here too.
+            submittedAt: new Date(),
             options: opts.length > 0 ? { create: opts } : undefined,
           },
           select: { id: true, options: { select: { id: true } } },
@@ -589,6 +592,7 @@ async function main(): Promise<void> {
           status: "pending_review",
           authoredBy: args.author as string,
           bodyRichtext: { blocks: paragraphs.map((p) => ({ type: "paragraph", text: p as string })) },
+          submittedAt: new Date(),
         },
         select: { id: true },
       });

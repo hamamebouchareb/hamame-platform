@@ -206,7 +206,12 @@ async function submitForReview(req: Request, res: Response, next: NextFunction) 
         );
       }
 
-      const updated = await prisma.lessonVersion.update({ where: { id }, data: { status: "pending_review" } });
+      // submittedAt = the real recency signal for the review queue (this row now
+      // sits at the top of GET /api/review/queue until decided).
+      const updated = await prisma.lessonVersion.update({
+        where: { id },
+        data: { status: "pending_review", submittedAt: new Date() },
+      });
       return res.status(200).json({ version: updated });
     }
 
@@ -221,7 +226,10 @@ async function submitForReview(req: Request, res: Response, next: NextFunction) 
       throw new ApiError(409, "INVALID_STATUS", `This question cannot be submitted from status '${question.status}'.`);
     }
 
-    const updated = await prisma.question.update({ where: { id }, data: { status: "pending_review" } });
+    const updated = await prisma.question.update({
+      where: { id },
+      data: { status: "pending_review", submittedAt: new Date() },
+    });
     res.status(200).json({ question: updated });
   } catch (err) {
     next(err);
@@ -292,7 +300,14 @@ async function editContent(req: Request, res: Response, next: NextFunction) {
         });
         const updatedLessonVersion = await tx.lessonVersion.update({
           where: { id },
-          data: { bodyRichtext: bodyRichtext as Prisma.InputJsonValue, status: "draft", reviewComment: null },
+          // status back to draft + clear the stale submission stamp so a future
+          // re-submit writes a fresh one.
+          data: {
+            bodyRichtext: bodyRichtext as Prisma.InputJsonValue,
+            status: "draft",
+            reviewComment: null,
+            submittedAt: null,
+          },
         });
         return { lesson: updatedLesson, version: updatedLessonVersion };
       });
@@ -340,6 +355,7 @@ async function editContent(req: Request, res: Response, next: NextFunction) {
         source,
         status: "draft",
         reviewComment: null,
+        submittedAt: null,
         difficulty,
         universityId: universityId ?? null,
         bodyRichtext: bodyRichtext as Prisma.InputJsonValue,
@@ -372,8 +388,9 @@ router.put("/:type/:id", requireInstructorOrReviewer, validateParams(submitParam
 // status defaults to the SUBMITTABLE set ('draft' | 'rejected') because that is what
 // "my drafts" means in the lifecycle ('pending_review'/'approved' rows are reachable
 // with an explicit status filter). updatedAt is intentionally omitted — Question has
-// no updatedAt column (see prisma/schema.prisma), createdAt is the sort key until a
-// submittedAt column exists (prepared migration, not applied — deliberate).
+// no updatedAt column (see prisma/schema.prisma); createdAt stays the sort key, and
+// submittedAt (column added by migration 20261024000000_add_submitted_at) is surfaced
+// so the author can see when a row entered/was last sent to review.
 const draftsQuerySchema = paginationQuery.extend({
   type: z.enum(["lesson", "question"]).optional(),
   status: z.enum(["draft", "pending_review", "approved", "rejected"]).optional(),
@@ -399,6 +416,7 @@ async function getMyDrafts(req: Request, res: Response, next: NextFunction) {
         versionNumber: true,
         status: true,
         createdAt: true,
+        submittedAt: true,
         reviewComment: true,
         lesson: { select: { title: true, unit: { select: { name: true, module: { select: { name: true } } } } } },
       },
@@ -412,6 +430,7 @@ async function getMyDrafts(req: Request, res: Response, next: NextFunction) {
         type: true,
         status: true,
         createdAt: true,
+        submittedAt: true,
         reviewComment: true,
         bodyRichtext: true,
         unit: { select: { name: true, module: { select: { name: true } } } },
@@ -428,6 +447,7 @@ async function getMyDrafts(req: Request, res: Response, next: NextFunction) {
       versionNumber: number | null;
       reviewComment: string | null;
       createdAt: Date;
+      submittedAt: Date | null;
     }[] = [];
 
     for (const row of lessonRows) {
@@ -444,6 +464,7 @@ async function getMyDrafts(req: Request, res: Response, next: NextFunction) {
         // verbatim (deliberately untranslated, like the stored reason itself).
         reviewComment: row.status === "rejected" ? row.reviewComment : null,
         createdAt: row.createdAt,
+        submittedAt: row.submittedAt,
       });
     }
 
@@ -459,6 +480,7 @@ async function getMyDrafts(req: Request, res: Response, next: NextFunction) {
         versionNumber: null,
         reviewComment: row.status === "rejected" ? row.reviewComment : null,
         createdAt: row.createdAt,
+        submittedAt: row.submittedAt,
       });
     }
 

@@ -69,6 +69,9 @@ async function submitReview(req: Request, res: Response, next: NextFunction) {
         serviceName: body.serviceName ?? null,
         rating: body.rating,
         content: body.content,
+        // status stays the DB default ('pending_review') — but the submission
+        // timestamp is stamped explicitly so the review queue can sort by it.
+        submittedAt: new Date(),
       },
     });
     res.status(201).json({ review: { id: row.id, status: row.status } });
