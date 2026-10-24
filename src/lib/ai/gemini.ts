@@ -17,27 +17,36 @@ import { z } from "zod";
 //     gemini-4-argon returned 429 RESOURCE_EXHAUSTED ("check plan and billing") and
 //     gemini-2.5-* models return 404 (no longer available to new keys).
 // There is NO code path that silently upgrades the model, enables billing, or falls
-// back to a different provider. If the operator sets GEMINI_MODEL to a paid-only
-// model, requests 429 → mapped to AI_QUOTA_EXHAUSTED, the user's credit is refunded,
-// and the student retries later. No charge can be incurred by architecture: the key
-// holder must never attach a billing account to the key's project (manual step, owned
-// by the operator — see .env.example).
+// back to a different provider — and the free-only policy is ENFORCED IN CODE (see
+// FREE_TIER_MODELS below), not left to an operational promise. An unset GEMINI_MODEL
+// uses the verified default; a configured value outside the verified free-tier set
+// fails loud at call time as CONFIGURATION before any provider call. No charge can be
+// incurred by architecture: the key holder must never attach a billing account to the
+// key's project (manual step, owned by the operator — see .env.example).
 
 // Default chosen from the live probe set above: gemini-3.5-flash responded 200 on the
 // free key while the older 2.5 generation is 404-closed for new keys.
 export const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash";
 
-// Defensive model-name validation: the value lands in a URL path we build, so anything
+// FREE-TIER ALLOWLIST — the zero-cost guarantee is enforced HERE, not by an
+// operational promise: only model ids verified live 2026-10-24 to answer
+// generateContent (HTTP 200) on a billing-free API key are accepted, and any other
+// configured value fails loud as CONFIGURATION before any provider call. Adding a
+// model to this set REQUIRES a fresh externally-verifiable probe on a key with no
+// billing account attached (evidence recorded in docs/verification/, 2026-10-24).
+const FREE_TIER_MODELS = new Set(["gemini-3.5-flash", "gemini-3.5-flash-lite"]);
+
+// Defensive second layer: the value also lands in a URL path we build, so anything
 // outside the model-id alphabet is rejected instead of passed through.
 const GEMINI_MODEL_PATTERN = /^[A-Za-z0-9._-]+$/;
 
 export function getGeminiModel(): string {
   const raw = process.env.GEMINI_MODEL?.trim();
   const model = raw && raw.length > 0 ? raw : DEFAULT_GEMINI_MODEL;
-  if (!GEMINI_MODEL_PATTERN.test(model)) {
+  if (!GEMINI_MODEL_PATTERN.test(model) || !FREE_TIER_MODELS.has(model)) {
     throw new GeminiError(
       "CONFIGURATION",
-      `GEMINI_MODEL is not a valid Gemini model id: ${model}`
+      `GEMINI_MODEL "${model}" is not a verified free-tier model (allowed: ${[...FREE_TIER_MODELS].join(", ")}). Verify it against a billing-free key first, then extend FREE_TIER_MODELS in src/lib/ai/gemini.ts.`
     );
   }
   return model;

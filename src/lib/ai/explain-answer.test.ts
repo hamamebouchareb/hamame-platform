@@ -1,12 +1,14 @@
-import { describe, it } from "node:test";
+import { afterEach, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   buildExplainUserPayload,
   explanationResponseSchema,
+  generateAnswerExplanation,
+  ExplainAnswerError,
   optionLabel,
   type ExplainQuestion,
 } from "./explain-answer";
-import { GeminiError } from "./gemini";
+import { GeminiError, injectGeminiJsonForTests } from "./gemini";
 
 // Mocked (no network): pins the DB-only payload construction and the response
 // contract. The fixture below is typed as ExplainQuestion but carries only the
@@ -116,10 +118,47 @@ describe("explanationResponseSchema (the response contract)", () => {
     assert.equal(parsed.success, false);
   });
 
-  it("treats SCHEMA_INVALID results as a GeminiError (route maps to 502, refunding the credit)", () => {
-    // The route's guarantee relies on validatedJsonResult's GeminiError kind —
-    // assert the classes relate as designed.
-    const err = new GeminiError("SCHEMA_INVALID", "x");
-    assert.equal(err.kind, "SCHEMA_INVALID");
+});
+
+describe("generateAnswerExplanation (public path, injected stub)", () => {
+  const originalStubFlag = process.env.HAMAME_AI_TEST_STUB;
+  const student = {
+    selectedOptionIds: ["o2"],
+    selectedOptionTexts: ["La veine porte"],
+    freeTextAnswer: null,
+    attemptCount: 1,
+  };
+
+  beforeEach(() => {
+    process.env.HAMAME_AI_TEST_STUB = "1";
+  });
+
+  afterEach(() => {
+    if (originalStubFlag === undefined) delete process.env.HAMAME_AI_TEST_STUB;
+    else process.env.HAMAME_AI_TEST_STUB = originalStubFlag;
+    injectGeminiJsonForTests(null);
+  });
+
+  it("maps a schema-invalid provider payload to ExplainAnswerError(SCHEMA_INVALID) — the refund-classifiable type", async () => {
+    injectGeminiJsonForTests(async () => ({
+      data: { directExplanation: "", keyReasoning: "", learningPoints: [] },
+      usage: { inputTokens: 1, outputTokens: 1 },
+      model: "stub",
+      timeoutMs: 1,
+    }));
+    await assert.rejects(
+      generateAnswerExplanation(fixtureQuestion, student),
+      (err: unknown) => err instanceof ExplainAnswerError && err.reason === "SCHEMA_INVALID"
+    );
+  });
+
+  it("maps provider quota exhaustion to ExplainAnswerError(QUOTA_EXHAUSTED)", async () => {
+    injectGeminiJsonForTests(async () => {
+      throw new GeminiError("QUOTA_EXHAUSTED", '429 RESOURCE_EXHAUSTED: "quota exceeded"');
+    });
+    await assert.rejects(
+      generateAnswerExplanation(fixtureQuestion, student),
+      (err: unknown) => err instanceof ExplainAnswerError && err.reason === "QUOTA_EXHAUSTED"
+    );
   });
 });

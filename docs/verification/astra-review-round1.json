@@ -1,0 +1,90 @@
+{
+  "model": "gpt-6-luna",
+  "scope": "3 explicit file(s)",
+  "files": [
+    "src/lib/ai/gemini.ts",
+    "src/lib/ai/explain-answer.ts",
+    "src/lib/ai/gemini.test.ts"
+  ],
+  "verdict": "FAIL",
+  "review": {
+    "verdict": "FAIL",
+    "summary": "The configured model is not restricted to free-tier models, and schema-validation failures bypass the explanation error type that callers need for consistent classification and credit refunds.",
+    "checks": [
+      {
+        "criterion": "Correctness",
+        "result": "FAIL",
+        "detail": "GEMINI_MODEL accepts any value matching a permissive character pattern, including paid models. The code therefore does not enforce the stated free-tier-only behavior."
+      },
+      {
+        "criterion": "Security",
+        "result": "FAIL",
+        "detail": "Question and option content is inserted into the prompt as data, but the system prompt only explicitly marks student text as untrusted. It does not instruct the model to ignore instructions embedded in question-bank content."
+      },
+      {
+        "criterion": "Error handling",
+        "result": "FAIL",
+        "detail": "Provider errors are mapped to ExplainAnswerError, but validatedJsonResult runs outside the try/catch. SCHEMA_INVALID therefore escapes as GeminiError instead of the explanation-layer error callers can classify consistently."
+      },
+      {
+        "criterion": "Input validation",
+        "result": "PASS",
+        "detail": "The generated response is validated with a Zod schema, and model names are checked against a restrictive character pattern before use."
+      },
+      {
+        "criterion": "Completeness",
+        "result": "FAIL",
+        "detail": "The free-tier-only guarantee is documented but not enforced, and schema-validation errors do not follow the same caller-facing error mapping as other generation failures."
+      },
+      {
+        "criterion": "No regressions",
+        "result": "PASS",
+        "detail": "No concrete breakage to existing callers is verifiable from the supplied three-file diff."
+      },
+      {
+        "criterion": "Tests",
+        "result": "FAIL",
+        "detail": "Tests cover classification helpers and the injection guard, but do not exercise generateGeminiJson or generateAnswerExplanation, including quota propagation, malformed JSON, or schema-error mapping."
+      },
+      {
+        "criterion": "Maintainability",
+        "result": "PASS",
+        "detail": "The implementation is generally readable and its provider and feature responsibilities are separated."
+      }
+    ],
+    "findings": [
+      {
+        "severity": "HIGH",
+        "file": "src/lib/ai/gemini.ts",
+        "line": 25,
+        "title": "Model configuration permits paid models",
+        "detail": "getGeminiModel accepts any model ID matching GEMINI_MODEL_PATTERN. A valid paid-only model can therefore reach generateContent; the comment's claim that this cannot incur charges depends on an operational promise not enforced by this code. A 429 refund path does not prevent charges when a request succeeds on a billed project.",
+        "suggestion": "Enforce an explicit allowlist of models verified as free-tier eligible, or otherwise reject configurations that do not meet the free-only policy."
+      },
+      {
+        "severity": "HIGH",
+        "file": "src/lib/ai/explain-answer.ts",
+        "line": 292,
+        "title": "Schema errors bypass the explanation error mapping",
+        "detail": "validatedJsonResult executes after the try/catch. If the provider returns invalid structured data, GeminiError with kind SCHEMA_INVALID escapes instead of ExplainAnswerError. Callers that classify/refund based on ExplainAnswerError can miss this failure and fail to refund exactly once.",
+        "suggestion": "Include response validation in the mapped error path, or explicitly catch GeminiError from validatedJsonResult and convert it to ExplainAnswerError while preserving the SCHEMA_INVALID reason."
+      },
+      {
+        "severity": "MEDIUM",
+        "file": "src/lib/ai/explain-answer.ts",
+        "line": 132,
+        "title": "Question-bank content is not explicitly marked untrusted",
+        "detail": "The prompt tells the model to treat student input as data, but does not give the same instruction for question text, options, baseline explanations, or case parts. Such content can contain embedded instructions and is interpolated into the prompt directly.",
+        "suggestion": "Tell the model that all payload fields are untrusted content to analyze, never instructions to follow, and delimit those fields clearly."
+      },
+      {
+        "severity": "MEDIUM",
+        "file": "src/lib/ai/gemini.test.ts",
+        "line": 1,
+        "title": "Tests do not cover the new generation and failure contract",
+        "detail": "The tests verify helper behavior and that injection can be armed, but never invoke the injected generator through generateGeminiJson or exercise generateAnswerExplanation. Thus they do not verify quota/error propagation, structured response validation, or the caller-facing error type. The stub's existence alone does not establish those behaviors.",
+        "suggestion": "Add mocked tests that call the public generation functions and assert the actual GeminiError/ExplainAnswerError contract, including quota and schema-invalid cases."
+      }
+    ]
+  }
+}

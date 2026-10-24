@@ -1,0 +1,66 @@
+{
+  "model": "gpt-6-luna",
+  "scope": "3 explicit file(s)",
+  "files": [
+    "src/routes/ai.routes.ts",
+    "src/middleware/rateLimit.ts",
+    "web/src/components/AiExplainPanel.tsx"
+  ],
+  "verdict": "PASS",
+  "review": {
+    "verdict": "PASS",
+    "summary": "Found one concrete medium-severity issue: the rate limiter's bucket map can grow without bound when it receives high-cardinality traffic during a window. No critical or high-severity finding was established from the supplied diff.",
+    "checks": [
+      {
+        "criterion": "Correctness",
+        "result": "PASS",
+        "detail": "The explanation route checks for the user's session ownership, an attempt, and the in-progress exam restriction before reserving credit. Successful responses include the remaining balance and daily allowance."
+      },
+      {
+        "criterion": "Security",
+        "result": "PASS",
+        "detail": "The AI router applies requireAuth, validates the explanation request with UUID fields, and checks session ownership before generating an explanation. The panel renders model text as React text nodes."
+      },
+      {
+        "criterion": "Error handling",
+        "result": "PASS",
+        "detail": "Generation failures, quota exhaustion, empty output, and provenance logging failures have explicit handling. Generation failures and empty output attempt a credit refund."
+      },
+      {
+        "criterion": "Input validation",
+        "result": "PASS",
+        "detail": "The explanation route validates questionId and sessionId as UUIDs. The study-chat route uses studyChatRequestSchema."
+      },
+      {
+        "criterion": "Completeness",
+        "result": "PASS",
+        "detail": "Both generation routes use limitAiCalls and the panel handles success, loading, and error states."
+      },
+      {
+        "criterion": "No regressions",
+        "result": "PASS",
+        "detail": "No breaking behavior is verifiable from the supplied diff."
+      },
+      {
+        "criterion": "Tests",
+        "result": "FAIL",
+        "detail": "The diff provides no tests for the new explanation route, credit reserve/refund paths, rate limiting, or panel behavior, and does not justify their absence."
+      },
+      {
+        "criterion": "Maintainability",
+        "result": "FAIL",
+        "detail": "The limiter's MAX_BUCKETS pruning does not cap the map when all buckets are still active; high-cardinality traffic can make the map grow without bound during the rate-limit window."
+      }
+    ],
+    "findings": [
+      {
+        "severity": "MEDIUM",
+        "file": "src/middleware/rateLimit.ts",
+        "line": 62,
+        "title": "Active buckets can grow without bound",
+        "detail": "The sweep only deletes expired buckets. If requests arrive from more than MAX_BUCKETS distinct client IPs while their buckets are still active, the sweep removes none and every new IP adds another entry. Repeated high-cardinality traffic can therefore grow the per-process map without a cap, increasing memory use despite the MAX_BUCKETS constant.",
+        "suggestion": "Enforce a hard capacity for active buckets, or use a bounded store/eviction strategy that preserves the intended rate-limit behavior under high-cardinality traffic."
+      }
+    ]
+  }
+}

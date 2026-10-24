@@ -66,6 +66,21 @@ function rateLimit(windowMs: number, max: number) {
       for (const [k, v] of buckets) {
         if (now >= v.resetAt) buckets.delete(k);
       }
+      // Hard capacity bound: if EVERY remaining bucket is still active (high-
+      // cardinality flood), the sweep above frees nothing and the map would grow
+      // without limit. Map iteration is insertion order, so the first keys are the
+      // OLDEST-created buckets — the ones closest to expiry and least likely to be
+      // mid-window hot traffic. Evict just enough of them to stay at capacity.
+      // Accepted trade-off: a flood cycling > MAX_BUCKETS IPs can rotate evictions,
+      // but the honest-IP buckets cluster at the tail and survive; bounding memory
+      // matters more than perfect flood accounting (this limiter is friction, not
+      // the security boundary).
+      let overflow = buckets.size - MAX_BUCKETS;
+      for (const k of buckets.keys()) {
+        if (overflow <= 0) break;
+        buckets.delete(k);
+        overflow -= 1;
+      }
     }
 
     bucket.count += 1;

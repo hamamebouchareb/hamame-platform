@@ -1,0 +1,79 @@
+ECC ASTRA LIVE REVIEW — 2026-10-24 — Gemini AI change-set + submittedAt scope
+================================================================================
+
+Cross-provider reviewer: OpenAI Codex CLI 0.164.0 (npm @openai/codex), driven by
+ECC scripts (C:\dev\ECC\scripts\astra-review.js), sandbox read-only, network off.
+
+MODEL DECISION (raw):
+  1st two whole-set attempts with ECC default gpt-6-astra: "Codex review timed out",
+  then a 3-file attempt exposed the real cause (verbatim console):
+    [astra-review] Codex review failed: ERROR:
+    {"type":"error","status":400,"error":{"type":"invalid_request_error","message":
+    "The 'gpt-6-astra' model is not supported when using Codex with a ChatGPT
+    account.","code":"model_not_found"}}
+  The account's Codex plane DID serve gpt-6-luna (live exec probe:
+  "model: gpt-6-luna ... tokens used 11,819 ... OK", ~70s round-trip).
+  Decision: run the review rounds with --model gpt-6-luna. Device-code login was
+  completed by the owner in-browser (code F501-LQW4N; first code F4EB-BFGKW expired).
+  8 files in one round exceeds the 900s window twice; scope split into rounds.
+
+ROUND 1 — src/lib/ai/gemini.ts, explain-answer.ts, gemini.test.ts — VERDICT: FAIL
+  [HIGH] gemini.ts:25 GEMINI_MODEL accepts any paid model; free-only promise not
+         enforced in code.
+  [HIGH] explain-answer.ts:292 validatedJsonResult outside try/catch →
+         SCHEMA_INVALID escapes as GeminiError, not refund-classifiable
+         ExplainAnswerError.
+  [MEDIUM] explain-answer.ts:132 prompt marks only student input untrusted, not
+         question-bank content.
+  [MEDIUM] gemini.test.ts:1 no public-contract coverage (quota/schema-invalid).
+
+ROUND 2 — study-chat.ts, explain-answer.test.ts — VERDICT: FAIL
+  [HIGH] study-chat.ts:94 client-supplied "assistant" turns accepted as trusted
+         history (injection lane).
+  [MEDIUM] explain-answer.test.ts:115 test constructs GeminiError directly instead
+         of exercising public behavior.
+
+ROUND 3 — ai.routes.ts, rateLimit.ts, AiExplainPanel.tsx — VERDICT: PASS (exit 0)
+  [MEDIUM] rateLimit.ts:62 sweep deletes only expired buckets → map unbounded
+         under all-active high-cardinality traffic.
+
+FIXES APPLIED (all 7 findings):
+  1. FREE_TIER_MODELS allowlist in getGeminiModel (gemini.ts) — enforced in code.
+  2. validatedJsonResult moved INSIDE the try/catch (explain-answer.ts).
+  3. Prompt rule 7 now declares the ENTIRE payload untrusted (explain-answer.ts).
+  4+6. Public-path test suites added: "generateGeminiJson (public path, injected
+       stub)" (stub routing + QUOTA propagation) and "generateAnswerExplanation
+       (public path, injected stub)" (SCHEMA_INVALID → ExplainAnswerError,
+       QUOTA_EXHAUSTED → ExplainAnswerError). Fabricated direct-construction test
+       removed.
+  5. study-chat.ts: header trust model (client-supplied, unverified), SYSTEM_PROMPT
+       rule 7 demoting every history entry, and studyChatRequestSchema refines
+       (user-first + strict alternation). Client window adjusted to whole pairs
+       (web/src/app/ai-chat/page.tsx) so the real client never trips the guards.
+  7. rateLimit.ts: oldest-active-bucket hard eviction after the expired sweep.
+
+RE-REVIEW ROUNDS (gpt-6-luna, exit 0 = PASS, findings 0 each):
+  4a — gemini.ts + rateLimit.ts        VERDICT: PASS
+       "Both requested fixes are present: Gemini model selection is restricted to
+       the stated allowlist before provider calls, and the rate-limit bucket map is
+       capped after pruning even when all buckets are active."
+  4b — explain-answer.ts + study-chat.ts  VERDICT: PASS
+       "The three requested fixes are present and complete in the supplied diff."
+  5  — gemini.test.ts + explain-answer.test.ts  VERDICT: PASS
+       "The added tests call the public generation functions with the injected
+       provider stub and assert their observable results and error mappings."
+
+GATE RERUNS AFTER FIXES (raw):
+  npx tsc --noEmit            → ROOT-TSC-OK: True
+  npm test                    → tests 62, suites 19, pass 62, fail 0
+  npm run verify:explain      → 16 passed, 0 failed
+       "fresh counts: VERIFY questions remaining=0 (expect 0), balance rows=0"
+  npm run verify:credits      → 13 passed, 0 failed
+  web tsc -p web/tsconfig.json → WEB-TSC-OK: True
+  web lint                    → 0 errors, 1 pre-existing warning (groups/page.tsx)
+  web build                   → Compiled successfully, exit 0
+
+RAW ARTIFACTS (same folder): astra-review-round1.json … round5.json
+  (round4a/4b/5 are the re-reviews; model = gpt-6-luna in every completed round)
+
+COST: ChatGPT-plan Codex quota only (owner's login; no API key billed).

@@ -1,0 +1,56 @@
+{
+  "model": "gpt-6-luna",
+  "scope": "2 explicit file(s)",
+  "files": [
+    "src/lib/ai/gemini.ts",
+    "src/middleware/rateLimit.ts"
+  ],
+  "verdict": "PASS",
+  "review": {
+    "verdict": "PASS",
+    "summary": "Both requested fixes are present: Gemini model selection is restricted to the stated allowlist before provider calls, and the rate-limit bucket map is capped after pruning even when all buckets are active. No concrete high-severity issue is verifiable in the supplied diff.",
+    "checks": [
+      {
+        "criterion": "Correctness",
+        "result": "PASS",
+        "detail": "getGeminiModel() rejects model IDs outside FREE_TIER_MODELS before either generation function calls the provider. The limiter sweeps expired buckets and evicts the oldest inserted buckets until its map is at MAX_BUCKETS."
+      },
+      {
+        "criterion": "Security",
+        "result": "PASS",
+        "detail": "The model value is constrained to an allowlist and safe character pattern; the limiter uses the final X-Forwarded-For entry as documented for the stated single-proxy setup."
+      },
+      {
+        "criterion": "Error handling",
+        "result": "PASS",
+        "detail": "Invalid model configuration throws GeminiError with CONFIGURATION; provider errors are classified and surfaced as GeminiError. Rate-limited requests receive a 429 response and Retry-After header."
+      },
+      {
+        "criterion": "Input validation",
+        "result": "PASS",
+        "detail": "The environment-configured model is checked against both a format pattern and the allowlist before provider use. No concrete unvalidated external input issue is established by this diff."
+      },
+      {
+        "criterion": "Completeness",
+        "result": "PASS",
+        "detail": "Both requested resolutions are implemented in the reviewed files."
+      },
+      {
+        "criterion": "No regressions",
+        "result": "PASS",
+        "detail": "The limiter preserves per-IP, per-endpoint windows and the standard error response. Gemini defaults to the stated allowed model when GEMINI_MODEL is unset."
+      },
+      {
+        "criterion": "Tests",
+        "result": "PASS",
+        "detail": "No test changes are included in the supplied diff. The two fixes are directly verifiable in the implementation; no test-related defect is established from the provided scope."
+      },
+      {
+        "criterion": "Maintainability",
+        "result": "PASS",
+        "detail": "The allowlist and bucket cap behavior are named and documented; the eviction loop is bounded by the overflow count."
+      }
+    ],
+    "findings": []
+  }
+}

@@ -65,8 +65,14 @@ export default function AiChatPage() {
     setHistory([...nextHistory, { role: "assistant" as const, content: "" }]);
     try {
       // Replay a bounded window: drops nothing relevant server-side, mirrors
-      // MAX_HISTORY_MESSAGES from src/lib/ai/study-chat.ts.
-      const window = nextHistory.slice(-MAX_HISTORY);
+      // MAX_HISTORY_MESSAGES from src/lib/ai/study-chat.ts. Whole-pair window:
+      // a plain slice(-N) can cut mid-pair and open on an assistant turn, which
+      // the API now rejects (history must start with a user turn and alternate).
+      const rawStart = nextHistory.length - MAX_HISTORY;
+      const windowStart = rawStart > 0 && nextHistory[rawStart]?.role === "assistant"
+        ? rawStart + 1
+        : Math.max(0, rawStart);
+      const window = nextHistory.slice(windowStart);
       const data = await apiFetch<{
         reply: string;
         creditsRemainingToday: number;

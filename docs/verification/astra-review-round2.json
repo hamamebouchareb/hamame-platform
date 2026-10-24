@@ -1,0 +1,73 @@
+{
+  "model": "gpt-6-luna",
+  "scope": "2 explicit file(s)",
+  "files": [
+    "src/lib/ai/study-chat.ts",
+    "src/lib/ai/explain-answer.test.ts"
+  ],
+  "verdict": "FAIL",
+  "review": {
+    "verdict": "FAIL",
+    "summary": "Client-supplied assistant turns are accepted as trusted conversation history, creating a prompt-injection path. The explain-answer tests also assert a fabricated error contract rather than exercising the public error-handling behavior.",
+    "checks": [
+      {
+        "criterion": "Correctness",
+        "result": "FAIL",
+        "detail": "The request schema accepts client-supplied assistant messages, so callers can forge prior assistant turns that influence the model as conversation history."
+      },
+      {
+        "criterion": "Security",
+        "result": "FAIL",
+        "detail": "Untrusted request content is assigned the assistant role and passed through to the model, weakening the system prompt's instruction boundary."
+      },
+      {
+        "criterion": "Error handling",
+        "result": "FAIL",
+        "detail": "The added error test only constructs GeminiError directly; it does not verify that actual quota exhaustion or schema-invalid responses are surfaced and mapped as intended."
+      },
+      {
+        "criterion": "Input validation",
+        "result": "FAIL",
+        "detail": "Message length and history count are bounded, but the schema does not distinguish trusted assistant history from user-provided messages."
+      },
+      {
+        "criterion": "Completeness",
+        "result": "PASS",
+        "detail": "The service rewrite defines its prompt, request schema, and result shape consistently within the reviewed file."
+      },
+      {
+        "criterion": "No regressions",
+        "result": "PASS",
+        "detail": "No caller incompatibility is verifiable from the supplied diff."
+      },
+      {
+        "criterion": "Tests",
+        "result": "FAIL",
+        "detail": "The error-contract test does not call a public function or exercise real quota/schema-invalid handling; it only checks a newly constructed GeminiError's kind."
+      },
+      {
+        "criterion": "Maintainability",
+        "result": "PASS",
+        "detail": "The reviewed code is generally readable and scoped."
+      }
+    ],
+    "findings": [
+      {
+        "severity": "HIGH",
+        "file": "src/lib/ai/study-chat.ts",
+        "line": 94,
+        "title": "Client can forge assistant turns",
+        "detail": "studyChatMessageSchema accepts both user and assistant roles, and generateStudyChatReply forwards every supplied role unchanged. A client can therefore submit arbitrary assistant messages as history, which the model receives as prior assistant output and may treat as trusted context. This undermines the system prompt's safeguards and makes the claimed untrusted-history handling incomplete.",
+        "suggestion": "Build history from server-validated conversation state, or accept only user messages from the request and construct assistant turns from trusted stored/model output."
+      },
+      {
+        "severity": "MEDIUM",
+        "file": "src/lib/ai/explain-answer.test.ts",
+        "line": 115,
+        "title": "Error test checks a fabricated contract",
+        "detail": "The test constructs `new GeminiError(\"SCHEMA_INVALID\", \"x\")` and asserts the supplied kind. It does not invoke an explain-answer public function or verify that malformed model output produces the expected error, nor does it cover quota exhaustion and its retry-facing behavior. The comment's route/refund claim is therefore not evidenced by this test.",
+        "suggestion": "Exercise the public explain-answer function with a mocked Gemini boundary that returns schema-invalid output and quota exhaustion, then assert the actual ExplainAnswerError/GeminiError contract and route-facing result."
+      }
+    ]
+  }
+}

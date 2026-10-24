@@ -1,0 +1,56 @@
+{
+  "model": "gpt-6-luna",
+  "scope": "2 explicit file(s)",
+  "files": [
+    "src/lib/ai/explain-answer.ts",
+    "src/lib/ai/study-chat.ts"
+  ],
+  "verdict": "PASS",
+  "review": {
+    "verdict": "PASS",
+    "summary": "The three requested fixes are present and complete in the supplied diff. I found no concrete high-severity or critical issue in the two files.",
+    "checks": [
+      {
+        "criterion": "Correctness",
+        "result": "PASS",
+        "detail": "validatedJsonResult is inside the generation try/catch, and its GeminiError schema failure maps to ExplainAnswerError(SCHEMA_INVALID). The study chat schema requires a user-first, strictly alternating history."
+      },
+      {
+        "criterion": "Security",
+        "result": "PASS",
+        "detail": "The explain prompt marks the full payload untrusted and identifies option status markers as the sole correctness signal. Study chat documents client-supplied history as unverified and demotes all history entries in its system prompt."
+      },
+      {
+        "criterion": "Error handling",
+        "result": "PASS",
+        "detail": "Explain generation failures are normalized to ExplainAnswerError with a classified reason. Study chat explicitly fails when Gemini is unconfigured and propagates provider errors."
+      },
+      {
+        "criterion": "Input validation",
+        "result": "PASS",
+        "detail": "The study chat request schema bounds message count and length, validates roles and optional unitId, and enforces thread shape. Explain response fields are validated with bounded Zod schemas."
+      },
+      {
+        "criterion": "Completeness",
+        "result": "PASS",
+        "detail": "The documented trust model, prompt instructions, and structural history checks are present in the supplied files."
+      },
+      {
+        "criterion": "No regressions",
+        "result": "PASS",
+        "detail": "No caller-breaking change is evident in the supplied diff; the study chat result retains usage, model, and prompt version fields."
+      },
+      {
+        "criterion": "Tests",
+        "result": "PASS",
+        "detail": "No test files or test changes were included in the supplied diff, so test coverage cannot be verified from this review. The requested fixes are directly observable in the implementation."
+      },
+      {
+        "criterion": "Maintainability",
+        "result": "PASS",
+        "detail": "The trust boundaries and validation rules are named and documented clearly; no concrete dead code or needless complexity was identified."
+      }
+    ],
+    "findings": []
+  }
+}

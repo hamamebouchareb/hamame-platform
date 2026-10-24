@@ -5,6 +5,7 @@ import {
   DEFAULT_GEMINI_MODEL,
   GeminiError,
   classifyGeminiError,
+  generateGeminiJson,
   getGeminiModel,
   injectGeminiJsonForTests,
   redactKeyLike,
@@ -114,6 +115,55 @@ describe("validatedJsonResult", () => {
     assert.throws(
       () => validatedJsonResult({ data: { a: "no" }, usage: { inputTokens: 1, outputTokens: 1 }, model: "m", timeoutMs: 1 }, schema, "test"),
       (err: unknown) => (err as GeminiError).kind === "SCHEMA_INVALID"
+    );
+  });
+});
+
+describe("generateGeminiJson (public path, injected stub)", () => {
+  const originalStubFlag = process.env.HAMAME_AI_TEST_STUB;
+  const baseRequest = {
+    system: "sys",
+    user: "user text",
+    jsonSchema: {} as Record<string, unknown>,
+  };
+
+  beforeEach(() => {
+    process.env.HAMAME_AI_TEST_STUB = "1";
+  });
+
+  afterEach(() => {
+    if (originalStubFlag === undefined) delete process.env.HAMAME_AI_TEST_STUB;
+    else process.env.HAMAME_AI_TEST_STUB = originalStubFlag;
+    injectGeminiJsonForTests(null);
+  });
+
+  it("routes the call through the armed stub and returns its structured result", async () => {
+    let sawSystem = "";
+    let sawUser = "";
+    injectGeminiJsonForTests(async (request) => {
+      sawSystem = request.system;
+      sawUser = request.user;
+      return {
+        data: { ok: 1 },
+        usage: { inputTokens: 2, outputTokens: 3 },
+        model: "stub",
+        timeoutMs: 1,
+      };
+    });
+    const result = await generateGeminiJson(baseRequest);
+    assert.equal(sawSystem, "sys");
+    assert.equal(sawUser, "user text");
+    assert.deepEqual(result.data, { ok: 1 });
+    assert.deepEqual(result.usage, { inputTokens: 2, outputTokens: 3 });
+  });
+
+  it("propagates an armed quota failure as the same GeminiError kind (the route refunds on this)", async () => {
+    injectGeminiJsonForTests(async () => {
+      throw new GeminiError("QUOTA_EXHAUSTED", '429 RESOURCE_EXHAUSTED: "quota exceeded"');
+    });
+    await assert.rejects(
+      generateGeminiJson(baseRequest),
+      (err: unknown) => err instanceof GeminiError && err.kind === "QUOTA_EXHAUSTED"
     );
   });
 });
