@@ -1,0 +1,63 @@
+Ask Hamame ("Demander à Hamame") — global assistant panel — 2026-10-25
+=====================================================================
+Environment: local API (npm run dev, :3000) + next dev (:3001), browser at http://localhost:3001.
+Fixture: disposable account "VERIFY-AskHamame" / verify-askhamame-1025@hamame.invalid,
+registered through /register, deleted through DELETE /api/users/me at the end.
+
+Static checks (after final edit)
+--------------------------------
+> npx tsc --noEmit -p web/tsconfig.json
+tsc exit: 0
+> npx eslint src/components/AskHamame.tsx src/app/ai-chat/page.tsx src/components/AppHeader.tsx src/app/layout.tsx src/components/index.ts
+lint exit: 0
+
+1. Header pill + panel geometry (Runtime.evaluate, viewport emulated 1280x720)
+-----------------------------------------------------------------------------
+{"innerW":1280,"dpr":1.0000000298023224,"panel":[864,1280],"btn":[735.5416870117188,924.1146087646484],"vv":"1280x720 scale 1"}
+Screenshot: docs/verification/ask-hamame-panel-1280.png
+
+2. Real send from the panel (Enter key), reply read from #ask-hamame-panel innerText
+-----------------------------------------------------------------------------------
+"Demander à Hamame\nC'est quoi la clairance rénale ? Réponds en 2 phrases.\nLa clairance rénale correspond au volume virtuel de plasma totalement débarrassé d'une substance par les reins par unité de temps, généralement exprimé en millilitres par minute. Elle est mesurée en comparant les concentrations plasmatique et urinaire d'une molécule, comme la créatinine, afin d'évaluer le débit de filtration glomérulaire et l'état de la fonction rénale.\nTon message\n\nUn message envoyé consomme un crédit IA."
+
+NOTE (disclosed): this first conversation was lost to a full page reload
+(performance navigation type "reload", docAge 43691 ms) — consistent with dev
+Fast Refresh reloading after an edit to AskHamame.tsx. In-memory state does not
+survive a hard reload by design. Re-tested cleanly below.
+
+3. Persistence across client navigation (dashboard -> /notes via sidebar link)
+-----------------------------------------------------------------------------
+on /dashboard: Demander à Hamame\nExplique le système rénine-angiotensine\nLe système rénine-angiotensine-aldostérone (SRAA) est une cascade hormonale et enzymatique essentielle à la régulation de la pression artériel
+---
+after nav -> /notes navType=navigate docAge=61927 | panel: Demander à Hamame\nExplique le système rénine-angiotensine\nLe système rénine-angiotensine-aldostérone (SRAA) est une cascade hormonale et enzymatique essentielle à la régulation de la pression artériel
+
+4. "Ouvrir en pleine page" -> /ai-chat shares the conversation; launcher hidden there
+-----------------------------------------------------------------------------------
+/ai-chat | panel: CLOSED | headerBtn: hidden | page: Assistant d'étude\n\nExplique-toi les notions du programme avec l'assistant IA. Un message envoyé consomme un crédit IA.\n\nCrédits IA restants aujourd'hui\n\n32 / 5 utilisés\n\nExplique le système rénine-angiotensine\nLe système rénine-angiotensine-aldostérone (SRAA) est une cascade hormonale et enzymatique essentielle à la régulation de la pression artéri
+("32 / 5 utilisés" = remaining "3" followed by hint "2 / 5 utilisés" in innerText.)
+
+5. Exam guard: panel open on /sessions/<id>/results, client-navigate to player /sessions/<id>
+------------------------------------------------------------------------------------------
+before: /sessions/00000000-0000-4000-8000-000000000000/results panel OPEN | after: /sessions/00000000-0000-4000-8000-000000000000 panel CLOSED | navType=navigate
+
+6. Escape closes the panel
+--------------------------
+panel after Escape: CLOSED
+
+7. Phone viewport (emulated 390 wide, mobile; page reported innerWidth 442)
+--------------------------------------------------------------------------
+{"path":"/notes","btn":[221,44],"btnText":"","panel":[0,442,0,906.6666870117188],"vw":442}
+(icon-only pill, 44px touch target; panel spans full width/height)
+Phone screenshot not persisted: the agent shell rejected the decode command twice.
+
+8. Cleanup — fixture account removed through the platform, then re-probed
+-------------------------------------------------------------------------
+> node tmp-delete-askhamame.mjs   (gitignored tmp script, deleted afterwards)
+login 200
+GET /ai/credits 200 {"dailyAllowance":5,"usedToday":2,"remainingToday":3,"resetAt":"2026-10-26T00:00:00.000Z","lowBalance":false}
+DELETE /users/me 200 {"id":"789b11c2-68c1-4258-b704-f88a29826742","status":"deleted"}
+re-login after delete 401 {"error":{"code":"INVALID_CREDENTIALS","message":"Invalid email/phone or password."}}
+
+Known, pre-existing (not from this change): next dev overlay reports
+"Cannot render a sync or defer <script> outside the main document..." at
+web/src/app/layout.tsx (46:5) — the pre-paint theme <script> placed under <html>.

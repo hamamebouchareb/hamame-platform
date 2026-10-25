@@ -4,35 +4,18 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useAuthedPage } from "@/lib/useAuthedPage";
 import { useLanguage } from "@/context/LanguageContext";
 import { useApiResource } from "@/lib/useApiResource";
-import { apiFetch, ApiError } from "@/lib/api";
-import { Button, Card, ErrorState, LoadingSkeleton, PageShell } from "@/components";
+import { Button, Card, ErrorState, LoadingSkeleton, PageShell, useAskHamame } from "@/components";
 import { Input } from "@/components/Field";
+import { SUGGESTION_KEYS } from "@/components/AskHamame";
 
 // AI study chat (V2, same pool as session hints per BR-6, one turn = one
-// credit). The page renders the conversation locally — the server is
-// stateless per turn; each send replays the last messages plus the new one.
-
-interface ChatMessage {
-  role: "user" | "assistant";
-  content: string;
-}
+// credit). Full-page view of the same conversation the "Demander à Hamame"
+// header panel holds (AskHamameProvider), so switching between them keeps it.
 
 interface CreditsData {
   dailyAllowance: number;
   usedToday: number;
   remainingToday: number;
-}
-
-const MAX_HISTORY = 10;
-
-const SUGGESTION_KEYS = ["aiChat.suggestion1", "aiChat.suggestion2", "aiChat.suggestion3", "aiChat.suggestion4"] as const;
-
-function sendFailMessage(err: unknown, t: (key: "aiChat.unavailable" | "aiChat.exhausted" | "aiChat.failed" | "aiChat.generic") => string): string {
-  const code = err instanceof ApiError ? err.code : null;
-  if (code === "AI_NOT_CONFIGURED") return t("aiChat.unavailable");
-  if (code === "AI_CREDITS_EXHAUSTED") return t("aiChat.exhausted");
-  if (code === "AI_GENERATION_FAILED") return t("aiChat.failed");
-  return t("aiChat.generic");
 }
 
 export default function AiChatPage() {
@@ -46,49 +29,13 @@ export default function AiChatPage() {
     isLoading: creditsLoading,
   } = useApiResource<CreditsData>(canFetch ? "/ai/credits" : null);
 
-  const [history, setHistory] = useState<ChatMessage[]>([]);
+  const { history, sending, sendError, send } = useAskHamame();
   const [draft, setDraft] = useState("");
-  const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [history.length, sending]);
-
-  async function send(text: string) {
-    const content = text.trim();
-    if (!content || sending) return;
-    setSending(true);
-    setSendError(null);
-    const nextHistory = [...history, { role: "user" as const, content }];
-    setHistory([...nextHistory, { role: "assistant" as const, content: "" }]);
-    try {
-      // Replay a bounded window: drops nothing relevant server-side, mirrors
-      // MAX_HISTORY_MESSAGES from src/lib/ai/study-chat.ts. Whole-pair window:
-      // a plain slice(-N) can cut mid-pair and open on an assistant turn, which
-      // the API now rejects (history must start with a user turn and alternate).
-      const rawStart = nextHistory.length - MAX_HISTORY;
-      const windowStart = rawStart > 0 && nextHistory[rawStart]?.role === "assistant"
-        ? rawStart + 1
-        : Math.max(0, rawStart);
-      const window = nextHistory.slice(windowStart);
-      const data = await apiFetch<{
-        reply: string;
-        creditsRemainingToday: number;
-        dailyAllowance: number;
-      }>("/ai/study-chat", {
-        method: "POST",
-        body: JSON.stringify({ messages: window }),
-      });
-      setHistory([...nextHistory, { role: "assistant" as const, content: data.reply }]);
-    } catch (err) {
-      setSendError(sendFailMessage(err, t));
-      setHistory(nextHistory);
-    } finally {
-      setSending(false);
-    }
-  }
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -145,18 +92,20 @@ export default function AiChatPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-3 py-2">
-            {history.map((message, index) => (
-              <div
-                key={`${index}-${message.role}`}
-                className={`max-w-[85%] rounded-card px-4 py-2 text-body ${
-                  message.role === "user"
-                    ? "self-end bg-accent-primary text-background"
-                    : "self-start bg-surface-2 text-text-primary"
-                }`}
-              >
-                {message.content.replace(/\n+$/, "")}
-              </div>
-            ))}
+            {history.map((message, index) =>
+              message.role === "assistant" && message.content === "" ? null : (
+                <div
+                  key={`${index}-${message.role}`}
+                  className={`max-w-[85%] whitespace-pre-wrap rounded-card px-4 py-2 text-body ${
+                    message.role === "user"
+                      ? "self-end bg-accent-primary text-on-accent"
+                      : "self-start bg-surface-2 text-text-primary"
+                  }`}
+                >
+                  {message.content.replace(/\n+$/, "")}
+                </div>
+              )
+            )}
             {sending && <p className="self-start text-caption text-text-tertiary">{t("aiChat.thinking")}</p>}
           </div>
         )}

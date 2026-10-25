@@ -4,7 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { ThemeProvider } from "@/context/ThemeContext";
-import { ToastProvider } from "@/components";
+import { AskHamameProvider, ToastProvider } from "@/components";
 
 const manrope = Manrope({
   variable: "--font-hamame-sans",
@@ -55,7 +55,9 @@ export default function RootLayout({
         <AuthProvider>
           <LanguageProvider>
             <ThemeProvider>
-              <ToastProvider>{children}</ToastProvider>
+              <ToastProvider>
+                <AskHamameProvider>{children}</AskHamameProvider>
+              </ToastProvider>
             </ThemeProvider>
           </LanguageProvider>
         </AuthProvider>

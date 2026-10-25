@@ -9,6 +9,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useTheme, type ThemeChoice } from "@/context/ThemeContext";
 import { UserMenu } from "@/components/UserMenu";
 import { NotificationsBell } from "@/components/NotificationsBell";
+import { AskHamameButton } from "@/components/AskHamame";
 import { ACCOUNT_NAV, PRIMARY_NAV, SECONDARY_NAV, adminNavForRoles, isNavActive, type NavKeyEntry } from "@/lib/nav";
 import { Sidebar } from "@/components/layout/Sidebar";
 
@@ -224,6 +225,7 @@ export function AppHeader({
         ) : null}
 
         <div className="flex shrink-0 items-center gap-1">
+          <AskHamameButton />
           <ThemeCycleButton theme={theme} onCycle={setTheme} />
           <NotificationsBell />
           <UserMenu user={user} onLogout={onLogout} links={resolvedMenuLinks} />
