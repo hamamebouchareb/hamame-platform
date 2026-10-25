@@ -1,0 +1,64 @@
+# Production deploy verification — batches 1-9 merged to main — 2026-10-25
+
+Scope: branch opencode/batch9 (28 commits, faeb006..cdc8eab) fast-forward merged
+into main and pushed. Both platforms already served the new code at first probe
+(Vercel/Railway had evidently been tracking opencode/batch9 from the earlier
+same-day push of cdc8eab); the main push makes the production branch canonical.
+
+## Migration state (prerequisite check)
+
+Raw output of `npx prisma migrate deploy` against production over the
+transaction pooler (port 6543, pgbouncer=true, connection_limit=1; the session
+pooler on 5432 was persistently EMAXCONNSESSION-exhausted by the live backend's
+pool — retried 5x over ~2 min before switching, see "Known environment gotchas"):
+
+    Datasource "db": PostgreSQL database "postgres", schema "public" at "aws-0-eu-west-1.pooler.supabase.com:6543"
+    35 migrations found in prisma/migrations
+    No pending migrations to apply.
+
+=> Production schema already current, including 20261024000000_add_submitted_at
+   and all ten earlier batch migrations. No Railway stop was needed.
+
+## Backend probes (https://hamame-platform-production.up.railway.app/api)
+
+Unauthenticated discriminators (new route => standard 401 shape, old backend
+=> 404 NOT_FOUND). Raw bodies:
+
+    GET  /plans                  -> 200  {"plans":[{"id":"00000000-0000-0000-0000-000000000100","name":"free",...
+    GET  /authoring/me/drafts    -> 401  {"error":{"code":"UNAUTHENTICATED","message":"A Bearer token is required for this endpoint."}}
+    GET  /points/balance         -> 401  {"error":{"code":"UNAUTHENTICATED","message":"A Bearer token is required for this endpoint."}}
+    GET  /groups                 -> 401  {"error":{"code":"UNAUTHENTICATED","message":"A Bearer token is required for this endpoint."}}
+    GET  /dms                    -> 401  {"error":{"code":"UNAUTHENTICATED","message":"A Bearer token is required for this endpoint."}}
+    GET  /progress/readiness     -> 401  {"error":{"code":"UNAUTHENTICATED","message":"A Bearer token is required for this endpoint."}}
+    POST /ai/explain-answer      -> 401  {"error":{"code":"UNAUTHENTICATED","message":"A Bearer token is required for this endpoint."}}
+
+Path corrections during probing (my initial guesses were wrong, not gaps):
+- DMs mount at /api/dms (src/routes/index.ts:96), not /api/messages.
+- Readiness is /api/progress/readiness (progress.routes.ts:291), not /api/readiness.
+
+## Frontend probes (https://hamame-platform-wcpk.vercel.app)
+
+    GET / -> 200
+    GET /ai-chat -> 200        GET /points -> 200
+    GET /groups -> 200         GET /messages -> 200
+    GET /internships -> 200    GET /associations -> 200
+    GET /authoring -> 200
+
+All new client pages from the batch range serve the app shell (200), where the
+pre-batch deployment would 404 (e.g. /ai-chat, /points, /groups did not exist).
+
+## What is NOT verified live (honest limits)
+
+- Any authenticated flow (passwords rotated 2026-09-12, not in repo). Owner
+  click-through needed for: practice-player AI explain panel, study chat,
+  review-queue submittedAt sort (reviewer login), readiness
+  recommendedNextSession rendering, authoring drafts list.
+- GEMINI_API_KEY is NOT set on Railway (deliberate warn-only policy). Until the
+  owner adds it, AI features degrade gracefully instead of calling the model.
+  Local pre-deploy equivalents were verified: verify:explain 16/16 (offline
+  mode), verify:credits 13/13, plus the browser e2e under next start
+  (docs/verification/2026-10-24-explain-panel-e2e.log).
+
+## Remaining owner action
+
+Add GEMINI_API_KEY in the Railway service Variables (triggers a redeploy).
