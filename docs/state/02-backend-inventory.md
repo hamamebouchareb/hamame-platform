@@ -74,7 +74,7 @@ X-Forwarded-For entry; auth endpoints 5/10min email-sends, 20/10min login.
 - GET /api/simulations (optionalAuth), POST /api/simulations/:id/register, DELETE /api/simulations/:id/register, POST /api/simulations/:id/start (auth; status derived, never stored)
 - GET /api/notifications, GET /api/notifications/unread-count, PATCH /api/notifications/:id/read, POST /api/notifications/read-all (auth); POST /api/admin/notifications (Admin)
 - GET /api/push/preferences, PUT /api/push/preferences, POST /api/push/subscribe, POST /api/push/unsubscribe (auth; VAPID, warn-only without keys)
-- GET /api/ai/credits (auth; daily allowance, server-computed lowBalance; AI features degrade without ANTHROPIC_API_KEY)
+- GET /api/ai/credits (auth; daily allowance, server-computed lowBalance, `upgrade: { planName, dailyAllowance } | null` = the active plan with the most daily AI credits above the caller's, null when none; AI features degrade without their provider key)
 
 Deliberately NOT mounted (`src/routes/index.ts` comment): `/api/admin/ai-credits`.
 

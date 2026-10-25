@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useLanguage } from "@/context/LanguageContext";
 import type { ExplainAnswerResponse } from "@/lib/types";
+import { AiUpgradePrompt } from "@/components/AiUpgradePrompt";
 
 /**
  * "Explain this answer" — student-facing AI explanation (MedSparkDZ gap).
@@ -110,6 +111,7 @@ export function AiExplainPanel({ questionId, sessionId }: { questionId: string; 
           {errorText(errorCode)}
         </p>
       ) : null}
+      {errorCode === "AI_CREDITS_EXHAUSTED" ? <AiUpgradePrompt className="mt-3" /> : null}
 
       {open && loaded && explanation ? (
         <div className="mt-3 rounded-control border border-border bg-surface-2 px-3 py-3">

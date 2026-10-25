@@ -17,6 +17,7 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import type { I18nKey } from "@/lib/i18n";
+import { AiUpgradePrompt } from "@/components/AiUpgradePrompt";
 
 /**
  * "Demander à Hamame" — the study assistant reachable from every signed-in
@@ -43,6 +44,10 @@ function isAssistantBlocked(pathname: string): boolean {
   return /^\/sessions\/[^/]+\/?$/.test(pathname);
 }
 
+function isCreditsExhausted(err: unknown): boolean {
+  return err instanceof ApiError && err.code === "AI_CREDITS_EXHAUSTED";
+}
+
 function sendFailKey(err: unknown): I18nKey {
   const code = err instanceof ApiError ? err.code : null;
   if (code === "AI_NOT_CONFIGURED") return "aiChat.unavailable";
@@ -55,6 +60,8 @@ interface AskHamameContextValue {
   history: ChatMessage[];
   sending: boolean;
   sendError: string | null;
+  /** True when the last send was refused because today's AI credits are spent. */
+  creditsExhausted: boolean;
   send: (text: string) => Promise<void>;
   reset: () => void;
   isOpen: boolean;
@@ -86,6 +93,7 @@ export function AskHamameProvider({ children }: { children: ReactNode }) {
   );
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [creditsExhausted, setCreditsExhausted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
   const available = !!user && !isAssistantBlocked(pathname) && pathname !== "/ai-chat";
@@ -96,6 +104,7 @@ export function AskHamameProvider({ children }: { children: ReactNode }) {
       if (!content || sending || !userId) return;
       setSending(true);
       setSendError(null);
+      setCreditsExhausted(false);
       const nextHistory = [...history, { role: "user" as const, content }];
       setConversation({ ownerId: userId, messages: [...nextHistory, { role: "assistant", content: "" }] });
       try {
@@ -111,6 +120,7 @@ export function AskHamameProvider({ children }: { children: ReactNode }) {
         setConversation({ ownerId: userId, messages: [...nextHistory, { role: "assistant", content: data.reply }] });
       } catch (err) {
         setSendError(t(sendFailKey(err)));
+        setCreditsExhausted(isCreditsExhausted(err));
         setConversation({ ownerId: userId, messages: nextHistory });
       } finally {
         setSending(false);
@@ -123,14 +133,15 @@ export function AskHamameProvider({ children }: { children: ReactNode }) {
     if (sending) return;
     setConversation({ ownerId: userId, messages: [] });
     setSendError(null);
+    setCreditsExhausted(false);
   }, [sending, userId]);
 
   const open = useCallback(() => setIsOpen(true), []);
   const close = useCallback(() => setIsOpen(false), []);
 
   const value = useMemo(
-    () => ({ history, sending, sendError, send, reset, isOpen, open, close, available }),
-    [history, sending, sendError, send, reset, isOpen, open, close, available]
+    () => ({ history, sending, sendError, creditsExhausted, send, reset, isOpen, open, close, available }),
+    [history, sending, sendError, creditsExhausted, send, reset, isOpen, open, close, available]
   );
 
   return (
@@ -184,7 +195,7 @@ const iconButtonClasses =
  *  stays readable and scrollable beside the conversation on desktop. */
 function AskHamamePanel() {
   const { t } = useLanguage();
-  const { history, sending, sendError, send, reset, close } = useAskHamame();
+  const { history, sending, sendError, creditsExhausted, send, reset, close } = useAskHamame();
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -284,6 +295,7 @@ function AskHamamePanel() {
             {sendError}
           </p>
         ) : null}
+        {creditsExhausted ? <AiUpgradePrompt className="mt-3" /> : null}
         <div ref={bottomRef} />
       </div>
 

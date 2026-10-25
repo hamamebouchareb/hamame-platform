@@ -67,6 +67,33 @@ export async function resolveAiCreditAllowances(
   return parseAiCreditAllowances(freePlan?.features) ?? { ...FALLBACK_AI_CREDITS };
 }
 
+export interface AiCreditUpgrade {
+  planName: string;
+  dailyAllowance: number;
+}
+
+// The active plan offering the most daily AI credits above `currentDailyAllowance`,
+// or null when no plan beats it (a premium student is never shown an upsell).
+// Reads the same admin-editable plans.features.aiCredits as resolveAiCreditAllowances.
+export async function findAiCreditUpgrade(
+  client: PrismaClient,
+  currentDailyAllowance: number
+): Promise<AiCreditUpgrade | null> {
+  const plans = await client.plan.findMany({
+    where: { isActive: true },
+    select: { name: true, features: true },
+  });
+  let best: AiCreditUpgrade | null = null;
+  for (const plan of plans) {
+    const allowances = parseAiCreditAllowances(plan.features);
+    if (!allowances || allowances.dailyAllowance <= currentDailyAllowance) continue;
+    if (!best || allowances.dailyAllowance > best.dailyAllowance) {
+      best = { planName: plan.name, dailyAllowance: allowances.dailyAllowance };
+    }
+  }
+  return best;
+}
+
 // Creates the balance row on first AI use and keeps the cached allowance columns in sync
 // with the user's current plan (a student who upgrades mid-day gets the premium daily cap
 // immediately). Counters are deliberately NOT touched here — only the caps — so an upgrade

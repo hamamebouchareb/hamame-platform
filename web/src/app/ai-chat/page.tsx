@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useAuthedPage } from "@/lib/useAuthedPage";
 import { useLanguage } from "@/context/LanguageContext";
 import { useApiResource } from "@/lib/useApiResource";
-import { Button, Card, ErrorState, LoadingSkeleton, PageShell, useAskHamame } from "@/components";
+import { AiUpgradePrompt, Button, Card, ErrorState, LoadingSkeleton, PageShell, useAskHamame } from "@/components";
 import { Input } from "@/components/Field";
 import { SUGGESTION_KEYS } from "@/components/AskHamame";
 
@@ -29,7 +29,8 @@ export default function AiChatPage() {
     isLoading: creditsLoading,
   } = useApiResource<CreditsData>(canFetch ? "/ai/credits" : null);
 
-  const { history, sending, sendError, send } = useAskHamame();
+  const { history, sending, sendError, creditsExhausted, send } = useAskHamame();
+  const outOfCredits = creditsExhausted || credits?.remainingToday === 0;
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -113,6 +114,7 @@ export default function AiChatPage() {
       </Card>
 
       {sendError && <ErrorState message={sendError} className="mt-2" />}
+      {outOfCredits && <AiUpgradePrompt className="mt-3" />}
 
       <form className="mt-3 flex items-end gap-2" onSubmit={handleSubmit}>
         <div className="flex-1">

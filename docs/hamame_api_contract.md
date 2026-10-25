@@ -60,7 +60,7 @@ Tokens carry a numeric version claim; a request whose version no longer matches 
 | POST | /api/ai/note-maker | Generate notes from lesson |
 | POST | /api/ai/answer-locator | Locate answer in lesson |
 | POST | /api/ai/audio | Generate narrated audio |
-| GET | /api/ai/credits | Remaining balance (BR-6) |
+| GET | /api/ai/credits | Remaining balance (BR-6), plus `upgrade` (best plan with more daily credits, or null) |
 
 ## Gamification & Social
 | Method | Endpoint | Description |

@@ -8,6 +8,7 @@ import {
   reserveAiCredit,
   resolveAiCreditAllowances,
   ensureAiCreditBalance,
+  findAiCreditUpgrade,
 } from "../lib/ai/credits";
 import { GeminiError, isGeminiConfigured } from "../lib/ai/gemini";
 import {
@@ -45,12 +46,14 @@ async function getCredits(req: Request, res: Response, next: NextFunction) {
       balance.dailyAllowance > 0 &&
       balance.remainingToday > 0 &&
       balance.remainingToday / balance.dailyAllowance < 0.2;
+    const upgrade = await findAiCreditUpgrade(prisma, balance.dailyAllowance);
     res.status(200).json({
       dailyAllowance: balance.dailyAllowance,
       usedToday: balance.usedToday,
       remainingToday: balance.remainingToday,
       resetAt: balance.resetAt.toISOString(),
       lowBalance,
+      upgrade,
     });
   } catch (err) {
     next(err);

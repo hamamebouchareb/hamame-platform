@@ -1,0 +1,72 @@
+AI credits exhausted -> upgrade prompt — 2026-10-25
+====================================================
+Local API (npm run dev, :3000) + next dev (:3001). Fixture: VERIFY-AiUpgrade /
+verify-aiupgrade-1025@hamame.invalid, registered via POST /api/auth/register,
+removed via DELETE /api/users/me. Harness: gitignored tmp-verify-ai-upgrade.ts
+(deleted afterwards). Credits were exhausted by setting the fixture's own
+ai_credit_balances.used_today = daily_allowance (no Gemini calls spent).
+
+Static checks
+-------------
+backend tsc: 0
+web tsc: 0
+lint (AiUpgradePrompt, AskHamame, AiExplainPanel, ai-chat page): 0
+
+Backend (raw harness output)
+----------------------------
+register 201 userId 3db1c1c4-ae57-44ab-960c-05fb2f0929bb
+login 200
+GET /ai/credits (fresh free account) 200 {"dailyAllowance":5,"usedToday":0,"remainingToday":5,"resetAt":"2026-10-26T00:00:00.000Z","lowBalance":false,"upgrade":{"planName":"premium","dailyAllowance":30}}
+findAiCreditUpgrade(5) = {"planName":"premium","dailyAllowance":30}
+findAiCreditUpgrade(30) = null
+balance row before exhaust: {"userId":"3db1c1c4-ae57-44ab-960c-05fb2f0929bb","dailyAllowance":5,"monthlyAllowance":150,"usedToday":0,"usedThisMonth":0,"resetAt":"2026-10-26T00:00:00.000Z"}
+balance row after exhaust: {"userId":"3db1c1c4-ae57-44ab-960c-05fb2f0929bb","dailyAllowance":5,"monthlyAllowance":150,"usedToday":5,"usedThisMonth":0,"resetAt":"2026-10-26T00:00:00.000Z"}
+GET /ai/credits (exhausted) 200 {"dailyAllowance":5,"usedToday":5,"remainingToday":0,"resetAt":"2026-10-26T00:00:00.000Z","lowBalance":false,"upgrade":{"planName":"premium","dailyAllowance":30}}
+POST /ai/study-chat (exhausted) 429 {"error":{"code":"AI_CREDITS_EXHAUSTED","message":"No AI credits remaining today (5 per day on your plan). Your balance resets at 2026-10-26T00:00:00.000Z."}}
+
+Frontend — Demander à Hamame panel after a refused send (#ask-hamame-panel innerText)
+------------------------------------------------------------------------------------
+Demander à Hamame
+Explique le cycle urinaire en simple
+
+Plus de crédits IA aujourd'hui. Ta balance se réinitialise demain — aucun crédit n'a été utilisé.
+
+Tes crédits IA du jour sont épuisés
+
+Passe à Premium pour 30 crédits IA par jour et continue à réviser sans attendre demain.
+
+Passer à Premium
+---CTA href--- /subscription
+Screenshot: docs/verification/ai-upgrade-panel.png
+
+Frontend — /ai-chat, then CTA click
+-----------------------------------
+/ai-chat
+Crédits IA restants aujourd'hui
+05 / 5 utilisés            (= remaining "0" + hint "5 / 5 utilisés")
+...
+Tes crédits IA du jour sont épuisés
+Passe à Premium pour 30 crédits IA par jour et continue à réviser sans attendre demain.
+CTA: Passer à Premium
+---after CTA click---
+/subscription :: Abonnement / Vous utilisez le plan Gratuit. / Plans disponibles / Free / Premium 1500 DZD/mois ...
+
+Not browser-tested (disclosed): the same <AiUpgradePrompt> inside AiExplainPanel
+(question player, practice feedback) — it renders on errorCode === AI_CREDITS_EXHAUSTED;
+reaching it needs a completed practice question on an exhausted account.
+
+Dev overlay: 4 issues, all the pre-existing layout.tsx (46:5) theme-<script> warning.
+
+Cleanup (re-probed through the API)
+-----------------------------------
+login 200
+DELETE /users/me 200 {"id":"3db1c1c4-ae57-44ab-960c-05fb2f0929bb","status":"deleted"}
+re-login after delete 401 {"error":{"code":"INVALID_CREDENTIALS","message":"Invalid email/phone or password."}}
+tmp script removed: Test-Path -> False
+
+Google OAuth (same session)
+---------------------------
+curl production GET /api/auth/providers -> {"providers":{"google":false}}
+Local .env: no GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_CALLBACK_URL values set.
+Login page snapshot: no Google button rendered (correct fail-closed behaviour).
+Change: GOOGLE_* placeholder names added to .env.example (no values).
