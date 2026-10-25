@@ -1,0 +1,52 @@
+# Production verification — GEMINI_API_KEY live end-to-end — 2026-10-25
+
+Context: owner added GEMINI_API_KEY in Railway Variables; deploy restarted the
+backend (GET /api/health uptime 859s ~14 min at probe time, process fresh).
+Verified the key actually works with the repo's standard tagged-fixture pattern:
+register throwaway -> real AI call -> soft-delete via the platform's own
+DELETE /api/users/me -> re-probe the dead token.
+
+## Liveness / redeploy proof
+
+    GET /api/health -> {"status":"ok","uptime":859,"database":"ok"}
+    GET /api/plans  -> 200
+
+Uptime ~14 min confirms the variable change triggered a fresh deployment.
+
+## End-to-end AI probe (raw bodies)
+
+    POST /api/auth/register
+      { email: verify-ai-key-1792929062@verify.hamame.dz, fullName: "VERIFY AI Key Deploy" }
+      -> 201 {accessToken, user, verificationEmailSent:false}
+
+    GET /api/ai/credits (before)
+      -> {"dailyAllowance":5,"usedToday":0,"remainingToday":5,"resetAt":"2026-10-26T00:00:00.000Z","lowBalance":false}
+
+    POST /api/ai/study-chat
+      {"messages":[{"role":"user","content":"En une phrase: quel est le role principal des globules rouges ?"}]}
+      -> HTTP 200
+      {"reply":"Le rôle principal des globules rouges est d'assurer le transport de l'oxygène depuis
+        les poumons vers l'ensemble des tissus de l'organisme et de participer au retour du dioxyde
+        de carbone vers les poumons grâce à l'hémoglobine qu'ils contiennent.",
+       "creditsRemainingToday":4,"dailyAllowance":5}
+
+      (Console rendered UTF-8 as ??/Ǹ glyphs — the documented cp850 non-bug,
+       handoff §12.2. API bytes are correct UTF-8; accents restored here from
+       the raw JSON.)
+
+    GET /api/ai/credits (after)
+      -> {"dailyAllowance":5,"usedToday":1,"remainingToday":4,"resetAt":"2026-10-26T00:00:00.000Z","lowBalance":false}
+
+    DELETE /api/users/me -> 200 {"id":"924c6326-f93c-495c-83c1-55064643afb5","status":"deleted"}
+
+    GET /api/ai/credits (deleted token re-probe)
+      -> HTTP 401 {"error":{"code":"ACCOUNT_DELETED","message":"This account has been deleted."}}
+
+## Verdict
+
+- GEMINI_API_KEY is visible to the production process and VALID: the model
+  answered, the model allowlist + JSON validation pipeline worked, and the
+  credit reserve/refund ledger charged exactly 1 credit.
+- Free-plan AI allowance on production: 5/day, resets 00:00 UTC.
+- Fixture account cleaned up through the platform's own soft-delete; dead token
+  re-probed from the API itself (not just DB).
