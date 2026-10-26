@@ -51,6 +51,8 @@ export function NotificationsBell() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const isOpenRef = useRef(open);
+  const tabRef = useRef<NotificationTab>(tab);
 
   const refreshUnread = useCallback(async () => {
     try {
@@ -99,6 +101,32 @@ export function NotificationsBell() {
     if (open) void loadList(tab);
   }, [open, tab, loadList]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  useEffect(() => {
+    isOpenRef.current = open;
+    tabRef.current = tab;
+  }, [open, tab]);
+
+  /* Poll so a friend request / new message becomes visible without a manual
+   * reload: quiet 45s unread-count heartbeat (badge), and an immediate catch-up
+   * when the tab regains focus. The open dropdown's list also refreshes so its
+   * content can't stay stale across a poll boundary. */
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState !== "visible") return;
+      void refreshUnread();
+      if (isOpenRef.current) void loadList(tabRef.current);
+    }
+    const interval = window.setInterval(() => {
+      void refreshUnread();
+      if (isOpenRef.current) void loadList(tabRef.current);
+    }, 45_000);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [refreshUnread, loadList]);
 
   useEffect(() => {
     if (!open) return;

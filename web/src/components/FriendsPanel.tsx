@@ -72,6 +72,14 @@ export function FriendsPanel({ className }: { className?: string }) {
     return () => window.clearTimeout(handle);
   }, [query]);
 
+  /** Relation state for a search hit, so already-related people get a status
+   * label instead of a second "Add" action (and never show twice). */
+  function relationState(userId: string): "friend" | "pending" | null {
+    if (friends.some((f) => f.id === userId)) return "friend";
+    if (incoming.some((p) => p.id === userId) || outgoing.some((p) => p.id === userId)) return "pending";
+    return null;
+  }
+
   async function add(userId: string) {
     setNotice(null);
     try {
@@ -123,14 +131,23 @@ export function FriendsPanel({ className }: { className?: string }) {
           {found.length === 0 ? (
             <li className="text-caption text-text-tertiary">{t("friends.noResults")}</li>
           ) : (
-            found.map((person) => (
-              <li key={person.id} className="flex items-center justify-between gap-2">
-                <span className="min-w-0 truncate text-body text-text-primary">{person.fullName ?? "—"}</span>
-                <button type="button" onClick={() => void add(person.id)} className="shrink-0 text-caption font-medium text-accent-soft">
-                  {t("friends.add")}
-                </button>
-              </li>
-            ))
+            found.map((person) => {
+              const state = relationState(person.id);
+              return (
+                <li key={person.id} className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate text-body text-text-primary">{person.fullName ?? "—"}</span>
+                  {state === "friend" ? (
+                    <span className="shrink-0 text-caption text-text-tertiary">{t("friends.alreadyFriends")}</span>
+                  ) : state === "pending" ? (
+                    <span className="shrink-0 text-caption text-text-tertiary">{t("friends.pending")}</span>
+                  ) : (
+                    <button type="button" onClick={() => void add(person.id)} className="shrink-0 text-caption font-medium text-accent-soft">
+                      {t("friends.add")}
+                    </button>
+                  )}
+                </li>
+              );
+            })
           )}
         </ul>
       ) : null}
@@ -161,39 +178,43 @@ export function FriendsPanel({ className }: { className?: string }) {
               </ul>
             </div>
           ) : null}
-          {outgoing.length > 0 ? (
-            <ul className="mt-2 flex flex-col gap-1">
-              {outgoing.map((person) => (
-                <li key={person.id} className="flex items-center justify-between gap-2 text-meta text-text-secondary">
-                  <span className="min-w-0 truncate">{person.fullName ?? "—"}</span>
-                  <span className="shrink-0 text-caption">{t("friends.pending")}</span>
-                </li>
-              ))}
-            </ul>
+          {query.trim().length < 3 ? (
+            <>
+              {outgoing.length > 0 ? (
+                <ul className="mt-2 flex flex-col gap-1">
+                  {outgoing.map((person) => (
+                    <li key={person.id} className="flex items-center justify-between gap-2 text-meta text-text-secondary">
+                      <span className="min-w-0 truncate">{person.fullName ?? "—"}</span>
+                      <span className="shrink-0 text-caption">{t("friends.pending")}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {friends.length === 0 && incoming.length === 0 ? (
+                <div className="mt-3">
+                  <EmptyState
+                    title={t("dashboard.noFriends")}
+                    description={t("dashboard.noFriendsDesc")}
+                    action={{ label: t("profile.addFriend"), onClick: () => document.getElementById("friend-search")?.focus() }}
+                  />
+                </div>
+              ) : (
+                <ul className="mt-2 flex flex-col gap-1">
+                  {friends.map((friend) => (
+                    <li key={friend.id} className="flex min-h-touch-target items-center gap-2 rounded-card px-1 py-1">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-surface-3 font-display text-caption font-bold text-accent-soft" aria-hidden>
+                        {initials(friend.fullName ?? "?")}
+                      </span>
+                      <p className="min-w-0 flex-1 truncate text-body font-medium text-text-primary">{friend.fullName ?? "—"}</p>
+                      <button type="button" onClick={() => void message(friend.id)} className="shrink-0 text-caption font-medium text-accent-soft">
+                        {t("friends.message")}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
           ) : null}
-          {friends.length === 0 && incoming.length === 0 ? (
-            <div className="mt-3">
-              <EmptyState
-                title={t("dashboard.noFriends")}
-                description={t("dashboard.noFriendsDesc")}
-                action={{ label: t("profile.addFriend"), onClick: () => document.getElementById("friend-search")?.focus() }}
-              />
-            </div>
-          ) : (
-            <ul className="mt-2 flex flex-col gap-1">
-              {friends.map((friend) => (
-                <li key={friend.id} className="flex min-h-touch-target items-center gap-2 rounded-card px-1 py-1">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-surface-3 font-display text-caption font-bold text-accent-soft" aria-hidden>
-                    {initials(friend.fullName ?? "?")}
-                  </span>
-                  <p className="min-w-0 flex-1 truncate text-body font-medium text-text-primary">{friend.fullName ?? "—"}</p>
-                  <button type="button" onClick={() => void message(friend.id)} className="shrink-0 text-caption font-medium text-accent-soft">
-                    {t("friends.message")}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
         </>
       )}
     </section>

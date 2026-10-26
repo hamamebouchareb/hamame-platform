@@ -43,6 +43,7 @@ export default function NotificationsPage() {
 
   const [tab, setTab] = useState<NotificationTab>("all");
   const [items, setItems] = useState<NotificationItem[]>([]);
+  const [requests, setRequests] = useState<{ userId: string; fullName: string | null }[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -64,15 +65,21 @@ export default function NotificationsPage() {
           limit: String(PAGE_LIMIT),
         });
         if (nextTab !== "all") params.set("category", nextTab);
-        const data = await apiFetch<{
-          notifications: NotificationItem[];
-          unreadCount: number;
-          pagination: { page: number; limit: number; total: number };
-        }>(`/notifications?${params.toString()}`);
+        const [data, pending] = await Promise.all([
+          apiFetch<{
+            notifications: NotificationItem[];
+            unreadCount: number;
+            pagination: { page: number; limit: number; total: number };
+          }>(`/notifications?${params.toString()}`),
+          nextTab === "all" || nextTab === "social"
+            ? apiFetch<{ requests: { userId: string; fullName: string | null }[] }>("/friends/requests")
+            : Promise.resolve({ requests: [] as { userId: string; fullName: string | null }[] }),
+        ]);
         setItems(data.notifications);
         setUnreadCount(data.unreadCount);
         setTotal(data.pagination.total);
         setPage(data.pagination.page);
+        setRequests(pending.requests);
       } catch (err) {
         setError(err instanceof ApiError ? err.message : t("notifs.loadError"));
       } finally {
@@ -164,6 +171,40 @@ export default function NotificationsPage() {
           ))}
         </div>
 
+        {tab === "all" || tab === "social" ? (
+          requests.length > 0 ? (
+            <div className="mt-4 rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
+              <p className="text-caption font-medium uppercase tracking-wide text-text-tertiary">{t("friends.requests")}</p>
+              <ul className="mt-2 flex flex-col gap-2">
+                {requests.map((request) => (
+                  <li key={request.userId} className="rounded-control border border-border px-3 py-2">
+                    <p className="truncate text-body font-semibold text-text-primary">{request.fullName ?? "—"}</p>
+                    <div className="mt-1 flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void apiFetch(`/friends/${request.userId}/accept`, { method: "POST" }).then(() => void loadPage(page, tab));
+                        }}
+                        className="text-caption font-semibold text-accent-soft"
+                      >
+                        {t("friends.approve")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void apiFetch(`/friends/${request.userId}`, { method: "DELETE" }).then(() => void loadPage(page, tab));
+                        }}
+                        className="text-caption font-medium text-danger"
+                      >
+                        {t("friends.decline")}
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null
+        ) : null}
         {isLoading ? (
           <div className="mt-4 flex flex-col gap-3" aria-busy="true">
             {[0, 1, 2].map((i) => (
