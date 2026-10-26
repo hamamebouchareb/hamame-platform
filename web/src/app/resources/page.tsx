@@ -18,10 +18,12 @@ interface ResourceItem {
   id: string;
   title: string;
   type: string;
-  fileUrl: string;
+  fileUrl: string | null;
   sourceLabel: string | null;
   facultyId: string | null;
   yearId: string | null;
+  priceJetons: number;
+  owned: boolean;
 }
 
 interface FacultyOption {
@@ -217,7 +219,15 @@ function ResourcesContent() {
                         : typeLabel(resource.type, t)
                     }
                     tone={resource.type === "official_drive" ? "primary" : "library"}
-                    actionLabel={resource.type === "official_drive" ? t("drive.officialBadge") : undefined}
+                    actionLabel={
+                      resource.priceJetons > 0
+                        ? resource.owned
+                          ? t("wal.owned")
+                          : t("wal.priceTag", { n: resource.priceJetons })
+                        : resource.type === "official_drive"
+                          ? t("drive.officialBadge")
+                          : undefined
+                    }
                   />
                 </li>
               ))}

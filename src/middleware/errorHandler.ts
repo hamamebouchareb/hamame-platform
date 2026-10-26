@@ -21,6 +21,12 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     });
   }
 
+  if (err?.type === "entity.too.large") {
+    return res.status(413).json({
+      error: { code: "PAYLOAD_TOO_LARGE", message: "Request body is too large." },
+    });
+  }
+
   // Unexpected-error forensics: Prisma known-request errors carry a short
   // code (P2002, P2028, P2034, …) plus driver metadata — log both, plus a
   // short per-request id for correlation. Never request bodies, tokens, or

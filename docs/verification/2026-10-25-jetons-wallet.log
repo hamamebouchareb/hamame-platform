@@ -1,0 +1,98 @@
+﻿=== 2026-10-25 jetons wallet: migrate deploy ===
+> npx prisma migrate deploy
+
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "postgres", schema "public" at "aws-0-eu-west-1.pooler.supabase.com:5432"
+
+36 migrations found in prisma/migrations
+
+Applying migration `20261025000000_add_jetons_wallet`
+
+The following migration(s) have been applied:
+
+migrations/
+  ÔööÔöÇ 20261025000000_add_jetons_wallet/
+    ÔööÔöÇ migration.sql
+      
+All migrations have been successfully applied.
+
+
+
+> npx prisma migrate status
+
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "postgres", schema "public" at "aws-0-eu-west-1.pooler.supabase.com:5432"
+
+36 migrations found in prisma/migrations
+
+Database schema is up to date!
+
+
+
+
+=== live API verification run (npx tsx tmp-verify-wallet.ts) ===
+=== jetons wallet live verification, 2026-10-26T08:35:18.019Z ===
+packs (SQL, before): [{"id":"7a1e0000-0000-4000-8000-000000000050","label":"Pack 50","jetons":50,"priceDzd":500,"badge":null,"isActive":true},{"id":"7a1e0000-0000-4000-8000-000000000100","label":"Pack 100","jetons":100,"priceDzd":1000,"badge":"recommended","isActive":true},{"id":"7a1e0000-0000-4000-8000-000000000200","label":"Pack 200","jetons":200,"priceDzd":2000,"badge":"best_value","isActive":true}]
+fixtures: 2 users registered via API; admin role granted to staff by direct user_roles INSERT
+preflight fixture counts: {"users":2,"ledger":0,"accounts":0,"deposits":0,"orders":0,"codes":0,"purchases":0,"resources":1,"notifications":0,"resourceIdKnown":true}
+OK   GET /wallet -> 200 (got 200)
+OK   balance starts at 0 (got 0)
+OK   pricing 10 DA/jeton, custom 10..2000 (got {"dzdPerJeton":10,"customMin":10,"customMax":2000})
+OK   packs 50/500 ┬À 100/1000 recommended ┬À 200/2000 best_value (got [[50,500,null],[100,1000,"recommended"],[200,2000,"best_value"]])
+OK   methods reflect unset env (online false, transfer null, receiptUpload false) (got {"online":false,"transfer":null,"receiptUpload":false})
+OK   GET /wallet without token -> 401 (got 401)
+OK   checkout with Chargily unset -> 503 ONLINE_PAYMENT_NOT_CONFIGURED (got 503 ONLINE_PAYMENT_NOT_CONFIGURED)
+OK   checkout custom 5 jetons (below min) -> 400 (got 400)
+OK   receipt upload with storage unset -> 503 RECEIPT_STORAGE_NOT_CONFIGURED (got 503 RECEIPT_STORAGE_NOT_CONFIGURED)
+OK   webhook with Chargily unset -> 503 (fails closed) (got 503)
+OK   signature: correct HMAC accepted
+OK   signature: tampered body rejected
+OK   signature: missing header rejected
+OK   student issuing codes -> 403 (got 403)
+OK   admin issues 3 codes of 100 -> 201 (got 201)
+OK   codes are HJ- + 16 hex (got ["HJ-"])
+OK   redeem code1 (lowercased input) -> 200 +100, balance 100 (got {"jetons":100,"balance":100})
+OK   redeem code1 again -> 409 RECHARGE_CODE_ALREADY_REDEEMED (got 409 RECHARGE_CODE_ALREADY_REDEEMED)
+OK   admin revokes code2 -> 200 (got 200)
+OK   redeem revoked code2 -> 409 RECHARGE_CODE_REVOKED (got 409 RECHARGE_CODE_REVOKED)
+OK   redeem unknown code -> 404 (got 404)
+OK   parallel double-redeem of code3 -> exactly one 200 and one 409 (got [200,409])
+OK   code3 produced exactly 1 ledger row (got 1)
+balances after code3 race: student=200 staff=0
+OK   free resource: fileUrl returned, locked false (got https://example.invalid/verify-wallet.pdf)
+OK   student setting price -> 403 (got 403)
+OK   admin sets price 40 -> 200 (got {"id":"a6220e99-ff36-4291-99c2-bfe98973d45c","title":"VERIFY-WALLET resource 1793003718018","priceJetons":40})
+OK   paid + not owned: fileUrl withheld (null), locked true (got {"fileUrl":null,"locked":true})
+OK   guest: fileUrl withheld (got null)
+OK   list: fixture row fileUrl withheld, priceJetons 40 (got {"fileUrl":null,"price":40})
+OK   purchase -> 201, balance 200 - 40 (got {"status":201,"balance":160})
+OK   purchase again -> 409 ALREADY_OWNED (got 409 ALREADY_OWNED)
+OK   after purchase: owned true, fileUrl returned (got {"owned":true})
+OK   staff buying at 100000 with small balance -> 409 INSUFFICIENT_JETONS (got 409 INSUFFICIENT_JETONS)
+OK   price raised after purchase: buyer keeps access (got true)
+OK   student reading deposit queue -> 403 (got 403)
+OK   admin queue lists both fixture deposits (got 200)
+OK   receipt signed URL with storage unset -> 503 (got 503)
+OK   approve without jetons -> 400 (got 400)
+OK   parallel double-approve -> one 200, one 409 (got [200,409])
+OK   approve credited exactly +50 once (got {"before":160,"after":210})
+OK   reject dep2 -> 200 rejected (got {"id":"683febd9-512b-47fd-856e-96e7c26c9ab5","status":"rejected","jetonsGranted":null})
+OK   reject credits nothing
+OK   student sees approved(+50) and rejected(note) receipts (got [["rejected",null,"VERIFY-WALLET unreadable"],["approved",50,null]])
+OK   confirm someone else's order -> 404 (got 404)
+OK   confirm own pending order (no provider) -> stays pending, no credit (got {"order":{"id":"6584f0ae-a92d-4c2c-90d8-9f3884d39550","status":"pending","jetons":100,"amountDzd":1000},"balance":210})
+OK   student PATCH pack -> 403 (got 403)
+OK   admin PATCH pack (same values) -> 200 (got 200)
+OK   packs byte-for-byte identical to snapshot
+OK   ledger SUM(delta) == balance for student (got {"sum":210,"balance":210})
+OK   ledger SUM(delta) == balance for staff (got {"sum":null})
+student ledger (API): [["topup_transfer",50,210],["resource_purchase",-40,160],["topup_code",100,200],["topup_code",100,100]]
+student prix notifications (SQL): ["Code de recharge activ├®","Code de recharge activ├®","Achat confirm├®","Versement valid├®","Versement refus├®"]
+=== cleanup BEFORE === {"users":2,"ledger":4,"accounts":1,"deposits":2,"orders":1,"codes":3,"purchases":1,"resources":1,"notifications":5,"resourceIdKnown":true}
+=== cleanup AFTER (fresh queries, must be zeros) === {"users":0,"ledger":0,"accounts":0,"deposits":0,"orders":0,"codes":0,"purchases":0,"resources":0,"notifications":0,"resourceIdKnown":false}
+RESULT: ALL CHECKS PASSED
+
+
+Harness notes: fixture users were hard-deleted via SQL (not DELETE /api/users/me) because that route is a soft delete and would leave the rows behind; the CCP deposit rows and the pending online order were inserted directly because receipt storage and Chargily are unset locally, so the upload and real checkout paths are verified only as 503. Live Chargily payment and Supabase receipt upload remain UNVERIFIED until keys exist.

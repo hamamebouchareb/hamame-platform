@@ -1,19 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { useApiResource } from "@/lib/useApiResource";
 import { useRequireAuth } from "@/lib/useRequireAuth";
-import { AppHeader, EmptyState, Footer, LoadingSkeleton } from "@/components";
+import { apiFetch, ApiError } from "@/lib/api";
+import { AppHeader, Button, ButtonLink, EmptyState, Footer, LoadingSkeleton } from "@/components";
 
 interface ResourceItem {
   id: string;
   title: string;
   type: string;
-  fileUrl: string;
+  fileUrl: string | null;
+  priceJetons: number;
+  owned: boolean;
+  locked: boolean;
   sourceLabel: string | null;
   facultyId: string | null;
   yearId: string | null;
@@ -56,6 +60,27 @@ function ResourceDetailContent() {
     isHydrated && user && params?.id ? `/resources/${params.id}` : null
   );
   const resource = data?.resource ?? null;
+  const walletRes = useApiResource<{ balance: number }>(
+    isHydrated && user && resource?.locked ? "/wallet" : null
+  );
+  const [buying, setBuying] = useState(false);
+  const [buyError, setBuyError] = useState<string | null>(null);
+  const [bought, setBought] = useState(false);
+
+  async function handleBuy() {
+    if (!resource) return;
+    setBuying(true);
+    setBuyError(null);
+    try {
+      await apiFetch(`/resources/${resource.id}/purchase`, { method: "POST" });
+      setBought(true);
+      refetch();
+    } catch (err) {
+      setBuyError(err instanceof ApiError ? err.message : t("wal.actionFailed"));
+    } finally {
+      setBuying(false);
+    }
+  }
 
   function handleLogout() {
     logout();
@@ -155,7 +180,7 @@ function ResourceDetailContent() {
             <article
               className="mt-section-gap rounded-card-lg border border-border bg-surface-1 p-card-padding shadow-card"
               data-resource-detail
-              data-file-url={resource.fileUrl}
+              data-file-url={resource.fileUrl ?? undefined}
             >
               <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
@@ -170,6 +195,41 @@ function ResourceDetailContent() {
                 ) : null}
               </dl>
 
+              {resource.priceJetons > 0 ? (
+                <p className="mt-4 text-meta font-semibold text-text-secondary">
+                  {resource.owned ? t("wal.owned") : t("wal.priceTag", { n: resource.priceJetons })}
+                </p>
+              ) : null}
+
+              {bought ? (
+                <p role="status" className="mt-4 rounded-control border border-success px-4 py-3 text-meta font-medium text-text-primary">
+                  {t("wal.bought")}
+                </p>
+              ) : null}
+
+              {resource.locked || !resource.fileUrl ? (
+                <div className="mt-section-gap border-t border-border pt-section-gap" data-resource-locked>
+                  <h2 className="text-body font-semibold text-text-primary">{t("wal.lockedTitle")}</h2>
+                  <p className="mt-1 text-meta text-text-secondary">
+                    {t("wal.lockedDesc", { n: resource.priceJetons, balance: walletRes.data?.balance ?? "…" })}
+                  </p>
+                  {buyError ? (
+                    <p role="alert" className="mt-3 text-meta text-danger">{buyError}</p>
+                  ) : null}
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {walletRes.data && walletRes.data.balance < resource.priceJetons ? (
+                      <>
+                        <Button disabled>{t("wal.insufficient")}</Button>
+                        <ButtonLink href="/wallet" variant="outline">{t("wal.topUp")}</ButtonLink>
+                      </>
+                    ) : (
+                      <Button onClick={() => void handleBuy()} disabled={buying || !walletRes.data}>
+                        {buying ? t("wal.buying") : t("wal.buy", { n: resource.priceJetons })}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ) : (
               <div className="mt-section-gap border-t border-border pt-section-gap">
                 {isPdfUrl(resource.fileUrl) ? (
                   <div>
@@ -192,6 +252,7 @@ function ResourceDetailContent() {
                   {t("drive.download")}
                 </a>
               </div>
+              )}
             </article>
           </>
         ) : null}

@@ -110,3 +110,7 @@ export const limitLogins = rateLimit(10 * 60 * 1000, 20);
 // caps per-IP request BURSTS so a scripted client cannot burn the (free-tier) provider
 // quota with concurrent popups. 30 per 10 minutes per IP per endpoint.
 export const limitAiCalls = rateLimit(10 * 60 * 1000, 30);
+
+// Wallet money surfaces: recharge-code redemption (code-guessing friction) and
+// receipt uploads (storage abuse). 10 per 10 minutes per IP per endpoint.
+export const limitWalletActions = rateLimit(10 * 60 * 1000, 10);

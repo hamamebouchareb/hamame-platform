@@ -169,6 +169,14 @@ model User {
   payoutRequestsSubmitted        PayoutRequest[]          @relation("PayoutRequestUser")
   payoutRequestsDecided          PayoutRequest[]          @relation("PayoutRequestDecider")
   internshipReviews              InternshipReview[]       @relation("InternshipReviewUser")
+  walletAccount                  WalletAccount?
+  walletLedger                   WalletLedger[]
+  walletTopupOrders              WalletTopupOrder[]
+  walletDepositsSubmitted        WalletTransferDeposit[]  @relation("WalletDepositUser")
+  walletDepositsDecided          WalletTransferDeposit[]  @relation("WalletDepositDecider")
+  rechargeCodesIssued            RechargeCode[]           @relation("RechargeCodeIssuer")
+  rechargeCodesRedeemed          RechargeCode[]           @relation("RechargeCodeRedeemer")
+  resourcePurchases              ResourcePurchase[]
 
   @@map("users")
 }
@@ -1095,6 +1103,140 @@ model PointsRedemption {
 }
 
 // ---------------------------------------------------------------------------
+// 7.5 Jetons wallet (medspark.online Sparx-wallet parity): a prepaid balance
+// bought with real money (online checkout, CCP/BaridiMob transfer receipt,
+// or a recharge code) and spent on paid resources. Deliberately separate
+// from the points economy above: points are earned, jetons are purchased.
+// ---------------------------------------------------------------------------
+
+model WalletAccount {
+  userId         String   @id @map("user_id") @db.Uuid
+  balance        Int      @default(0)
+  purchasedTotal Int      @default(0) @map("purchased_total")
+  spentTotal     Int      @default(0) @map("spent_total")
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("wallet_accounts")
+}
+
+// Append-only, same invariants as points_ledger: SUM(delta) = balance, and
+// (userId, reason, refId) makes every credit/debit claimable exactly once —
+// refId is the order / deposit / recharge-code / resource id it settles.
+model WalletLedger {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  delta        Int // negative = spend
+  reason       String // 'topup_online' | 'topup_transfer' | 'topup_code' | 'resource_purchase' | 'admin_adjust'
+  refId        String   @map("ref_id")
+  balanceAfter Int      @map("balance_after")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, reason, refId])
+  @@index([userId, createdAt])
+  @@map("wallet_ledger")
+}
+
+model JetonPack {
+  id          String   @id @default(uuid()) @db.Uuid
+  label       String
+  jetons      Int
+  bonusJetons Int      @default(0) @map("bonus_jetons")
+  priceDzd    Int      @map("price_dzd")
+  badge       String? // 'recommended' | 'best_value'
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  orders WalletTopupOrder[]
+
+  @@map("jeton_packs")
+}
+
+// Online checkout (Chargily). Credited only once the provider reports it
+// paid — via the signed webhook or the authenticated confirm poll, whichever
+// lands first; the ledger unique key makes the second a no-op.
+model WalletTopupOrder {
+  id                 String    @id @default(uuid()) @db.Uuid
+  userId             String    @map("user_id") @db.Uuid
+  packId             String?   @map("pack_id") @db.Uuid
+  jetons             Int
+  amountDzd          Int       @map("amount_dzd")
+  provider           String // 'chargily'
+  status             String    @default("pending") // 'pending' | 'paid' | 'failed' | 'canceled' | 'expired'
+  providerCheckoutId String?   @unique @map("provider_checkout_id")
+  checkoutUrl        String?   @map("checkout_url")
+  paidAt             DateTime? @map("paid_at") @db.Timestamptz
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pack JetonPack? @relation(fields: [packId], references: [id])
+
+  @@index([userId, createdAt])
+  @@map("wallet_topup_orders")
+}
+
+// CCP / BaridiMob transfer: the student uploads a receipt (private storage
+// object path, never a public URL), an admin/support agent decides.
+model WalletTransferDeposit {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  amountDzd     Int?      @map("amount_dzd") // as declared by the student
+  receiptPath   String    @map("receipt_path")
+  receiptMime   String    @map("receipt_mime")
+  status        String    @default("pending") // 'pending' | 'approved' | 'rejected'
+  jetonsGranted Int?      @map("jetons_granted")
+  decidedBy     String?   @map("decided_by") @db.Uuid
+  decidedAt     DateTime? @map("decided_at") @db.Timestamptz
+  decisionNote  String?   @map("decision_note")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  user    User  @relation("WalletDepositUser", fields: [userId], references: [id], onDelete: Cascade)
+  decider User? @relation("WalletDepositDecider", fields: [decidedBy], references: [id])
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
+  @@map("wallet_transfer_deposits")
+}
+
+// Jeton recharge codes sold off-platform. Distinct from ActivationCode, which
+// grants faculty-year premium rather than a wallet credit.
+model RechargeCode {
+  id         String    @id @default(uuid()) @db.Uuid
+  code       String    @unique
+  jetons     Int
+  status     String    @default("active") // 'active' | 'redeemed' | 'revoked'
+  issuedBy   String    @map("issued_by") @db.Uuid
+  redeemedBy String?   @map("redeemed_by") @db.Uuid
+  redeemedAt DateTime? @map("redeemed_at") @db.Timestamptz
+  expiresAt  DateTime? @map("expires_at") @db.Timestamptz
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  issuer   User  @relation("RechargeCodeIssuer", fields: [issuedBy], references: [id])
+  redeemer User? @relation("RechargeCodeRedeemer", fields: [redeemedBy], references: [id])
+
+  @@map("recharge_codes")
+}
+
+model ResourcePurchase {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  resourceId  String   @map("resource_id") @db.Uuid
+  priceJetons Int      @map("price_jetons")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, resourceId])
+  @@map("resource_purchases")
+}
+
+// ---------------------------------------------------------------------------
 // 7.6 Study groups (medspark.online-parity: GroupSpace, reduced to Hamame's
 // shape: faculty/year-scoped small cohorts with open- or request-gated joins,
 // chat, announcements, and shared attachments. No Telegram relay, no drive
@@ -1278,10 +1420,14 @@ model Resource {
   fileUrl     String @map("file_url")
   sourceLabel String?  @map("source_label") // attribution/source name shown to students
   addedBy     String?  @map("added_by") @db.Uuid
+  // 0 = free. A paid resource's fileUrl is withheld server-side until the
+  // viewer owns a ResourcePurchase row.
+  priceJetons Int      @default(0) @map("price_jetons")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  faculty Faculty? @relation(fields: [facultyId], references: [id])
-  year    Year?    @relation(fields: [yearId], references: [id])
+  faculty   Faculty?           @relation(fields: [facultyId], references: [id])
+  year      Year?              @relation(fields: [yearId], references: [id])
+  purchases ResourcePurchase[]
 
   @@map("resources")
 }

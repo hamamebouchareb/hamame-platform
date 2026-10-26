@@ -36,6 +36,7 @@ export const SECONDARY_NAV: NavKeyEntry[] = [
   { href: "/couverture", labelKey: "nav.coverage" },
   { href: "/messages", labelKey: "nav.messages" },
   { href: "/points", labelKey: "nav.points" },
+  { href: "/wallet", labelKey: "nav.wallet" },
   { href: "/groups", labelKey: "nav.groups" },
   { href: "/ai-chat", labelKey: "nav.assistant" },
   { href: "/associations", labelKey: "nav.assoc" },
@@ -71,6 +72,7 @@ export const ADMIN_NAV: NavKeyEntry[] = [
   { href: "/admin/roles", labelKey: "admin.roles" },
   { href: "/admin/reports", labelKey: "admin.reports" },
   { href: "/admin/payouts", labelKey: "admin.payouts" },
+  { href: "/admin/wallet", labelKey: "admin.wallet" },
   { href: "/admin/associations", labelKey: "admin.assocTitle" },
 ];
 // NOTE: admin.applications / admin.promos / admin.notifications / admin.jobs
@@ -83,15 +85,18 @@ const ADMIN_FAMILY = ["admin", "super_admin"];
  * Visible admin entries for a role list (roles from GET /api/users/me via
  * AuthContext — client-side UX gating only; every endpoint re-checks
  * server-side and 403s regardless). The admin family sees all;
- * support_agent sees /admin/codes only (matching the activation-code
- * endpoints' gate); moderator sees /admin/reports only (matching the
+ * support_agent sees /admin/codes and /admin/wallet (matching the
+ * activation-code and wallet staff endpoints' gates; pack prices stay
+ * admin-only server-side); moderator sees /admin/reports only (matching the
  * moderation endpoints' gate, which support_agent cannot call).
  */
 export function adminNavForRoles(roles: string[] | undefined): NavKeyEntry[] {
   if (!roles || roles.length === 0) return [];
   if (roles.some((r) => ADMIN_FAMILY.includes(r))) return ADMIN_NAV;
   const entries: NavKeyEntry[] = [];
-  if (roles.includes("support_agent")) entries.push(...ADMIN_NAV.filter((e) => e.href === "/admin/codes"));
+  if (roles.includes("support_agent")) {
+    entries.push(...ADMIN_NAV.filter((e) => e.href === "/admin/codes" || e.href === "/admin/wallet"));
+  }
   if (roles.includes("moderator")) entries.push(...ADMIN_NAV.filter((e) => e.href === "/admin/reports"));
   return entries;
 }
