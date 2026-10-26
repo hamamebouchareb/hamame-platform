@@ -7,10 +7,12 @@ import { useLanguage } from "@/context/LanguageContext";
 import { apiFetch, ApiError } from "@/lib/api";
 import { EmptyState } from "@/components/EmptyState";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
+import { PresenceDot } from "@/components/PresenceDot";
 
 interface Person {
   id: string;
   fullName: string | null;
+  online?: boolean;
 }
 
 function initials(name: string): string {
@@ -202,8 +204,14 @@ export function FriendsPanel({ className }: { className?: string }) {
                 <ul className="mt-2 flex flex-col gap-1">
                   {friends.map((friend) => (
                     <li key={friend.id} className="flex min-h-touch-target items-center gap-2 rounded-card px-1 py-1">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-surface-3 font-display text-caption font-bold text-accent-soft" aria-hidden>
-                        {initials(friend.fullName ?? "?")}
+                      <span className="relative shrink-0">
+                        <span
+                          className="flex h-8 w-8 items-center justify-center rounded-pill bg-surface-3 font-display text-caption font-bold text-accent-soft"
+                          aria-hidden
+                        >
+                          {initials(friend.fullName ?? "?")}
+                        </span>
+                        <PresenceDot online={friend.online} />
                       </span>
                       <p className="min-w-0 flex-1 truncate text-body font-medium text-text-primary">{friend.fullName ?? "—"}</p>
                       <button type="button" onClick={() => void message(friend.id)} className="shrink-0 text-caption font-medium text-accent-soft">

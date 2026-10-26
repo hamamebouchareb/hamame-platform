@@ -6,6 +6,7 @@ import { requireAuth } from "../middleware/auth";
 import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
 import { createNotificationBestEffort } from "./notifications.routes";
+import { isOnline } from "../lib/presence";
 
 // Direct messages (DMs) between accepted friends. MedSparkDZ-parity feature —
 // their client talks to a Supabase `conversations` table with Realtime
@@ -111,8 +112,8 @@ async function listConversations(req: Request, res: Response, next: NextFunction
       skip: (page - 1) * limit,
       take: limit,
       include: {
-        userA: { select: { id: true, fullName: true } },
-        userB: { select: { id: true, fullName: true } },
+        userA: { select: { id: true, fullName: true, lastActiveAt: true } },
+        userB: { select: { id: true, fullName: true, lastActiveAt: true } },
         messages: { orderBy: { createdAt: "desc" }, take: 1, select: { body: true, senderId: true, createdAt: true } },
       },
     });
@@ -137,7 +138,7 @@ async function listConversations(req: Request, res: Response, next: NextFunction
         const last = c.messages[0] ?? null;
         return {
           id: c.id,
-          otherUser: other,
+          otherUser: { id: other.id, fullName: other.fullName, online: isOnline(other.lastActiveAt) },
           lastMessage: last ? { body: last.body, fromMe: last.senderId === me, createdAt: last.createdAt } : null,
           unreadCount: unreadByConversation.get(c.id) ?? 0,
           lastMessageAt: c.lastMessageAt,

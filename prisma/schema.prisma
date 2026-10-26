@@ -110,6 +110,10 @@ model User {
   // as the backfill — existing rows read as v1 and pre-plan tokens are
   // grandfathered as v1.
   tokenVersion                Int       @default(1) @map("token_version")
+  // Presence (Facebook-style online dot): refreshed by a throttled write in
+  // requireAuth/optionalAuth via src/lib/presence.ts. Nullable — a row with a
+  // null value simply reads as offline until its first authenticated request.
+  lastActiveAt                DateTime? @map("last_active_at") @db.Timestamptz
   createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt                   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 

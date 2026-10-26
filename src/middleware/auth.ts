@@ -4,6 +4,7 @@ import { verifyAccessToken } from "../lib/jwt";
 import { prisma } from "../lib/prisma";
 import { isEffectivelySuspended } from "../lib/suspension";
 import { isTokenCurrent } from "../lib/token-version";
+import { touchPresence } from "../lib/presence";
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -66,6 +67,11 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
     return next(err);
   }
 
+  // Presence heartbeat (fb-style online dot): throttled in src/lib/presence.ts,
+  // fire-and-forget. Only after every auth/suspension/token check has passed, so
+  // a rejected request never refreshes presence.
+  touchPresence(req.auth.userId);
+
   next();
 }
 
@@ -96,6 +102,8 @@ export async function optionalAuth(req: Request, _res: Response, next: NextFunct
         !isTokenCurrent(req.auth.tokenVersion, state.tokenVersion)
       ) {
         delete req.auth;
+      } else {
+        touchPresence(req.auth.userId);
       }
     } catch (err) {
       return next(err);

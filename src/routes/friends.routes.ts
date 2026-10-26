@@ -6,6 +6,7 @@ import { requireAuth } from "../middleware/auth";
 import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
 import { createNotificationBestEffort } from "./notifications.routes";
+import { isOnline } from "../lib/presence";
 
 // V2 social: friends/following via the Friendship model (prisma/schema.prisma).
 //
@@ -152,15 +153,15 @@ async function listFriends(req: Request, res: Response, next: NextFunction) {
         OR: [{ userIdA: me }, { userIdB: me }],
       },
       include: {
-        userA: { select: { id: true, fullName: true } },
-        userB: { select: { id: true, fullName: true } },
+        userA: { select: { id: true, fullName: true, lastActiveAt: true } },
+        userB: { select: { id: true, fullName: true, lastActiveAt: true } },
       },
     });
 
     res.status(200).json({
       friends: friendships.map((row) => {
         const other = row.userIdA === me ? row.userB : row.userA;
-        return { id: other.id, fullName: other.fullName };
+        return { id: other.id, fullName: other.fullName, online: isOnline(other.lastActiveAt) };
       }),
     });
   } catch (err) {

@@ -11,10 +11,11 @@ import { AppHeader, EmptyState, Footer, LoadingSkeleton, UserAvatar } from "@/co
 import { cx } from "@/lib/cx";
 import { shareLabel } from "@/lib/share-message";
 import { MessageBody } from "@/components/ShareWithFriend";
+import { PresenceDot } from "@/components/PresenceDot";
 
 interface ConversationSummary {
   id: string;
-  otherUser: { id: string; fullName: string | null };
+  otherUser: { id: string; fullName: string | null; online?: boolean };
   lastMessage: { body: string; fromMe: boolean; createdAt: string } | null;
   unreadCount: number;
   lastMessageAt: string;
@@ -468,6 +469,7 @@ export default function MessagesPage() {
                   >
                     <span className="relative shrink-0">
                       <UserAvatar name={conversation.otherUser.fullName} seed={conversation.otherUser.id} size={44} />
+                      <PresenceDot online={conversation.otherUser.online} />
                       {unread ? (
                         <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-pill bg-accent-primary ring-2 ring-surface-1" />
                       ) : null}
@@ -507,11 +509,14 @@ export default function MessagesPage() {
                 <div className="flex h-full flex-col">
                   <div className="flex items-center justify-between gap-2 border-b border-border p-card-padding">
                     <div className="flex min-w-0 flex-1 items-center gap-3">
-                      <UserAvatar
-                        name={selectedConversation.otherUser.fullName}
-                        seed={selectedConversation.otherUser.id}
-                        size={40}
-                      />
+                      <span className="relative shrink-0">
+                        <UserAvatar
+                          name={selectedConversation.otherUser.fullName}
+                          seed={selectedConversation.otherUser.id}
+                          size={40}
+                        />
+                        <PresenceDot online={selectedConversation.otherUser.online} />
+                      </span>
                       <p className="min-w-0 truncate text-body font-semibold text-text-primary">
                         {selectedConversation.otherUser.fullName ?? "—"}
                       </p>

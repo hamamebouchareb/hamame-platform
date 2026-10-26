@@ -195,7 +195,7 @@ export function NotificationsBell() {
         <div
           role="menu"
           aria-label={t("nav.notifications")}
-          className="hamame-dialog-enter absolute right-0 top-full z-30 mt-2 max-h-[70vh] w-80 overflow-y-auto rounded-card border border-border bg-surface-2 p-2 shadow-card-lg"
+          className="hamame-dialog-enter absolute right-0 top-full z-40 mt-2 max-h-[70vh] w-80 overflow-y-auto rounded-card border border-border bg-surface-2 p-2 shadow-card-lg"
         >
           <div className="flex items-center justify-between gap-2 px-2 py-1">
             <p className="text-body font-semibold text-text-primary">{t("nav.notifications")}</p>

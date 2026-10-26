@@ -8,12 +8,13 @@ import { localeFor, type UiLanguage } from "@/lib/i18n";
 import { apiFetch } from "@/lib/api";
 import { Icon } from "@/components/Icon";
 import { UserAvatar } from "@/components/UserAvatar";
+import { PresenceDot } from "@/components/PresenceDot";
 import { shareLabel } from "@/lib/share-message";
 import { MessageBody } from "@/components/ShareWithFriend";
 
 export interface ConversationSummary {
   id: string;
-  otherUser: { id: string; fullName: string | null };
+  otherUser: { id: string; fullName: string | null; online?: boolean };
   lastMessage: { body: string; fromMe: boolean; createdAt: string } | null;
   unreadCount: number;
   lastMessageAt: string;
@@ -27,6 +28,8 @@ interface DirectMessageItem {
 }
 
 const POLL_MS = 12000;
+/** Facebook parity: at most three docked chat windows, newest on the right. */
+const MAX_OPEN_WINDOWS = 3;
 
 function formatWhen(iso: string, lang: UiLanguage): string {
   try {
@@ -56,6 +59,7 @@ function ConversationRow({
     >
       <span className="relative shrink-0">
         <UserAvatar name={conversation.otherUser.fullName} seed={conversation.otherUser.id} size={40} />
+        <PresenceDot online={conversation.otherUser.online} />
         {unread ? (
           <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-pill bg-accent-primary ring-2 ring-surface-1" />
         ) : null}
@@ -149,7 +153,10 @@ function MiniChat({
   return (
     <div className="flex h-96 w-80 flex-col overflow-hidden rounded-card border border-border bg-surface-1 shadow-card">
       <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-        <UserAvatar name={conversation.otherUser.fullName} seed={conversation.otherUser.id} size={28} />
+        <span className="relative shrink-0">
+          <UserAvatar name={conversation.otherUser.fullName} seed={conversation.otherUser.id} size={28} />
+          <PresenceDot online={conversation.otherUser.online} />
+        </span>
         <p className="min-w-0 flex-1 truncate text-body font-semibold leading-5 text-text-primary">
           {conversation.otherUser.fullName ?? "—"}
         </p>
@@ -220,14 +227,23 @@ export function MessengerDock({ userId }: { userId: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
-  const [headerOpen, setHeaderOpen] = useState(false);
-  const [openChatId, setOpenChatId] = useState<string | null>(null);
+  /** Field-of-conversations cache so open windows stay fed even when their row
+   * scrolls out of the polled top-20 (Facebook keeps chat windows alive too). */
+  const [chatCache, setChatCache] = useState<Record<string, ConversationSummary>>({});
+  const [listOpen, setListOpen] = useState(false);
+  /** Newest first; rendered right-most via flex-row-reverse (Facebook order). */
+  const [openIds, setOpenIds] = useState<string[]>([]);
   const headerRef = useRef<HTMLDivElement>(null);
   const onMessagesPage = pathname === "/messages" || pathname.startsWith("/messages/");
 
   const load = useCallback(async () => {
     const data = await apiFetch<{ conversations: ConversationSummary[] }>("/dms/conversations?page=1&limit=20");
     setConversations(data.conversations);
+    setChatCache((prev) => {
+      const next = { ...prev };
+      for (const conversation of data.conversations) next[conversation.id] = conversation;
+      return next;
+    });
   }, []);
 
   useEffect(() => {
@@ -243,23 +259,28 @@ export function MessengerDock({ userId }: { userId: string }) {
 
   useEffect(() => {
     function onPointer(event: MouseEvent) {
-      if (!headerRef.current?.contains(event.target as Node)) setHeaderOpen(false);
+      // Facebook parity: clicking outside dismisses the LIST, never open chat
+      // windows — those close only through their own X button.
+      if (!headerRef.current?.contains(event.target as Node)) setListOpen(false);
     }
     document.addEventListener("mousedown", onPointer);
     return () => document.removeEventListener("mousedown", onPointer);
   }, []);
 
   const unread = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
-  const openConversation = conversations.find((c) => c.id === openChatId) ?? null;
 
   function openFromList(id: string) {
     if (onMessagesPage) {
       router.push(`/messages?c=${id}`);
-      setHeaderOpen(false);
+      setListOpen(false);
       return;
     }
-    setOpenChatId(id);
-    setHeaderOpen(false);
+    setOpenIds((ids) => [id, ...ids.filter((existing) => existing !== id)].slice(0, MAX_OPEN_WINDOWS));
+    setListOpen(false);
+  }
+
+  function closeWindow(id: string) {
+    setOpenIds((ids) => ids.filter((existing) => existing !== id));
   }
 
   const list = (
@@ -269,7 +290,7 @@ export function MessengerDock({ userId }: { userId: string }) {
         <button
           type="button"
           onClick={() => {
-            setHeaderOpen(false);
+            setListOpen(false);
             router.push("/messages");
           }}
           className="text-caption font-medium text-accent-soft hover:text-text-primary"
@@ -300,9 +321,9 @@ export function MessengerDock({ userId }: { userId: string }) {
       <div ref={headerRef} className="relative">
         <button
           type="button"
-          onClick={() => setHeaderOpen((v) => !v)}
+          onClick={() => setListOpen((v) => !v)}
           aria-label={unread > 0 ? t("dms.unreadMany", { count: unread }) : t("dms.openMessenger")}
-          aria-expanded={headerOpen}
+          aria-expanded={listOpen}
           className="relative inline-flex min-h-touch-target min-w-touch-target items-center justify-center rounded-pill text-text-secondary transition hover:bg-surface-2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
         >
           <Icon name="messages" size={20} />
@@ -312,14 +333,28 @@ export function MessengerDock({ userId }: { userId: string }) {
             </span>
           ) : null}
         </button>
-        {headerOpen ? (
-          <div className="fixed right-4 top-[4.25rem] z-40">{list}</div>
+        {listOpen ? (
+          // Anchored under the button inside the header stack (same pattern as
+          // the bell dropdown) instead of a fixed page-position — no more
+          // floating panel that can overlap page content.
+          <div className="absolute right-0 top-full z-40 mt-2">{list}</div>
         ) : null}
       </div>
 
-      {!onMessagesPage && openConversation ? (
-        <div className="fixed bottom-4 right-4 z-40 hidden lg:block">
-          <MiniChat conversation={openConversation} userId={userId} onClose={() => setOpenChatId(null)} />
+      {!onMessagesPage && openIds.length > 0 ? (
+        <div className="fixed bottom-4 right-4 z-40 hidden flex-row-reverse items-end gap-2 lg:flex">
+          {openIds.map((id) => {
+            const conversation = chatCache[id];
+            if (!conversation) return null;
+            return (
+              <MiniChat
+                key={id}
+                conversation={conversation}
+                userId={userId}
+                onClose={() => closeWindow(id)}
+              />
+            );
+          })}
         </div>
       ) : null}
     </>

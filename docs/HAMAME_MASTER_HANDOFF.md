@@ -2164,3 +2164,52 @@ window); Supabase pooler hit `EMAXCONNSESSION` with default Prisma pool — loca
 up out of repo), acceptable for single-dev machines, document if deploying
 self-hosted.
 
+
+## 33. Presence (online dot) + Facebook-style messenger dock — built & verified (2026-10-26)
+
+Owner request three-parter: "green online dot when a friend is online", "chat
+like Facebook desktop: click messenger icon → list of friends you've talked to
+→ docked chat windows", and "fix the overlapping UI in many places".
+
+**Backend (deployed with commit below):**
+- New `users.last_active_at TIMESTAMPTZ NULL` column
+  (`prisma/migrations/20261026210000_add_user_last_active_at`, pooler-safe
+  hand-extracted diff — unrelated `resources` drift excluded as always).
+- `src/lib/presence.ts`: `ONLINE_WINDOW_MS` = 2 min, per-user `TOUCH_THROTTLE_MS`
+  = 60s (in-process Map, wholesale-clear like the rate limiter), fire-and-forget
+  `prisma.user.update` inside `requireAuth`/`optionalAuth` **after** every
+  auth/suspension/token check passes — a rejected request never refreshes
+  presence. Login itself is unauthenticated and does NOT touch.
+- `GET /api/friends` rows and `GET /api/dms/conversations` `otherUser` now carry
+  `online`. Defined honestly: "active in the last 2 minutes" — NOT a realtime
+  socket heartbeat (zero-new-dependency line held).
+- REA check recorded: medspark.online has no live messenger/presence to
+  reverse-engineer (gap analysis confirms; only a friends widget + QCM-player
+  chat bubble) so the design reference is the Facebook dock itself.
+
+**Frontend:**
+- `PresenceDot` shared component (bg-success dot + surface ring, renders
+  nothing when offline; FR "En ligne"/EN "Online" via i18n `friends.online`).
+- `MessengerDock` reworked to the Facebook pattern: convo-list panel now
+  anchors `absolute right-0 top-full mt-2` under the icon (same as the bell —
+  no more floating `fixed top-[4.25rem]` panel) and clicking outside closes
+  only the list, never chat windows; up to **3 docked chat windows** rendered
+  `fixed bottom-4 right-4 flex-row-reverse` so the newest sits right-most
+  (`MAX_OPEN_WINDOWS = 3`); a `chatCache` map keeps window data fed even when a
+  conversation scrolls out of the polled top-20.
+- Green dots added in messages page (list + thread header) and FriendsPanel
+  friends rows.
+- Overlap normalization: Modal `z-40→z-50`; NotificationsBell dropdown, UserMenu,
+  MessengerDock list all `z-40`; dock windows `z-40`. Chat windows are
+  `hidden lg:flex` so they can never collide with the mobile nav.
+
+**Evidence:** raw log `docs/verification/2026-10-26-presence-online-dot-raw.log`
+(+ summary .md beside it), harness `tmp-verify-presence.mjs` (gitignored): 18/18
+assertions passed — login does not touch presence (`last_active_at` stays
+null), first authed call sets it, 2 rapid authed calls do NOT rewrite it (60s
+throttle), `GET /friends` online flags `true`-within-window / `false`-for-never-
+logged-in, same for `GET /dms/conversations` otherUser, online flips
+false after a 125s silence (window expiry), and all 3 throwaway
+`vf-presence-*@verify.hamame.test` accounts soft-deleted via the real
+`DELETE /api/users/me` with `0` active pattern rows re-queried + post-delete
+login rejected 401.

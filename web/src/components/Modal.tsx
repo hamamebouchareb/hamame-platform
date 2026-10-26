@@ -38,7 +38,7 @@ export function Modal({ open, onClose, title, children, footer, className }: Mod
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-[color:var(--color-overlay)] p-card-padding"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[color:var(--color-overlay)] p-card-padding"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
