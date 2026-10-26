@@ -196,7 +196,12 @@ async function redeemItem(req: Request, res: Response, next: NextFunction) {
         // extends from itself; a non-matching plan is switched onto the
         // rewarded plan.
         if (activeSubscription) {
-          const base = activeSubscription.currentPeriodEnd > now ? activeSubscription.currentPeriodEnd : now;
+          // A free-plan row's currentPeriodEnd is ~100 years out; only a running
+          // period on the granted plan is extended from.
+          const base =
+            activeSubscription.planId === item.planId && activeSubscription.currentPeriodEnd > now
+              ? activeSubscription.currentPeriodEnd
+              : now;
           const updated = await tx.subscription.update({
             where: { id: activeSubscription.id },
             data: {

@@ -17,6 +17,7 @@ interface ResourceItem {
   fileUrl: string | null;
   priceJetons: number;
   owned: boolean;
+  includedInPremium?: boolean;
   locked: boolean;
   sourceLabel: string | null;
   facultyId: string | null;
@@ -197,7 +198,11 @@ function ResourceDetailContent() {
 
               {resource.priceJetons > 0 ? (
                 <p className="mt-4 text-meta font-semibold text-text-secondary">
-                  {resource.owned ? t("wal.owned") : t("wal.priceTag", { n: resource.priceJetons })}
+                  {resource.owned
+                    ? t("wal.owned")
+                    : resource.includedInPremium
+                      ? t("wal.includedInPremium")
+                      : t("wal.priceTag", { n: resource.priceJetons })}
                 </p>
               ) : null}
 
@@ -227,6 +232,7 @@ function ResourceDetailContent() {
                         {buying ? t("wal.buying") : t("wal.buy", { n: resource.priceJetons })}
                       </Button>
                     )}
+                    <ButtonLink href="/subscription" variant="ghost">{t("wal.spendPremium")}</ButtonLink>
                   </div>
                 </div>
               ) : (

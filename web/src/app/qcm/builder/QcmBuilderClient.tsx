@@ -7,7 +7,15 @@ import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { apiFetch, ApiError } from "@/lib/api";
-import { AppHeader, Footer, LoadingSkeleton, SessionBuilder, type SessionConfig } from "@/components";
+import {
+  AppHeader,
+  DailyQuestionsBanner,
+  Footer,
+  isDailyLimitError,
+  LoadingSkeleton,
+  SessionBuilder,
+  type SessionConfig,
+} from "@/components";
 
 export interface QcmBuilderClientProps {
   initialMode?: "practice" | "exam";
@@ -20,6 +28,7 @@ export default function QcmBuilderClient({ initialMode = "practice" }: QcmBuilde
   const { t } = useLanguage();
   const [isStarting, setIsStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+  const [quotaKey, setQuotaKey] = useState(0);
 
   function handleLogout() {
     logout();
@@ -55,11 +64,12 @@ export default function QcmBuilderClient({ initialMode = "practice" }: QcmBuilde
       });
       router.push(`/sessions/${session.id}`);
     } catch (err) {
-      setStartError(
-        err instanceof ApiError
-          ? err.message
-          : t("qcmBuilder.startError")
-      );
+      if (isDailyLimitError(err)) {
+        setStartError(t("quota.reachedDesc"));
+        setQuotaKey((key) => key + 1);
+      } else {
+        setStartError(err instanceof ApiError ? err.message : t("qcmBuilder.startError"));
+      }
       setIsStarting(false);
     }
   }
@@ -90,6 +100,8 @@ export default function QcmBuilderClient({ initialMode = "practice" }: QcmBuilde
         <p className="mt-2 text-body text-text-secondary">
           {t("qcmBuilder.subtitle")}
         </p>
+
+        <DailyQuestionsBanner refreshKey={quotaKey} className="mt-section-gap" />
 
         <SessionBuilder
           className="mt-section-gap"

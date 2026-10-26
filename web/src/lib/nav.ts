@@ -42,6 +42,7 @@ export const SECONDARY_NAV: NavKeyEntry[] = [
   { href: "/associations", labelKey: "nav.assoc" },
   { href: "/internships", labelKey: "nav.internships" },
   { href: "/subscription", labelKey: "nav.subscription" },
+  { href: "/offres", labelKey: "nav.offers" },
   { href: "/resources", labelKey: "nav.resources" },
   { href: "/profile", labelKey: "nav.profile" },
   { href: "/notifications", labelKey: "nav.notifications" },

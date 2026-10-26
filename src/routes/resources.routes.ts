@@ -8,6 +8,7 @@ import { resolveViewerUniversityId } from "../lib/university-scope";
 import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
 import { lockWalletRow, postWalletEntry } from "../lib/wallet";
+import { premiumCoversResource, resolvePremiumScope, type PremiumScope } from "../lib/entitlements";
 import { createNotificationBestEffort } from "./notifications.routes";
 
 const router = Router();
@@ -24,10 +25,18 @@ async function ownedResourceIds(userId: string | undefined, resourceIds: string[
   return new Set(rows.map((row) => row.resourceId));
 }
 
-function withAccess<T extends { id: string; fileUrl: string; priceJetons: number }>(resource: T, owned: Set<string>) {
+// Premium for a faculty-year also unlocks that year's paid resources.
+async function viewerPremiumScope(userId: string | undefined): Promise<PremiumScope | null> {
+  return userId ? resolvePremiumScope(prisma, userId) : null;
+}
+
+function withAccess<
+  T extends { id: string; fileUrl: string; priceJetons: number; facultyId: string | null; yearId: string | null },
+>(resource: T, owned: Set<string>, premium: PremiumScope | null) {
   const isOwned = owned.has(resource.id);
-  const unlocked = resource.priceJetons === 0 || isOwned;
-  return { ...resource, fileUrl: unlocked ? resource.fileUrl : null, owned: isOwned, locked: !unlocked };
+  const includedInPremium = resource.priceJetons > 0 && premiumCoversResource(premium, resource);
+  const unlocked = resource.priceJetons === 0 || isOwned || includedInPremium;
+  return { ...resource, fileUrl: unlocked ? resource.fileUrl : null, owned: isOwned, includedInPremium, locked: !unlocked };
 }
 
 const VISIBLE_FACULTY_ROLLOUT_STATUSES = ["beta", "live"] as const;
@@ -73,8 +82,9 @@ async function listResources(req: Request, res: Response, next: NextFunction) {
       req.auth?.userId,
       resources.filter((r) => r.priceJetons > 0).map((r) => r.id)
     );
+    const premium = await viewerPremiumScope(req.auth?.userId);
 
-    res.status(200).json({ resources: resources.map((r) => withAccess(r, owned)) });
+    res.status(200).json({ resources: resources.map((r) => withAccess(r, owned, premium)) });
   } catch (err) {
     next(err);
   }
@@ -113,7 +123,8 @@ async function getResourceDetail(req: Request, res: Response, next: NextFunction
     }
 
     const owned = await ownedResourceIds(req.auth?.userId, resource.priceJetons > 0 ? [resource.id] : []);
-    res.status(200).json({ resource: withAccess(resource, owned) });
+    const premium = resource.priceJetons > 0 ? await viewerPremiumScope(req.auth?.userId) : null;
+    res.status(200).json({ resource: withAccess(resource, owned, premium) });
   } catch (err) {
     next(err);
   }
@@ -135,7 +146,7 @@ async function purchaseResource(req: Request, res: Response, next: NextFunction)
     const { id } = req.params as { id: string };
     const resource = await prisma.resource.findUnique({
       where: { id },
-      select: { id: true, title: true, priceJetons: true, fileUrl: true, facultyId: true },
+      select: { id: true, title: true, priceJetons: true, fileUrl: true, facultyId: true, yearId: true },
     });
     if (!resource) {
       throw new ApiError(404, "RESOURCE_NOT_FOUND", "No resource exists with this id.");
@@ -148,6 +159,9 @@ async function purchaseResource(req: Request, res: Response, next: NextFunction)
     }
     if (resource.priceJetons === 0) {
       throw new ApiError(409, "RESOURCE_IS_FREE", "This resource is free.");
+    }
+    if (premiumCoversResource(await resolvePremiumScope(prisma, userId), resource)) {
+      throw new ApiError(409, "INCLUDED_IN_PREMIUM", "This resource is included in your Premium.");
     }
     const already = await prisma.resourcePurchase.findUnique({
       where: { userId_resourceId: { userId, resourceId: id } },

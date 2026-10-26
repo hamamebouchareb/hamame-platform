@@ -6,7 +6,16 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useAuthedPage } from "@/lib/useAuthedPage";
 import { useApiResource } from "@/lib/useApiResource";
 import { apiFetch, ApiError } from "@/lib/api";
-import { Breadcrumb, CourseCard, EmptyState, LoadingSkeleton, PageShell, curriculumTrail } from "@/components";
+import {
+  Breadcrumb,
+  CourseCard,
+  DailyQuestionsBanner,
+  EmptyState,
+  LoadingSkeleton,
+  PageShell,
+  curriculumTrail,
+  isDailyLimitError,
+} from "@/components";
 import type { CurriculumContext, LessonSummary, SessionDetail } from "@/lib/types";
 
 const SESSION_SIZE = 20;
@@ -28,6 +37,7 @@ export default function UnitDetailPage() {
   const [search, setSearch] = useState("");
   const [startingMode, setStartingMode] = useState<SessionMode | null>(null);
   const [startError, setStartError] = useState<string | null>(null);
+  const [quotaKey, setQuotaKey] = useState(0);
 
   const canFetch = isHydrated && !!user;
   const { data: lessonsData, error: lessonsError, isLoading: lessonsLoading, refetch: refetchLessons } = useApiResource<{
@@ -65,7 +75,12 @@ export default function UnitDetailPage() {
       });
       router.push(`/sessions/${session.id}`);
     } catch (err) {
-      setStartError(err instanceof ApiError ? err.message : t("unitDetail.startError"));
+      if (isDailyLimitError(err)) {
+        setStartError(t("quota.reachedDesc"));
+        setQuotaKey((key) => key + 1);
+      } else {
+        setStartError(err instanceof ApiError ? err.message : t("unitDetail.startError"));
+      }
       setStartingMode(null);
     }
   }
@@ -89,6 +104,7 @@ export default function UnitDetailPage() {
       <>
         <section aria-label={t("unitDetail.launchTitle")} className="mt-section-gap">
           <h2 className="font-display text-h3 font-semibold text-text-primary">{t("unitDetail.launchTitle")}</h2>
+          <DailyQuestionsBanner refreshKey={quotaKey} className="mt-3" />
           <div className="mt-3 grid gap-card-gap sm:grid-cols-2">
             <button
               type="button"

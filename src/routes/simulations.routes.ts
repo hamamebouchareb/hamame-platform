@@ -196,6 +196,7 @@ async function startSimulation(req: Request, res: Response, next: NextFunction) 
       ...(sim.yearId ? { yearId: sim.yearId } : {}),
       size: Math.min(sim.questionCount, 200),
       isOfficialMock: true,
+      enforceDailyLimit: false,
       timeLimitSeconds: sim.durationMinutes * 60,
       sort: "random",
       showStats: true,

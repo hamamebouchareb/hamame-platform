@@ -4,6 +4,7 @@ import { validateBody } from "../middleware/validate";
 import { requireAuth } from "../middleware/auth";
 import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
+import { getDailyQuestionsView, resolvePremiumScope } from "../lib/entitlements";
 
 // docs/hamame_api_contract.md — "Monetization" section (subscription lifecycle).
 // Promo-code redeem/admin live under `/api/promo-codes` (promoCodes.routes.ts), not here.
@@ -152,6 +153,39 @@ async function getCurrentSubscription(req: Request, res: Response, next: NextFun
 }
 
 router.get("/me", getCurrentSubscription);
+
+// GET /api/subscriptions/me/entitlements — what the student can use right now:
+// Premium scope (faculty-year) and today's free-question budget outside it.
+async function getEntitlements(req: Request, res: Response, next: NextFunction) {
+  try {
+    const userId = req.auth!.userId;
+    const scope = await resolvePremiumScope(prisma, userId);
+    const year = scope?.yearId
+      ? await prisma.year.findUnique({
+          where: { id: scope.yearId },
+          select: { id: true, label: true, faculty: { select: { id: true, name: true } } },
+        })
+      : null;
+    const dailyQuestions = await getDailyQuestionsView(prisma, userId);
+    res.status(200).json({
+      premium: scope
+        ? {
+            planName: scope.planName,
+            currentPeriodEnd: scope.currentPeriodEnd,
+            facultyId: year?.faculty.id ?? scope.facultyId,
+            faculty: year?.faculty.name ?? null,
+            yearId: scope.yearId,
+            year: year?.label ?? null,
+          }
+        : null,
+      dailyQuestions,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+router.get("/me/entitlements", getEntitlements);
 
 // PUT /api/subscriptions/me/cancel — BR-7: effective end of period.
 async function cancelCurrentSubscription(req: Request, res: Response, next: NextFunction) {

@@ -1,19 +1,21 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api";
 
+export type ApiErrorDetails = { suspendedUntil?: string | null } & Record<string, unknown>;
+
 export interface ApiErrorBody {
   error: {
     code: string;
     message: string;
-    details?: { suspendedUntil?: string | null };
+    details?: ApiErrorDetails;
   };
 }
 
 export class ApiError extends Error {
   code: string;
   status: number;
-  details?: { suspendedUntil?: string | null };
+  details?: ApiErrorDetails;
 
-  constructor(status: number, code: string, message: string, details?: { suspendedUntil?: string | null }) {
+  constructor(status: number, code: string, message: string, details?: ApiErrorDetails) {
     super(message);
     this.name = "ApiError";
     this.status = status;

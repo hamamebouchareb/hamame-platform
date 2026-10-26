@@ -199,6 +199,68 @@ function PackEditor({ pack, onSaved }: { pack: PackRow; onSaved: (message: strin
   );
 }
 
+interface SpendItemRow {
+  id: string;
+  label: string;
+  priceJetons: number;
+  isActive: boolean;
+  durationDays?: number;
+  credits?: number;
+}
+
+// Premium offers (amount = durationDays) and AI credit packs (amount = credits).
+function SpendItemEditor({
+  item,
+  endpoint,
+  amountKey,
+  amountLabel,
+  onSaved,
+}: {
+  item: SpendItemRow;
+  endpoint: string;
+  amountKey: "durationDays" | "credits";
+  amountLabel: string;
+  onSaved: (message: string) => void;
+}) {
+  const { t } = useLanguage();
+  const [amount, setAmount] = useState(String(item[amountKey] ?? ""));
+  const [price, setPrice] = useState(String(item.priceJetons));
+  const [active, setActive] = useState(item.isActive);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save(event: FormEvent) {
+    event.preventDefault();
+    setError(null);
+    try {
+      await apiFetch(`${endpoint}/${item.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ [amountKey]: Number(amount), priceJetons: Number(price), isActive: active }),
+      });
+      onSaved(t("wal.adminSaved"));
+    } catch (err) {
+      setError(errorText(err, t("wal.actionFailed")));
+    }
+  }
+
+  return (
+    <Card as="li">
+      <form className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_8rem_8rem_auto_auto] sm:items-end" onSubmit={(e) => void save(e)}>
+        <p className="text-body font-semibold text-text-primary sm:mb-3">{item.label}</p>
+        <Input id={`${amountKey}-${item.id}`} type="number" min={1} label={amountLabel} value={amount} onChange={(e) => setAmount(e.target.value)} />
+        <Input id={`price-${item.id}`} type="number" min={1} label={t("wal.adminPriceJetons")} value={price} onChange={(e) => setPrice(e.target.value)} />
+        <label className="flex min-h-touch-target items-center gap-2 text-meta text-text-primary sm:mb-1">
+          <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
+          {t("wal.adminPackActive")}
+        </label>
+        <Button size="sm" type="submit" className="sm:mb-1">
+          {t("wal.adminPackSave")}
+        </Button>
+      </form>
+      {error && <p role="alert" className="mt-2 text-meta text-danger">{error}</p>}
+    </Card>
+  );
+}
+
 function ResourcePriceRow({ resource, onSaved }: { resource: ResourceRow; onSaved: (message: string) => void }) {
   const { t } = useLanguage();
   const [price, setPrice] = useState(String(resource.priceJetons));
@@ -262,6 +324,9 @@ export default function AdminWalletPage() {
     isStaff && canFetch ? `/wallet/admin/recharge-codes?limit=50${codeFilter ? `&status=${codeFilter}` : ""}` : null
   );
   const packs = useApiResource<{ packs: PackRow[] }>(isAdmin && canFetch ? "/wallet/admin/packs" : null);
+  const spendItems = useApiResource<{ premiumOffers: SpendItemRow[]; aiCreditPacks: SpendItemRow[] }>(
+    isAdmin && canFetch ? "/wallet/admin/offers" : null
+  );
   const resources = useApiResource<{ resources: ResourceRow[] }>(isAdmin && canFetch ? "/resources" : null);
 
   const depositRows = useMemo(() => deposits.data?.deposits ?? [], [deposits.data]);
@@ -422,6 +487,40 @@ export default function AdminWalletPage() {
               <ul className="mt-4 flex flex-col gap-card-gap">
                 {(packs.data?.packs ?? []).map((pack) => (
                   <PackEditor key={pack.id} pack={pack} onSaved={(m) => { setNotice(m); packs.refetch(); }} />
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {isAdmin && (
+            <section aria-labelledby="admin-wallet-offers">
+              <h2 id="admin-wallet-offers" className="font-display text-h3 font-bold text-text-primary">
+                {t("wal.adminOffers")}
+              </h2>
+              {spendItems.error && <ErrorState message={spendItems.error} onRetry={spendItems.refetch} className="mt-4" />}
+              <ul className="mt-4 flex flex-col gap-card-gap">
+                {(spendItems.data?.premiumOffers ?? []).map((offer) => (
+                  <SpendItemEditor
+                    key={offer.id}
+                    item={offer}
+                    endpoint="/wallet/admin/premium-offers"
+                    amountKey="durationDays"
+                    amountLabel={t("wal.adminDuration")}
+                    onSaved={(m) => { setNotice(m); spendItems.refetch(); }}
+                  />
+                ))}
+              </ul>
+              <h2 className="mt-section-gap font-display text-h3 font-bold text-text-primary">{t("wal.adminAiPacks")}</h2>
+              <ul className="mt-4 flex flex-col gap-card-gap">
+                {(spendItems.data?.aiCreditPacks ?? []).map((pack) => (
+                  <SpendItemEditor
+                    key={pack.id}
+                    item={pack}
+                    endpoint="/wallet/admin/ai-credit-packs"
+                    amountKey="credits"
+                    amountLabel={t("wal.adminCredits")}
+                    onSaved={(m) => { setNotice(m); spendItems.refetch(); }}
+                  />
                 ))}
               </ul>
             </section>

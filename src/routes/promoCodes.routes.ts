@@ -141,7 +141,12 @@ async function redeemPromoCode(req: Request, res: Response, next: NextFunction) 
       // negative-length extension.
       let subscriptionResult;
       if (activeSubscription) {
-        const base = activeSubscription.currentPeriodEnd > now ? activeSubscription.currentPeriodEnd : now;
+        // A free-plan row's currentPeriodEnd is ~100 years out; only a running
+        // Premium period is extended from.
+        const base =
+          activeSubscription.planId === premiumPlan.id && activeSubscription.currentPeriodEnd > now
+            ? activeSubscription.currentPeriodEnd
+            : now;
         subscriptionResult = await tx.subscription.update({
           // Same plan-switch rule as activation-code redemption: an active
           // row off the premium plan (e.g. free) moves onto it, otherwise

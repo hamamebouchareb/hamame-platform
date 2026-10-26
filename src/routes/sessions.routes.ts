@@ -13,6 +13,13 @@ import { shuffle } from "../lib/shuffle";
 import { awardSessionPoints } from "../lib/points";
 import { createFlashcardFromQuestion, findFlashcardSourceQuestion } from "../lib/flashcard-from-question";
 import { resolveViewerUniversityId } from "../lib/university-scope";
+import {
+  nextUtcDay,
+  questionsUsedToday,
+  resolveDailyQuestionLimit,
+  resolvePremiumScope,
+  utcDay,
+} from "../lib/entitlements";
 import { checkAndAwardBadges, notifyBadgeEarned } from "../lib/badge-awards";
 import { enqueueReviewQueueItem } from "./reviews.routes";
 import { isAiConfigured } from "../lib/ai/anthropic";
@@ -254,6 +261,8 @@ export interface BuildSessionParams {
   timeLimitSeconds?: number;
   sort?: "by_year" | "by_course" | "random";
   showStats?: boolean;
+  // Scheduled simulations are exempt from the free-plan daily question limit.
+  enforceDailyLimit?: boolean;
 }
 
 export async function buildSessionForUser(userId: string, params: BuildSessionParams) {
@@ -277,6 +286,7 @@ export async function buildSessionForUser(userId: string, params: BuildSessionPa
     timeLimitSeconds,
     sort = "random",
     showStats = true,
+    enforceDailyLimit = true,
   } = params;
 
   if (unitIds && unitIds.length > 0) {
@@ -321,37 +331,53 @@ export async function buildSessionForUser(userId: string, params: BuildSessionPa
   // cap at `size` in application code rather than relying on DB-level randomness.
   const candidates = await prisma.question.findMany({
     where,
-    select: { id: true, options: { select: { id: true } } },
+    select: { id: true, options: { select: { id: true } }, unit: { select: { module: { select: { yearId: true } } } } },
   });
-  let selected = shuffle(candidates).slice(0, size);
+  const shuffled = shuffle(candidates);
 
-  // FR-15 result ordering — see createSessionSchema docs. Shuffle first (BR-4), then a
-  // stable group-sort by curriculum key; ties keep their shuffled order so randomness
-  // is preserved inside every group. 'random' skips this entirely.
-  if (sort !== "random" && selected.length > 1) {
-    const keyRows = await prisma.question.findMany({
-      where: { id: { in: selected.map((question) => question.id) } },
-      select: {
-        id: true,
-        unit: { select: { module: { select: { orderIndex: true, year: { select: { orderIndex: true } } } } } },
-      },
-    });
-    const shuffledIndexById = new Map(selected.map((question, index) => [question.id, index]));
-    const keyById = new Map(keyRows.map((row) => [row.id, row]));
-    selected = [...selected].sort((a, b) => {
-      const keyA = keyById.get(a.id)!;
-      const keyB = keyById.get(b.id)!;
-      const yearDiff = keyA.unit.module.year.orderIndex - keyB.unit.module.year.orderIndex;
-      if (yearDiff !== 0) return yearDiff;
-      if (sort === "by_course") {
-        const moduleDiff = keyA.unit.module.orderIndex - keyB.unit.module.orderIndex;
-        if (moduleDiff !== 0) return moduleDiff;
+  const premiumScope = enforceDailyLimit ? await resolvePremiumScope(prisma, userId) : null;
+  const dailyLimit = enforceDailyLimit ? await resolveDailyQuestionLimit(prisma) : 0;
+  const coveredYearId = premiumScope?.yearId ?? null;
+
+  const { session, dailyQuestions } = await prisma.$transaction(async (tx) => {
+    // Serializes concurrent session builds for this user so two requests can't
+    // both spend the same remaining daily questions.
+    let selected = shuffled.slice(0, size);
+    let limitedCount = 0;
+    let usedToday = 0;
+    if (enforceDailyLimit) {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`daily-questions:${userId}`}))`;
+      usedToday = await questionsUsedToday(tx, userId);
+      let remaining = Math.max(dailyLimit - usedToday, 0);
+      selected = [];
+      for (const question of shuffled) {
+        if (selected.length >= size) break;
+        if (coveredYearId !== null && question.unit.module.yearId === coveredYearId) {
+          selected.push(question);
+        } else if (remaining > 0) {
+          selected.push(question);
+          remaining -= 1;
+          limitedCount += 1;
+        }
       }
-      return shuffledIndexById.get(a.id)! - shuffledIndexById.get(b.id)!;
-    });
-  }
+      if (selected.length === 0 && shuffled.length > 0) {
+        throw new ApiError(
+          403,
+          "DAILY_QUESTION_LIMIT",
+          `You have used your ${dailyLimit} free questions for today. Upgrade to Premium for unlimited questions in your year.`,
+          { limit: dailyLimit, usedToday, resetAt: nextUtcDay().toISOString() }
+        );
+      }
+      if (limitedCount > 0) {
+        await tx.$executeRaw`
+          INSERT INTO "daily_question_usage" ("user_id", "day", "used")
+          VALUES (${userId}::uuid, ${utcDay()}::date, ${limitedCount})
+          ON CONFLICT ("user_id", "day") DO UPDATE SET "used" = "daily_question_usage"."used" + EXCLUDED."used"`;
+      }
+    }
 
-  const session = await prisma.$transaction(async (tx) => {
+    selected = await orderSelectedQuestions(tx, selected, sort);
+
     const createdSession = await tx.studySession.create({
       data: {
         userId,
@@ -381,12 +407,57 @@ export async function buildSessionForUser(userId: string, params: BuildSessionPa
       });
     }
 
-    return createdSession;
+    const usedAfter = usedToday + limitedCount;
+    return {
+      session: createdSession,
+      dailyQuestions: enforceDailyLimit
+        ? {
+            limit: dailyLimit,
+            usedToday: usedAfter,
+            remaining: Math.max(dailyLimit - usedAfter, 0),
+            premiumYearId: coveredYearId,
+            limitedBySize: selected.length < Math.min(size, shuffled.length),
+          }
+        : null,
+    };
     // Explicit budget (same P2034-under-latency class as submit/redeem).
   }, { maxWait: 10000, timeout: 20000 });
 
   const fullSession = await loadSessionWithQuestions(session.id);
-  return formatSessionForResponse(fullSession!);
+  return { ...formatSessionForResponse(fullSession!), dailyQuestions };
+}
+
+// FR-15 result ordering — see createSessionSchema docs. Shuffle first (BR-4), then a
+// stable group-sort by curriculum key; ties keep their shuffled order so randomness
+// is preserved inside every group. 'random' skips this entirely.
+async function orderSelectedQuestions<T extends { id: string }>(
+  client: Prisma.TransactionClient,
+  selected: T[],
+  sort: "by_year" | "by_course" | "random"
+): Promise<T[]> {
+  if (sort !== "random" && selected.length > 1) {
+    const keyRows = await client.question.findMany({
+      where: { id: { in: selected.map((question) => question.id) } },
+      select: {
+        id: true,
+        unit: { select: { module: { select: { orderIndex: true, year: { select: { orderIndex: true } } } } } },
+      },
+    });
+    const shuffledIndexById = new Map(selected.map((question, index) => [question.id, index]));
+    const keyById = new Map(keyRows.map((row) => [row.id, row]));
+    return [...selected].sort((a, b) => {
+      const keyA = keyById.get(a.id)!;
+      const keyB = keyById.get(b.id)!;
+      const yearDiff = keyA.unit.module.year.orderIndex - keyB.unit.module.year.orderIndex;
+      if (yearDiff !== 0) return yearDiff;
+      if (sort === "by_course") {
+        const moduleDiff = keyA.unit.module.orderIndex - keyB.unit.module.orderIndex;
+        if (moduleDiff !== 0) return moduleDiff;
+      }
+      return shuffledIndexById.get(a.id)! - shuffledIndexById.get(b.id)!;
+    });
+  }
+  return selected;
 }
 
 async function createSession(req: Request, res: Response, next: NextFunction) {

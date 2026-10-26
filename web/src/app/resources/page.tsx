@@ -24,6 +24,7 @@ interface ResourceItem {
   yearId: string | null;
   priceJetons: number;
   owned: boolean;
+  includedInPremium?: boolean;
 }
 
 interface FacultyOption {
@@ -223,7 +224,9 @@ function ResourcesContent() {
                       resource.priceJetons > 0
                         ? resource.owned
                           ? t("wal.owned")
-                          : t("wal.priceTag", { n: resource.priceJetons })
+                          : resource.includedInPremium
+                            ? t("wal.includedInPremium")
+                            : t("wal.priceTag", { n: resource.priceJetons })
                         : resource.type === "official_drive"
                           ? t("drive.officialBadge")
                           : undefined

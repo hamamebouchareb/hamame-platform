@@ -274,6 +274,8 @@ export interface AiCredits {
   dailyAllowance: number;
   usedToday: number;
   remainingToday: number;
+  /** Bought with jetons; never expire, spent after the daily allowance. */
+  purchasedCredits?: number;
   resetAt: string;
   /** Server-computed <20% flag (Task 7a) — replaces the former client computation. */
   lowBalance: boolean;
@@ -307,6 +309,38 @@ export interface Plan {
   billingPeriod: "monthly" | "yearly" | null;
   features: { description: string };
   isActive: boolean;
+}
+
+// GET /api/subscriptions/me/entitlements
+export interface Entitlements {
+  premium: {
+    planName: string;
+    currentPeriodEnd: string;
+    facultyId: string | null;
+    faculty: string | null;
+    yearId: string | null;
+    year: string | null;
+  } | null;
+  dailyQuestions: { limit: number; usedToday: number; remaining: number; resetAt: string };
+}
+
+// GET /api/wallet → premiumOffers / aiCreditPacks
+export interface PremiumOffer {
+  id: string;
+  label: string;
+  durationDays: number;
+  priceJetons: number;
+  priceDzd: number;
+  badge: "recommended" | "best_value" | null;
+}
+
+export interface AiCreditPack {
+  id: string;
+  label: string;
+  credits: number;
+  priceJetons: number;
+  priceDzd: number;
+  badge: "recommended" | "best_value" | null;
 }
 
 // GET /api/subscriptions/me and POST /api/subscriptions.

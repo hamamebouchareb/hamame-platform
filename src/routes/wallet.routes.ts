@@ -13,8 +13,10 @@ import {
   CUSTOM_MAX_JETONS,
   CUSTOM_MIN_JETONS,
   DZD_PER_JETON,
+  lockWalletRow,
   postWalletEntry,
 } from "../lib/wallet";
+import { ensureAiCreditBalance, resolveAiCreditAllowances } from "../lib/ai/credits";
 import {
   createChargilyCheckout,
   getChargilyCheckout,
@@ -39,7 +41,8 @@ import {
 //     owner's confirm poll, whichever lands first, credits exactly once;
 //   - CCP / BaridiMob: receipt photo → admin/support-agent decision;
 //   - recharge code: single-use code sold off-platform.
-// Spending lives on the resource purchase endpoint (resources.routes.ts).
+// Spending: Premium offers and AI credit packs here; paid resources on the
+// resource purchase endpoint (resources.routes.ts).
 //
 // Bank details come from env (WALLET_CCP_*), never from source.
 // Sequential awaits throughout — Supabase session pooler concurrency limit.
@@ -89,6 +92,54 @@ function serializePack(pack: {
     sortOrder: pack.sortOrder,
     isActive: pack.isActive,
   };
+}
+
+function serializeOffer(offer: {
+  id: string;
+  label: string;
+  durationDays: number;
+  priceJetons: number;
+  badge: string | null;
+  sortOrder: number;
+  isActive: boolean;
+}) {
+  return {
+    id: offer.id,
+    label: offer.label,
+    durationDays: offer.durationDays,
+    priceJetons: offer.priceJetons,
+    priceDzd: offer.priceJetons * DZD_PER_JETON,
+    badge: offer.badge,
+    sortOrder: offer.sortOrder,
+    isActive: offer.isActive,
+  };
+}
+
+function serializeAiPack(pack: {
+  id: string;
+  label: string;
+  credits: number;
+  priceJetons: number;
+  badge: string | null;
+  sortOrder: number;
+  isActive: boolean;
+}) {
+  return {
+    id: pack.id,
+    label: pack.label,
+    credits: pack.credits,
+    priceJetons: pack.priceJetons,
+    priceDzd: pack.priceJetons * DZD_PER_JETON,
+    badge: pack.badge,
+    sortOrder: pack.sortOrder,
+    isActive: pack.isActive,
+  };
+}
+
+function addDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
 }
 
 // Marks an online order paid and credits it. Safe to call any number of
@@ -167,6 +218,25 @@ async function chargilyWebhook(req: Request, res: Response, next: NextFunction) 
 
 router.post("/chargily/webhook", chargilyWebhook);
 
+// GET /api/wallet/catalog — public prices for the /offres page.
+async function getCatalog(_req: Request, res: Response, next: NextFunction) {
+  try {
+    const packs = await prisma.jetonPack.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } });
+    const offers = await prisma.premiumOffer.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } });
+    const aiPacks = await prisma.aiCreditPack.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } });
+    res.json({
+      pricing: { dzdPerJeton: DZD_PER_JETON, customMin: CUSTOM_MIN_JETONS, customMax: CUSTOM_MAX_JETONS },
+      packs: packs.map(serializePack),
+      premiumOffers: offers.map(serializeOffer),
+      aiCreditPacks: aiPacks.map(serializeAiPack),
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+router.get("/catalog", getCatalog);
+
 router.use(requireAuth);
 
 // ---------------------------------------------------------------------------
@@ -180,12 +250,16 @@ async function getWallet(req: Request, res: Response, next: NextFunction) {
     const userId = req.auth!.userId;
     const account = await prisma.walletAccount.findUnique({ where: { userId } });
     const packs = await prisma.jetonPack.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } });
+    const offers = await prisma.premiumOffer.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } });
+    const aiPacks = await prisma.aiCreditPack.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } });
     res.json({
       balance: account?.balance ?? 0,
       purchasedTotal: account?.purchasedTotal ?? 0,
       spentTotal: account?.spentTotal ?? 0,
       pricing: { dzdPerJeton: DZD_PER_JETON, customMin: CUSTOM_MIN_JETONS, customMax: CUSTOM_MAX_JETONS },
       packs: packs.map(serializePack),
+      premiumOffers: offers.map(serializeOffer),
+      aiCreditPacks: aiPacks.map(serializeAiPack),
       methods: {
         online: isChargilyConfigured(),
         transfer: transferDetails(),
@@ -444,8 +518,163 @@ async function redeemRechargeCode(req: Request, res: Response, next: NextFunctio
   }
 }
 
+const premiumPurchaseSchema = z.object({ offerId: z.string().uuid(), yearId: z.string().uuid() });
+
+// POST /api/wallet/premium — buy a Premium offer for one faculty-year with jetons.
+// Stacks on a running Premium of the same year; a running Premium on another
+// year must end first (one subscription row per student). Bought Premium never
+// auto-renews.
+async function buyPremium(req: Request, res: Response, next: NextFunction) {
+  try {
+    const userId = req.auth!.userId;
+    const body = req.body as z.infer<typeof premiumPurchaseSchema>;
+    const offer = await prisma.premiumOffer.findFirst({ where: { id: body.offerId, isActive: true } });
+    if (!offer) throw new ApiError(404, "OFFER_NOT_FOUND", "This offer does not exist.");
+    const year = await prisma.year.findFirst({
+      where: { id: body.yearId, faculty: { rolloutStatus: { in: ["beta", "live"] } } },
+      select: { id: true, facultyId: true, label: true, faculty: { select: { name: true } } },
+    });
+    if (!year) throw new ApiError(404, "YEAR_NOT_FOUND", "This year does not exist.");
+    const premiumPlan = await prisma.plan.findFirst({ where: { name: "premium", isActive: true } });
+    if (!premiumPlan) throw new ApiError(500, "PREMIUM_PLAN_MISSING", "No active premium plan is configured.");
+    const profile = await prisma.user.findUnique({ where: { id: userId }, select: { yearId: true } });
+
+    const now = new Date();
+    const result = await prisma.$transaction(
+      async (tx) => {
+        const account = await lockWalletRow(tx, userId);
+        if (account.balance < offer.priceJetons) {
+          throw new ApiError(409, "INSUFFICIENT_JETONS", "Not enough jetons for this offer.", {
+            balance: account.balance,
+            price: offer.priceJetons,
+          });
+        }
+
+        const active = await tx.subscription.findFirst({
+          where: { userId, status: "active" },
+          orderBy: { currentPeriodEnd: "desc" },
+          include: { plan: { select: { priceDzd: true } } },
+        });
+        const runningPaid =
+          active !== null &&
+          active.plan.priceDzd !== null &&
+          active.plan.priceDzd.toNumber() > 0 &&
+          active.currentPeriodEnd > now;
+        if (runningPaid) {
+          const runningYearId = active.yearId ?? profile?.yearId ?? null;
+          if (runningYearId !== null && runningYearId !== year.id) {
+            throw new ApiError(409, "PREMIUM_OTHER_YEAR", "Your current Premium covers another year. Wait until it ends.", {
+              yearId: runningYearId,
+              currentPeriodEnd: active.currentPeriodEnd.toISOString(),
+            });
+          }
+        }
+        const currentPeriodEnd = addDays(runningPaid ? active!.currentPeriodEnd : now, offer.durationDays);
+        const scope = { planId: premiumPlan.id, facultyId: year.facultyId, yearId: year.id, currentPeriodEnd, autoRenew: false };
+
+        const subscription = active
+          ? await tx.subscription.update({
+              where: { id: active.id },
+              data: { ...scope, cancelledAt: null, ...(runningPaid ? {} : { startedAt: now }) },
+            })
+          : await tx.subscription.create({ data: { ...scope, userId, status: "active", startedAt: now } });
+
+        const payment = await tx.payment.create({
+          data: {
+            subscriptionId: subscription.id,
+            amountDzd: offer.priceJetons * DZD_PER_JETON,
+            method: "jetons",
+            status: "succeeded",
+            externalRef: `premium_offer:${offer.id}`,
+          },
+        });
+        const posted = await postWalletEntry(tx, {
+          userId,
+          reason: "premium_purchase",
+          refId: payment.id,
+          delta: -offer.priceJetons,
+        });
+        return { subscription, balance: posted.balance };
+      },
+      { maxWait: 10000, timeout: 20000 }
+    );
+
+    await createNotificationBestEffort({
+      userId,
+      category: "prix",
+      title: "Premium activé",
+      body: `Premium ${offer.label} actif pour ${year.faculty.name} — ${year.label} jusqu'au ${result.subscription.currentPeriodEnd.toLocaleDateString("fr-FR")}.`,
+    });
+    res.status(201).json({
+      subscription: {
+        id: result.subscription.id,
+        currentPeriodEnd: result.subscription.currentPeriodEnd,
+        facultyId: year.facultyId,
+        faculty: year.faculty.name,
+        yearId: year.id,
+        year: year.label,
+      },
+      balance: result.balance,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+const aiCreditsPurchaseSchema = z.object({ packId: z.string().uuid() });
+
+// POST /api/wallet/ai-credits — buy a pack of AI credits that never expire and
+// are spent only after the daily allowance (see reserveAiCredit).
+async function buyAiCredits(req: Request, res: Response, next: NextFunction) {
+  try {
+    const userId = req.auth!.userId;
+    const { packId } = req.body as z.infer<typeof aiCreditsPurchaseSchema>;
+    const pack = await prisma.aiCreditPack.findFirst({ where: { id: packId, isActive: true } });
+    if (!pack) throw new ApiError(404, "PACK_NOT_FOUND", "This pack does not exist.");
+    const allowances = await resolveAiCreditAllowances(prisma, userId);
+    await ensureAiCreditBalance(prisma, userId, allowances);
+
+    const result = await prisma.$transaction(
+      async (tx) => {
+        const account = await lockWalletRow(tx, userId);
+        if (account.balance < pack.priceJetons) {
+          throw new ApiError(409, "INSUFFICIENT_JETONS", "Not enough jetons for this pack.", {
+            balance: account.balance,
+            price: pack.priceJetons,
+          });
+        }
+        const posted = await postWalletEntry(tx, {
+          userId,
+          reason: "ai_credits_purchase",
+          refId: randomUUID(),
+          delta: -pack.priceJetons,
+        });
+        const credits = await tx.aiCreditBalance.update({
+          where: { userId },
+          data: { purchasedCredits: { increment: pack.credits } },
+          select: { purchasedCredits: true },
+        });
+        return { balance: posted.balance, purchasedCredits: credits.purchasedCredits };
+      },
+      { maxWait: 10000, timeout: 20000 }
+    );
+
+    await createNotificationBestEffort({
+      userId,
+      category: "prix",
+      title: "Crédits IA ajoutés",
+      body: `${pack.credits} crédits IA ont été ajoutés. Ils n'expirent pas.`,
+    });
+    res.status(201).json({ credits: pack.credits, ...result });
+  } catch (err) {
+    next(err);
+  }
+}
+
 router.get("/", getWallet);
 router.get("/ledger", validateQuery(paginationQuery), listLedger);
+router.post("/premium", limitWalletActions, validateBody(premiumPurchaseSchema), buyPremium);
+router.post("/ai-credits", limitWalletActions, validateBody(aiCreditsPurchaseSchema), buyAiCredits);
 router.post("/checkout", validateBody(checkoutSchema), createCheckout);
 router.post("/checkout/:orderId/confirm", validateParams(uuidParam("orderId")), confirmCheckout);
 router.get("/transfer-deposits", listMyDeposits);
@@ -691,7 +920,66 @@ async function updatePack(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+const offerUpdateSchema = z
+  .object({
+    label: z.string().min(1).max(60),
+    durationDays: z.number().int().min(1).max(730),
+    priceJetons: z.number().int().min(1).max(100_000),
+    badge: z.enum(["recommended", "best_value"]).nullable(),
+    sortOrder: z.number().int().min(0).max(1000),
+    isActive: z.boolean(),
+  })
+  .partial();
+
+const aiPackUpdateSchema = z
+  .object({
+    label: z.string().min(1).max(60),
+    credits: z.number().int().min(1).max(100_000),
+    priceJetons: z.number().int().min(1).max(100_000),
+    badge: z.enum(["recommended", "best_value"]).nullable(),
+    sortOrder: z.number().int().min(0).max(1000),
+    isActive: z.boolean(),
+  })
+  .partial();
+
+async function listAdminOffers(_req: Request, res: Response, next: NextFunction) {
+  try {
+    const offers = await prisma.premiumOffer.findMany({ orderBy: { sortOrder: "asc" } });
+    const aiPacks = await prisma.aiCreditPack.findMany({ orderBy: { sortOrder: "asc" } });
+    res.json({ premiumOffers: offers.map(serializeOffer), aiCreditPacks: aiPacks.map(serializeAiPack) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function updateOffer(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params as { id: string };
+    const existing = await prisma.premiumOffer.findUnique({ where: { id } });
+    if (!existing) throw new ApiError(404, "OFFER_NOT_FOUND", "This offer does not exist.");
+    const offer = await prisma.premiumOffer.update({ where: { id }, data: req.body as z.infer<typeof offerUpdateSchema> });
+    res.json({ offer: serializeOffer(offer) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function updateAiPack(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params as { id: string };
+    const existing = await prisma.aiCreditPack.findUnique({ where: { id } });
+    if (!existing) throw new ApiError(404, "PACK_NOT_FOUND", "This pack does not exist.");
+    const pack = await prisma.aiCreditPack.update({ where: { id }, data: req.body as z.infer<typeof aiPackUpdateSchema> });
+    res.json({ pack: serializeAiPack(pack) });
+  } catch (err) {
+    next(err);
+  }
+}
+
 router.use("/admin", requireStaff);
+router.get("/admin/offers", listAdminOffers);
+router.patch("/admin/premium-offers/:id", requireAdmin, validateParams(uuidParam("id")), validateBody(offerUpdateSchema), updateOffer);
+router.patch("/admin/ai-credit-packs/:id", requireAdmin, validateParams(uuidParam("id")), validateBody(aiPackUpdateSchema), updateAiPack);
 router.get("/admin/transfer-deposits", validateQuery(adminDepositsQuery), listAdminDeposits);
 router.get("/admin/transfer-deposits/:id/receipt", validateParams(uuidParam("id")), getDepositReceipt);
 router.post("/admin/transfer-deposits/:id/decide", validateParams(uuidParam("id")), validateBody(decideSchema), decideDeposit);

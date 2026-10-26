@@ -177,6 +177,7 @@ model User {
   rechargeCodesIssued            RechargeCode[]           @relation("RechargeCodeIssuer")
   rechargeCodesRedeemed          RechargeCode[]           @relation("RechargeCodeRedeemer")
   resourcePurchases              ResourcePurchase[]
+  dailyQuestionUsage             DailyQuestionUsage[]
 
   @@map("users")
 }
@@ -375,6 +376,7 @@ model Faculty {
   resources            Resource[]
   simulations          Simulation[]
   studyGroups          StudyGroup[]
+  subscriptions        Subscription[]
 
   @@map("faculties")
 }
@@ -397,6 +399,7 @@ model Year {
   resources            Resource[]
   simulations          Simulation[]
   studyGroups          StudyGroup[]
+  subscriptions        Subscription[]
 
   @@map("years")
 }
@@ -902,6 +905,8 @@ model AiCreditBalance {
   monthlyAllowance Int      @map("monthly_allowance")
   usedToday        Int      @default(0) @map("used_today")
   usedThisMonth    Int      @default(0) @map("used_this_month")
+  // Bought with jetons; never expire, spent only once the daily allowance is used up.
+  purchasedCredits Int      @default(0) @map("purchased_credits")
   resetAt          DateTime @map("reset_at") @db.Timestamptz
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -936,9 +941,15 @@ model Subscription {
   currentPeriodEnd DateTime  @map("current_period_end") @db.Timestamptz
   cancelledAt      DateTime? @map("cancelled_at") @db.Timestamptz
   autoRenew        Boolean   @default(true) @map("auto_renew") // BR-7
+  // The faculty-year a paid plan unlocks. Null on grants that carry no scope
+  // (promo codes, points shop); those fall back to the student's profile year.
+  facultyId        String?   @map("faculty_id") @db.Uuid
+  yearId           String?   @map("year_id") @db.Uuid
 
   user     User      @relation(fields: [userId], references: [id])
   plan     Plan      @relation(fields: [planId], references: [id])
+  faculty  Faculty?  @relation(fields: [facultyId], references: [id])
+  year     Year?     @relation(fields: [yearId], references: [id])
   payments Payment[]
 
   @@map("subscriptions")
@@ -1128,7 +1139,7 @@ model WalletLedger {
   id           String   @id @default(uuid()) @db.Uuid
   userId       String   @map("user_id") @db.Uuid
   delta        Int // negative = spend
-  reason       String // 'topup_online' | 'topup_transfer' | 'topup_code' | 'resource_purchase' | 'admin_adjust'
+  reason       String // 'topup_online' | 'topup_transfer' | 'topup_code' | 'resource_purchase' | 'premium_purchase' | 'ai_credits_purchase' | 'admin_adjust'
   refId        String   @map("ref_id")
   balanceAfter Int      @map("balance_after")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
@@ -1154,6 +1165,46 @@ model JetonPack {
   orders WalletTopupOrder[]
 
   @@map("jeton_packs")
+}
+
+// Questions served today outside the student's Premium year (free-plan daily
+// limit, plans.features.dailyQuestionLimit). Day is the UTC date.
+model DailyQuestionUsage {
+  userId String   @map("user_id") @db.Uuid
+  day    DateTime @db.Date
+  used   Int      @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, day])
+  @@map("daily_question_usage")
+}
+
+// Premium bought with jetons: one faculty-year for durationDays.
+model PremiumOffer {
+  id           String   @id @default(uuid()) @db.Uuid
+  label        String
+  durationDays Int      @map("duration_days")
+  priceJetons  Int      @map("price_jetons")
+  badge        String? // 'recommended' | 'best_value'
+  sortOrder    Int      @default(0) @map("sort_order")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("premium_offers")
+}
+
+model AiCreditPack {
+  id          String   @id @default(uuid()) @db.Uuid
+  label       String
+  credits     Int
+  priceJetons Int      @map("price_jetons")
+  badge       String?
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("ai_credit_packs")
 }
 
 // Online checkout (Chargily). Credited only once the provider reports it

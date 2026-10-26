@@ -97,7 +97,8 @@ export default function SessionResultsPage() {
       });
       router.push(`/sessions/${session.id}`);
     } catch (err) {
-      setRedoError(err instanceof ApiError ? err.message : t("player.submitError"));
+      const limited = err instanceof ApiError && err.code === "DAILY_QUESTION_LIMIT";
+      setRedoError(limited ? t("quota.reachedDesc") : err instanceof ApiError ? err.message : t("player.submitError"));
       setIsRedoing(false);
     }
   }

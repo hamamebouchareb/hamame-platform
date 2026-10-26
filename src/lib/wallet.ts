@@ -24,6 +24,8 @@ export const WALLET_REASONS = [
   "topup_transfer",
   "topup_code",
   "resource_purchase",
+  "premium_purchase",
+  "ai_credits_purchase",
   "admin_adjust",
 ] as const;
 export type WalletReason = (typeof WALLET_REASONS)[number];

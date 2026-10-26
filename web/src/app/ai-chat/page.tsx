@@ -16,6 +16,7 @@ interface CreditsData {
   dailyAllowance: number;
   usedToday: number;
   remainingToday: number;
+  purchasedCredits?: number;
 }
 
 export default function AiChatPage() {
@@ -30,7 +31,7 @@ export default function AiChatPage() {
   } = useApiResource<CreditsData>(canFetch ? "/ai/credits" : null);
 
   const { history, sending, sendError, creditsExhausted, send } = useAskHamame();
-  const outOfCredits = creditsExhausted || credits?.remainingToday === 0;
+  const outOfCredits = creditsExhausted || (credits?.remainingToday === 0 && !credits.purchasedCredits);
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -65,6 +66,9 @@ export default function AiChatPage() {
             <span className="ml-2 text-meta text-text-tertiary">
               {t("aiChat.creditsHint", { used: credits.usedToday, allowance: credits.dailyAllowance })}
             </span>
+            {credits.purchasedCredits ? (
+              <span className="ml-2 text-meta font-semibold text-success">{t("aiChat.purchased", { n: credits.purchasedCredits })}</span>
+            ) : null}
           </p>
         </Card>
       )}

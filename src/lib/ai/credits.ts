@@ -122,9 +122,12 @@ export function nextUtcMidnight(from: Date): Date {
 
 export interface AiCreditReservation {
   reserved: boolean;
+  // 'purchased' when the daily allowance was used up and a bought credit paid instead.
+  source: "daily" | "purchased" | null;
   usedToday: number;
   dailyAllowance: number;
   remainingToday: number;
+  purchasedCredits: number;
   // The reset boundary observed at reservation time. Passed back to refundAiCredit so a
   // refund can never cross a day boundary and eat a credit from a fresh day.
   resetAt: Date;
@@ -133,7 +136,9 @@ export interface AiCreditReservation {
 interface ReserveRow {
   used_today: number;
   daily_allowance: number;
+  purchased_credits: number;
   reset_at: Date;
+  daily_had_room: boolean;
 }
 
 // RESERVE-THEN-GENERATE: the credit is taken BEFORE the (billable, externally-visible)
@@ -154,32 +159,52 @@ interface ReserveRow {
 // used_this_month is maintained but NOT enforced in v1 (the confirmed decision is a
 // daily 5/30 cap). It resets when the crossed day boundary lands in a new month:
 // reset_at - 1 day is by construction the day the counters were last valid for.
+//
+// Purchased credits are the second source in the SAME statement: when the daily
+// allowance has no room, a bought credit is decremented instead (and used_today is
+// left alone). All SET expressions read the pre-update row, so `daily_room` below
+// is evaluated once against the old values.
 export async function reserveAiCredit(client: PrismaClient, userId: string): Promise<AiCreditReservation> {
   const rows = await client.$queryRaw<ReserveRow[]>`
-    UPDATE "ai_credit_balances" SET
-      "used_today" = CASE WHEN "reset_at" <= now() THEN 1 ELSE "used_today" + 1 END,
+    WITH current AS (
+      SELECT "user_id",
+             ((CASE WHEN "reset_at" <= now() THEN 0 ELSE "used_today" END) < "daily_allowance") AS daily_room
+      FROM "ai_credit_balances"
+      WHERE "user_id" = ${userId}::uuid
+      FOR UPDATE
+    )
+    UPDATE "ai_credit_balances" b SET
+      "used_today" = CASE
+          WHEN NOT c.daily_room THEN (CASE WHEN b."reset_at" <= now() THEN 0 ELSE b."used_today" END)
+          WHEN b."reset_at" <= now() THEN 1
+          ELSE b."used_today" + 1
+        END,
+      "purchased_credits" = CASE WHEN c.daily_room THEN b."purchased_credits" ELSE b."purchased_credits" - 1 END,
       "used_this_month" = CASE
-          WHEN "reset_at" <= now()
-           AND date_trunc('month', "reset_at" - interval '1 day') <> date_trunc('month', now())
+          WHEN b."reset_at" <= now()
+           AND date_trunc('month', b."reset_at" - interval '1 day') <> date_trunc('month', now())
           THEN 1
-          ELSE "used_this_month" + 1
+          ELSE b."used_this_month" + 1
         END,
       "reset_at" = CASE
-          WHEN "reset_at" <= now()
+          WHEN b."reset_at" <= now()
           THEN (date_trunc('day', now() AT TIME ZONE 'UTC') + interval '1 day') AT TIME ZONE 'UTC'
-          ELSE "reset_at"
+          ELSE b."reset_at"
         END
-    WHERE "user_id" = ${userId}::uuid
-      AND (CASE WHEN "reset_at" <= now() THEN 0 ELSE "used_today" END) < "daily_allowance"
-    RETURNING "used_today", "daily_allowance", "reset_at"`;
+    FROM current c
+    WHERE b."user_id" = c."user_id"
+      AND (c.daily_room OR b."purchased_credits" > 0)
+    RETURNING b."used_today", b."daily_allowance", b."purchased_credits", b."reset_at", c.daily_room AS daily_had_room`;
 
   const row = rows[0];
   if (row) {
     return {
       reserved: true,
+      source: row.daily_had_room ? "daily" : "purchased",
       usedToday: row.used_today,
       dailyAllowance: row.daily_allowance,
       remainingToday: Math.max(row.daily_allowance - row.used_today, 0),
+      purchasedCredits: row.purchased_credits,
       resetAt: row.reset_at,
     };
   }
@@ -190,9 +215,11 @@ export async function reserveAiCredit(client: PrismaClient, userId: string): Pro
   const balance = await client.aiCreditBalance.findUnique({ where: { userId } });
   return {
     reserved: false,
+    source: null,
     usedToday: balance?.usedToday ?? 0,
     dailyAllowance: balance?.dailyAllowance ?? 0,
     remainingToday: 0,
+    purchasedCredits: balance?.purchasedCredits ?? 0,
     resetAt: balance?.resetAt ?? nextUtcMidnight(new Date()),
   };
 }
@@ -206,6 +233,15 @@ export async function refundAiCredit(
   userId: string,
   reservation: AiCreditReservation
 ): Promise<void> {
+  if (reservation.source === "purchased") {
+    // Bought credits never expire, so no day-boundary guard is needed.
+    await client.$executeRaw`
+      UPDATE "ai_credit_balances" SET
+        "purchased_credits" = "purchased_credits" + 1,
+        "used_this_month" = GREATEST("used_this_month" - 1, 0)
+      WHERE "user_id" = ${userId}::uuid`;
+    return;
+  }
   await client.$executeRaw`
     UPDATE "ai_credit_balances" SET
       "used_today" = GREATEST("used_today" - 1, 0),
@@ -218,6 +254,7 @@ export interface AiCreditBalanceView {
   dailyAllowance: number;
   usedToday: number;
   remainingToday: number;
+  purchasedCredits: number;
   resetAt: Date;
 }
 
@@ -260,6 +297,7 @@ export async function getAiCreditBalance(
     dailyAllowance: balance.dailyAllowance,
     usedToday: balance.usedToday,
     remainingToday: Math.max(balance.dailyAllowance - balance.usedToday, 0),
+    purchasedCredits: balance.purchasedCredits,
     resetAt: balance.resetAt,
   };
 }

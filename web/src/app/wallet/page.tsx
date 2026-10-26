@@ -7,7 +7,9 @@ import { useAuthedPage } from "@/lib/useAuthedPage";
 import { apiFetch, ApiError } from "@/lib/api";
 import { localeFor, type I18nKey, type UiLanguage } from "@/lib/i18n";
 import { cx } from "@/lib/cx";
+import Link from "next/link";
 import { Button, Card, ErrorState, Input, LoadingSkeleton, PageShell } from "@/components";
+import type { AiCreditPack } from "@/lib/types";
 
 // Jetons wallet (medspark.online Sparx-wallet parity): balance, three ways to
 // top up (online / CCP-BaridiMob receipt / recharge code), and the ledger.
@@ -26,6 +28,7 @@ interface WalletState {
   balance: number;
   pricing: { dzdPerJeton: number; customMin: number; customMax: number };
   packs: Pack[];
+  aiCreditPacks: AiCreditPack[];
   methods: {
     online: boolean;
     transfer: { ccpAccount: string | null; ccpKey: string | null; rip: string | null; beneficiary: string } | null;
@@ -57,6 +60,8 @@ const REASON_KEYS: Record<string, I18nKey> = {
   topup_transfer: "wal.reasonTransfer",
   topup_code: "wal.reasonCode",
   resource_purchase: "wal.reasonPurchase",
+  premium_purchase: "wal.reasonPremium",
+  ai_credits_purchase: "wal.reasonAiCredits",
   admin_adjust: "wal.reasonAdmin",
 };
 
@@ -143,6 +148,8 @@ function WalletContent() {
   const [receiptBusy, setReceiptBusy] = useState(false);
   const [code, setCode] = useState("");
   const [codeBusy, setCodeBusy] = useState(false);
+  const [purchasedCredits, setPurchasedCredits] = useState<number | null>(null);
+  const [busyAiPackId, setBusyAiPackId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const canFetch = isHydrated && !!user;
@@ -151,9 +158,11 @@ function WalletContent() {
     const walletData = await apiFetch<WalletState>("/wallet");
     const ledgerData = await apiFetch<{ ledger: LedgerRow[] }>("/wallet/ledger?limit=30");
     const depositData = await apiFetch<{ deposits: DepositRow[] }>("/wallet/transfer-deposits");
+    const credits = await apiFetch<{ purchasedCredits?: number }>("/ai/credits").catch(() => null);
     setWallet(walletData);
     setLedger(ledgerData.ledger);
     setDeposits(depositData.deposits);
+    setPurchasedCredits(credits?.purchasedCredits ?? null);
   }, []);
 
   useEffect(() => {
@@ -310,6 +319,27 @@ function WalletContent() {
       setNotice({ kind: "error", text: errorMessage(err, t("wal.actionFailed")) });
     } finally {
       setCodeBusy(false);
+    }
+  }
+
+  async function buyAiCredits(pack: AiCreditPack) {
+    setNotice(null);
+    setBusyAiPackId(pack.id);
+    try {
+      const result = await apiFetch<{ credits: number }>("/wallet/ai-credits", {
+        method: "POST",
+        body: JSON.stringify({ packId: pack.id }),
+      });
+      setNotice({ kind: "success", text: t("wal.aiBought", { n: result.credits }) });
+      await load();
+    } catch (err) {
+      const text =
+        err instanceof ApiError && err.code === "INSUFFICIENT_JETONS"
+          ? t("prem.insufficient", { price: pack.priceJetons, balance: wallet?.balance ?? 0 })
+          : errorMessage(err, t("wal.actionFailed"));
+      setNotice({ kind: "error", text });
+    } finally {
+      setBusyAiPackId(null);
     }
   }
 
@@ -610,6 +640,54 @@ function WalletContent() {
                 </Card>
               </div>
             )}
+          </section>
+
+          <section aria-labelledby="wallet-spend">
+            <h2 id="wallet-spend" className="font-display text-h3 font-bold text-text-primary">
+              {t("wal.spendTitle")}
+            </h2>
+            <div className="mt-3 grid grid-cols-1 gap-card-gap sm:grid-cols-2">
+              {[
+                { href: "/subscription", title: t("wal.spendPremium"), desc: t("wal.spendPremiumDesc") },
+                { href: "/resources", title: t("wal.spendResources"), desc: t("wal.spendResourcesDesc") },
+              ].map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="rounded-card border border-border bg-surface-1 p-card-padding transition hover:border-border-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+                >
+                  <p className="text-body font-semibold text-text-primary">{item.title} →</p>
+                  <p className="mt-1 text-meta text-text-secondary">{item.desc}</p>
+                </Link>
+              ))}
+            </div>
+
+            <Card as="section" className="mt-card-gap" data-wallet-ai>
+              <h3 className="text-body font-semibold text-text-primary">{t("wal.aiTitle")}</h3>
+              <p className="mt-1 text-meta text-text-secondary">{t("wal.aiDesc")}</p>
+              {purchasedCredits !== null && (
+                <p className="mt-2 text-meta font-semibold text-text-primary">{t("wal.aiOwned", { n: purchasedCredits })}</p>
+              )}
+              <ul className="mt-3 grid grid-cols-1 gap-card-gap sm:grid-cols-3">
+                {wallet.aiCreditPacks.map((pack) => (
+                  <li
+                    key={pack.id}
+                    className={cx(
+                      "flex flex-col gap-2 rounded-control border p-4",
+                      pack.badge === "recommended" ? "border-accent-primary" : "border-border"
+                    )}
+                  >
+                    <p className="font-display text-h3 font-bold text-text-primary">{t("wal.aiCredits", { n: pack.credits })}</p>
+                    <p className="text-meta text-text-secondary">
+                      {t("wal.priceTag", { n: pack.priceJetons })} · {formatDzd(pack.priceDzd, lang)} DA
+                    </p>
+                    <Button size="sm" disabled={busyAiPackId !== null} onClick={() => void buyAiCredits(pack)}>
+                      {busyAiPackId === pack.id ? t("wal.paying") : t("wal.aiBuy")}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </Card>
           </section>
 
           <Card as="section">

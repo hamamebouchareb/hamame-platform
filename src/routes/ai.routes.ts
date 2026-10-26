@@ -51,6 +51,7 @@ async function getCredits(req: Request, res: Response, next: NextFunction) {
       dailyAllowance: balance.dailyAllowance,
       usedToday: balance.usedToday,
       remainingToday: balance.remainingToday,
+      purchasedCredits: balance.purchasedCredits,
       resetAt: balance.resetAt.toISOString(),
       lowBalance,
       upgrade,

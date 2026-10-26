@@ -37,6 +37,7 @@ export { EnqueueReviewButton } from "@/components/EnqueueReviewButton";
 export { AiExplainPanel } from "@/components/AiExplainPanel";
 export { AskHamameProvider, AskHamameButton, useAskHamame } from "@/components/AskHamame";
 export { AiUpgradePrompt } from "@/components/AiUpgradePrompt";
+export { DailyQuestionsBanner, isDailyLimitError } from "@/components/DailyQuestionsBanner";
 export { VerifyEmailBanner } from "@/components/VerifyEmailBanner";
 export { LanguageToggle } from "@/components/LanguageToggle";
 export { GoogleSignInButton } from "@/components/GoogleSignInButton";

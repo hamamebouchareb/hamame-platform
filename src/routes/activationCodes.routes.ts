@@ -117,12 +117,19 @@ async function redeemActivationCode(req: Request, res: Response, next: NextFunct
       // would leave the user on the wrong plan with Premium never granted.
       let subscriptionResult;
       if (activeSubscription) {
-        const base = activeSubscription.currentPeriodEnd > now ? activeSubscription.currentPeriodEnd : now;
+        // A free-plan row's currentPeriodEnd is ~100 years out; only a running
+        // Premium period is extended from.
+        const base =
+          activeSubscription.planId === premiumPlan.id && activeSubscription.currentPeriodEnd > now
+            ? activeSubscription.currentPeriodEnd
+            : now;
         subscriptionResult = await tx.subscription.update({
           where: { id: activeSubscription.id },
           data: {
             ...(activeSubscription.planId !== premiumPlan.id ? { planId: premiumPlan.id } : {}),
             currentPeriodEnd: addDays(base, ACTIVATION_GRANT_DAYS),
+            facultyId: activationCode.facultyId,
+            yearId: activationCode.yearId,
           },
           include: { plan: true },
         });
@@ -135,6 +142,8 @@ async function redeemActivationCode(req: Request, res: Response, next: NextFunct
             startedAt: now,
             currentPeriodEnd: addDays(now, ACTIVATION_GRANT_DAYS),
             autoRenew: true,
+            facultyId: activationCode.facultyId,
+            yearId: activationCode.yearId,
           },
           include: { plan: true },
         });

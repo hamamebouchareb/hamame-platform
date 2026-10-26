@@ -1,0 +1,206 @@
+﻿
+=== 2026-10-26 premium-with-jetons: PRE-MIGRATION SNAPSHOT (plans rows, verbatim) ===
+[{"id":"00000000-0000-0000-0000-000000000100","name":"free","priceDzd":"0","billingPeriod":null,"features":{"aiCredits":{"dailyAllowance":5,"monthlyAllowance":150},"description":"Full question bank access, practice/exam modes, basic stats"},"isActive":true},{"id":"00000000-0000-0000-0000-000000000110","name":"premium","priceDzd":"1500","billingPeriod":"monthly","features":{"aiCredits":{"dailyAllowance":30,"monthlyAllowance":900},"description":"Full official courses, unlimited mock exams, priority support"},"isActive":true}]
+subscriptions by status: [{"_count":6,"status":"active"},{"_count":4,"status":"expired"}]
+redeemed activation codes linked to a payment: 2
+
+=== migrate deploy ===
+warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+For more information, see: https://pris.ly/prisma-config
+System.Management.Automation.RemoteException
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "postgres", schema "public" at "aws-0-eu-west-1.pooler.supabase.com:5432"
+
+37 migrations found in prisma/migrations
+
+Applying migration `20261026000000_add_premium_jetons`
+
+The following migration(s) have been applied:
+
+migrations/
+  ÔööÔöÇ 20261026000000_add_premium_jetons/
+    ÔööÔöÇ migration.sql
+      
+All migrations have been successfully applied.
+=== migrate status ===
+warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+For more information, see: https://pris.ly/prisma-config
+System.Management.Automation.RemoteException
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "postgres", schema "public" at "aws-0-eu-west-1.pooler.supabase.com:5432"
+
+37 migrations found in prisma/migrations
+
+Database schema is up to date!
+=== generate ===
+Ô£ö Generated Prisma Client (v6.19.3) to .\node_modules\@prisma\client in 1.03s
+
+=== migrate deploy (daily_question_usage) ===
+warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+For more information, see: https://pris.ly/prisma-config
+System.Management.Automation.RemoteException
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "postgres", schema "public" at "aws-0-eu-west-1.pooler.supabase.com:5432"
+
+38 migrations found in prisma/migrations
+
+Applying migration `20261026010000_add_daily_question_usage`
+
+The following migration(s) have been applied:
+
+migrations/
+  ÔööÔöÇ 20261026010000_add_daily_question_usage/
+    ÔööÔöÇ migration.sql
+      
+All migrations have been successfully applied.
+=== migrate status ===
+warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+For more information, see: https://pris.ly/prisma-config
+System.Management.Automation.RemoteException
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "postgres", schema "public" at "aws-0-eu-west-1.pooler.supabase.com:5432"
+
+38 migrations found in prisma/migrations
+
+Database schema is up to date!
+=== generate ===
+Ô£ö Generated Prisma Client (v6.19.3) to .\node_modules\@prisma\client in 796ms
+
+
+================================================================================
+LIVE VERIFICATION — 2026-10-26 (harness: tmp-verify-premium.ts, gitignored)
+================================================================================
+Command (local API on :3000 restarted with connection_limit=5; harness with connection_limit=3,
+because the shared Supabase session pool (15) was exhausted by the API + production):
+  npx tsx tmp-verify-premium.ts *> tmp-verify-premium.out
+
+Run history (disclosed, harness-side problems, not product failures):
+  run 1 — the 3 "session N" checks read `dailyQuestions` at the top level of the response,
+          but POST /api/sessions returns { session: { ..., dailyQuestions } }. The served
+          counts were already correct (9, 9, 2, then 403). It then crashed with
+          EMAXCONNSESSION because the harness opened a second PrismaClient for the
+          in-process simulation builder. Left 3 fixture users behind.
+  run 2 — the leftover sweep removed run 1's fixtures (fresh query: users=0 resources=0),
+          then registration hit the in-memory RATE_LIMITED limiter (429) after 2 users.
+          The API was restarted to reset the limiter.
+  run 3 — below, verbatim. Its leftover sweep removed run 2's 2 users first.
+Fixes between runs: read session.dailyQuestions; share src/lib/prisma's client; add a
+leftover sweep (email prefix verify-premium-…@example.invalid, resource sourceLabel VERIFY-PREMIUM…).
+
+Simulation exemption is exercised in-process (buildSessionForUser with enforceDailyLimit:false,
+the exact flag POST /api/simulations/:id/start passes) rather than through a real simulation,
+so no VERIFY simulation row was ever visible to real students.
+
+Console note: "┬À" below is the middle dot "·" rendered through codepage 850 by PowerShell
+redirection — not a data problem (see AGENTS.md encoding note).
+
+----- raw output (run 3) -----
+=== Premium / jetons / daily limit / AI packs live verification, 2026-10-26T11:56:53.727Z ===
+leftover sweep: 2 user(s) from an earlier crashed run: ["verify-premium-1793015750932-student@example.invalid","verify-premium-1793015750932-buyer@example.invalid"]
+leftover sweep AFTER (fresh queries): users=0 resources=0
+Y1=00000000-0000-0000-0000-000000000020 (faculty b37b039e-2208-4837-b5d5-28b1c338a2cf, 9 approved global questions); Y2=6db1ce70-8e4e-44d3-89d9-57863f833339
+fixtures: 3 users registered via API; admin role granted by direct user_roles INSERT
+subscription row created by registration: null
+OK   GET /wallet/catalog without token -> 200 (got 200)
+OK   premium offers 30d/150 ┬À 180d/750 recommended ┬À 365d/1200 best_value (got [[30,150,1500,null],[180,750,7500,"recommended"],[365,1200,12000,"best_value"]])
+OK   AI packs 20/10 ┬À 60/25 recommended ┬À 150/50 best_value (got [[20,10,null],[60,25,"recommended"],[150,50,"best_value"]])
+OK   free entitlements: premium null, limit 20, used 0, remaining 20 (got {"premium":null,"dailyQuestions":{"limit":20,"usedToday":0,"remaining":20,"resetAt":"2026-10-27T00:00:00.000Z"}})
+OK   session 1: 201, 9 questions, usedToday 9 (got {"status":201,"count":9,"dailyQuestions":{"limit":20,"usedToday":9,"remaining":11,"premiumYearId":null,"limitedBySize":false}})
+OK   session 2: 201, 9 questions, usedToday 18 (got {"status":201,"count":9,"dailyQuestions":{"limit":20,"usedToday":18,"remaining":2,"premiumYearId":null,"limitedBySize":false}})
+OK   session 3: 201, 2 questions, usedToday 20 (got {"status":201,"count":2,"dailyQuestions":{"limit":20,"usedToday":20,"remaining":0,"premiumYearId":null,"limitedBySize":true}})
+OK   4th session at 20/20 -> 403 DAILY_QUESTION_LIMIT {limit 20, usedToday 20} (got {"status":403,"error":{"code":"DAILY_QUESTION_LIMIT","message":"You have used your 20 free questions for today. Upgrade to Premium for unlimited questions in your year.","details":{"limit":20,"usedToday":20,"resetAt":"2026-10-27T00:00:00.000Z"}}})
+OK   SQL daily_question_usage: one row, used 20 (got [["2026-10-26T00:00:00.000Z",20]])
+OK   SQL session_questions served == 20 (got 20)
+OK   simulation builder at 20/20 still builds, dailyQuestions null (got null)
+OK   simulation did not count toward the limit (still 20) (got 20)
+OK   buy Premium with 0 jetons -> 409 INSUFFICIENT_JETONS {balance 0, price 150} (got {"code":"INSUFFICIENT_JETONS","message":"Not enough jetons for this offer.","details":{"balance":0,"price":150}})
+OK   funded student with an admin recharge code: 1000 (got 1000)
+OK   buy monthly for Y1 -> 201, balance 850, ends ~now+30d (got {"status":201,"balance":850,"sub":{"id":"3af2aeac-2217-421d-a258-9f09fa1bfe2a","currentPeriodEnd":"2026-11-25T11:57:14.942Z","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","faculty":"Medicine","yearId":"00000000-0000-0000-0000-000000000020","year":"Year 1"}})
+SQL subscriptions for student: [{"plan":"premium","status":"active","autoRenew":false,"facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020","end":"2026-11-25T11:57:14.942Z","payments":[["jetons","1500","succeeded","premium_offer:7a1e0000-0000-4000-8000-0000000b0030"]]}]
+OK   one subscription row, premium, autoRenew false, scoped to Y1
+OK   payment jetons 1500 DA + ledger premium_purchase -150 refId=payment.id (got [[-150,true]])
+OK   buy monthly again (same year) -> extends +30d from previous end, balance 700 (got {"balance":700,"end":"2026-12-25T11:57:14.942Z"})
+OK   buy for another year while Y1 runs -> 409 PREMIUM_OTHER_YEAR (got {"code":"PREMIUM_OTHER_YEAR","message":"Your current Premium covers another year. Wait until it ends.","details":{"yearId":"00000000-0000-0000-0000-000000000020","currentPeriodEnd":"2026-12-25T11:57:14.942Z"}})
+OK   rejected other-year purchase charged nothing (700)
+OK   premium entitlements: premium.yearId Y1 (got {"planName":"premium","currentPeriodEnd":"2026-12-25T11:57:14.942Z","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","faculty":"Medicine","yearId":"00000000-0000-0000-0000-000000000020","year":"Year 1"})
+OK   Premium year questions bypass the limit: session -> 201 with 9 questions after 20/20 (got {"status":201,"dailyQuestions":{"limit":20,"usedToday":20,"remaining":0,"premiumYearId":"00000000-0000-0000-0000-000000000020","limitedBySize":false}})
+OK   covered-year questions not counted (still 20) (got 20)
+OK   Premium student, Y1 paid resource: includedInPremium, unlocked, fileUrl (got {"inc":true,"locked":false})
+OK   buying an included resource -> 409 INCLUDED_IN_PREMIUM (no charge) (got {"code":"INCLUDED_IN_PREMIUM","message":"This resource is included in your Premium."})
+OK   Premium student, other-year paid resource: locked, fileUrl withheld (got {"inc":false,"locked":true})
+OK   free student, Y1 paid resource: locked (got true)
+OK   list view agrees: Y1 included + unlocked (got {"inc":true})
+OK   free buyer with 0 jetons buys AI pack -> 409 INSUFFICIENT_JETONS (got {"code":"INSUFFICIENT_JETONS","message":"Not enough jetons for this pack.","details":{"balance":0,"price":10}})
+OK   student buys 20 credits for 10 jetons -> 201, balance 690, purchased 20 (got {"credits":20,"balance":690,"purchasedCredits":20})
+OK   GET /ai/credits: premium daily 30, purchased 20 (got {"daily":30,"purchased":20})
+OK   reserve with daily room -> source daily, purchased untouched (20) (got {"reserved":true,"source":"daily","usedToday":1,"dailyAllowance":30,"remainingToday":29,"purchasedCredits":20,"resetAt":"2026-10-27T00:00:00.000Z"})
+OK   daily exhausted (30/30) -> source purchased, purchased 19, usedToday stays 30 (got {"reserved":true,"source":"purchased","usedToday":30,"dailyAllowance":30,"remainingToday":0,"purchasedCredits":19,"resetAt":"2026-10-27T00:00:00.000Z"})
+OK   refund of a purchased reservation restores purchased to 20 (got {"purchased":20,"used":30})
+OK   free buyer, 5/5 used, 0 purchased -> not reserved (got {"reserved":false,"source":null,"usedToday":5,"dailyAllowance":5,"remainingToday":0,"purchasedCredits":0,"resetAt":"2026-10-27T00:00:00.000Z"})
+OK   admin issues activation code -> 201 (got 201)
+OK   redeem on a free-plan row -> ends ~now+30d (not 100 years out), scoped to Y1 (got {"status":200,"end":"2026-11-25T11:57:28.868Z","yearId":"00000000-0000-0000-0000-000000000020"})
+OK   code-redeemed entitlements: premium.yearId Y1 (got {"planName":"premium","currentPeriodEnd":"2026-11-25T11:57:28.868Z","facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","faculty":"Medicine","yearId":"00000000-0000-0000-0000-000000000020","year":"Year 1"})
+OK   student PATCH premium offer -> 403 (got 403)
+OK   admin GET /wallet/admin/offers -> 3 offers, 3 packs (got 200)
+OK   admin PATCH offer (same values) -> 200 (got 200)
+OK   admin PATCH AI pack (same values) -> 200 (got 200)
+OK   plans + offers + AI packs byte-for-byte identical to snapshot
+OK   ledger SUM(delta) == balance for student (got {"sum":690,"balance":690})
+OK   ledger SUM(delta) == balance for buyer (got {"sum":null})
+student ledger (API): [["ai_credits_purchase",-10,690],["premium_purchase",-150,700],["premium_purchase",-150,850],["topup_code",1000,1000]]
+=== cleanup BEFORE === {"users":3,"subscriptions":2,"payments":3,"activationCodes":1,"rechargeCodes":1,"ledger":4,"accounts":1,"dailyUsage":1,"sessions":5,"aiBalances":2,"resources":2,"purchases":0,"notifications":5}
+=== cleanup AFTER (fresh queries, must be zeros) === {"users":0,"subscriptions":0,"payments":0,"activationCodes":0,"rechargeCodes":0,"ledger":0,"accounts":0,"dailyUsage":0,"sessions":0,"aiBalances":0,"resources":0,"purchases":0,"notifications":0}
+RESULT: ALL CHECKS PASSED
+----- end raw output -----
+
+================================================================================
+FINDING — real Premium subscription extended from a 100-year free-plan end (pre-existing bug)
+================================================================================
+Query: subscriptions with current_period_end > 2100 on the premium plan (tmp-probe-years.ts):
+[
+ {
+  "id": "df0aacd2-58e4-4f5a-a929-9c7ca0e3caa8",
+  "user_id": "ccc911ca-f084-48e0-bd91-deed2e605923",
+  "status": "active",
+  "started_at": "2026-10-07T12:25:30.943Z",
+  "current_period_end": "2126-11-06T12:25:30.943Z",
+  "auto_renew": true,
+  "faculty_id": "b37b039e-2208-4837-b5d5-28b1c338a2cf",
+  "year_id": "00000000-0000-0000-0000-000000000020",
+  "plan": "premium",
+  "payments": [
+   {
+    "method": "manual_assisted",
+    "amount": 0,
+    "ref": null,
+    "at": "2026-10-07T12:25:31.319+00:00"
+   },
+   {
+    "method": "manual_assisted",
+    "amount": 0,
+    "ref": null,
+    "at": "2026-10-07T12:25:33.969+00:00"
+   }
+  ],
+  "activation_codes": [
+   {
+    "code_prefix": "AC-",
+    "redeemed_at": "2026-10-07T12:25:33.147+00:00"
+   }
+  ],
+  "promo_redemptions": 0
+ }
+]
+
+Reading: started_at 2026-10-07T12:25:30Z, current_period_end 2126-11-06T12:25:30Z =
+start + 100 years (the free-plan row's end) + 30 days (ACTIVATION_GRANT_DAYS). An activation
+code was redeemed 2.2 s later, so the old code extended from the free row's end instead of from
+now. This user effectively has Premium for ~100 years. The base rule is now fixed in
+activationCodes / promoCodes / points routes (verified above: "redeem on a free-plan row -> ends
+~now+30d"). The existing row was NOT modified — correcting it (e.g. to 2026-11-06T12:25:30Z)
+needs the owner's sign-off. Three other rows end in 2126 but are on the free plan, which is
+the intended "no expiry" convention for free rows.

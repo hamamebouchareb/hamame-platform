@@ -10,6 +10,8 @@ export interface PremiumCardProps {
   planName?: string;
   priceLabel?: string;
   renewsAt?: string;
+  /** Non-renewing access (bought with jetons or a code); shown instead of `renewsAt`. */
+  endsAt?: string;
   /** Visible until `renewsAt`. */
   cancelsAt?: string;
   error?: string | null;
@@ -34,6 +36,7 @@ export function PremiumCard({
   planName,
   priceLabel,
   renewsAt,
+  endsAt,
   cancelsAt,
   error,
   onRetry,
@@ -115,7 +118,11 @@ export function PremiumCard({
         <>
           <p className={cx(titleBase, "mt-2 text-accent-soft")}>{planName ?? t("premium.defaultName")}</p>
           {priceLabel ? <p className="mt-1 text-meta text-text-secondary">{priceLabel}</p> : null}
-          {renewsAt ? <p className="mt-1 text-meta text-text-tertiary">{t("premium.renews", { date: renewsAt })}</p> : null}
+          {endsAt ? (
+            <p className="mt-1 text-meta text-text-tertiary">{t("prem.until", { date: endsAt })}</p>
+          ) : renewsAt ? (
+            <p className="mt-1 text-meta text-text-tertiary">{t("premium.renews", { date: renewsAt })}</p>
+          ) : null}
           {onCancel ? (
             <button
               type="button"

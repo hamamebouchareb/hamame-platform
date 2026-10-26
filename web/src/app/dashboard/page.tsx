@@ -324,7 +324,7 @@ export default function DashboardPage() {
             <article
               className={[
                 "rounded-card border bg-surface-1 p-card-padding shadow-card",
-                credits.data && credits.data.remainingToday === 0
+                credits.data && credits.data.remainingToday === 0 && !credits.data.purchasedCredits
                   ? "border-danger"
                   : credits.data && credits.data.lowBalance
                     ? "border-warning"
@@ -345,7 +345,7 @@ export default function DashboardPage() {
                   </button>
                 </div>
               )}
-              {!credits.isLoading && !credits.error && credits.data && credits.data.remainingToday === 0 && (
+              {!credits.isLoading && !credits.error && credits.data && credits.data.remainingToday === 0 && !credits.data.purchasedCredits && (
                 <div className="mt-2">
                   <p className="font-display text-h3 font-semibold text-danger">{t("dashboard.noCredit")}</p>
                   <p className="mt-1 text-meta text-text-secondary">
@@ -358,14 +358,14 @@ export default function DashboardPage() {
                     })}
                   </p>
                   <Link
-                    href="/subscription"
+                    href="/wallet"
                     className="mt-3 inline-flex min-h-touch-target items-center justify-center rounded-control bg-danger px-3 text-meta font-medium text-background transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
                   >
                     {t("dashboard.recharge")}
                   </Link>
                 </div>
               )}
-              {!credits.isLoading && !credits.error && credits.data && credits.data.remainingToday > 0 && (
+              {!credits.isLoading && !credits.error && credits.data && (credits.data.remainingToday > 0 || !!credits.data.purchasedCredits) && (
                 <div className="mt-2">
                   <p
                     className={[
@@ -377,6 +377,11 @@ export default function DashboardPage() {
                     <span className="ml-1 text-meta font-medium text-text-secondary">
                       {t("dashboard.remaining", { allowance: credits.data.dailyAllowance })}
                     </span>
+                    {credits.data.purchasedCredits ? (
+                      <span className="ml-2 text-meta font-semibold text-success">
+                        {t("aiChat.purchased", { n: credits.data.purchasedCredits })}
+                      </span>
+                    ) : null}
                   </p>
                   {credits.data.lowBalance && (
                     <p className="mt-1 text-meta text-warning">{t("dashboard.lowBalance")}</p>
@@ -453,6 +458,11 @@ export default function DashboardPage() {
               planName={currentSubscription?.plan.name}
               priceLabel={subscriptionPrice}
               renewsAt={currentSubscription ? formatDateShort(currentSubscription.currentPeriodEnd, lang) : undefined}
+              endsAt={
+                currentSubscription && !currentSubscription.autoRenew
+                  ? formatDateShort(currentSubscription.currentPeriodEnd, lang)
+                  : undefined
+              }
               cancelsAt={currentSubscription?.cancelledAt ? formatDateShort(currentSubscription.currentPeriodEnd, lang) : undefined}
               error={subscription.error}
               onRetry={subscription.refetch}

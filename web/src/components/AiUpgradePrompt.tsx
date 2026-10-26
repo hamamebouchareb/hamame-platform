@@ -16,20 +16,22 @@ function capitalize(value: string): string {
 }
 
 /**
- * Upsell shown once the student's daily AI credits are spent. The offer comes
- * from GET /api/ai/credits (`upgrade`), so it follows the admin-edited plans and
- * renders nothing for students already on the top plan — they only see the
- * "resets tomorrow" message their caller already displays.
+ * Shown once the student's AI credits are spent. The plan upgrade comes from
+ * GET /api/ai/credits (`upgrade`), so it follows the admin-edited plans and is
+ * omitted on the top plan; buying extra credits with jetons is always offered.
  */
 export function AiUpgradePrompt({ className }: { className?: string }) {
   const { t } = useLanguage();
+  const [loaded, setLoaded] = useState(false);
   const [upgrade, setUpgrade] = useState<AiCreditUpgrade | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     apiFetch<{ upgrade: AiCreditUpgrade | null }>("/ai/credits")
       .then((data) => {
-        if (!cancelled) setUpgrade(data.upgrade ?? null);
+        if (cancelled) return;
+        setUpgrade(data.upgrade ?? null);
+        setLoaded(true);
       })
       .catch(() => {
         // No offer is better than a broken one; the exhausted message still shows.
@@ -39,18 +41,28 @@ export function AiUpgradePrompt({ className }: { className?: string }) {
     };
   }, []);
 
-  if (!upgrade) return null;
-  const plan = capitalize(upgrade.planName);
+  if (!loaded) return null;
+  const plan = upgrade ? capitalize(upgrade.planName) : null;
 
   return (
     <div className={cx("rounded-card border border-accent-secondary/40 bg-surface-2 p-4 shadow-glow-secondary", className)}>
       <p className="font-display text-body font-semibold text-text-primary">{t("aiUpgrade.title")}</p>
-      <p className="mt-1 text-meta text-text-secondary">
-        {t("aiUpgrade.desc", { plan, count: upgrade.dailyAllowance })}
-      </p>
-      <ButtonLink href="/subscription" accent="secondary" width="full" className="mt-3">
-        {t("aiUpgrade.cta", { plan })}
-      </ButtonLink>
+      {upgrade && plan && (
+        <p className="mt-1 text-meta text-text-secondary">
+          {t("aiUpgrade.desc", { plan, count: upgrade.dailyAllowance })}
+        </p>
+      )}
+      <p className="mt-1 text-meta text-text-secondary">{t("wal.aiDesc")}</p>
+      <div className="mt-3 flex flex-col gap-2">
+        {upgrade && plan && (
+          <ButtonLink href="/subscription" accent="secondary" width="full">
+            {t("aiUpgrade.cta", { plan })}
+          </ButtonLink>
+        )}
+        <ButtonLink href="/wallet" variant="outline" width="full">
+          {t("aiUpgrade.buyCredits")}
+        </ButtonLink>
+      </div>
     </div>
   );
 }
