@@ -204,3 +204,14 @@ activationCodes / promoCodes / points routes (verified above: "redeem on a free-
 ~now+30d"). The existing row was NOT modified — correcting it (e.g. to 2026-11-06T12:25:30Z)
 needs the owner's sign-off. Three other rows end in 2126 but are on the free plan, which is
 the intended "no expiry" convention for free rows.
+
+================================================================================
+CORRECTION — owner approved 2026-10-26: set the 2126 row to 30 days from code redemption
+================================================================================
+Command: npx tsx tmp-fix-2126.ts (gitignored; UPDATE guarded on the exact bad end value)
+BEFORE (full row): {"id":"df0aacd2-58e4-4f5a-a929-9c7ca0e3caa8","userId":"ccc911ca-f084-48e0-bd91-deed2e605923","planId":"00000000-0000-0000-0000-000000000110","status":"active","startedAt":"2026-10-07T12:25:30.943Z","currentPeriodEnd":"2126-11-06T12:25:30.943Z","cancelledAt":null,"autoRenew":true,"facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020"}
+activation code redeemed at 2026-10-07T12:25:33.147Z -> correct end 2026-11-06T12:25:33.147Z
+UPDATE ... WHERE id AND current_period_end = 2126-11-06T12:25:30.943Z -> 1 row(s)
+AFTER (full row, fresh query): {"id":"df0aacd2-58e4-4f5a-a929-9c7ca0e3caa8","userId":"ccc911ca-f084-48e0-bd91-deed2e605923","planId":"00000000-0000-0000-0000-000000000110","status":"active","startedAt":"2026-10-07T12:25:30.943Z","currentPeriodEnd":"2026-11-06T12:25:33.147Z","cancelledAt":null,"autoRenew":true,"facultyId":"b37b039e-2208-4837-b5d5-28b1c338a2cf","yearId":"00000000-0000-0000-0000-000000000020"}
+columns changed: ["currentPeriodEnd"]
+premium subscriptions ending after 2100 (fresh query): 0
