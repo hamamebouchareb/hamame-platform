@@ -168,7 +168,7 @@ export default function DashboardPage() {
 
   const hasAnyActivity =
     (progress.data?.totalCompletedSessions ?? 0) > 0 || (progress.data?.recentActivity.length ?? 0) > 0;
-  const recentItems = (progress.data?.recentActivity ?? []).slice(0, 5);
+  const recentItems = (progress.data?.recentActivity ?? []).slice(0, 3);
   const readinessData = readiness.data && !readiness.data.insufficientData ? readiness.data : null;
   const dueReviewCount = dueReviews.data?.items?.length ?? 0;
 
@@ -296,8 +296,14 @@ export default function DashboardPage() {
 
             {/* 5. Recent activity */}
             <section id="activite" aria-label={t("dashboard.recentActivity")}>
-              <h2 className="mb-3 font-display text-h2 font-semibold text-text-primary">{t("dashboard.recentActivity")}</h2>
+              <div className="mb-3 flex items-end justify-between gap-3">
+                <h2 className="font-display text-h2 font-semibold text-text-primary">{t("dashboard.recentActivity")}</h2>
+                <Link href="/historique" className="text-meta font-medium text-accent-soft hover:text-text-primary">
+                  {t("dashboard.seeHistory")}
+                </Link>
+              </div>
               <WeeklyActivity
+                compact
                 items={recentItems.map((item, index) => {
                   const { title, subtitle, href } = formatActivity(item, t);
                   return {

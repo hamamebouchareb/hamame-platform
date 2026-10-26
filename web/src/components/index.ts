@@ -1,4 +1,7 @@
 export { AppHeader } from "@/components/AppHeader";
+export { BrandMark, BrandLockup } from "@/components/BrandMark";
+export { Icon } from "@/components/Icon";
+export { UserAvatar } from "@/components/UserAvatar";
 export { Breadcrumb, curriculumTrail, type BreadcrumbItem } from "@/components/Breadcrumb";
 export { PageShell, type PageWidth } from "@/components/PageShell";
 export { Card } from "@/components/Card";

@@ -23,6 +23,8 @@ export interface WeeklyActivityProps {
   emptyDescription?: string;
   emptyAction?: EmptyStateAction;
   className?: string;
+  /** One line per item, so a dashboard list does not stretch the page. */
+  compact?: boolean;
 }
 
 /** Recent-activity list with loading skeletons, an error+retry state, and a CTA empty state. */
@@ -35,6 +37,7 @@ export function WeeklyActivity({
   emptyDescription,
   emptyAction,
   className,
+  compact,
 }: WeeklyActivityProps) {
   const { t } = useLanguage();
   if (loading) {
@@ -77,11 +80,17 @@ export function WeeklyActivity({
         <li key={item.key}>
           <Link
             href={item.href}
-            className="block min-h-touch-target rounded-card border border-border bg-surface-1 p-card-padding transition hover:border-border-strong hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
+            className={cx(
+              "block min-h-touch-target rounded-card border border-border bg-surface-1 transition hover:border-border-strong hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2",
+              compact ? "px-3 py-2" : "p-card-padding"
+            )}
           >
-            <p className="text-body font-medium text-text-primary">{item.title}</p>
-            {item.subtitle ? <p className="mt-0.5 text-meta text-text-secondary">{item.subtitle}</p> : null}
-            {item.timestamp ? <p className="mt-0.5 text-meta text-text-tertiary">{item.timestamp}</p> : null}
+            <p className="flex items-baseline justify-between gap-3">
+              <span className="min-w-0 truncate text-body font-medium text-text-primary">{item.title}</span>
+              {item.timestamp ? <span className="shrink-0 text-caption text-text-tertiary">{item.timestamp}</span> : null}
+            </p>
+            {item.subtitle && !compact ? <p className="mt-0.5 text-meta text-text-secondary">{item.subtitle}</p> : null}
+            {item.subtitle && compact ? <p className="truncate text-caption text-text-secondary">{item.subtitle}</p> : null}
           </Link>
         </li>
       ))}

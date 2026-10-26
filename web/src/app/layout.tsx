@@ -48,7 +48,7 @@ export default function RootLayout({
           dark) so returners never flash the wrong theme. No secrets here. */}
       <script
         dangerouslySetInnerHTML={{
-          __html: `(function(){try{var t=localStorage.getItem("hamame_theme");var r=t==="light"?"light":t==="system"&&matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";document.documentElement.dataset.theme=r;}catch(e){}})();`,
+          __html: `(function(){try{var t=localStorage.getItem("hamame_theme");var r=t==="light"?"light":t==="system"&&matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";document.documentElement.dataset.theme=r;var s=localStorage.getItem("hamame_sidebar");document.documentElement.dataset.sidebar=s==="collapsed"?"collapsed":"open";}catch(e){}})();`,
         }}
       />
       <body className="flex min-h-full flex-col font-sans">

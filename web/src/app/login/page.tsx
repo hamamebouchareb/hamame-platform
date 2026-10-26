@@ -7,7 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { localeFor, type UiLanguage } from "@/lib/i18n";
 import { ApiError } from "@/lib/api";
-import { GoogleSignInButton, LanguageToggle } from "@/components";
+import { BrandLockup, GoogleSignInButton, LanguageToggle } from "@/components";
 
 function suspensionText(
   t: (key: "auth.suspended" | "auth.suspendedUntil", vars?: Record<string, string>) => string,
@@ -91,6 +91,7 @@ export default function LoginPage() {
         <LanguageToggle />
       </div>
       <div className="w-full max-w-sm">
+        <BrandLockup href="/login" size={40} className="mb-6 justify-center" />
         <h1 className="mb-6 text-center font-display text-h2 font-bold text-text-primary">
           {t("auth.loginTitle")}
         </h1>

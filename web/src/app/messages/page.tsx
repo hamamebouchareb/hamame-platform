@@ -7,7 +7,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { localeFor, type UiLanguage } from "@/lib/i18n";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { apiFetch, ApiError } from "@/lib/api";
-import { AppHeader, EmptyState, Footer, LoadingSkeleton } from "@/components";
+import { AppHeader, EmptyState, Footer, LoadingSkeleton, UserAvatar } from "@/components";
 import { cx } from "@/lib/cx";
 
 interface ConversationSummary {
@@ -82,6 +82,7 @@ export default function MessagesPage() {
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const selectedIdRef = useRef<string | null>(null);
+  const queryOpened = useRef(false);
   useEffect(() => {
     selectedIdRef.current = selectedId;
   }, [selectedId]);
@@ -159,6 +160,16 @@ export default function MessagesPage() {
       cancelled = true;
     };
   }, [isHydrated, user, loadConversations, loadFriends, loadInvites, t]);
+
+  useEffect(() => {
+    if (queryOpened.current || conversations.length === 0) return;
+    const id = new URLSearchParams(window.location.search).get("c");
+    if (!id || !conversations.some((c) => c.id === id)) return;
+    queryOpened.current = true;
+    selectConversation(id);
+    // selectConversation is stable enough for this one-shot open from ?c=
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversations]);
 
   // Polling loop (no realtime transport in this stack — zero-new-dependency
   // precedent). Refreshes the conversation list, the open thread (cursor-based)
@@ -404,50 +415,73 @@ export default function MessagesPage() {
             />
           </div>
         ) : (
-          <div className="mt-4 grid gap-card-gap md:grid-cols-[280px_1fr]">
-            <ul className="flex flex-col gap-2" aria-label={t("dms.title")}>
-              {conversations.map((conversation) => (
+          <div className="mt-4 grid overflow-hidden rounded-card-lg border border-border bg-surface-1 shadow-card md:grid-cols-[minmax(16rem,20rem)_1fr]">
+            <ul className="flex max-h-[70vh] flex-col overflow-y-auto border-b border-border md:border-b-0 md:border-r" aria-label={t("dms.title")}>
+              {conversations.map((conversation) => {
+                const unread = conversation.unreadCount > 0;
+                return (
                 <li key={conversation.id}>
                   <button
                     type="button"
                     onClick={() => selectConversation(conversation.id)}
                     aria-current={selectedId === conversation.id ? "true" : undefined}
                     className={cx(
-                      "block w-full rounded-card border p-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+                      "flex w-full items-center gap-3 px-3 py-2.5 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
                       selectedId === conversation.id
-                        ? "border-accent-primary bg-surface-2"
-                        : "border-border bg-surface-1 hover:bg-surface-2"
+                        ? "bg-surface-3"
+                        : "hover:bg-surface-2"
                     )}
                   >
-                    <span className="flex items-center justify-between gap-2">
-                      <span className="min-w-0 truncate text-body font-semibold text-text-primary">
-                        {conversation.otherUser.fullName ?? "—"}
-                      </span>
-                      {conversation.unreadCount > 0 ? (
-                        <span className="shrink-0 rounded-pill bg-accent-primary px-2 py-0.5 text-[10px] font-bold text-on-accent tabular-nums">
-                          {conversation.unreadCount > 99 ? "99+" : conversation.unreadCount}
-                        </span>
+                    <span className="relative shrink-0">
+                      <UserAvatar name={conversation.otherUser.fullName} seed={conversation.otherUser.id} size={44} />
+                      {unread ? (
+                        <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-pill bg-accent-primary ring-2 ring-surface-1" />
                       ) : null}
                     </span>
-                    <span className="mt-0.5 block truncate text-[12px] text-text-secondary">
-                      {conversation.lastMessage
-                        ? conversation.lastMessage.fromMe
-                          ? t("dms.fromMe", { message: conversation.lastMessage.body })
-                          : conversation.lastMessage.body
-                        : ""}
+                    <span className="min-w-0 flex-1">
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className={cx("min-w-0 flex-1 truncate text-body", unread ? "font-bold text-text-primary" : "font-semibold text-text-primary")}>
+                          {conversation.otherUser.fullName ?? "—"}
+                        </span>
+                        {conversation.lastMessage ? (
+                          <span className="shrink-0 text-caption text-text-tertiary">
+                            {formatWhen(conversation.lastMessage.createdAt, lang)}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className={cx("mt-0.5 block truncate text-[12px]", unread ? "text-text-primary" : "text-text-secondary")}>
+                        {conversation.lastMessage
+                          ? conversation.lastMessage.fromMe
+                            ? t("dms.fromMe", { message: conversation.lastMessage.body })
+                            : conversation.lastMessage.body
+                          : ""}
+                      </span>
                     </span>
+                    {unread ? (
+                      <span className="shrink-0 rounded-pill bg-accent-primary px-2 py-0.5 text-[10px] font-bold text-on-accent tabular-nums">
+                        {conversation.unreadCount > 99 ? "99+" : conversation.unreadCount}
+                      </span>
+                    ) : null}
                   </button>
                 </li>
-              ))}
+                );
+              })}
             </ul>
 
-            <div className="rounded-card border border-border bg-surface-1">
+            <div className="min-h-[28rem] bg-surface-1">
               {selectedConversation ? (
                 <div className="flex h-full flex-col">
                   <div className="flex items-center justify-between gap-2 border-b border-border p-card-padding">
-                    <p className="min-w-0 truncate text-body font-semibold text-text-primary">
-                      {selectedConversation.otherUser.fullName ?? "—"}
-                    </p>
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <UserAvatar
+                        name={selectedConversation.otherUser.fullName}
+                        seed={selectedConversation.otherUser.id}
+                        size={40}
+                      />
+                      <p className="min-w-0 truncate text-body font-semibold text-text-primary">
+                        {selectedConversation.otherUser.fullName ?? "—"}
+                      </p>
+                    </div>
                     <button
                       type="button"
                       onClick={() => void inviteToStudy(selectedConversation.id)}
@@ -468,8 +502,10 @@ export default function MessagesPage() {
                             <li key={message.id} className={cx("flex", fromMe ? "justify-end" : "justify-start")}>
                               <div
                                 className={cx(
-                                  "max-w-[75%] rounded-card px-3 py-2 text-body",
-                                  fromMe ? "bg-accent-primary text-on-accent" : "bg-surface-2 text-text-primary"
+                                  "max-w-[75%] px-3 py-2 text-body",
+                                  fromMe
+                                    ? "rounded-2xl rounded-br-sm bg-accent-primary text-on-accent"
+                                    : "rounded-2xl rounded-bl-sm bg-surface-2 text-text-primary"
                                 )}
                               >
                                 <p className="whitespace-pre-wrap break-words">{message.body}</p>
@@ -501,7 +537,7 @@ export default function MessagesPage() {
                       onChange={(event) => setDraft(event.target.value)}
                       placeholder={t("dms.placeholder")}
                       maxLength={2000}
-                      className="min-h-touch-target w-full rounded-control border border-border bg-surface-1 px-3 text-body text-text-primary placeholder:text-text-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+                      className="min-h-touch-target w-full rounded-pill border border-border bg-surface-2 px-4 text-body text-text-primary placeholder:text-text-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
                     />
                     <button
                       type="submit"

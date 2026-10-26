@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { ApiError } from "@/lib/api";
-import { GoogleSignInButton, LanguageToggle } from "@/components";
+import { BrandLockup, GoogleSignInButton, LanguageToggle } from "@/components";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -40,6 +40,7 @@ export default function RegisterPage() {
         <LanguageToggle />
       </div>
       <div className="w-full max-w-sm">
+        <BrandLockup href="/login" size={40} className="mb-6 justify-center" />
         <h1 className="mb-6 text-center font-display text-h2 font-bold text-text-primary">
           {t("auth.registerTitle")}
         </h1>

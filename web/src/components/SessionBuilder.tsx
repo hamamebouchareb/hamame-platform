@@ -8,6 +8,7 @@ import { useApiResource } from "@/lib/useApiResource";
 import { Button } from "@/components/Button";
 import { ErrorState } from "@/components/ErrorState";
 import { Input, Select } from "@/components/Field";
+import { Icon } from "@/components/Icon";
 import type {
   CurriculumModule,
   Faculty,
@@ -459,19 +460,45 @@ export function SessionBuilder({
           the builder (no separate screen/step). */}
       <fieldset>
         <legend className="mb-2 text-meta font-medium text-text-secondary">{t("builder.modeDisplay")}</legend>
-        <div className="flex flex-col gap-2">
-          <SwitchRow
-            id="builder-exam-mode"
-            label={t("builder.examMode")}
-            description={
-              mode === "exam"
-                ? t("builder.examModeOn")
-                : t("builder.examModeOff")
-            }
-            checked={mode === "exam"}
-            onChange={(checked) => setMode(checked ? "exam" : "practice")}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setMode("practice")}
             disabled={isStarting}
-          />
+            aria-pressed={mode === "practice"}
+            className={cx(
+              "flex min-h-touch-target flex-col items-start gap-1 rounded-control border px-3 py-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50",
+              mode === "practice"
+                ? "border-accent-qcm bg-accent-qcm/15 text-text-primary"
+                : "border-border bg-surface-2 text-text-secondary hover:bg-surface-3"
+            )}
+          >
+            <span className="inline-flex items-center gap-2 text-body font-semibold">
+              <Icon name="qcm" size={18} />
+              {t("qcm.practiceTitle")}
+            </span>
+            <span className="text-caption">{t("builder.examModeOff")}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("exam")}
+            disabled={isStarting}
+            aria-pressed={mode === "exam"}
+            className={cx(
+              "flex min-h-touch-target flex-col items-start gap-1 rounded-control border px-3 py-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50",
+              mode === "exam"
+                ? "border-accent-secondary bg-accent-secondary/15 text-text-primary"
+                : "border-border bg-surface-2 text-text-secondary hover:bg-surface-3"
+            )}
+          >
+            <span className="inline-flex items-center gap-2 text-body font-semibold">
+              <Icon name="simulations" size={18} />
+              {t("builder.nameExam")}
+            </span>
+            <span className="text-caption">{t("builder.examModeOn")}</span>
+          </button>
+        </div>
+        <div className="mt-2 flex flex-col gap-2">
           <SwitchRow
             id="builder-show-stats"
             label={t("builder.showStats")}

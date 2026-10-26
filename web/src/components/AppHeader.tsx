@@ -10,7 +10,11 @@ import { useTheme, type ThemeChoice } from "@/context/ThemeContext";
 import { UserMenu } from "@/components/UserMenu";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { AskHamameButton } from "@/components/AskHamame";
-import { ACCOUNT_NAV, PRIMARY_NAV, SECONDARY_NAV, adminNavForRoles, isNavActive, type NavKeyEntry } from "@/lib/nav";
+import { BrandLockup } from "@/components/BrandMark";
+import { AppSearch } from "@/components/AppSearch";
+import { MessengerDock } from "@/components/MessengerDock";
+import { Icon } from "@/components/Icon";
+import { ACCOUNT_NAV, NAV_GROUPS, PRIMARY_NAV, adminNavForRoles, isNavActive, type NavKeyEntry } from "@/lib/nav";
 import { Sidebar } from "@/components/layout/Sidebar";
 
 export interface AppHeaderNavItem {
@@ -74,6 +78,7 @@ export function AppHeader({
   const { t } = useLanguage();
   const { theme, setTheme } = useTheme();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [mobileSearch, setMobileSearch] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
@@ -82,19 +87,9 @@ export function AppHeader({
   const resolvedNav: AppHeaderNavItem[] = nav.map((item) =>
     "labelKey" in item ? { href: item.href, label: t(item.labelKey) } : item
   );
-  // Secondary destinations ride the mobile drawer (phones have no sidebar),
-  // resolved with the same dictionary mechanism as the primary nav.
-  const resolvedSecondaryNav: AppHeaderNavItem[] = SECONDARY_NAV.map((item) =>
-    "labelKey" in item ? { href: item.href, label: t(item.labelKey) } : item
-  );
-  // Admin destinations: visible only to role holders (support_agent sees
-  // /admin/codes only, admin family sees all, everyone else sees none).
-  // Server-side role checks stay the source of truth — this is UX only.
+  // Admin destinations: visible only to role holders. Server-side role checks
+  // stay the source of truth — this is UX only.
   const visibleAdminNav = adminNavForRoles(user.roles);
-  const resolvedAdminNav: AppHeaderNavItem[] = visibleAdminNav.map((item) => ({
-    href: item.href,
-    label: t(item.labelKey),
-  }));
   const resolvedMenuLinks: { href: string; label: string }[] = menuLinks.map((link) =>
     "labelKey" in link ? { href: link.href, label: t(link.labelKey) } : link
   );
@@ -144,64 +139,9 @@ export function AppHeader({
   return (
     <>
     <header className="sticky top-0 z-20 border-b border-border bg-surface-1/95 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center gap-3 px-card-padding py-3">
-        <Link
-          href={brandHref}
-          className="inline-flex min-h-touch-target shrink-0 items-center gap-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
-        >
-          <span className="flex h-7 w-7 items-center justify-center rounded-pill bg-accent-primary font-display text-caption font-bold text-on-accent" aria-hidden>
-            H
-          </span>
-          <span className="font-display text-h3 font-bold tracking-tight text-text-primary">Hamame</span>
-        </Link>
+      <div className="flex w-full items-center gap-2 px-card-padding py-2.5 lg:gap-3">
+        <BrandLockup href={brandHref} size={28} className="lg:hidden" />
 
-        {resolvedNav.length > 0 ? (
-          <nav aria-label={t("nav.mainAria")} className="hidden min-w-0 flex-1 gap-1 overflow-x-auto md:flex lg:hidden">
-            {resolvedNav.map((item) => {
-              const active = isNavActive(pathname, item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-current={active ? "page" : undefined}
-                  className={cx(
-                    "inline-flex min-h-touch-target shrink-0 items-center rounded-pill px-4 text-body font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
-                    active
-                      ? "bg-surface-3 text-accent-soft"
-                      : "text-text-secondary hover:bg-surface-2 hover:text-text-primary active:bg-surface-2"
-                  )}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-            {/* Mid-size screens have no sidebar (lg+) and no drawer (<md),
-                so admin entries ride this row too — same links, same style. */}
-            {resolvedAdminNav.map((item) => {
-              const active = isNavActive(pathname, item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-current={active ? "page" : undefined}
-                  className={cx(
-                    "inline-flex min-h-touch-target shrink-0 items-center rounded-pill px-4 text-body font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
-                    active
-                      ? "bg-surface-3 text-accent-soft"
-                      : "text-text-secondary hover:bg-surface-2 hover:text-text-primary active:bg-surface-2"
-                  )}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-        ) : (
-          <div className="min-w-0 flex-1" />
-        )}
-        <div className="hidden min-w-0 flex-1 lg:block" aria-hidden />
-
-        {/* Hamburger — visible only on mobile */}
         {resolvedNav.length > 0 ? (
           <button
             ref={triggerRef}
@@ -210,27 +150,42 @@ export function AppHeader({
             aria-expanded={drawerOpen}
             aria-controls="mobile-nav-drawer"
             onClick={() => setDrawerOpen((prev) => !prev)}
-            className="inline-flex min-h-touch-target min-w-touch-target items-center justify-center rounded-pill text-text-secondary transition hover:bg-surface-2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring md:hidden"
+            className="inline-flex min-h-touch-target min-w-touch-target items-center justify-center rounded-pill text-text-secondary transition hover:bg-surface-2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring lg:hidden"
           >
-            {drawerOpen ? (
-              <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                <path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                <path d="M3 5h14M3 10h14M3 15h14" strokeLinecap="round" />
-              </svg>
-            )}
+            {drawerOpen ? <Icon name="close" size={20} /> : <Icon name="panelLeft" size={20} />}
           </button>
         ) : null}
 
-        <div className="flex shrink-0 items-center gap-1">
+        {resolvedNav.length > 0 ? (
+          <AppSearch roles={user.roles} className="hidden min-w-0 flex-1 md:block" />
+        ) : (
+          <div className="min-w-0 flex-1" />
+        )}
+
+        <div className="flex shrink-0 items-center gap-0.5">
+          {resolvedNav.length > 0 ? (
+            <button
+              type="button"
+              className="inline-flex min-h-touch-target min-w-touch-target items-center justify-center rounded-pill text-text-secondary transition hover:bg-surface-2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring md:hidden"
+              aria-label={t("nav.searchOpen")}
+              aria-expanded={mobileSearch}
+              onClick={() => setMobileSearch((v) => !v)}
+            >
+              <Icon name="search" size={20} />
+            </button>
+          ) : null}
           <AskHamameButton />
+          {resolvedNav.length > 0 ? <MessengerDock userId={user.id} /> : null}
           <ThemeCycleButton theme={theme} onCycle={setTheme} />
           <NotificationsBell />
           <UserMenu user={user} onLogout={onLogout} links={resolvedMenuLinks} />
         </div>
       </div>
+      {mobileSearch && resolvedNav.length > 0 ? (
+        <div className="border-t border-border px-card-padding py-2 md:hidden">
+          <AppSearch roles={user.roles} />
+        </div>
+      ) : null}
 
       {/* Mobile nav drawer */}
       {resolvedNav.length > 0 ? (
@@ -240,12 +195,12 @@ export function AppHeader({
           role="navigation"
           aria-label={t("nav.mobileAria")}
           className={cx(
-            "border-t border-border bg-surface-1 px-card-padding md:hidden",
+            "border-t border-border bg-surface-1 px-card-padding lg:hidden",
             drawerOpen ? "block pb-4" : "hidden"
           )}
         >
           <nav className="flex flex-col gap-1 pt-2">
-            {resolvedNav.map((item) => {
+            {PRIMARY_NAV.map((item) => {
               const active = isNavActive(pathname, item.href);
               return (
                 <Link
@@ -254,40 +209,23 @@ export function AppHeader({
                   aria-current={active ? "page" : undefined}
                   onClick={() => setDrawerOpen(false)}
                   className={cx(
-                    "inline-flex min-h-touch-target items-center rounded-control px-4 text-body font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+                    "inline-flex min-h-touch-target items-center gap-3 rounded-control px-3 text-body font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
                     active
                       ? "bg-surface-3 text-accent-soft"
                       : "text-text-secondary hover:bg-surface-2 hover:text-text-primary active:bg-surface-2"
                   )}
                 >
-                  {item.label}
+                  {item.icon ? <Icon name={item.icon} size={18} /> : null}
+                  {t(item.labelKey)}
                 </Link>
               );
             })}
-            <div className="mx-4 my-2 border-t border-border" aria-hidden />
-            {resolvedSecondaryNav.map((item) => {
-              const active = isNavActive(pathname, item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-current={active ? "page" : undefined}
-                  onClick={() => setDrawerOpen(false)}
-                  className={cx(
-                    "inline-flex min-h-touch-target items-center rounded-control px-4 text-meta font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
-                    active
-                      ? "bg-surface-3 text-accent-soft"
-                      : "text-text-secondary hover:bg-surface-2 hover:text-text-primary active:bg-surface-2"
-                  )}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-            {resolvedAdminNav.length > 0 ? (
-              <>
-                <div className="mx-4 my-2 border-t border-border" aria-hidden />
-                {resolvedAdminNav.map((item) => {
+            {NAV_GROUPS.map((group) => (
+              <div key={group.id}>
+                <p className="px-3 pb-1 pt-3 text-caption font-medium uppercase tracking-wide text-text-tertiary">
+                  {t(group.labelKey)}
+                </p>
+                {group.items.map((item) => {
                   const active = isNavActive(pathname, item.href);
                   return (
                     <Link
@@ -296,17 +234,45 @@ export function AppHeader({
                       aria-current={active ? "page" : undefined}
                       onClick={() => setDrawerOpen(false)}
                       className={cx(
-                        "inline-flex min-h-touch-target items-center rounded-control px-4 text-meta font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+                        "inline-flex min-h-touch-target w-full items-center gap-3 rounded-control px-3 text-meta font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
                         active
                           ? "bg-surface-3 text-accent-soft"
                           : "text-text-secondary hover:bg-surface-2 hover:text-text-primary active:bg-surface-2"
                       )}
                     >
-                      {item.label}
+                      {item.icon ? <Icon name={item.icon} size={18} /> : null}
+                      {t(item.labelKey)}
                     </Link>
                   );
                 })}
-              </>
+              </div>
+            ))}
+            {visibleAdminNav.length > 0 ? (
+              <div>
+                <p className="px-3 pb-1 pt-3 text-caption font-medium uppercase tracking-wide text-text-tertiary">
+                  {t("admin.section")}
+                </p>
+                {visibleAdminNav.map((item) => {
+                  const active = isNavActive(pathname, item.href);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      aria-current={active ? "page" : undefined}
+                      onClick={() => setDrawerOpen(false)}
+                      className={cx(
+                        "inline-flex min-h-touch-target w-full items-center gap-3 rounded-control px-3 text-meta font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+                        active
+                          ? "bg-surface-3 text-accent-soft"
+                          : "text-text-secondary hover:bg-surface-2 hover:text-text-primary active:bg-surface-2"
+                      )}
+                    >
+                      {item.icon ? <Icon name={item.icon} size={18} /> : null}
+                      {t(item.labelKey)}
+                    </Link>
+                  );
+                })}
+              </div>
             ) : null}
           </nav>
         </div>
@@ -320,7 +286,7 @@ export function AppHeader({
       <div
         aria-hidden
         onClick={() => setDrawerOpen(false)}
-        className="fixed inset-0 z-10 bg-overlay md:hidden"
+        className="fixed inset-0 z-10 bg-overlay lg:hidden"
       />
     ) : null}
 
@@ -334,7 +300,7 @@ export function AppHeader({
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <div className="grid grid-cols-5">
-          {resolvedNav.map((item) => {
+          {PRIMARY_NAV.map((item) => {
             const active = isNavActive(pathname, item.href);
             return (
               <Link
@@ -342,11 +308,12 @@ export function AppHeader({
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cx(
-                  "flex min-h-14 flex-col items-center justify-center px-1 text-center text-caption font-medium leading-tight focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+                  "flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 text-center text-caption font-medium leading-tight focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
                   active ? "text-accent-soft" : "text-text-secondary"
                 )}
               >
-                <span className="line-clamp-2">{item.label}</span>
+                {item.icon ? <Icon name={item.icon} size={18} /> : null}
+                <span className="line-clamp-1">{t(item.labelKey)}</span>
               </Link>
             );
           })}

@@ -8,9 +8,10 @@ import { useLanguage } from "@/context/LanguageContext";
 import { localeFor, type UiLanguage } from "@/lib/i18n";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { useApiResource } from "@/lib/useApiResource";
-import { AppHeader, ButtonLink, Card, ErrorState, Footer, LoadingSkeleton } from "@/components";
+import { PageShell, ButtonLink, Card, ErrorState, LoadingSkeleton, Icon } from "@/components";
 import { accentText, accentVar, type AccentTone } from "@/components/FeatureCard";
 import { cx } from "@/lib/cx";
+import type { IconName } from "@/components/Icon";
 import type { SessionHistoryEntry } from "@/lib/types";
 
 interface HistoryResponse {
@@ -37,20 +38,28 @@ interface DecisionCardProps {
   points: string[];
   cta: string;
   tone: AccentTone;
+  icon: IconName;
 }
 
-function DecisionCard({ href, title, description, points, cta, tone }: DecisionCardProps) {
+function DecisionCard({ href, title, description, points, cta, tone, icon }: DecisionCardProps) {
   const { t } = useLanguage();
   return (
     <Link
       href={href}
-      className="group flex flex-col gap-4 rounded-card-lg border border-border bg-surface-1 p-card-padding shadow-card transition hover:border-border-strong hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
+      className="group flex flex-col gap-4 rounded-card-lg border border-border bg-surface-1 p-card-padding shadow-card transition hover:border-border-strong hover:bg-surface-2 hover:shadow-glow-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
       style={{ borderTop: `3px solid ${accentVar(tone)}` }}
     >
       <div className="flex items-start justify-between gap-3">
-        <h2 className={cxFont(tone)}>{title}</h2>
+        <span
+          className="inline-flex h-11 w-11 items-center justify-center rounded-control text-on-accent"
+          style={{ background: accentVar(tone) }}
+          aria-hidden
+        >
+          <Icon name={icon} size={22} />
+        </span>
         <span className={cxBadge(tone)}>{t("qcm.freeBadge")}</span>
       </div>
+      <h2 className={cxFont(tone)}>{title}</h2>
       <p className="text-body text-text-secondary">{description}</p>
       <ul className="flex flex-col gap-1.5">
         {points.map((point) => (
@@ -117,7 +126,7 @@ function RecentSessions({ canFetch }: { canFetch: boolean }) {
   const isEmpty = !isLoading && !error && (data?.sessions.length ?? 0) === 0;
 
   return (
-    <section aria-label={t("qcm.recentTitle")} className="mx-auto mt-section-gap max-w-4xl">
+    <section aria-label={t("qcm.recentTitle")} className="mt-section-gap">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h2 className="font-display text-h3 font-semibold text-text-primary">{t("qcm.recentTitle")}</h2>
@@ -157,26 +166,35 @@ function RecentSessions({ canFetch }: { canFetch: boolean }) {
               const completed = session.completedAt !== null;
               return (
                 <Card as="li" key={session.id}>
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <p className="text-body font-semibold text-text-primary">{session.name}</p>
-                    <p className="text-meta text-text-tertiary">
-                      {session.mode === "exam" ? t("builder.nameExam") : t("builder.namePractice")} · {formatDate(session.startedAt, lang)}
-                    </p>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-body font-semibold text-text-primary">{session.name}</p>
+                      <p className="mt-0.5 text-meta text-text-tertiary">
+                        {session.mode === "exam" ? t("builder.nameExam") : t("builder.namePractice")} · {formatDate(session.startedAt, lang)}
+                      </p>
+                      <p className="mt-1 text-meta text-text-secondary">
+                        {t("history.answered", { a: session.stats.answered, t: session.stats.total })}
+                        {" · "}
+                        {t("history.accuracy", { v: accuracy(session.stats.answered, session.stats.correct) })}
+                        {completed && session.score !== null ? ` · ${t("history.score", { v: Math.round(session.score) })}` : null}
+                        {completed ? ` · ${t("history.done")}` : ` · ${t("dashboard.inProgress")}`}
+                      </p>
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-pill bg-surface-3" aria-hidden>
+                        <div
+                          className="h-full rounded-pill bg-accent-qcm"
+                          style={{
+                            width: `${session.stats.total === 0 ? 0 : Math.round((session.stats.answered / session.stats.total) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <ButtonLink
+                      href={completed ? `/sessions/${session.id}/results` : `/sessions/${session.id}`}
+                      variant="outline"
+                    >
+                      {completed ? t("history.review") : t("history.continue")}
+                    </ButtonLink>
                   </div>
-                  <p className="mt-1 text-meta text-text-secondary">
-                    {t("history.answered", { a: session.stats.answered, t: session.stats.total })}
-                    {" · "}
-                    {t("history.accuracy", { v: accuracy(session.stats.answered, session.stats.correct) })}
-                    {completed && session.score !== null ? ` · ${t("history.score", { v: Math.round(session.score) })}` : null}
-                    {completed ? ` · ${t("history.done")}` : ` · ${t("dashboard.inProgress")}`}
-                  </p>
-                  <ButtonLink
-                    href={completed ? `/sessions/${session.id}/results` : `/sessions/${session.id}`}
-                    variant="outline"
-                    className="mt-3"
-                  >
-                    {completed ? t("history.review") : t("history.continue")}
-                  </ButtonLink>
                 </Card>
               );
             })}
@@ -198,64 +216,41 @@ export default function QcmPage() {
     router.push("/login");
   }
 
-  if (!isHydrated || !user) {
-    return (
-      <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
-      </main>
-    );
-  }
-
   return (
-    <>
-      <AppHeader user={user} onLogout={handleLogout} />
+    <PageShell
+      user={user}
+      isHydrated={isHydrated}
+      onLogout={handleLogout}
+      width="wide"
+      kicker={t("qcm.kicker")}
+      title={t("qcm.title")}
+      titleSize="hero"
+      description={t("qcm.subtitle")}
+    >
+      <section aria-label={t("qcm.modeAria")} className="mt-section-gap grid grid-cols-1 gap-card-gap md:grid-cols-2">
+        <DecisionCard
+          href="/qcm/builder?mode=practice"
+          title={t("qcm.practiceTitle")}
+          description={t("qcm.practiceDesc")}
+          points={[t("qcm.practiceP1"), t("qcm.practiceP2"), t("qcm.practiceP3")]}
+          cta={t("qcm.practiceCta")}
+          tone="qcm"
+          icon="qcm"
+        />
+        <DecisionCard
+          href="/qcm/builder?mode=exam"
+          title={t("builder.nameExam")}
+          description={t("qcm.examDesc")}
+          points={[t("qcm.examP1"), t("qcm.examP2"), t("qcm.examP3")]}
+          cta={t("qcm.examCta")}
+          tone="secondary"
+          icon="simulations"
+        />
+      </section>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-card-padding py-section-gap">
-        <section aria-label={t("qcm.heroAria")} className="mx-auto max-w-3xl text-center">
-          <p className="text-meta font-medium uppercase tracking-wide text-accent-soft">{t("qcm.kicker")}</p>
-          <h1 className="mt-2 font-display text-h1 font-bold leading-tight text-text-primary md:text-hero">
-            {t("qcm.title")}
-          </h1>
-          <p className="mx-auto mt-3 max-w-xl text-body text-text-secondary">
-            {t("qcm.subtitle")}
-          </p>
-        </section>
+      <RecentSessions canFetch={isHydrated && !!user} />
 
-        <section aria-label={t("qcm.modeAria")} className="mx-auto mt-section-gap grid max-w-4xl grid-cols-1 gap-card-gap md:grid-cols-2">
-          <DecisionCard
-            href="/qcm/builder?mode=practice"
-            title={t("qcm.practiceTitle")}
-            description={t("qcm.practiceDesc")}
-            points={[
-              t("qcm.practiceP1"),
-              t("qcm.practiceP2"),
-              t("qcm.practiceP3"),
-            ]}
-            cta={t("qcm.practiceCta")}
-            tone="qcm"
-          />
-          <DecisionCard
-            href="/qcm/builder?mode=exam"
-            title={t("builder.nameExam")}
-            description={t("qcm.examDesc")}
-            points={[
-              t("qcm.examP1"),
-              t("qcm.examP2"),
-              t("qcm.examP3"),
-            ]}
-            cta={t("qcm.examCta")}
-            tone="secondary"
-          />
-        </section>
-
-        <RecentSessions canFetch={isHydrated && !!user} />
-
-        <p className="mt-section-gap text-center text-meta text-text-tertiary">
-          {t("qcm.footnote")}
-        </p>
-      </main>
-
-      <Footer />
-    </>
+      <p className="mt-section-gap text-center text-meta text-text-tertiary">{t("qcm.footnote")}</p>
+    </PageShell>
   );
 }

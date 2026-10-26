@@ -36,6 +36,7 @@ import notificationsRoutes, { adminNotificationsRouter } from "./notifications.r
 import pushRoutes from "./push.routes";
 import aiRoutes from "./ai.routes";
 import walletRoutes from "./wallet.routes";
+import searchRoutes from "./search.routes";
 
 // Mounts every implemented route group under /api.
 //
@@ -108,5 +109,6 @@ router.use("/admin/notifications", adminNotificationsRouter);
 router.use("/push", pushRoutes);
 router.use("/ai", aiRoutes);
 router.use("/wallet", walletRoutes);
+router.use("/search", searchRoutes);
 
 export default router;

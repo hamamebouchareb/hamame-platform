@@ -1,18 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { apiFetch, ApiError } from "@/lib/api";
 import {
-  AppHeader,
   DailyQuestionsBanner,
-  Footer,
   isDailyLimitError,
-  LoadingSkeleton,
+  PageShell,
   SessionBuilder,
   type SessionConfig,
 } from "@/components";
@@ -74,51 +71,31 @@ export default function QcmBuilderClient({ initialMode = "practice" }: QcmBuilde
     }
   }
 
-  if (!isHydrated || !user) {
-    return (
-      <main className="flex min-h-screen items-center justify-center px-card-padding">
-        <LoadingSkeleton className="h-8 w-48" ariaLabel={t("common.loading")} />
-      </main>
-    );
-  }
-
   return (
-    <>
-      <AppHeader user={user} onLogout={handleLogout} />
-
-      <main className="mx-auto w-full max-w-2xl flex-1 px-card-padding py-section-gap">
-        <Link
-          href="/qcm"
-          className="inline-flex min-h-touch-target items-center gap-1 text-body font-medium text-accent-soft transition hover:text-accent-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
-        >
-          <span aria-hidden>←</span> {t("qcmBuilder.back")}
-        </Link>
-
-        <h1 className="mt-2 font-display text-h2 font-bold leading-tight text-text-primary sm:text-h1">
-          {t("qcmBuilder.title")}
-        </h1>
-        <p className="mt-2 text-body text-text-secondary">
-          {t("qcmBuilder.subtitle")}
-        </p>
-
-        <DailyQuestionsBanner refreshKey={quotaKey} className="mt-section-gap" />
-
-        <SessionBuilder
-          className="mt-section-gap"
-          initialMode={initialMode}
-          initialFacultyId={user.facultyId ?? null}
-          initialYearId={user.yearId ?? null}
-          onStart={handleStart}
-          isStarting={isStarting}
-          startError={startError}
-        />
-
-        <p className="mt-4 text-center text-meta text-text-tertiary">
-          {t("qcmBuilder.footnote")}
-        </p>
-      </main>
-
-      <Footer />
-    </>
+    <PageShell
+      user={user}
+      isHydrated={isHydrated}
+      onLogout={handleLogout}
+      width="narrow"
+      back={{ href: "/qcm", label: t("qcmBuilder.back") }}
+      title={t("qcmBuilder.title")}
+      description={t("qcmBuilder.subtitle")}
+    >
+      {(authed) => (
+        <>
+          <DailyQuestionsBanner refreshKey={quotaKey} className="mt-section-gap" />
+          <SessionBuilder
+            className="mt-section-gap"
+            initialMode={initialMode}
+            initialFacultyId={authed.facultyId ?? null}
+            initialYearId={authed.yearId ?? null}
+            onStart={handleStart}
+            isStarting={isStarting}
+            startError={startError}
+          />
+          <p className="mt-4 text-center text-meta text-text-tertiary">{t("qcmBuilder.footnote")}</p>
+        </>
+      )}
+    </PageShell>
   );
 }

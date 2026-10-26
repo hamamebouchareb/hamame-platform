@@ -16,11 +16,19 @@
 }
 
 @media (min-width: 1024px) {
-  body:has([data-hamame-sidebar]:not([data-collapsed])) {
-    padding-left: 17rem;
+  /* Must match Sidebar width (w-64 / w-[4.5rem]) exactly — leftover gap was the
+     "decalage" when the rail collapsed. html[data-sidebar] is set before paint
+     (layout.tsx) so a stored "collapsed" rail does not flash open then jump. */
+  body:has([data-hamame-sidebar]) {
+    padding-left: 16rem;
+    transition: padding-left 200ms cubic-bezier(0.4, 0, 0.2, 1);
   }
+  html[data-sidebar="collapsed"] body:has([data-hamame-sidebar]),
   body:has([data-hamame-sidebar][data-collapsed]) {
-    padding-left: 5.5rem;
+    padding-left: 4.5rem;
+  }
+  html[data-sidebar="collapsed"] [data-hamame-sidebar] {
+    width: 4.5rem;
   }
 }
 
