@@ -8,6 +8,8 @@ import { localeFor, type UiLanguage } from "@/lib/i18n";
 import { apiFetch } from "@/lib/api";
 import { Icon } from "@/components/Icon";
 import { UserAvatar } from "@/components/UserAvatar";
+import { shareLabel } from "@/lib/share-message";
+import { MessageBody } from "@/components/ShareWithFriend";
 
 export interface ConversationSummary {
   id: string;
@@ -72,8 +74,8 @@ function ConversationRow({
         <span className={cx("mt-0.5 block truncate text-caption leading-4", unread ? "text-text-primary" : "text-text-secondary")}>
           {conversation.lastMessage
             ? conversation.lastMessage.fromMe
-              ? fromMeLabel(conversation.lastMessage.body)
-              : conversation.lastMessage.body
+              ? fromMeLabel(shareLabel(conversation.lastMessage.body) ?? conversation.lastMessage.body)
+              : (shareLabel(conversation.lastMessage.body) ?? conversation.lastMessage.body)
             : ""}
         </span>
       </span>
@@ -174,7 +176,7 @@ function MiniChat({
                       : "rounded-2xl rounded-bl-sm bg-surface-2 text-text-primary"
                   )}
                 >
-                  <p className="whitespace-pre-wrap break-words">{message.body}</p>
+                  <MessageBody body={message.body} />
                   <p className={cx("mt-0.5 text-[10px]", fromMe ? "text-on-accent/70" : "text-text-tertiary")}>
                     {formatWhen(message.createdAt, lang)}
                   </p>

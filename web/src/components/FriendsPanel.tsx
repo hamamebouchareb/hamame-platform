@@ -1,25 +1,16 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { cx } from "@/lib/cx";
 import { useLanguage } from "@/context/LanguageContext";
-import { EmptyState, type EmptyStateAction } from "@/components/EmptyState";
+import { apiFetch, ApiError } from "@/lib/api";
+import { EmptyState } from "@/components/EmptyState";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 
-export interface FriendEntry {
+interface Person {
   id: string;
-  name: string;
-  subtitle?: string;
-}
-
-export interface FriendsPanelProps {
-  friends: FriendEntry[];
-  loading?: boolean;
-  error?: string | null;
-  onRetry?: () => void;
-  emptyAction?: EmptyStateAction;
-  emptyTitle?: string;
-  emptyDescription?: string;
-  className?: string;
+  fullName: string | null;
 }
 
 function initials(name: string): string {
@@ -29,63 +20,181 @@ function initials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-/** Social sidebar panel — friend list with loading / error / empty states. */
-export function FriendsPanel({
-  friends,
-  loading,
-  error,
-  onRetry,
-  emptyAction,
-  emptyTitle,
-  emptyDescription,
-  className,
-}: FriendsPanelProps) {
+/** Dashboard friends: search, incoming requests, and a chat shortcut. */
+export function FriendsPanel({ className }: { className?: string }) {
   const { t } = useLanguage();
+  const router = useRouter();
+  const [friends, setFriends] = useState<Person[]>([]);
+  const [incoming, setIncoming] = useState<Person[]>([]);
+  const [outgoing, setOutgoing] = useState<Person[]>([]);
+  const [query, setQuery] = useState("");
+  const [found, setFound] = useState<Person[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  async function reload() {
+    const [friendData, requestData, outgoingData] = await Promise.all([
+      apiFetch<{ friends: Person[] }>("/friends"),
+      apiFetch<{ requests: { userId: string; fullName: string | null }[] }>("/friends/requests"),
+      apiFetch<{ requests: { userId: string; fullName: string | null }[] }>("/friends/outgoing"),
+    ]);
+    setFriends(friendData.friends);
+    setIncoming(requestData.requests.map((row) => ({ id: row.userId, fullName: row.fullName })));
+    setOutgoing(outgoingData.requests.map((row) => ({ id: row.userId, fullName: row.fullName })));
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        await reload();
+      } catch (err: unknown) {
+        if (!cancelled) setError(err instanceof ApiError ? err.message : t("dashboard.friendsError", { error: "" }));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 3) return;
+    const handle = window.setTimeout(() => {
+      apiFetch<{ users: Person[] }>(`/users/search?q=${encodeURIComponent(q)}`)
+        .then((data) => setFound(data.users))
+        .catch(() => setFound([]));
+    }, 250);
+    return () => window.clearTimeout(handle);
+  }, [query]);
+
+  async function add(userId: string) {
+    setNotice(null);
+    try {
+      await apiFetch("/friends", { method: "POST", body: JSON.stringify({ userId }) });
+      setNotice(t("friends.sent"));
+      setQuery("");
+      setFound([]);
+      await reload();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("friends.noResults"));
+    }
+  }
+
+  async function accept(userId: string) {
+    await apiFetch(`/friends/${userId}/accept`, { method: "POST" });
+    await reload();
+  }
+
+  async function remove(userId: string) {
+    await apiFetch(`/friends/${userId}`, { method: "DELETE" });
+    await reload();
+  }
+
+  async function message(userId: string) {
+    const data = await apiFetch<{ conversation: { id: string } }>("/dms/conversations", {
+      method: "POST",
+      body: JSON.stringify({ userId }),
+    });
+    router.push(`/messages?c=${data.conversation.id}`);
+  }
+
   return (
     <section className={cx("rounded-card border border-border bg-surface-1 p-card-padding shadow-card", className)}>
       <p className="text-meta font-medium uppercase tracking-wide text-text-secondary">{t("profile.friends")}</p>
+      <label className="sr-only" htmlFor="friend-search">{t("friends.searchPh")}</label>
+      <input
+        id="friend-search"
+        value={query}
+        onChange={(event) => {
+          setQuery(event.target.value);
+          setFound([]);
+        }}
+        placeholder={t("friends.searchPh")}
+        className="mt-2 h-10 w-full rounded-control border border-border bg-surface-2 px-3 text-meta text-text-primary placeholder:text-text-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+      />
+      {notice ? <p className="mt-2 text-caption text-success">{notice}</p> : null}
+      {query.trim().length >= 3 ? (
+        <ul className="mt-2 flex flex-col gap-1">
+          {found.length === 0 ? (
+            <li className="text-caption text-text-tertiary">{t("friends.noResults")}</li>
+          ) : (
+            found.map((person) => (
+              <li key={person.id} className="flex items-center justify-between gap-2">
+                <span className="min-w-0 truncate text-body text-text-primary">{person.fullName ?? "—"}</span>
+                <button type="button" onClick={() => void add(person.id)} className="shrink-0 text-caption font-medium text-accent-soft">
+                  {t("friends.add")}
+                </button>
+              </li>
+            ))
+          )}
+        </ul>
+      ) : null}
 
       {loading ? (
-        <div className="mt-2 flex flex-col gap-2" aria-busy="true">
-          {[0, 1, 2].map((i) => (
-            <LoadingSkeleton key={i} className="h-12 w-full rounded-card" />
-          ))}
-        </div>
+        <LoadingSkeleton className="mt-3 h-12 w-full" />
       ) : error ? (
-        <div className="mt-2">
-          <p className="text-meta text-danger">{error}</p>
-          {onRetry ? (
-            <button
-              type="button"
-              onClick={onRetry}
-              className="mt-2 inline-flex min-h-touch-target items-center justify-center rounded-control border border-border px-3 text-meta font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
-            >
-              {t("common.retry")}
-            </button>
-          ) : null}
-        </div>
-      ) : friends.length === 0 ? (
-        <div className="mt-3">
-          <EmptyState
-            title={emptyTitle ?? t("dashboard.noFriends")}
-            description={emptyDescription}
-            action={emptyAction ?? { label: t("friendsPanel.soon"), disabled: true }}
-          />
-        </div>
+        <p className="mt-2 text-meta text-danger">{error}</p>
       ) : (
-        <ul className="mt-2 flex flex-col gap-1">
-          {friends.map((friend) => (
-            <li key={friend.id} className="flex min-h-touch-target items-center gap-2 rounded-card px-2 py-1 transition hover:bg-surface-2">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-surface-3 font-display text-caption font-bold text-accent-soft" aria-hidden>
-                {initials(friend.name)}
-              </span>
-              <div className="min-w-0">
-                <p className="truncate text-body font-medium text-text-primary">{friend.name}</p>
-                {friend.subtitle ? <p className="truncate text-meta text-text-tertiary">{friend.subtitle}</p> : null}
-              </div>
-            </li>
-          ))}
-        </ul>
+        <>
+          {incoming.length > 0 ? (
+            <div className="mt-3">
+              <p className="text-caption font-medium uppercase tracking-wide text-text-tertiary">{t("friends.requests")}</p>
+              <ul className="mt-1 flex flex-col gap-2">
+                {incoming.map((person) => (
+                  <li key={person.id} className="rounded-control border border-border px-2 py-2">
+                    <p className="truncate text-body font-medium text-text-primary">{person.fullName ?? "—"}</p>
+                    <div className="mt-1 flex gap-2">
+                      <button type="button" onClick={() => void accept(person.id)} className="text-caption font-semibold text-accent-soft">
+                        {t("friends.approve")}
+                      </button>
+                      <button type="button" onClick={() => void remove(person.id)} className="text-caption font-medium text-danger">
+                        {t("friends.decline")}
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {outgoing.length > 0 ? (
+            <ul className="mt-2 flex flex-col gap-1">
+              {outgoing.map((person) => (
+                <li key={person.id} className="flex items-center justify-between gap-2 text-meta text-text-secondary">
+                  <span className="min-w-0 truncate">{person.fullName ?? "—"}</span>
+                  <span className="shrink-0 text-caption">{t("friends.pending")}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {friends.length === 0 && incoming.length === 0 ? (
+            <div className="mt-3">
+              <EmptyState
+                title={t("dashboard.noFriends")}
+                description={t("dashboard.noFriendsDesc")}
+                action={{ label: t("profile.addFriend"), onClick: () => document.getElementById("friend-search")?.focus() }}
+              />
+            </div>
+          ) : (
+            <ul className="mt-2 flex flex-col gap-1">
+              {friends.map((friend) => (
+                <li key={friend.id} className="flex min-h-touch-target items-center gap-2 rounded-card px-1 py-1">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-surface-3 font-display text-caption font-bold text-accent-soft" aria-hidden>
+                    {initials(friend.fullName ?? "?")}
+                  </span>
+                  <p className="min-w-0 flex-1 truncate text-body font-medium text-text-primary">{friend.fullName ?? "—"}</p>
+                  <button type="button" onClick={() => void message(friend.id)} className="shrink-0 text-caption font-medium text-accent-soft">
+                    {t("friends.message")}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
     </section>
   );

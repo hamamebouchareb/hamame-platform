@@ -189,19 +189,71 @@ router.get("/conversations/:id/messages", validateParams(uuidParam("id")), valid
 // POST /api/dms/conversations/:id/messages — send a message. Bumps the
 // conversation's lastMessageAt in the same transaction as the insert, and
 // notifies the recipient best-effort (never fails the send).
-const sendMessageSchema = z.object({ body: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH) });
+const SHARE_PREFIX = "[[hamame]]";
+
+const sendMessageSchema = z
+  .object({
+    body: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH).optional(),
+    questionId: z.string().uuid().optional(),
+    resourceId: z.string().uuid().optional(),
+    imageUrl: z.string().trim().url().max(500).optional(),
+  })
+  .refine((value) => Boolean(value.body || value.questionId || value.resourceId || value.imageUrl), {
+    message: "A message needs text or something to share.",
+  });
+
+function snippet(raw: string): string {
+  return raw.replace(/[{}"\\[\]]/g, " ").replace(/\b(text|type|content|attrs)\s*:/gi, " ").replace(/\s+/g, " ").trim().slice(0, 140);
+}
+
+async function composeBody(input: z.infer<typeof sendMessageSchema>): Promise<{ stored: string; preview: string }> {
+  const note = input.body?.trim();
+  if (input.questionId) {
+    const question = await prisma.question.findFirst({
+      where: { id: input.questionId, status: "approved" },
+      select: { id: true, unitId: true, bodyRichtext: true },
+    });
+    if (!question) throw new ApiError(404, "QUESTION_NOT_FOUND", "That question is not available to share.");
+    const payload = {
+      kind: "question" as const,
+      id: question.id,
+      unitId: question.unitId,
+      title: snippet(JSON.stringify(question.bodyRichtext)),
+      note: note || undefined,
+    };
+    return { stored: SHARE_PREFIX + JSON.stringify(payload), preview: payload.title || "Question" };
+  }
+  if (input.resourceId) {
+    const resource = await prisma.resource.findUnique({
+      where: { id: input.resourceId },
+      select: { id: true, title: true },
+    });
+    if (!resource) throw new ApiError(404, "RESOURCE_NOT_FOUND", "That resource is not available to share.");
+    const payload = { kind: "resource" as const, id: resource.id, title: resource.title, note: note || undefined };
+    return { stored: SHARE_PREFIX + JSON.stringify(payload), preview: resource.title };
+  }
+  if (input.imageUrl) {
+    if (!input.imageUrl.startsWith("https://")) {
+      throw new ApiError(400, "IMAGE_URL_INVALID", "A shared photo must be an https link.");
+    }
+    const payload = { kind: "image" as const, url: input.imageUrl, note: note || undefined };
+    return { stored: SHARE_PREFIX + JSON.stringify(payload), preview: "Photo" };
+  }
+  return { stored: note ?? "", preview: note ?? "" };
+}
 
 async function sendMessage(req: Request, res: Response, next: NextFunction) {
   try {
     const me = req.auth!.userId;
     const { id } = req.params;
-    const { body } = req.body as z.infer<typeof sendMessageSchema>;
+    const input = req.body as z.infer<typeof sendMessageSchema>;
+    const { stored, preview } = await composeBody(input);
 
     const { conversation, other } = await getConversationForMe(me, id);
 
     const [message] = await prisma.$transaction([
       prisma.directMessage.create({
-        data: { conversationId: conversation.id, senderId: me, body },
+        data: { conversationId: conversation.id, senderId: me, body: stored },
         select: { id: true, senderId: true, body: true, readAt: true, createdAt: true },
       }),
       prisma.conversation.update({
@@ -216,7 +268,7 @@ async function sendMessage(req: Request, res: Response, next: NextFunction) {
       userId: other.id,
       category: "social",
       title: `${sender?.fullName ?? "Un camarade"} vous a écrit`,
-      body: body.length > 80 ? `${body.slice(0, 80)}…` : body,
+      body: preview.length > 80 ? `${preview.slice(0, 80)}…` : preview,
     });
 
     res.status(201).json({ message });

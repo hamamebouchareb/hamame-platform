@@ -46,6 +46,7 @@ export function NotificationsBell() {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<NotificationTab>("all");
   const [items, setItems] = useState<NotificationItem[]>([]);
+  const [requests, setRequests] = useState<{ userId: string; fullName: string | null }[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +79,12 @@ export function NotificationsBell() {
         );
         setItems(data.notifications);
         setUnreadCount(data.unreadCount);
+        if (nextTab === "all" || nextTab === "social") {
+          const pending = await apiFetch<{ requests: { userId: string; fullName: string | null }[] }>("/friends/requests");
+          setRequests(pending.requests);
+        } else {
+          setRequests([]);
+        }
       } catch {
         setError(t("notifs.loadError"));
       } finally {
@@ -192,6 +199,36 @@ export function NotificationsBell() {
               </button>
             ))}
           </div>
+          {requests.length > 0 ? (
+            <ul className="mb-1 flex flex-col gap-1 border-b border-border pb-2">
+              {requests.map((request) => (
+                <li key={request.userId} className="rounded-control px-3 py-2">
+                  <p className="truncate text-body font-medium text-text-primary">{request.fullName ?? "—"}</p>
+                  <p className="text-caption text-text-secondary">{t("friends.requests")}</p>
+                  <div className="mt-1 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void apiFetch(`/friends/${request.userId}/accept`, { method: "POST" }).then(() => loadList(tab));
+                      }}
+                      className="text-caption font-semibold text-accent-soft"
+                    >
+                      {t("friends.approve")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void apiFetch(`/friends/${request.userId}`, { method: "DELETE" }).then(() => loadList(tab));
+                      }}
+                      className="text-caption font-medium text-danger"
+                    >
+                      {t("friends.decline")}
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : null}
           {isLoading ? (
             <p className="px-3 py-6 text-center text-meta text-text-tertiary">{t("builder.loadingShort")}</p>
           ) : error ? (

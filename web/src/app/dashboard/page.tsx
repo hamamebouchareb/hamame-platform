@@ -25,7 +25,6 @@ import {
 import type {
   AiCredits,
   ExamReadiness,
-  FriendSummary,
   ProgressSummary,
   RecentActivityItem,
   Subscription,
@@ -123,7 +122,6 @@ export default function DashboardPage() {
   const progress = useApiResource<ProgressSummary>(canFetch ? "/progress/me" : null);
   const readiness = useApiResource<ExamReadiness>(canFetch ? "/progress/readiness" : null);
   const credits = useApiResource<AiCredits>(canFetch ? "/ai/credits" : null);
-  const friends = useApiResource<{ friends: FriendSummary[] }>(canFetch ? "/friends" : null);
   const dueReviews = useApiResource<{ items: { id: string; dueAt: string }[] }>(canFetch ? "/reviews/due" : null);
   const subscription = useApiResource<{ subscription: Subscription | null }>(canFetch ? "/subscriptions/me" : null);
 
@@ -172,6 +170,7 @@ export default function DashboardPage() {
   const readinessData = readiness.data && !readiness.data.insufficientData ? readiness.data : null;
   const dueReviewCount = dueReviews.data?.items?.length ?? 0;
 
+  const isStaff = user.roles.some((role) => role === "admin" || role === "super_admin");
   const currentSubscription = subscription.data?.subscription ?? null;
   const subscriptionPrice =
     currentSubscription?.plan.priceDzd != null
@@ -401,6 +400,8 @@ export default function DashboardPage() {
               )}
             </article>
 
+            <FriendsPanel />
+
             {/* Révision dues (Phase 4) — small widget over GET /reviews/due.
                 No efficacy stat exists anywhere (verified: no such field in the
                 endpoint, jobs, or ReviewSettings), so the widget shows the due
@@ -451,7 +452,9 @@ export default function DashboardPage() {
             {/* Subscription */}
             <PremiumCard
               status={
-                subscription.isLoading
+                isStaff
+                  ? "active"
+                  : subscription.isLoading
                   ? "loading"
                   : subscription.error
                     ? "error"
@@ -461,15 +464,22 @@ export default function DashboardPage() {
                         ? "cancelled"
                         : "active"
               }
-              planName={currentSubscription?.plan.name}
-              priceLabel={subscriptionPrice}
-              renewsAt={currentSubscription ? formatDateShort(currentSubscription.currentPeriodEnd, lang) : undefined}
-              endsAt={
-                currentSubscription && !currentSubscription.autoRenew
-                  ? formatDateShort(currentSubscription.currentPeriodEnd, lang)
-                  : undefined
+              planName={isStaff ? t("premium.adminPlan") : currentSubscription?.plan.name}
+              priceLabel={isStaff ? undefined : subscriptionPrice}
+              renewsAt={
+                isStaff || !currentSubscription ? undefined : formatDateShort(currentSubscription.currentPeriodEnd, lang)
               }
-              cancelsAt={currentSubscription?.cancelledAt ? formatDateShort(currentSubscription.currentPeriodEnd, lang) : undefined}
+              endsAt={
+                isStaff || !currentSubscription || currentSubscription.autoRenew
+                  ? undefined
+                  : formatDateShort(currentSubscription.currentPeriodEnd, lang)
+              }
+              cancelsAt={
+                isStaff || !currentSubscription?.cancelledAt
+                  ? undefined
+                  : formatDateShort(currentSubscription.currentPeriodEnd, lang)
+              }
+              successMessage={isStaff ? t("premium.adminAll") : undefined}
               error={subscription.error}
               onRetry={subscription.refetch}
               upgradeHref="/subscription"
@@ -477,26 +487,9 @@ export default function DashboardPage() {
 
             {/* Activation code (FR-65/BR-18) — the manual-payment redemption path,
                 shown next to the upgrade prompt it is an alternative to. */}
-            {!currentSubscription || currentSubscription.cancelledAt ? (
+            {!isStaff && (!currentSubscription || currentSubscription.cancelledAt) ? (
               <ActivationCodeCard onRedeemed={subscription.refetch} />
             ) : null}
-
-            {/* Social / friends */}
-            <FriendsPanel
-              friends={(friends.data?.friends ?? []).map((friend) => ({
-                id: friend.id,
-                name: friend.fullName,
-              }))}
-              loading={friends.isLoading}
-              error={friends.error ? t("dashboard.friendsError", { error: friends.error }) : null}
-              onRetry={friends.refetch}
-              emptyTitle={t("dashboard.noFriends")}
-              emptyDescription={t("dashboard.noFriendsDesc")}
-              emptyAction={{
-                label: t("dashboard.viewActivity"),
-                onClick: () => document.getElementById("activite")?.scrollIntoView({ behavior: "smooth" }),
-              }}
-            />
 
             {/* Resources */}
             <article className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card">

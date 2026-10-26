@@ -345,7 +345,7 @@ export async function buildSessionForUser(userId: string, params: BuildSessionPa
     let selected = shuffled.slice(0, size);
     let limitedCount = 0;
     let usedToday = 0;
-    if (enforceDailyLimit) {
+    if (enforceDailyLimit && !premiumScope?.unrestricted) {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`daily-questions:${userId}`}))`;
       usedToday = await questionsUsedToday(tx, userId);
       let remaining = Math.max(dailyLimit - usedToday, 0);

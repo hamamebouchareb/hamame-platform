@@ -9,6 +9,8 @@ import { useRequireAuth } from "@/lib/useRequireAuth";
 import { apiFetch, ApiError } from "@/lib/api";
 import { AppHeader, EmptyState, Footer, LoadingSkeleton, UserAvatar } from "@/components";
 import { cx } from "@/lib/cx";
+import { shareLabel } from "@/lib/share-message";
+import { MessageBody } from "@/components/ShareWithFriend";
 
 interface ConversationSummary {
   id: string;
@@ -75,6 +77,9 @@ export default function MessagesPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [messages, setMessages] = useState<DirectMessageItem[]>([]);
   const [draft, setDraft] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [resourceQuery, setResourceQuery] = useState("");
+  const [resourceHits, setResourceHits] = useState<{ id: string; title: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -220,6 +225,35 @@ export default function MessagesPage() {
         setSendError(t("dms.loadFailed"));
       }
     })();
+  }
+
+  useEffect(() => {
+    const q = resourceQuery.trim();
+    if (q.length < 2) return;
+    const handle = window.setTimeout(() => {
+      apiFetch<{ resources: { id: string; title: string }[] }>(`/search?q=${encodeURIComponent(q)}`)
+        .then((data) => setResourceHits(data.resources))
+        .catch(() => setResourceHits([]));
+    }, 250);
+    return () => window.clearTimeout(handle);
+  }, [resourceQuery]);
+
+  async function sendShare(payload: { imageUrl?: string; resourceId?: string }) {
+    const conversationId = selectedId;
+    if (!conversationId) return;
+    setSendError(null);
+    try {
+      const data = await apiFetch<{ message: DirectMessageItem }>(
+        `/dms/conversations/${conversationId}/messages`,
+        { method: "POST", body: JSON.stringify(payload) }
+      );
+      setImageUrl("");
+      setResourceQuery("");
+      setResourceHits([]);
+      setMessages((prev) => [...prev, data.message]);
+    } catch (err) {
+      setSendError(err instanceof ApiError ? err.message : t("dms.sendFailed"));
+    }
   }
 
   async function sendDraft() {
@@ -452,8 +486,8 @@ export default function MessagesPage() {
                       <span className={cx("mt-0.5 block truncate text-[12px]", unread ? "text-text-primary" : "text-text-secondary")}>
                         {conversation.lastMessage
                           ? conversation.lastMessage.fromMe
-                            ? t("dms.fromMe", { message: conversation.lastMessage.body })
-                            : conversation.lastMessage.body
+                            ? t("dms.fromMe", { message: shareLabel(conversation.lastMessage.body) ?? conversation.lastMessage.body })
+                            : (shareLabel(conversation.lastMessage.body) ?? conversation.lastMessage.body)
                           : ""}
                       </span>
                     </span>
@@ -508,7 +542,7 @@ export default function MessagesPage() {
                                     : "rounded-2xl rounded-bl-sm bg-surface-2 text-text-primary"
                                 )}
                               >
-                                <p className="whitespace-pre-wrap break-words">{message.body}</p>
+                                <MessageBody body={message.body} />
                                 <p className={cx("mt-1 text-caption", fromMe ? "text-on-accent/70" : "text-text-tertiary")}>
                                   {formatWhen(message.createdAt, lang)}
                                 </p>
@@ -547,6 +581,47 @@ export default function MessagesPage() {
                       {t("dms.send")}
                     </button>
                   </form>
+                  <div className="flex flex-col gap-2 border-t border-border px-card-padding py-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="url"
+                        value={imageUrl}
+                        onChange={(event) => setImageUrl(event.target.value)}
+                        placeholder={t("friends.photoPh")}
+                        className="min-h-10 min-w-0 flex-1 rounded-pill border border-border bg-surface-2 px-3 text-meta text-text-primary placeholder:text-text-tertiary"
+                      />
+                      <button
+                        type="button"
+                        disabled={!imageUrl.trim().startsWith("https://")}
+                        onClick={() => void sendShare({ imageUrl: imageUrl.trim() })}
+                        className="shrink-0 text-caption font-medium text-accent-soft disabled:opacity-40"
+                      >
+                        {t("friends.share")}
+                      </button>
+                    </div>
+                    <input
+                      type="search"
+                      value={resourceQuery}
+                      onChange={(event) => setResourceQuery(event.target.value)}
+                      placeholder={t("friends.resourcePh")}
+                      className="min-h-10 w-full rounded-pill border border-border bg-surface-2 px-3 text-meta text-text-primary placeholder:text-text-tertiary"
+                    />
+                    {resourceHits.length > 0 ? (
+                      <ul className="max-h-32 overflow-y-auto">
+                        {resourceHits.map((resource) => (
+                          <li key={resource.id}>
+                            <button
+                              type="button"
+                              onClick={() => void sendShare({ resourceId: resource.id })}
+                              className="block w-full truncate rounded-control px-2 py-1 text-left text-meta text-text-primary hover:bg-surface-2"
+                            >
+                              {resource.title}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center gap-1 p-section-gap text-center">

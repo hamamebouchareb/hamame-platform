@@ -2118,3 +2118,49 @@ state as settings, current choice announced). Full three-way choice stays
 in settings; also corrected a stale `AppHeader` comment still naming
 `SECONDARY_NAV` as the menu default.
 
+## 32. Admin-premium UI surfaces + friends evidence pass (2026-10-26)
+
+Backend was already unconditional for admins (`src/lib/entitlements.ts`
+`resolvePremiumScope` → `planName:"Admin"`, period end year 2999,
+`unrestricted:true` for `admin`/`super_admin`; unlimited AI credits; session
+daily-limit bypass; resources ok). This session closed the two frontend spots
+that still rendered free-user UI to admins, and landed a live evidence pass on
+the friend/sharing stack.
+
+**Frontend changes (only 2 real gaps found):**
+- `web/src/app/subscription/page.tsx` — `isStaff` check; entitlements card shows
+  `premium.adminPlan` + `premium.adminAll` ("Admin · Accès complet") instead of a
+  countdown to 2999; the buy/offers/codes sections and the compare link are
+  hidden for staff.
+- `web/src/app/profile/page.tsx` — subscription chip reads staff scope: shows
+  `Admin · Accès complet` instead of "Plan Gratuit".
+
+**Already built and now live-verified (no code change needed):**
+- `FriendsPanel` already sits in the dashboard sidebar after the AI-credits
+  card (`web/src/app/dashboard/page.tsx:403`).
+- Friend request → `social` notification → accept/decline from the
+  notifications bell; DM conversations accept text / `[[hamame]]`-encoded
+  question / image / resource payloads; `ShareWithFriend.tsx` is mounted on
+  `QuestionCard` + session results pages with the full friend list picker.
+- Two pre-existing errors in `FriendsPanel.tsx` fixed on the way (EmptyState
+  now gets an `action` button; effect converted to the async-IIFE lint-clean
+  pattern). `tsc`, `next build`, and `ESLint` all green (2 pre-existing lint
+  warnings unrelated to this work).
+
+**Evidence:** raw log
+`docs/verification/2026-10-26-friends-admin-premium-raw.log` + summary `2026-10-26-friends-admin-premium.md`
+beside it. The pass proved through the real API: request →
+notification → accept → mutual friend lists → conversation with text/question/
+photo messages → unread counts → markRead → decline; plus admin
+`planName:"Admin"` entitlements, `1000000` daily AI allowance, and a `25`-count
+session creation succeeding where a free account with an exhausted 20-quota got
+`403 DAILY_QUESTION_LIMIT`. DM resource-share and admin priced-resource unlock
+were skipped: the bank has **zero priced resources** (honest disclose; endpoint
+paths unchanged).
+
+Ops notes: login limiter is 20/10min/IP (bit twice during the pass; waited the
+window); Supabase pooler hit `EMAXCONNSESSION` with default Prisma pool — local
+`.env` now appends `?connection_limit=3` to `DATABASE_URL` (original line backed
+up out of repo), acceptable for single-dev machines, document if deploying
+self-hosted.
+

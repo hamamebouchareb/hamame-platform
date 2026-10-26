@@ -8,6 +8,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useApiResource } from "@/lib/useApiResource";
 import { apiFetch, ApiError } from "@/lib/api";
 import { extractParagraphs } from "@/lib/richtext";
+import { ShareWithFriend } from "@/components/ShareWithFriend";
 import type { SessionDetail, SessionResultItem, SessionSummary } from "@/lib/types";
 
 function isGradable(type: string): boolean {
@@ -289,6 +290,9 @@ export default function SessionResultsPage() {
                       {result.isCorrect === null && (
                         <span className="text-meta text-text-tertiary">{t("results.ungraded")}</span>
                       )}
+                      <span className="ml-auto">
+                        <ShareWithFriend questionId={result.question.id} />
+                      </span>
                     </div>
 
                     <div className="mt-2 flex flex-col gap-2 text-body text-text-primary">

@@ -8,6 +8,7 @@ import { useApiResource } from "@/lib/useApiResource";
 import { apiFetch, ApiError } from "@/lib/api";
 import { extractParagraphs } from "@/lib/richtext";
 import { ConfirmDialog, EnqueueReviewButton, LoadingSkeleton, Modal, QuestionCard, StudyTimer } from "@/components";
+import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
 import type { AnswerAttemptResponse, AnswerStatsResponse, SessionDetail, SessionQuestionEntry } from "@/lib/types";
 
@@ -104,6 +105,7 @@ export default function SessionQuestionPage() {
   // shows the banner; practice and untimed sessions never touch it.
   const [timeUp, setTimeUp] = useState(false);
   const autoFinishRef = useRef(false);
+  const currentRailRef = useRef<HTMLButtonElement | null>(null);
 
   // Fresh session id = fresh expiry state (the component itself is not
   // remounted when navigating between sessions).
@@ -111,6 +113,10 @@ export default function SessionQuestionPage() {
     setTimeUp(false);
     autoFinishRef.current = false;
   }, [sessionId]);
+
+  useEffect(() => {
+    currentRailRef.current?.scrollIntoView({ block: "nearest" });
+  }, [currentIndex]);
 
   // A completed session has nothing left to answer here — drop the resume marker and
   // send the user straight to its results instead of showing (now-frozen) question UI.
@@ -433,124 +439,55 @@ export default function SessionQuestionPage() {
     );
   }
 
+  const playing = Boolean(session && !session.completedAt && questions.length > 0);
+  const sideButton =
+    "inline-flex min-h-touch-target w-full items-center justify-center gap-2 rounded-control border border-border px-2 py-2 text-center text-meta font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-40";
+
   return (
-    <main className="min-h-screen bg-background pb-60 text-text-primary sm:pb-28">
+    <main className="flex h-dvh overflow-hidden bg-background text-text-primary">
       <h1 className="sr-only">{t("player.srTitle")}</h1>
-      {/* Sticky header */}
-      <header
-        className="sticky top-0 z-20 border-b border-border bg-surface-1/95 backdrop-blur"
-        style={{ boxShadow: "var(--shadow-glow-qcm)" }}
-      >
-        <div className="mx-auto flex max-w-3xl items-center gap-3 px-card-padding py-3">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-meta font-medium text-text-secondary">
-                {questions.length > 0
-                  ? t("player.questionOf", { i: currentIndex + 1, n: questions.length })
-                  : t("player.sessionFallback")}
-              </p>
-              <p className="text-meta text-text-tertiary">{t("player.answered", { count: answeredCount })}</p>
-            </div>
+      {playing ? (
+        <aside className="flex w-[4.5rem] shrink-0 flex-col border-r border-border bg-surface-1">
+          <div className="border-b border-border px-1.5 py-3 text-center">
+            <p className="text-caption font-semibold tabular-nums text-text-secondary">
+              {currentIndex + 1}/{questions.length}
+            </p>
             <div className="mt-2 h-1.5 overflow-hidden rounded-pill bg-surface-3" aria-hidden>
-              <div
-                className="h-full rounded-pill bg-accent-qcm transition-[width]"
-                style={{ width: `${progressPct}%` }}
-              />
+              <div className="h-full rounded-pill bg-accent-qcm" style={{ width: `${progressPct}%` }} />
             </div>
           </div>
-          {timed && remainingSeconds !== null && (
-            <p
-              className={[
-                "shrink-0 rounded-pill border px-3 py-2 font-display text-h3 font-semibold tabular-nums",
-                remainingSeconds <= 60
-                  ? "border-danger text-danger"
-                  : "border-border text-text-primary",
-              ].join(" ")}
-              aria-live="polite"
-            >
-              {formatRemaining(remainingSeconds)}
-            </p>
-          )}
-          {/* Practice elapsed time (count-up). aria-live off: announcing every
-              second would spam screen readers, unlike the exam countdown. */}
-          {!timed && elapsedSeconds !== null && (
-            <p
-              aria-live="off"
-              className="shrink-0 rounded-pill border border-border px-3 py-2 font-display text-h3 font-semibold tabular-nums text-text-secondary"
-            >
-              {formatRemaining(elapsedSeconds)}
-            </p>
-          )}
-          <button
-            type="button"
-            onClick={() => setExitOpen(true)}
-            className="inline-flex min-h-touch-target shrink-0 items-center justify-center rounded-control border border-border px-3 text-meta font-medium text-text-secondary transition hover:bg-surface-2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
-          >
-            {t("player.quit")}
-          </button>
-          {/* Fullscreen toggle (mirrors the reference "Plein écran" control).
-              Pure local UI state — no data or session behavior involved. */}
-          <button
-            type="button"
-            onClick={toggleFullscreen}
-            title={isFullscreen ? t("player.exitFullscreen") : t("player.fullscreen")}
-            aria-label={isFullscreen ? t("player.exitFullscreen") : t("player.enterFullscreen")}
-            aria-pressed={isFullscreen}
-            className="inline-flex min-h-touch-target w-11 shrink-0 items-center justify-center rounded-control border border-border text-text-secondary transition hover:bg-surface-2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden
-            >
-              {isFullscreen ? (
-                <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
-              ) : (
-                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
-              )}
-            </svg>
-          </button>
-          {/* P7 report/flag: icon-only like the reference (title mirrors it). */}
-          <button
-            type="button"
-            onClick={openReport}
-            title={t("player.reportError")}
-            aria-label={t("player.reportErrorLong")}
-            className="inline-flex min-h-touch-target w-11 shrink-0 items-center justify-center rounded-control border border-border text-text-secondary transition hover:bg-surface-2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2"
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden
-            >
-              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-              <line x1="4" y1="22" x2="4" y2="15" />
-            </svg>
-          </button>
-          {/* F1 manual revision enrollment for the current question — opt-in
-              only; auto-enqueue on submit stays the default. Rendered only
-              once a question is loaded; the button re-checks membership
-              whenever the question id changes. */}
-          {currentEntry ? (
-            <EnqueueReviewButton variant="icon" questionId={currentEntry.question.id} />
+          {questions.length > 1 ? (
+            <nav aria-label={t("player.railAria")} className="flex min-h-0 flex-1 flex-col items-center gap-1.5 overflow-y-auto p-2">
+              {questions.map((entry, index) => {
+                const isCurrent = index === currentIndex;
+                const isAnswered = !!answers[entry.sessionQuestionId]?.submitted;
+                return (
+                  <button
+                    key={entry.sessionQuestionId}
+                    ref={isCurrent ? currentRailRef : undefined}
+                    type="button"
+                    onClick={() => setCurrentIndex(index)}
+                    aria-label={`${t("player.railGo", { n: index + 1 })}${isCurrent ? t("player.railCurrent") : ""}${isAnswered ? t("player.railAnswered") : ""}`}
+                    aria-current={isCurrent ? "true" : undefined}
+                    className={[
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-control border text-meta font-semibold tabular-nums transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+                      isCurrent
+                        ? "border-accent-qcm bg-[linear-gradient(to_bottom_right,var(--color-accent-primary),var(--color-accent-secondary))] text-on-accent ring-2 ring-accent-soft"
+                        : isAnswered
+                          ? "border-success/60 bg-success/10 text-success"
+                          : "border-border bg-surface-1 text-text-secondary hover:bg-surface-2",
+                    ].join(" ")}
+                  >
+                    {index + 1}
+                  </button>
+                );
+              })}
+            </nav>
           ) : null}
-        </div>
-        <div className="h-0.5 w-full bg-accent-qcm" aria-hidden />
-      </header>
-
-      <div className="mx-auto max-w-3xl px-card-padding py-section-gap">
+        </aside>
+      ) : null}
+      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 py-4">
+        <div className="mx-auto w-full max-w-3xl">
         {isLoading && !session && (
           <div className="mx-auto max-w-xl" aria-busy aria-label={t("player.loadingSession")}>
             <LoadingSkeleton className="mb-3 h-4 w-32" />
@@ -609,36 +546,6 @@ export default function SessionQuestionPage() {
                 <p className="mt-1 text-body text-text-secondary">{t("player.timeUpDesc")}</p>
               </div>
             ) : null}
-            {/* P4 numbered rail: jump between questions with answered/current
-                states. Horizontal strip (not a sidebar) for the single-column
-                layout — same states and behavior as the reference rail. */}
-            {questions.length > 1 ? (
-              <nav aria-label={t("player.railAria")} className="mx-auto mb-4 flex max-w-xl gap-1.5 overflow-x-auto pb-1">
-                {questions.map((entry, index) => {
-                  const isCurrent = index === currentIndex;
-                  const isAnswered = !!answers[entry.sessionQuestionId]?.submitted;
-                  return (
-                    <button
-                      key={entry.sessionQuestionId}
-                      type="button"
-                      onClick={() => setCurrentIndex(index)}
-                      aria-label={`${t("player.railGo", { n: index + 1 })}${isCurrent ? t("player.railCurrent") : ""}${isAnswered ? t("player.railAnswered") : ""}`}
-                      aria-current={isCurrent ? "true" : undefined}
-                      className={[
-                        "flex h-12 w-12 shrink-0 items-center justify-center rounded-[20px] border text-meta font-semibold tabular-nums transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
-                        isCurrent
-                          ? "border-accent-qcm bg-[linear-gradient(to_bottom_right,var(--color-accent-primary),var(--color-accent-secondary))] text-on-accent ring-2 ring-accent-soft"
-                          : isAnswered
-                            ? "border-success/60 bg-success/10 text-success"
-                            : "border-border bg-surface-1 text-text-secondary hover:bg-surface-2",
-                      ].join(" ")}
-                    >
-                      {index + 1}
-                    </button>
-                  );
-                })}
-              </nav>
-            ) : null}
             <QuestionCard
               key={currentEntry.sessionQuestionId}
             meta={
@@ -674,66 +581,104 @@ export default function SessionQuestionPage() {
           />
           </>
         )}
+        </div>
       </div>
 
-      {/* Bottom nav — three visually distinct action groups */}
-      {session && !session.completedAt && questions.length > 0 && (
-        <nav
-          className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface-1/95 backdrop-blur"
+      {playing && session ? (
+        <aside
+          className="flex w-60 shrink-0 flex-col gap-2 overflow-y-auto border-l border-border bg-surface-1 p-3"
           aria-label={t("player.bottomNav")}
         >
-          <div className="mx-auto flex max-w-3xl flex-col gap-3 px-card-padding py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
-                disabled={currentIndex === 0}
-                title={currentIndex === 0 ? t("player.firstQuestion") : undefined}
-                className="inline-flex min-h-touch-target flex-1 items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-40 sm:flex-none"
-              >
-                {t("player.prev")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setCurrentIndex((i) => Math.min(questions.length - 1, i + 1))}
-                disabled={currentIndex >= questions.length - 1}
-                title={currentIndex >= questions.length - 1 ? t("player.lastQuestion") : undefined}
-                className="inline-flex min-h-touch-target flex-1 items-center justify-center rounded-control border border-border px-4 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-40 sm:flex-none"
-              >
-                {t("player.next")}
-              </button>
-            </div>
-
-            <button
-              type="button"
-              onClick={toggleMarkForReview}
-              aria-pressed={isMarked}
+          {timed && remainingSeconds !== null ? (
+            <p
               className={[
-                "inline-flex min-h-touch-target items-center justify-center rounded-control px-4 text-body font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
-                isMarked
-                  ? "border border-accent-qcm bg-accent-qcm/15 text-accent-soft"
-                  : "border border-transparent text-text-secondary underline-offset-2 hover:text-text-primary hover:underline",
+                "rounded-pill border px-3 py-2 text-center font-display text-h3 font-semibold tabular-nums",
+                remainingSeconds <= 60 ? "border-danger text-danger" : "border-border text-text-primary",
               ].join(" ")}
+              aria-live="polite"
             >
-              {isMarked ? t("player.marked") : t("player.mark")}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleFinishSession}
-              disabled={isFinishing}
-              className="inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-qcm px-5 text-body font-semibold text-on-accent shadow-glow-qcm transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-60 sm:w-auto"
+              {formatRemaining(remainingSeconds)}
+            </p>
+          ) : null}
+          {!timed && elapsedSeconds !== null ? (
+            <p
+              aria-live="off"
+              className="rounded-pill border border-border px-3 py-2 text-center font-display text-h3 font-semibold tabular-nums text-text-secondary"
             >
-              {isFinishing ? t("player.finishing") : t("player.finish")}
-            </button>
-          </div>
-          {finishError && (
-            <p role="alert" className="mx-auto max-w-3xl px-card-padding pb-3 text-meta text-danger">
+              {formatRemaining(elapsedSeconds)}
+            </p>
+          ) : null}
+          <p className="text-center text-caption text-text-tertiary">{t("player.answered", { count: answeredCount })}</p>
+          <button type="button" onClick={() => setExitOpen(true)} className={sideButton}>
+            <Icon name="close" size={16} />
+            {t("player.quit")}
+          </button>
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            title={isFullscreen ? t("player.exitFullscreen") : t("player.fullscreen")}
+            aria-label={isFullscreen ? t("player.exitFullscreen") : t("player.enterFullscreen")}
+            aria-pressed={isFullscreen}
+            className={sideButton}
+          >
+            {isFullscreen ? t("player.exitFullscreen") : t("player.fullscreen")}
+          </button>
+          <button type="button" onClick={openReport} className={sideButton} aria-label={t("player.reportErrorLong")}>
+            <Icon name="flag" size={16} />
+            {t("player.reportError")}
+          </button>
+          {currentEntry ? (
+            <div className="[&_button]:w-full">
+              <EnqueueReviewButton questionId={currentEntry.question.id} />
+            </div>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
+            disabled={currentIndex === 0}
+            title={currentIndex === 0 ? t("player.firstQuestion") : undefined}
+            className={sideButton}
+          >
+            <Icon name="chevronLeft" size={16} />
+            {t("player.prev")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrentIndex((i) => Math.min(questions.length - 1, i + 1))}
+            disabled={currentIndex >= questions.length - 1}
+            title={currentIndex >= questions.length - 1 ? t("player.lastQuestion") : undefined}
+            className={sideButton}
+          >
+            {t("player.next")}
+            <Icon name="chevronRight" size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={toggleMarkForReview}
+            aria-pressed={isMarked}
+            className={[
+              sideButton,
+              isMarked ? "border-accent-qcm bg-accent-qcm/15 text-accent-soft" : "text-text-secondary",
+            ].join(" ")}
+          >
+            {isMarked ? t("player.marked") : t("player.mark")}
+          </button>
+          <button
+            type="button"
+            onClick={handleFinishSession}
+            disabled={isFinishing}
+            className="inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-qcm px-3 py-2 text-center text-meta font-semibold text-on-accent shadow-glow-qcm transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-60"
+          >
+            {isFinishing ? t("player.finishing") : t("player.finish")}
+          </button>
+          {finishError ? (
+            <p role="alert" className="text-meta text-danger">
               {finishError}
             </p>
-          )}
-        </nav>
-      )}
+          ) : null}
+          {session.mode === "practice" ? <StudyTimer embedded /> : null}
+        </aside>
+      ) : null}
 
       <Modal
         open={reportOpen}
@@ -817,11 +762,6 @@ export default function SessionQuestionPage() {
         onCancel={() => setExitOpen(false)}
       />
 
-      {/* FR-66 — optional study-timer presets. Practice sessions only: exam mode already
-          has its own FR-19 chronometer in the header above. Purely client-side. */}
-      {session && !session.completedAt && session.mode === "practice" && questions.length > 0 && (
-        <StudyTimer />
-      )}
     </main>
   );
 }

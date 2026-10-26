@@ -74,7 +74,7 @@ function formatClock(totalSeconds: number): string {
   return `${m}:${(s % 60).toString().padStart(2, "0")}`;
 }
 
-export function StudyTimer() {
+export function StudyTimer({ embedded = false }: { embedded?: boolean }) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   // Selection state hydrates from localStorage after mount (SSR-safe, mirrors the
@@ -208,7 +208,10 @@ export function StudyTimer() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-28 right-4 z-20 inline-flex min-h-touch-target items-center gap-2 rounded-pill border border-border bg-surface-1 px-4 py-2 text-meta font-medium text-text-secondary shadow-card transition hover:bg-surface-2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring sm:bottom-6"
+        className={cx(
+          "inline-flex min-h-touch-target items-center gap-2 rounded-pill border border-border bg-surface-1 px-4 py-2 text-meta font-medium text-text-secondary shadow-card transition hover:bg-surface-2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+          embedded ? "w-full justify-center" : "fixed bottom-28 right-4 z-20 sm:bottom-6"
+        )}
         aria-label={t("timer.open")}
         data-testid="study-timer-closed"
       >
@@ -219,7 +222,10 @@ export function StudyTimer() {
 
   return (
     <div
-      className="fixed bottom-28 right-4 z-20 w-64 rounded-card border border-border bg-surface-1 p-4 shadow-card sm:bottom-6"
+      className={cx(
+        "rounded-card border border-border bg-surface-1 p-4 shadow-card",
+        embedded ? "w-full" : "fixed bottom-28 right-4 z-20 w-64 sm:bottom-6"
+      )}
       role="group"
       aria-label={t("timer.title")}
       data-testid="study-timer-open"

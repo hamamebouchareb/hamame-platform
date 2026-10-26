@@ -1,5 +1,6 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { z } from "zod";
+import { hasUnrestrictedAccess } from "../entitlements";
 
 // BR-6 AI credit governance — the first real user-facing consumer of ai_credit_balances
 // (contextual hints, FR-29). Everything here is shared infrastructure: any future AI
@@ -123,7 +124,7 @@ export function nextUtcMidnight(from: Date): Date {
 export interface AiCreditReservation {
   reserved: boolean;
   // 'purchased' when the daily allowance was used up and a bought credit paid instead.
-  source: "daily" | "purchased" | null;
+  source: "daily" | "purchased" | "unrestricted" | null;
   usedToday: number;
   dailyAllowance: number;
   remainingToday: number;
@@ -165,6 +166,18 @@ interface ReserveRow {
 // left alone). All SET expressions read the pre-update row, so `daily_room` below
 // is evaluated once against the old values.
 export async function reserveAiCredit(client: PrismaClient, userId: string): Promise<AiCreditReservation> {
+  if (await hasUnrestrictedAccess(client, userId)) {
+    return {
+      reserved: true,
+      source: "unrestricted",
+      usedToday: 0,
+      dailyAllowance: 1_000_000,
+      remainingToday: 1_000_000,
+      purchasedCredits: 0,
+      resetAt: nextUtcMidnight(new Date()),
+    };
+  }
+
   const rows = await client.$queryRaw<ReserveRow[]>`
     WITH current AS (
       SELECT "user_id",
@@ -233,6 +246,7 @@ export async function refundAiCredit(
   userId: string,
   reservation: AiCreditReservation
 ): Promise<void> {
+  if (reservation.source === "unrestricted") return;
   if (reservation.source === "purchased") {
     // Bought credits never expire, so no day-boundary guard is needed.
     await client.$executeRaw`
@@ -268,6 +282,16 @@ export async function getAiCreditBalance(
   client: PrismaClient,
   userId: string
 ): Promise<AiCreditBalanceView> {
+  if (await hasUnrestrictedAccess(client, userId)) {
+    return {
+      dailyAllowance: 1_000_000,
+      usedToday: 0,
+      remainingToday: 1_000_000,
+      purchasedCredits: 0,
+      resetAt: nextUtcMidnight(new Date()),
+    };
+  }
+
   const allowances = await resolveAiCreditAllowances(client, userId);
   await ensureAiCreditBalance(client, userId, allowances);
 

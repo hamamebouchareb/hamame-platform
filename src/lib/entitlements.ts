@@ -17,9 +17,32 @@ export interface PremiumScope {
   facultyId: string | null;
   yearId: string | null;
   currentPeriodEnd: Date;
+  /** Admin and super-admin: every question and resource is unlocked. */
+  unrestricted?: boolean;
+}
+
+const UNRESTRICTED_ROLES = ["admin", "super_admin"] as const;
+
+export async function hasUnrestrictedAccess(client: Client, userId: string): Promise<boolean> {
+  const row = await client.userRole.findFirst({
+    where: { userId, role: { name: { in: [...UNRESTRICTED_ROLES] } } },
+    select: { userId: true },
+  });
+  return row !== null;
 }
 
 export async function resolvePremiumScope(client: Client, userId: string): Promise<PremiumScope | null> {
+  if (await hasUnrestrictedAccess(client, userId)) {
+    return {
+      subscriptionId: "admin",
+      planName: "Admin",
+      facultyId: null,
+      yearId: null,
+      currentPeriodEnd: new Date("2999-01-01T00:00:00.000Z"),
+      unrestricted: true,
+    };
+  }
+
   const subscription = await client.subscription.findFirst({
     where: {
       userId,
@@ -60,7 +83,9 @@ export function premiumCoversResource(
   scope: PremiumScope | null,
   resource: { facultyId: string | null; yearId: string | null }
 ): boolean {
-  if (!scope || !scope.yearId) return false;
+  if (!scope) return false;
+  if (scope.unrestricted) return true;
+  if (!scope.yearId) return false;
   if (resource.yearId) return resource.yearId === scope.yearId;
   if (resource.facultyId) return resource.facultyId === scope.facultyId;
   return true;

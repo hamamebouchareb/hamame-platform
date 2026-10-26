@@ -5,6 +5,7 @@ import { cx } from "@/lib/cx";
 import { useLanguage } from "@/context/LanguageContext";
 import { AnswerOption } from "@/components/AnswerOption";
 import { AiExplainPanel } from "@/components/AiExplainPanel";
+import { ShareWithFriend } from "@/components/ShareWithFriend";
 import type { QuestionOptionRef, QuestionType } from "@/lib/types";
 
 export interface QuestionAnswerState {
@@ -125,8 +126,11 @@ export function QuestionCard({
   ];
 
   return (
-    <article className={cx("mx-auto max-w-xl rounded-card border border-border bg-surface-1 p-card-padding shadow-card", className)}>
-      {meta ? <p className="text-meta font-medium uppercase tracking-wide text-text-tertiary">{meta}</p> : null}
+    <article className={cx("w-full rounded-card border border-border bg-surface-1 p-card-padding shadow-card", className)}>
+      <div className="flex items-start justify-between gap-2">
+        {meta ? <p className="text-meta font-medium uppercase tracking-wide text-text-tertiary">{meta}</p> : <span />}
+        {questionId ? <ShareWithFriend questionId={questionId} /> : null}
+      </div>
 
       {/* P5 course + sitting chips */}
       {unitName || moduleName || sittingChips.length > 0 ? (

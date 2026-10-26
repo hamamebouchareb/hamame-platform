@@ -35,6 +35,9 @@ export default function SubscriptionPage() {
   const { user, isHydrated, handleLogout } = useAuthedPage();
   const { lang, t } = useLanguage();
   const canFetch = isHydrated && !!user;
+  // Admin/super_admin: the backend resolves an unrestricted Premium scope
+  // (entitlements.ts), so the buy/activate sections below are noise — hide them.
+  const isStaff = user?.roles.some((role) => role === "admin" || role === "super_admin") ?? false;
 
   const [entitlements, setEntitlements] = useState<Entitlements | null>(null);
   const [offers, setOffers] = useState<PremiumOffer[]>([]);
@@ -160,7 +163,12 @@ export default function SubscriptionPage() {
       {entitlements && (
         <div className="mt-section-gap flex flex-col gap-section-gap">
           <Card radius="card-lg" accentTone="primary" data-entitlements>
-            {premium ? (
+            {isStaff && premium ? (
+              <>
+                <p className="font-display text-h3 font-bold text-text-primary">{t("premium.adminPlan")}</p>
+                <p className="mt-1 text-meta text-text-secondary">{t("premium.adminAll")}</p>
+              </>
+            ) : premium ? (
               <>
                 <p className="font-display text-h3 font-bold text-text-primary">
                   {premium.year
@@ -177,12 +185,15 @@ export default function SubscriptionPage() {
                 </p>
               </>
             )}
-            <Link href="/offres" className="mt-3 inline-block text-meta font-semibold text-accent-primary hover:underline">
-              {t("prem.compareLink")} →
-            </Link>
+            {!isStaff && (
+              <Link href="/offres" className="mt-3 inline-block text-meta font-semibold text-accent-primary hover:underline">
+                {t("prem.compareLink")} →
+              </Link>
+            )}
           </Card>
 
-          <section aria-labelledby="premium-offers">
+          {!isStaff && (
+            <section aria-labelledby="premium-offers">
             <h2 id="premium-offers" className="font-display text-h3 font-bold text-text-primary">
               {t("prem.offersTitle")}
             </h2>
@@ -280,9 +291,11 @@ export default function SubscriptionPage() {
                 );
               })}
             </ul>
-          </section>
+            </section>
+          )}
 
-          <section aria-labelledby="premium-codes">
+          {!isStaff && (
+            <section aria-labelledby="premium-codes">
             <h2 id="premium-codes" className="font-display text-h3 font-bold text-text-primary">
               {t("prem.codesTitle")}
             </h2>
@@ -291,6 +304,7 @@ export default function SubscriptionPage() {
               <PromoCodeCard onRedeemed={() => void refresh()} />
             </div>
           </section>
+            )}
         </div>
       )}
     </PageShell>

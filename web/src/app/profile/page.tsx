@@ -66,6 +66,9 @@ export default function ProfilePage() {
   const router = useRouter();
   const { user, isHydrated } = useRequireAuth();
   const { t } = useLanguage();
+  // Admin/super-admin are silently treated as lifetime Premium by the backend
+  // (entitlements.ts resolves an unrestricted scope) — the status chip mirrors that.
+  const isStaff = user?.roles.some((role) => role === "admin" || role === "super_admin") ?? false;
   const canFetch = isHydrated && !!user;
 
   const streak = useApiResource<{ streak: { currentStreakDays: number; longestStreakDays: number } }>(
@@ -223,7 +226,9 @@ export default function ProfilePage() {
                   </span>
                 ) : null}
                 <span className="rounded-pill border border-border bg-surface-3 px-2.5 py-0.5 text-caption font-medium text-text-secondary">
-                  {subscriptionStatusLabel(subscription.data?.subscription ?? null, t)}
+                  {isStaff
+                    ? `${t("premium.adminPlan")} · ${t("premium.adminAll")}`
+                    : subscriptionStatusLabel(subscription.data?.subscription ?? null, t)}
                 </span>
               </div>
             </div>

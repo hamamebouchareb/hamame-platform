@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<title>Hamame — logo concepts</title>
+<style>
+  body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; background: #0b0f1a; color: #e6e9f2; }
+  h1 { font-size: 20px; margin: 24px 32px 4px; }
+  p.sub { margin: 0 32px 16px; color: #94a0b8; font-size: 13px; }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 520px)); gap: 16px; padding: 0 32px 32px; }
+  .card { border: 1px solid #222b3d; border-radius: 16px; overflow: hidden; }
+  .dark, .light { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 22px 12px; }
+  .dark { background: #111827; }
+  .light { background: #f6f7fb; color: #111827; }
+  .lockup { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 24px; letter-spacing: -0.02em; }
+  .sizes { display: flex; align-items: flex-end; gap: 14px; }
+  .label { padding: 10px 14px; font-size: 13px; background: #0f1524; border-top: 1px solid #222b3d; }
+  .label b { color: #a5b4fc; }
+</style>
+</head>
+<body>
+<h1>Hamame — propositions de logo</h1>
+<p class="sub">Palette Hamame (bleu #2563EB → violet #7C3AED). Chaque logo est montré en grand, en taille d'icône (32 px, 20 px) et avec le nom.</p>
+<div class="grid" id="grid"></div>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2563EB" />
+      <stop offset="0.5" stop-color="#5B54E8" />
+      <stop offset="1" stop-color="#7C3AED" />
+    </linearGradient>
+  </defs>
+</svg>
+
+<template id="A">
+  <svg viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="url(#g)"/>
+    <path d="M19 17v30M45 17v30" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
+    <path d="M19 33h6l4-9 6 17 4-11 2 3h4" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</template>
+
+<template id="B">
+  <svg viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="url(#g)"/>
+    <path d="M31 40C27 30 22 20 13 12c13 1 22 10 24 22z" fill="#fff" opacity=".6"/>
+    <path d="M12 35l12 10 21-22" fill="none" stroke="#fff" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="47" cy="21" r="6" fill="#fff"/>
+    <path d="M52 19l7 1.6-6.2 3.2z" fill="#fff"/>
+  </svg>
+</template>
+
+<template id="C">
+  <svg viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="url(#g)"/>
+    <path d="M32 24c-5-4-11-5-19-4v26c8-1 14 0 19 4z" fill="#fff"/>
+    <path d="M32 24c5-4 11-5 19-4v26c-8-1-14 0-19 4z" fill="#fff" opacity=".75"/>
+    <path d="M32 9v10M27 14h10" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+  </svg>
+</template>
+
+<template id="D">
+  <svg viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="url(#g)"/>
+    <rect x="13" y="12" width="11" height="40" rx="5.5" fill="#fff"/>
+    <rect x="40" y="12" width="11" height="40" rx="5.5" fill="#fff" opacity=".75"/>
+    <path d="M21 33l7 7 15-15" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</template>
+
+<script>
+  const concepts = [
+    ["A", "Pouls", "Le H de Hamame, sa barre devient un tracé ECG : médecine + précision."],
+    ["B", "Colombe", "Hamame = « colombe ». Une colombe en vol dont le corps forme une coche de bonne réponse."],
+    ["C", "Livre + croix", "Un livre ouvert surmonté d'une croix médicale : étudier la médecine."],
+    ["D", "Gélules", "Un H fait de deux gélules reliées par une coche : santé + QCM réussi."],
+  ];
+  const grid = document.getElementById("grid");
+  for (const [id, name, desc] of concepts) {
+    const svg = () => document.getElementById(id).content.firstElementChild.cloneNode(true);
+    const sized = (px) => { const s = svg(); s.setAttribute("width", px); s.setAttribute("height", px); return s; };
+    const card = document.createElement("div"); card.className = "card";
+    for (const theme of ["dark", "light"]) {
+      const pane = document.createElement("div"); pane.className = theme;
+      if (theme === "dark") {
+        const sizes = document.createElement("div"); sizes.className = "sizes";
+        sizes.append(sized(96), sized(32), sized(20));
+        pane.append(sizes);
+      }
+      const lockup = document.createElement("div"); lockup.className = "lockup";
+      lockup.append(sized(34), Object.assign(document.createElement("span"), { textContent: "Hamame" }));
+      pane.append(lockup);
+      card.append(pane);
+    }
+    const label = document.createElement("div"); label.className = "label";
+    label.innerHTML = `<b>${id} — ${name}</b><br>${desc}`;
+    card.append(label);
+    grid.append(card);
+  }
+</script>
+</body>
+</html>

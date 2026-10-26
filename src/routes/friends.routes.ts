@@ -56,6 +56,14 @@ async function sendFriendRequest(req: Request, res: Response, next: NextFunction
       data: { userIdA: me, userIdB: userId, status: "pending" },
     });
 
+    const sender = await prisma.user.findUnique({ where: { id: me }, select: { fullName: true } });
+    await createNotificationBestEffort({
+      userId,
+      category: "social",
+      title: "Demande d'ami",
+      body: `${sender?.fullName ?? "Un camarade"} veut vous ajouter comme ami.`,
+    });
+
     res.status(201).json({ friendship });
   } catch (err) {
     next(err);
@@ -184,5 +192,24 @@ async function listFriendRequests(req: Request, res: Response, next: NextFunctio
 }
 
 router.get("/requests", listFriendRequests);
+
+// GET /api/friends/outgoing — requests the caller sent that are still pending.
+async function listOutgoingRequests(req: Request, res: Response, next: NextFunction) {
+  try {
+    const me = req.auth!.userId;
+    const requests = await prisma.friendship.findMany({
+      where: { userIdA: me, status: "pending" },
+      orderBy: { userIdB: "asc" },
+      include: { userB: { select: { id: true, fullName: true } } },
+    });
+    res.status(200).json({
+      requests: requests.map((row) => ({ userId: row.userB.id, fullName: row.userB.fullName })),
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+router.get("/outgoing", listOutgoingRequests);
 
 export default router;
