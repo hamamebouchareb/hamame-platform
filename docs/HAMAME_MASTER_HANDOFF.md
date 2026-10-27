@@ -2410,3 +2410,69 @@ old image would have silently stripped the phone (GET → null); the live one
 persisted it (GET → `"+213000000099"`), then `DELETE /api/users/me` → 200 and
 re-login rejected 401 (cleanup via the real API, loudly-fake fixture phone).
 Vercel `/login` → 200.
+
+## 36. Friend profiles with progress + server-truth friend-search chips — built & verified (2026-10-27)
+
+Owner report: "make can visit the profile of a friend and see its progress;
+also in amis where we type a name of a user there is en attente always there
+even if the other person accept the invitation." Two deliverables, one shared
+root cause for (2).
+
+**(2) Root cause — WHY the chip never updated.** The "Amis" surfaces are
+`FriendsPanel` (dashboard) and the find-friends form on `/profile`. Both
+derived search-hit chips from CLIENT-SIDE snapshots: FriendsPanel's
+`relationState()` checked `friends`/`incoming`/`outgoing` lists fetched once on
+mount (`useEffect []`), and /profile kept a local `sentRequests` map. When the
+OTHER person accepted, nothing on our client could ever know — the chip stayed
+"En attente" forever. Fix: `GET /api/users/search` rows now carry a
+SERVER-derived `relationship: none|friend|pending_sent|pending_received`
+(one extra ≤10-row both-directions `friendship.findMany`), so every fresh
+search is the database's truth. Frontend chips read that field; FriendsPanel
+also reloads + re-runs an active search on window focus and visibilitychange
+(accepts that happened while the tab sat open converge silently), accept/add
+refresh an on-screen search immediately, and `pending_received` rows get an
+inline "Accepter" button (the reverse side of the same discovery). /profile's
+`sentRequests` map is deleted, same treatment there; friend rows on BOTH
+surfaces link to the new page.
+
+**(1) Friend profiles.** `GET /api/users/:id/profile`
+(`getFriendProfile`, users.routes.ts): gate order is deliberate — user lookup
+FIRST (unknown/soft-deleted → 404 `USER_NOT_FOUND`; malformed UUID → 400),
+THEN the accepted-friendship gate (403 `NOT_FRIENDS`, self always allowed).
+Run-1 probe caught this: my first implementation 403'd a phantom UUID; the
+comment in the route documents why the order matters (a NOT_FRIENDS verdict
+equally applies to real accounts only). Payload discipline: id/fullName/
+faculty(+name)/year(+label)/wilaya/photo/createdAt — NO email/phone/status.
+The `progress` block is the exact `GET /api/progress/me` payload: its builder
+was extracted verbatim as `buildProgressSummary(userId)`
+(progress.routes.ts export), and the wet run PROVED the invariant byte-for-
+byte (progress block JSON === target's own /progress/me body). Inherited
+caveat kept honest: this surface (like /me itself) counts every attempt row —
+it does NOT apply the /qcm-stats newest-attempt de-dup; the metric subtitle
+"QCM / QCS, au total" states that on the page. Frontend:
+`web/src/app/amis/[id]/page.tsx` (PageShell, identity card, 4 metrics via
+existing `suivi.*` keys, top-5 recent activity, notFriends/notFound/
+network+retry EmptyStates, self badge). Lint round-1 caught two real writing
+defects, both before shipping: refs written during render in FriendsPanel
+(→ useCallback converge) and a synchronous invalid-UUID setState in the new
+page's effect (→ render-time `invalidParam` flag).
+
+**Gates:** backend `tsc --noEmit` 0; `npm test` 73/73; web tsc 0; eslint
+0 errors (3 PRE-EXISTING warnings in unrelated files); `next build` 0
+(`/amis/[id]` in the route table); Playwright 4/4 (first run 3+1
+startup-flaky — machine-known; immediate retry green).
+
+**Evidence:** `docs/verification/2026-10-27-friend-profile-raw.log` + paired
+`.md` — local REAL API, run 1 disclosed (31/32: unknown-uuid 403 bug found BY
+the probe, fixed, rerun) and run 2 **32/32**: relationship transitions
+`none → pending_sent → friend` (sender) and `pending_received → friend`
+(receiver) with raw JSON; profile matrix self 200 / pending-sent 403 /
+pending-received 403 / friend 200 / deleted-friend 404 / unknown 404 /
+malformed 400; deleted user absent from search rows; no-PII key assertions;
+byte-identical progress invariant; cleanup 4 `vf-friend-*@verify.hamame.test`
+accounts → 0 remaining via real `DELETE /api/users/me` + re-login 401 per
+account. Harness ran with the standing pooler workaround (process-local
+DATABASE_URL → 6543 + `&pgbouncer=true`); tsx-watch restart after the gate
+reorder EADDRINUSE'd and had to be relaunched clean (both disclosed). i18n
+keys added both sides: `friends.viewProfile`, `friendPage.*` (9 keys).
+

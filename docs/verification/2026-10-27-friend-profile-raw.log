@@ -1,0 +1,33 @@
+﻿[PASS] register: 4 accounts live (A,B,C,D) -- live=4
+ids: A=faf40142-73f5-4770-a612-620bf90c3e84 B=195eae53-0789-43a5-b52b-4298c82089d9 C=ac6bfbc2-aa32-4ab9-9110-4337e44272d0 D=719082bf-8b60-4b32-bc45-97df5a7653bd
+[PASS] search C->A before request: relationship none -- [{"id":"faf40142-73f5-4770-a612-620bf90c3e84","fullName":"VfAlpha HAMAME","relationship":"none"}]
+[PASS] C sends request to A: 201/200 -- {"friendship":{"userIdA":"ac6bfbc2-aa32-4ab9-9110-4337e44272d0","userIdB":"faf40142-73f5-4770-a612-620bf90c3e84","status":"pending"}}
+[PASS] search C->A after send: pending_sent -- rel=pending_sent
+[PASS] search A->C after send: pending_received -- rel=pending_received
+[PASS] A /progress/me: 200 + shape -- {"streak":{"currentStreakDays":0,"longestStreakDays":0},"dailyGoal":{"dailyGoalMinutes":20,"minutesStudiedToday":0,"goalMet":false},"totalCompletedSessions":0,"averageScore":null,"accuracy":null,"recentActivity":[]}
+[PASS] self profile: 200 -- status=200
+[PASS] profile for pending_sent (C->A): 403 NOT_FRIENDS -- {"error":{"code":"NOT_FRIENDS","message":"This profile is visible to friends only."}}
+[PASS] profile for pending_received (A->C): 403 NOT_FRIENDS -- {"error":{"code":"NOT_FRIENDS","message":"This profile is visible to friends only."}}
+[PASS] A accepts C: 200 -- {"friendship":{"userIdA":"ac6bfbc2-aa32-4ab9-9110-4337e44272d0","userIdB":"faf40142-73f5-4770-a612-620bf90c3e84","status":"accepted"}}
+[PASS] search C->A after accept: friend -- rel=friend
+[PASS] search A->C after accept: friend -- rel=friend
+[PASS] friend profile as friend C: 200 -- status=200
+[PASS] friend profile: user.id/fullName/createdAt present -- {"id":"faf40142-73f5-4770-a612-620bf90c3e84","fullName":"VfAlpha HAMAME","facultyId":null,"yearId":null,"wilaya":null,"profilePhotoUrl":null,"createdAt":"2026-10-27T14:56:00.403Z","facultyName":null,"yearLabel":null}
+[PASS] friend profile: has faculty/year/wilaya/photo fields (even when null) -- facultyName=null yearLabel=null
+[PASS] friend profile: NO PII (email/phone/status absent) -- email=false phone=false status=false
+[PASS] friend profile: progress block shape -- {"streak":{"currentStreakDays":0,"longestStreakDays":0},"dailyGoal":{"dailyGoalMinutes":20,"minutesStudiedToday":0,"goalMet":false},"totalCompletedSessions":0,"averageScore":null,"accuracy":null,"recentActivity":[]}
+[PASS] friend progress === A's own /progress/me JSON (same builder) -- mine={"streak":{"currentStreakDays":0,"longestStreakDays":0},"dailyGoal":{"dailyGoalMinutes":20,"minutesStudiedToday":0,"goalMet":false},"totalCompletedSessions":0,"averageScore":null,"accuracy":null,"recentActivity":[]}
+  theirs={"streak":{"currentStreakDays":0,"longestStreakDays":0},"dailyGoal":{"dailyGoalMinutes":20,"minutesStudiedToday":0,"goalMet":false},"totalCompletedSessions":0,"averageScore":null,"accuracy":null,"recentActivity":[]}
+[PASS] B sees friend D profile before delete: 200 -- status=200
+[PASS] D deletes own account: 200 -- status=200
+[PASS] profile of DELETED friend: 404 USER_NOT_FOUND (friendship row survives soft delete) -- {"error":{"code":"USER_NOT_FOUND","message":"User not found."}}
+[PASS] deleted user absent from search results -- []
+[PASS] unknown uuid profile: 404 USER_NOT_FOUND -- {"error":{"code":"USER_NOT_FOUND","message":"User not found."}}
+[PASS] malformed uuid profile: 400 -- status=400 body={"error":{"code":"VALIDATION_ERROR","message":"id: Invalid uuid"}}
+[PASS] deleted user's token rejects: 401 -- status=401
+--- cleanup ---
+[PASS] delete Alpha: 200 + re-login 401 -- del=200 relogin=401
+[PASS] delete Bravo: 200 + re-login 401 -- del=200 relogin=401
+[PASS] delete Charlie: 200 + re-login 401 -- del=200 relogin=401
+[PASS] cleanup complete: 0 accounts remaining -- remaining=0
+ALL CHECKS PASSED

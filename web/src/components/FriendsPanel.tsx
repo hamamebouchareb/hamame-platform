@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cx } from "@/lib/cx";
 import { useLanguage } from "@/context/LanguageContext";
@@ -8,6 +9,7 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { EmptyState } from "@/components/EmptyState";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { PresenceDot } from "@/components/PresenceDot";
+import type { UserSearchResult } from "@/lib/types";
 
 interface Person {
   id: string;
@@ -30,12 +32,12 @@ export function FriendsPanel({ className }: { className?: string }) {
   const [incoming, setIncoming] = useState<Person[]>([]);
   const [outgoing, setOutgoing] = useState<Person[]>([]);
   const [query, setQuery] = useState("");
-  const [found, setFound] = useState<Person[]>([]);
+  const [found, setFound] = useState<UserSearchResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  async function reload() {
+  const reload = useCallback(async () => {
     const [friendData, requestData, outgoingData] = await Promise.all([
       apiFetch<{ friends: Person[] }>("/friends"),
       apiFetch<{ requests: { userId: string; fullName: string | null }[] }>("/friends/requests"),
@@ -44,7 +46,7 @@ export function FriendsPanel({ className }: { className?: string }) {
     setFriends(friendData.friends);
     setIncoming(requestData.requests.map((row) => ({ id: row.userId, fullName: row.fullName })));
     setOutgoing(outgoingData.requests.map((row) => ({ id: row.userId, fullName: row.fullName })));
-  }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,24 +65,45 @@ export function FriendsPanel({ className }: { className?: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Search hits carry the SERVER-derived relationship (types.ts
+  // UserSearchResult): the database's truth at search time, never a
+  // mount-time snapshot of local lists (that snapshot was the stale-chip bug).
+  const fetchSearch = useCallback(async (q: string) => {
+    const data = await apiFetch<{ users: UserSearchResult[] }>(`/users/search?q=${encodeURIComponent(q)}`);
+    setFound(data.users);
+  }, []);
+
   useEffect(() => {
     const q = query.trim();
     if (q.length < 3) return;
     const handle = window.setTimeout(() => {
-      apiFetch<{ users: Person[] }>(`/users/search?q=${encodeURIComponent(q)}`)
-        .then((data) => setFound(data.users))
-        .catch(() => setFound([]));
+      fetchSearch(q).catch(() => setFound([]));
     }, 250);
     return () => window.clearTimeout(handle);
-  }, [query]);
+  }, [query, fetchSearch]);
 
-  /** Relation state for a search hit, so already-related people get a status
-   * label instead of a second "Add" action (and never show twice). */
-  function relationState(userId: string): "friend" | "pending" | null {
-    if (friends.some((f) => f.id === userId)) return "friend";
-    if (incoming.some((p) => p.id === userId) || outgoing.some((p) => p.id === userId)) return "pending";
-    return null;
-  }
+  // The other person acts OUTSIDE this tab: they can accept your request while
+  // this panel sits open, and the old client-side chips stayed stale forever
+  // (the reported "En attente" bug). On window focus and on the tab becoming
+  // visible, reload the lists and re-run an active search so state converges
+  // to server truth without the user re-typing anything. Re-subscribing per
+  // query change is intentional and trivial (two window listeners).
+  const converge = useCallback(() => {
+    if (document.visibilityState !== "visible") return;
+    // A transient pooler hiccup keeps the current view — never blanks it.
+    void reload().catch(() => undefined);
+    const q = query.trim();
+    if (q.length >= 3) void fetchSearch(q).catch(() => undefined);
+  }, [query, reload, fetchSearch]);
+
+  useEffect(() => {
+    window.addEventListener("focus", converge);
+    document.addEventListener("visibilitychange", converge);
+    return () => {
+      window.removeEventListener("focus", converge);
+      document.removeEventListener("visibilitychange", converge);
+    };
+  }, [converge]);
 
   async function add(userId: string) {
     setNotice(null);
@@ -98,6 +121,11 @@ export function FriendsPanel({ className }: { className?: string }) {
   async function accept(userId: string) {
     await apiFetch(`/friends/${userId}/accept`, { method: "POST" });
     await reload();
+    // Accepting usually comes from a search hit (inline accept) or the
+    // incoming list — either way, refresh an active search so the chip flips
+    // to server truth immediately instead of waiting for the next search.
+    const q = query.trim();
+    if (q.length >= 3) await fetchSearch(q).catch(() => undefined);
   }
 
   async function remove(userId: string) {
@@ -134,19 +162,26 @@ export function FriendsPanel({ className }: { className?: string }) {
             <li className="text-caption text-text-tertiary">{t("friends.noResults")}</li>
           ) : (
             found.map((person) => {
-              const state = relationState(person.id);
+              // Chips come from the search response itself (server truth);
+              // pending_received additionally surfaces the inline accept.
+              const chip =
+                person.relationship === "friend" ? (
+                  <span className="shrink-0 text-caption text-text-tertiary">{t("friends.alreadyFriends")}</span>
+                ) : person.relationship === "pending_sent" ? (
+                  <span className="shrink-0 text-caption text-text-tertiary">{t("friends.pending")}</span>
+                ) : person.relationship === "pending_received" ? (
+                  <button type="button" onClick={() => void accept(person.id)} className="shrink-0 text-caption font-semibold text-accent-soft">
+                    {t("friends.approve")}
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => void add(person.id)} className="shrink-0 text-caption font-medium text-accent-soft">
+                    {t("friends.add")}
+                  </button>
+                );
               return (
                 <li key={person.id} className="flex items-center justify-between gap-2">
                   <span className="min-w-0 truncate text-body text-text-primary">{person.fullName ?? "—"}</span>
-                  {state === "friend" ? (
-                    <span className="shrink-0 text-caption text-text-tertiary">{t("friends.alreadyFriends")}</span>
-                  ) : state === "pending" ? (
-                    <span className="shrink-0 text-caption text-text-tertiary">{t("friends.pending")}</span>
-                  ) : (
-                    <button type="button" onClick={() => void add(person.id)} className="shrink-0 text-caption font-medium text-accent-soft">
-                      {t("friends.add")}
-                    </button>
-                  )}
+                  {chip}
                 </li>
               );
             })
@@ -204,16 +239,24 @@ export function FriendsPanel({ className }: { className?: string }) {
                 <ul className="mt-2 flex flex-col gap-1">
                   {friends.map((friend) => (
                     <li key={friend.id} className="flex min-h-touch-target items-center gap-2 rounded-card px-1 py-1">
-                      <span className="relative shrink-0">
-                        <span
-                          className="flex h-8 w-8 items-center justify-center rounded-pill bg-surface-3 font-display text-caption font-bold text-accent-soft"
-                          aria-hidden
-                        >
-                          {initials(friend.fullName ?? "?")}
+                      {/* Friend rows open the friend profile; chat stays a
+                          separate button so the two actions never compete. */}
+                      <Link
+                        href={`/amis/${friend.id}`}
+                        title={t("friends.viewProfile")}
+                        className="flex min-w-0 flex-1 items-center gap-2 rounded-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+                      >
+                        <span className="relative shrink-0">
+                          <span
+                            className="flex h-8 w-8 items-center justify-center rounded-pill bg-surface-3 font-display text-caption font-bold text-accent-soft"
+                            aria-hidden
+                          >
+                            {initials(friend.fullName ?? "?")}
+                          </span>
+                          <PresenceDot online={friend.online} />
                         </span>
-                        <PresenceDot online={friend.online} />
-                      </span>
-                      <p className="min-w-0 flex-1 truncate text-body font-medium text-text-primary">{friend.fullName ?? "—"}</p>
+                        <span className="min-w-0 truncate text-body font-medium text-text-primary">{friend.fullName ?? "—"}</span>
+                      </Link>
                       <button type="button" onClick={() => void message(friend.id)} className="shrink-0 text-caption font-medium text-accent-soft">
                         {t("friends.message")}
                       </button>

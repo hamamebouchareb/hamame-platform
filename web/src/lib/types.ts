@@ -519,6 +519,39 @@ export interface FriendSummary {
   fullName: string;
 }
 
+// Server-derived relationship in GET /api/users/search rows. WHY (bug fix):
+// the client's locally-loaded friend/request lists go stale the moment the
+// OTHER person acts — they can accept your request while your search row
+// still claimed "pending". This field is the database's truth at search
+// time, so a chip can never be older than the search that produced it.
+// pending_sent = I sent the request; pending_received = THEY sent it to me.
+export type SearchRelationship = "none" | "friend" | "pending_sent" | "pending_received";
+
+// GET /api/users/search — one row per matched account (≤10).
+export interface UserSearchResult {
+  id: string;
+  fullName: string | null;
+  relationship: SearchRelationship;
+}
+
+// GET /api/users/:id/profile — a FRIEND's public profile. The progress block
+// is the exact GET /api/progress/me payload (same backend builder — one
+// accuracy surface, never a second implementation).
+export interface FriendProfile {
+  user: {
+    id: string;
+    fullName: string | null;
+    facultyId: string | null;
+    yearId: string | null;
+    facultyName: string | null;
+    yearLabel: string | null;
+    wilaya: string | null;
+    profilePhotoUrl: string | null;
+    createdAt: string;
+  };
+  progress: ProgressSummary;
+}
+
 // GET/PUT /api/push/preferences — the 3 V1 push notification types plus the master
 // switch (src/routes/push.routes.ts). No row on the backend = every field defaults true.
 export interface PushPreferences {

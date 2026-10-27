@@ -34,11 +34,16 @@ function readinessLabel(score: number): "Needs work" | "On track" | "Exam ready"
 }
 
 // GET /api/progress/me — streak, score, accuracy, activity history.
-async function getMyProgress(req: Request, res: Response, next: NextFunction) {
-  try {
-    const userId = req.auth!.userId;
-
-    // Sequential, not Promise.all — same pooler-concurrency fix already applied to
+//
+// The payload builder below is a standalone EXPORT so the friend-profile
+// endpoint (GET /api/users/:id/profile, users.routes.ts) can serve the EXACT
+// same progress surface for a friend — one implementation, so "my dashboard"
+// and "a friend's page" can never disagree. Inherited caveat (kept verbatim,
+// it protects the /progress/me contract): like /progress/me, this summary
+// does NOT apply the "newest attempt per session_question" dedup that
+// /qcm-stats and /by-module apply.
+export async function buildProgressSummary(userId: string) {
+  // Sequential, not Promise.all — same pooler-concurrency fix already applied to
     // GET /api/users/me/export (see that handler's comment in users.routes.ts): firing
     // all of these concurrently can trip the Supabase session pooler's ~10-connection
     // limit (P1001). This isn't a hot path, so trading a little latency for reliability
@@ -113,7 +118,7 @@ async function getMyProgress(req: Request, res: Response, next: NextFunction) {
       })),
     ].sort((a, b) => b.at.getTime() - a.at.getTime());
 
-    res.status(200).json({
+    return {
       streak: {
         currentStreakDays: streak?.currentStreakDays ?? 0,
         longestStreakDays: streak?.longestStreakDays ?? 0,
@@ -127,7 +132,14 @@ async function getMyProgress(req: Request, res: Response, next: NextFunction) {
       averageScore: roundedAverageScore,
       accuracy,
       recentActivity,
-    });
+    };
+}
+
+// Thin HTTP adapter over buildProgressSummary().
+async function getMyProgress(req: Request, res: Response, next: NextFunction) {
+  try {
+    const progress = await buildProgressSummary(req.auth!.userId);
+    res.status(200).json(progress);
   } catch (err) {
     next(err);
   }

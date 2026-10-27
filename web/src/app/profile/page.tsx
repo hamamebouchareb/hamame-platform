@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
@@ -16,6 +17,7 @@ import type {
   ProgressSummary,
   QcmStats,
   Subscription,
+  UserSearchResult,
 } from "@/lib/types";
 
 function initials(fullName: string): string {
@@ -104,14 +106,16 @@ export default function ProfilePage() {
     return friends.filter((f) => f.fullName.toLowerCase().includes(q));
   }, [friends, friendSearch]);
 
-  // Find-new-friends search (GET /api/users/search — id+fullName only, min 3
-  // chars server-side). Results carry per-row send state, keyed by user id.
+  // Find-new-friends search (GET /api/users/search — id + fullName +
+  // server-derived relationship, min 3 chars server-side). The old client-side
+  // sentRequests map is gone: a locally-tracked "request sent" flag went stale
+  // the instant the other person accepted the request (the reported bug) —
+  // the relationship field is the database's truth at search time.
   const [userQuery, setUserQuery] = useState("");
-  const [userResults, setUserResults] = useState<FriendSummary[]>([]);
+  const [userResults, setUserResults] = useState<UserSearchResult[]>([]);
   const [userSearching, setUserSearching] = useState(false);
   const [userSearchError, setUserSearchError] = useState<string | null>(null);
   const [userSearched, setUserSearched] = useState(false);
-  const [sentRequests, setSentRequests] = useState<Record<string, boolean>>({});
   const [sendingId, setSendingId] = useState<string | null>(null);
 
   async function handleUserSearch(event: FormEvent<HTMLFormElement>) {
@@ -124,7 +128,7 @@ export default function ProfilePage() {
     setUserSearching(true);
     setUserSearchError(null);
     try {
-      const data = await apiFetch<{ users: FriendSummary[] }>(
+      const data = await apiFetch<{ users: UserSearchResult[] }>(
         `/users/search?q=${encodeURIComponent(query)}`
       );
       setUserResults(data.users);
@@ -144,10 +148,33 @@ export default function ProfilePage() {
         body: JSON.stringify({ userId: targetId }),
       });
       // 200 (already pending) and 201 (created) both mean a request now exists.
-      setSentRequests((prev) => ({ ...prev, [targetId]: true }));
+      // The chip flips WITHOUT a re-search for snappiness; the next search
+      // (or re-search on focus) replaces it with fresh server truth.
+      setUserResults((prev) =>
+        prev.map((row) => (row.id === targetId ? { ...row, relationship: "pending_sent" as const } : row))
+      );
     } catch {
       // Row-level failure: the button simply stays actionable. A global banner
       // would punish the whole section for one row's failed POST.
+    } finally {
+      setSendingId(null);
+    }
+  }
+
+  // Inline accept for a search hit whose row is pending_received (THEY sent
+  // the request to me) — mirrors FriendsPanel so both search surfaces behave
+  // alike and a caught-up chip can never claim an unaccepted request.
+  async function handleAcceptRequest(targetId: string) {
+    setSendingId(targetId);
+    try {
+      await apiFetch(`/friends/${targetId}/accept`, { method: "POST" });
+      setUserResults((prev) =>
+        prev.map((row) => (row.id === targetId ? { ...row, relationship: "friend" as const } : row))
+      );
+      friendsData.refetch();
+    } catch {
+      // Row-level failure keeps the chip as-is; the dashboard's incoming
+      // list remains the fallback place to act on the request.
     } finally {
       setSendingId(null);
     }
@@ -333,10 +360,17 @@ export default function ProfilePage() {
                   key={friend.id}
                   className="flex min-h-touch-target items-center gap-3 rounded-card border border-border bg-surface-1 px-3 py-2 shadow-card transition hover:border-border-strong hover:bg-surface-2"
                 >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-surface-3 font-display text-caption font-bold text-accent-soft" aria-hidden>
-                    {initials(friend.fullName)}
-                  </span>
-                  <p className="truncate text-body font-medium text-text-primary">{friend.fullName}</p>
+                  {/* Friend rows open the friend profile (progress view). */}
+                  <Link
+                    href={`/amis/${friend.id}`}
+                    title={t("friends.viewProfile")}
+                    className="flex min-w-0 flex-1 items-center gap-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+                  >
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-surface-3 font-display text-caption font-bold text-accent-soft" aria-hidden>
+                      {initials(friend.fullName)}
+                    </span>
+                    <span className="truncate text-body font-medium text-text-primary">{friend.fullName}</span>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -384,17 +418,28 @@ export default function ProfilePage() {
                       className="flex min-h-touch-target items-center gap-3 rounded-control border border-border bg-surface-2 px-3 py-2"
                     >
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-surface-3 font-display text-caption font-bold text-accent-soft" aria-hidden>
-                        {initials(result.fullName)}
+                        {initials(result.fullName ?? "?")}
                       </span>
                       <p className="min-w-0 flex-1 truncate text-body font-medium text-text-primary">
-                        {result.fullName}
+                        {result.fullName ?? "—"}
                       </p>
-                      {sentRequests[result.id] ? (
+                      {result.relationship === "friend" ? (
+                        <span className="shrink-0 text-meta font-medium text-text-tertiary">{t("friends.alreadyFriends")}</span>
+                      ) : result.relationship === "pending_sent" ? (
                         <span className="shrink-0 text-meta font-medium text-success">{t("profile.requestSent")}</span>
+                      ) : result.relationship === "pending_received" ? (
+                        <button
+                          type="button"
+                          onClick={() => void handleAcceptRequest(result.id)}
+                          disabled={sendingId === result.id}
+                          className="inline-flex min-h-touch-target shrink-0 items-center justify-center rounded-control border border-accent-secondary/50 bg-accent-secondary/10 px-3 text-meta font-semibold text-accent-soft transition hover:bg-accent-secondary/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-60"
+                        >
+                          {sendingId === result.id ? "…" : t("friends.approve")}
+                        </button>
                       ) : (
                         <button
                           type="button"
-                          onClick={() => handleSendRequest(result.id)}
+                          onClick={() => void handleSendRequest(result.id)}
                           disabled={sendingId === result.id}
                           className="inline-flex min-h-touch-target shrink-0 items-center justify-center rounded-control border border-border px-3 text-meta font-medium text-text-primary transition hover:bg-surface-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-60"
                         >

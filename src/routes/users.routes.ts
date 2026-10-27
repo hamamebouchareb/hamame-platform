@@ -2,10 +2,12 @@ import crypto from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { NextFunction, Request, Response, Router } from "express";
 import { z } from "zod";
-import { validateBody, validateQuery } from "../middleware/validate";
+import { validateBody, validateParams, validateQuery } from "../middleware/validate";
 import { invalidateAccountState, requireAuth } from "../middleware/auth";
 import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
+import { uuidParam } from "../lib/common-schemas";
+import { buildProgressSummary } from "./progress.routes";
 
 // docs/hamame_api_contract.md — "Auth & Account" section (profile-related endpoints).
 const router = Router();
@@ -93,8 +95,41 @@ async function searchUsers(req: Request, res: Response, next: NextFunction) {
       take: 10,
     });
 
+    // Server-derived relationship per row. WHY: the caller's locally loaded
+    // friend/request lists go stale the instant the OTHER person acts — they
+    // can accept your request while your chip still reads "pending" (that
+    // stale chip was a reported bug). Deriving here makes every fresh search
+    // the database's truth. One extra ≤10-row query, both directions.
+    // friends.routes.ts guarantees a single row per pair (never a duplicate
+    // opposite-direction row); defensively, an accepted row would still win
+    // over a leftover pending if the invariant were ever violated.
+    const relationships = new Map<string, string>();
+    if (users.length > 0) {
+      const rows = await prisma.friendship.findMany({
+        where: {
+          OR: [
+            { userIdA: userId, userIdB: { in: users.map((user) => user.id) } },
+            { userIdB: userId, userIdA: { in: users.map((user) => user.id) } },
+          ],
+        },
+        select: { userIdA: true, userIdB: true, status: true },
+      });
+      for (const row of rows) {
+        const other = row.userIdA === userId ? row.userIdB : row.userIdA;
+        const relationship =
+          row.status === "accepted" ? "friend" : row.userIdA === userId ? "pending_sent" : "pending_received";
+        if (!relationships.has(other) || relationship === "friend") {
+          relationships.set(other, relationship);
+        }
+      }
+    }
+
     res.status(200).json({
-      users: users.map((user) => ({ id: user.id, fullName: user.fullName })),
+      users: users.map((user) => ({
+        id: user.id,
+        fullName: user.fullName,
+        relationship: relationships.get(user.id) ?? "none",
+      })),
     });
   } catch (err) {
     next(err);
@@ -102,6 +137,89 @@ async function searchUsers(req: Request, res: Response, next: NextFunction) {
 }
 
 router.get("/search", validateQuery(searchUsersQuerySchema), searchUsers);
+
+// GET /api/users/:id/profile — a friend's public profile with their progress.
+//
+// Gate ORDER matters and is deliberate: the user row is looked up FIRST, so
+// an unknown or soft-deleted account 404s (USER_NOT_FOUND) and the
+// NOT_FRIENDS verdict never attaches to a phantom id. Only an account that
+// actually exists can produce 403 — "this profile is visible to friends
+// only" asserts the account is real, which the sanctioned /users/search
+// discovery surface also reveals. Friend gate: accepted friendship row in
+// either direction (A=sender / B=receiver convention — friends.routes.ts);
+// the caller's own id is always allowed so the page can render self too.
+// PII discipline: no email, no phone, no status — the same public fields as
+// the friends lists, plus faculty/year/wilaya/photo labels.
+//
+// The progress block REUSES buildProgressSummary() from progress.routes.ts
+// verbatim (the one-accuracy-surface invariant — see the note there): it is
+// the identical payload GET /api/progress/me would return for that user, NOT
+// a re-implementation. Sequential awaits throughout per the pooler
+// concurrency discipline.
+async function getFriendProfile(req: Request, res: Response, next: NextFunction) {
+  try {
+    const me = req.auth!.userId;
+    const { id } = req.params as unknown as { id: string };
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        fullName: true,
+        facultyId: true,
+        yearId: true,
+        wilaya: true,
+        profilePhotoUrl: true,
+        createdAt: true,
+        status: true,
+      },
+    });
+    if (!user || user.status === "deleted") {
+      throw new ApiError(404, "USER_NOT_FOUND", "User not found.");
+    }
+
+    if (id !== me) {
+      const friendship = await prisma.friendship.findFirst({
+        where: {
+          status: "accepted",
+          OR: [
+            { userIdA: me, userIdB: id },
+            { userIdA: id, userIdB: me },
+          ],
+        },
+        select: { userIdA: true },
+      });
+      if (!friendship) {
+        throw new ApiError(403, "NOT_FRIENDS", "This profile is visible to friends only.");
+      }
+    }
+
+    const { status: _status, ...safeUser } = user;
+
+    const facultyName = user.facultyId
+      ? (await prisma.faculty.findUnique({ where: { id: user.facultyId }, select: { name: true } }))?.name ?? null
+      : null;
+
+    const yearLabel = user.yearId
+      ? (await prisma.year.findUnique({ where: { id: user.yearId }, select: { label: true } }))?.label ?? null
+      : null;
+
+    const progress = await buildProgressSummary(id);
+
+    res.status(200).json({
+      user: {
+        ...safeUser,
+        facultyName,
+        yearLabel,
+      },
+      progress,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+router.get("/:id/profile", validateParams(uuidParam("id")), getFriendProfile);
 
 // PUT /api/users/me — FR-4: full_name, phone, faculty, year, university, wilaya, photo.
 //
