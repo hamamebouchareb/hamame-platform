@@ -5,6 +5,8 @@ import Link from "next/link";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useLanguage } from "@/context/LanguageContext";
 import { parseShare } from "@/lib/share-message";
+import { formatDmBytes } from "@/lib/dm-types";
+import { Icon } from "@/components/Icon";
 
 interface FriendRow {
   id: string;
@@ -20,6 +22,22 @@ export function MessageBody({ body }: { body: string }) {
       <div>
         <a href={share.url} target="_blank" rel="noreferrer">
           <img src={share.url} alt="" className="max-h-48 max-w-full rounded-control" />
+        </a>
+        {note}
+      </div>
+    );
+  }
+  if (share.kind === "file") {
+    return (
+      <div>
+        <a
+          href={share.url}
+          download={share.name}
+          className="flex items-center gap-2 rounded-control bg-surface-1/60 px-2 py-1.5 text-caption hover:bg-surface-2"
+        >
+          <Icon name="paperclip" size={14} className="shrink-0" />
+          <span className="min-w-0 truncate font-medium">{share.name}</span>
+          <span className="shrink-0 whitespace-nowrap text-text-tertiary">{formatDmBytes(share.size)}</span>
         </a>
         {note}
       </div>

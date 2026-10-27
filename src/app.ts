@@ -31,11 +31,14 @@ export function createApp() {
   app.use(cors(corsOptions));
   // rawBody: the Chargily webhook signature is an HMAC of the exact bytes.
   // Receipt uploads carry a base64 image (≤10 MB raw), so only that route
-  // gets the larger limit; everything else keeps the 100kb default.
+  // gets the larger limit; everything else keeps this default. DM
+  // attachments (base64 data URLs inside DirectMessage.body, up to 4 MiB
+  // binary ≈ 5.6 MB of JSON) need a wider default than Express's 100kb —
+  // everything else stays bounded by per-route validators.
   const keepRawBody = (req: express.Request, _res: express.Response, buf: Buffer) => {
     (req as express.Request & { rawBody?: Buffer }).rawBody = buf;
   };
-  const defaultJson = express.json({ verify: keepRawBody });
+  const defaultJson = express.json({ verify: keepRawBody, limit: "6mb" });
   const receiptJson = express.json({ limit: "14mb" });
   app.use((req, res, next) =>
     req.method === "POST" && req.path === "/api/wallet/transfer-deposits"

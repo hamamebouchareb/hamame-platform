@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname),
   },
+  // Playwright (and anyone reaching the dev server through 127.0.0.1) triggers
+  // Next 16's dev-resource origin block: the HMR socket never connects, so
+  // pages serve SSR HTML but never hydrate — client effects (like the /messages
+  // auth redirect) never run. Allow the loopback host used by the e2e harness.
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
 };
 
 export default nextConfig;

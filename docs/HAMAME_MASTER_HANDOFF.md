@@ -2213,3 +2213,108 @@ false after a 125s silence (window expiry), and all 3 throwaway
 `vf-presence-*@verify.hamame.test` accounts soft-deleted via the real
 `DELETE /api/users/me` with `0` active pattern rows re-queried + post-delete
 login rejected 401.
+
+## 34. DM attachments + messenger polish (minimize, page rebuild) — built & verified (2026-10-27)
+
+Follow-up to §33. Full desktop messaging experience, REA not a target again
+(facebook.com is auth-walled production; source of truth is Hamame's own
+contract, agreed with the owner).
+
+**Attachments — architecture decision (no fake uploads):** there is NO object
+storage (Railway FS ephemeral, Supabase Storage untracked/unconfig'd), so
+attachments ride the existing `[[hamame]]` body convention as size-capped,
+MIME-allowlisted base64 data URLs inside `DirectMessage.body`. One attachment
+per message; optional short text note rides in the payload (`note`).
+
+- `src/lib/dm-attachments.ts` = the single server-side trust boundary:
+  images `image/png|jpeg|webp|gif` ≤ 2.5 MiB, files `application/pdf`,
+  `text/plain`, `text/csv` ≤ 4 MiB (docx/xlsx/pptx refused on purpose —
+  unverifiable ZIPs); size = `floor(base64.length/4)*3` (over-estimates ≤2
+  bytes on unpadded payloads — documented); declared `mime` must equal the
+  dataUrl prefix; empty/blank-name → `ATTACHMENT_INVALID`, allowlist/
+  char-ceiling misses and mime mismatch → `ATTACHMENT_TYPE_UNSUPPORTED`,
+  over cap → `413 ATTACHMENT_TOO_LARGE`. Route `dms.routes.ts` mapper-imports
+  it (`composeBody` attachment branch), stores
+  `[[hamame]]{"kind":"image"|"file",…,url:<dataUrl>,name,size?,note?}`.
+  **Crucially `app.ts` default JSON limit had to move 100kb → 6mb** (Express
+  default; only `/wallet/transfer-deposits` keeps its 14mb lane) — without
+  that, the validator's 412/413 vocabulary was unreachable (parser 413'd
+  first). Everything else remains bounded by per-route validators.
+- Frontend: `web/src/lib/dm-types.ts` is the single contract (previously the
+  page + dock each hand-rolled `ConversationSummary`/`DirectMessageItem`) and
+  also mirrors the caps/accept strings for pickers (`DM_*` + `formatDmBytes`,
+  `isDmAttachmentAllowed` — UX preflight only, server re-validates anyway).
+  `share-message.ts` payload union extends for data-URL images + `kind:"file"`
+  (`shareLabel` file → file name), `MessageBody` renders file chips
+  (paperclip + name + size + Télécharger link) and data-URL images through the
+  same `<img>` branch.
+- **`web/src/components/DmComposer.tsx` (new)** — THE shared composer for the
+  docked windows AND the /messages page. Native file pickers via properly
+  associated sr-only `<label htmlFor>` + hidden `input[type=file]` with exact
+  `accept` strings; cancel leaves state untouched (change never fires); input
+  resets after read so the same file is re-pickable; up to 4 staged items
+  (`DM_MAX_ATTACHMENTS_PER_SEND`), image thumbnails / file chips with remove;
+  rejected names surfaced as a status line (`dms.attachRejectedList` /
+  `dms.attachTooMany`); send is sequential POSTs (attachment-first, then
+  trailing text), a duplicate-send guard, and failures keep the unsent items
+  staged; zero object-URL leaks (dataUrl previews only).
+- **`MessengerDock` Phase 2:** windows are now `{id, minimized}[]` with a
+  minimized strip BELOW the open windows (`flex-col-reverse` container —
+  first child bottom = minimized tabs, elevated windows above, matching
+  messenger.com); minimum animation none (plain) but NA — minimize keeps the
+  MiniChat MOUNTED, preserving drafts + loaded messages, and pauses polling +
+  mark-read while hidden (`minimizedRef`); unread badge on the minimized tab
+  comes from the polled feed; Escape minimizes when the window holds focus;
+  viewport-aware cap 3/≥1280px else 2 (resize listener trims over-cap
+  windows, newest kept); reopening an open-or-minimized row RE-FRONTS +
+  restores instead of duplicating (click-path rule: a row may not toggle two
+  different states); panel got loading skeleton / error+retry / empty states,
+  and MiniChat got the same states (fixes the previously unhandled deleted
+  `load()` promise).
+- **/messages page Phase 3 rebuild:** real fixed-height two-pane grid
+  (`md:h-[min(calc(100dvh-17rem),46rem)]`,
+  `md:grid-cols-[minmax(15rem,19rem)_minmax(0,1fr)]`) replacing the
+  `max-h-[70vh]` vs `min-h-[28rem]` mismatch and the inline
+  `style={{minHeight:"320px"}}` hack; `min-w-0/min-h-0` chain intact
+  (header shrink-0 / history `flex-1 overflow-y-auto` with autoscroll /
+  composer shrink-0); mobile = list-or-thread swap with an
+  `arrowLeft`-labeled back button (`dms.backToList`); the photo-URL +
+  resource-search rows collapsed into a collapsible `dms.extrasShare`
+  popover; composer is the shared DmComposer (keyed per conversation).
+- i18n keys added BOTH sides: `dms.minimizeChat`, `dms.restoreChat`,
+  `dms.backToList`, `dms.retry`, `dms.attachImage`, `dms.attachFile`,
+  `dms.pendingAria`, `dms.removeAttachment`, `dms.attachRejectedList`,
+  `dms.attachTooMany`, `dms.attachSendFailed`, `dms.extrasShare` (FR+EN
+  typed table — missing key would fail tsc). New Icon paths: `image`,
+  `paperclip` (were missing).
+- `web/next.config.ts`: added `allowedDevOrigins: ["127.0.0.1","localhost"]`
+  — without it Next 16 blocks the dev HMR transport for the loopback host
+  Playwright uses, pages serve SSR HTML but never hydrate, and client-only
+  behaviour (the /messages auth redirect) is untestable e2e on this machine.
+  Pre-existing hydration *warnings* (theme script, `data-theme` attr) became
+  visible for the first time once hydration actually happened.
+
+**Gates:** backend `tsc --noEmit` 0; `npm test` 73/73 (incl. 11 new
+`dm-attachments.test.ts` unit tests — package.json list updated); web tsc 0;
+`eslint` 0 errors (2 pre-existing warnings + 3 pre-existing-style `<img>`
+warnings — data URLs can't go through next/image); `next build` 0; Playwright
+e2e 4/4 (two new: unauth `/messages`→`/login` redirect, composer-source
+allowlist contract; auth-browser e2e remains infeasible here — no test creds,
+register rate-limited — disclosed).
+
+**Evidence:** `docs/verification/2026-10-27-dm-attachments-raw.log` +
+paired `.md` summary — 23/23 assertions through the REAL API on :3000: real
+friends handshake, image attachment with note byte-for-byte, PDF file
+attachment, csv-as-image / docx / oversize-413 / empty-base64 rejections with
+exact codes, CRLF name sanitation, `403 NOT_FRIENDS` (non-friend, plus 404
+participant vocabulary), conversation-scoped DB rows, all throwaway
+`vf-dmatt-*@verify.hamame.test` accounts soft-deleted via real
+`DELETE /api/users/me` (3 active → 0) and the harness conversation/messages/
+friendship rows deleted DB-side with before/after counts
+(`…-cleanup.log`). Harness quirks disclosed in the .md: first run (a) posted
+the sender's own id as `userId` (conversation step 400'd) and (b) had an
+unscoped `directMessage.findMany` that surfaced other users' rows in a LOCAL
+log only — corrected run is the committed log, the DB step is now
+convId-guarded. Harness DB access runs via the transaction pooler (6543 +
+`pgbouncer=true`) because the session pooler (5432, pool_size 15) is saturated
+by servers outside this machine's control; API keeps 5432.

@@ -7,6 +7,12 @@ import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
 import { createNotificationBestEffort } from "./notifications.routes";
 import { isOnline } from "../lib/presence";
+import {
+  ATTACHMENT_FILE_KIND,
+  ATTACHMENT_IMAGE_KIND,
+  MAX_FILE_CHARS,
+  validateAttachment,
+} from "../lib/dm-attachments";
 
 // Direct messages (DMs) between accepted friends. MedSparkDZ-parity feature —
 // their client talks to a Supabase `conversations` table with Realtime
@@ -192,16 +198,30 @@ router.get("/conversations/:id/messages", validateParams(uuidParam("id")), valid
 // notifies the recipient best-effort (never fails the send).
 const SHARE_PREFIX = "[[hamame]]";
 
+// Attachments ride inside the [[hamame]] body convention (see
+// src/lib/dm-attachments.ts for the WHY and the caps). One attachment per
+// message; a text note may accompany it.
+const attachmentSchema = z.object({
+  kind: z.enum([ATTACHMENT_IMAGE_KIND, ATTACHMENT_FILE_KIND]),
+  name: z.string().trim().min(1).max(200),
+  mime: z.string().trim().min(3).max(120),
+  dataUrl: z.string().max(MAX_FILE_CHARS).refine((value) => value.startsWith("data:") && value.includes(";base64,"), {
+    message: "An attachment must be a base64 data URL.",
+  }),
+});
+
 const sendMessageSchema = z
   .object({
     body: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH).optional(),
     questionId: z.string().uuid().optional(),
     resourceId: z.string().uuid().optional(),
     imageUrl: z.string().trim().url().max(500).optional(),
+    attachment: attachmentSchema.optional(),
   })
-  .refine((value) => Boolean(value.body || value.questionId || value.resourceId || value.imageUrl), {
-    message: "A message needs text or something to share.",
-  });
+  .refine(
+    (value) => Boolean(value.body || value.questionId || value.resourceId || value.imageUrl || value.attachment),
+    { message: "A message needs text or something to share." }
+  );
 
 function snippet(raw: string): string {
   return raw.replace(/[{}"\\[\]]/g, " ").replace(/\b(text|type|content|attrs)\s*:/gi, " ").replace(/\s+/g, " ").trim().slice(0, 140);
@@ -239,6 +259,33 @@ async function composeBody(input: z.infer<typeof sendMessageSchema>): Promise<{ 
     }
     const payload = { kind: "image" as const, url: input.imageUrl, note: note || undefined };
     return { stored: SHARE_PREFIX + JSON.stringify(payload), preview: "Photo" };
+  }
+  if (input.attachment) {
+    // Server-side trust boundary for file/image attachments (kind "file") —
+    // mirror-imported so the route stays thin. throws on bad type/size.
+    const attachment = validateAttachment({
+      kind: input.attachment.kind === ATTACHMENT_FILE_KIND ? ATTACHMENT_FILE_KIND : ATTACHMENT_IMAGE_KIND,
+      name: input.attachment.name,
+      mime: input.attachment.mime,
+      dataUrl: input.attachment.dataUrl,
+    });
+    const payload =
+      attachment.kind === ATTACHMENT_FILE_KIND
+        ? {
+            kind: "file" as const,
+            name: attachment.name,
+            mime: attachment.mime,
+            size: attachment.size,
+            url: attachment.dataUrl,
+            note: note || undefined,
+          }
+        : {
+            kind: "image" as const,
+            url: attachment.dataUrl,
+            name: attachment.name,
+            note: note || undefined,
+          };
+    return { stored: SHARE_PREFIX + JSON.stringify(payload), preview: attachment.kind === ATTACHMENT_FILE_KIND ? attachment.name : "Photo" };
   }
   return { stored: note ?? "", preview: note ?? "" };
 }

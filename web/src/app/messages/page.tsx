@@ -12,22 +12,11 @@ import { cx } from "@/lib/cx";
 import { shareLabel } from "@/lib/share-message";
 import { MessageBody } from "@/components/ShareWithFriend";
 import { PresenceDot } from "@/components/PresenceDot";
+import { DmComposer } from "@/components/DmComposer";
+import { Icon } from "@/components/Icon";
+import type { ConversationSummary, DirectMessageItem } from "@/lib/dm-types";
 
-interface ConversationSummary {
-  id: string;
-  otherUser: { id: string; fullName: string | null; online?: boolean };
-  lastMessage: { body: string; fromMe: boolean; createdAt: string } | null;
-  unreadCount: number;
-  lastMessageAt: string;
-}
-
-interface DirectMessageItem {
-  id: string;
-  senderId: string;
-  body: string;
-  readAt: string | null;
-  createdAt: string;
-}
+export type { ConversationSummary } from "@/lib/dm-types";
 
 interface FriendItem {
   id: string;
@@ -77,15 +66,20 @@ export default function MessagesPage() {
   const [outgoingInvites, setOutgoingInvites] = useState<StudyInviteOutgoing[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [messages, setMessages] = useState<DirectMessageItem[]>([]);
-  const [draft, setDraft] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [resourceQuery, setResourceQuery] = useState("");
   const [resourceHits, setResourceHits] = useState<{ id: string; title: string }[]>([]);
+  const [extrasOpen, setExtrasOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  const historyRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    historyRef.current?.scrollTo({ top: historyRef.current.scrollHeight });
+  }, [selectedId, messages.length]);
 
   const selectedIdRef = useRef<string | null>(null);
   const queryOpened = useRef(false);
@@ -239,6 +233,21 @@ export default function MessagesPage() {
     return () => window.clearTimeout(handle);
   }, [resourceQuery]);
 
+  function handleSentMessage(conversationId: string, message: DirectMessageItem) {
+    setMessages((prev) => [...prev, message]);
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === conversationId
+          ? {
+              ...c,
+              lastMessage: { body: message.body, fromMe: true, createdAt: message.createdAt },
+              lastMessageAt: message.createdAt,
+            }
+          : c
+      )
+    );
+  }
+
   async function sendShare(payload: { imageUrl?: string; resourceId?: string }) {
     const conversationId = selectedId;
     if (!conversationId) return;
@@ -251,35 +260,7 @@ export default function MessagesPage() {
       setImageUrl("");
       setResourceQuery("");
       setResourceHits([]);
-      setMessages((prev) => [...prev, data.message]);
-    } catch (err) {
-      setSendError(err instanceof ApiError ? err.message : t("dms.sendFailed"));
-    }
-  }
-
-  async function sendDraft() {
-    const conversationId = selectedId;
-    const body = draft.trim();
-    if (!conversationId || !body) return;
-    setSendError(null);
-    try {
-      const data = await apiFetch<{ message: DirectMessageItem }>(
-        `/dms/conversations/${conversationId}/messages`,
-        { method: "POST", body: JSON.stringify({ body }) }
-      );
-      setDraft("");
-      setMessages((prev) => [...prev, data.message]);
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === conversationId
-            ? {
-                ...c,
-                lastMessage: { body: data.message.body, fromMe: true, createdAt: data.message.createdAt },
-                lastMessageAt: data.message.createdAt,
-              }
-            : c
-        )
-      );
+      handleSentMessage(conversationId, data.message);
     } catch (err) {
       setSendError(err instanceof ApiError ? err.message : t("dms.sendFailed"));
     }
@@ -450,8 +431,18 @@ export default function MessagesPage() {
             />
           </div>
         ) : (
-          <div className="mt-4 grid overflow-hidden rounded-card-lg border border-border bg-surface-1 shadow-card md:grid-cols-[minmax(16rem,20rem)_1fr]">
-            <ul className="flex max-h-[70vh] flex-col overflow-y-auto border-b border-border md:border-b-0 md:border-r" aria-label={t("dms.title")}>
+          <div
+            className="mt-4 grid min-h-[24rem] overflow-hidden rounded-card-lg border border-border bg-surface-1 shadow-card md:h-[min(calc(100dvh-17rem),46rem)] md:grid-cols-[minmax(15rem,19rem)_minmax(0,1fr)]"
+          >
+            {/* Conversation list — full pane on mobile until a thread is opened. */}
+            <aside
+              aria-label={t("dms.title")}
+              className={cx(
+                "flex min-h-0 min-w-0 flex-col border-b border-border md:border-b-0 md:border-r",
+                selectedId ? "hidden md:flex" : "flex"
+              )}
+            >
+              <ul className="min-h-0 flex-1 overflow-y-auto">
               {conversations.map((conversation) => {
                 const unread = conversation.unreadCount > 0;
                 return (
@@ -502,13 +493,29 @@ export default function MessagesPage() {
                 </li>
                 );
               })}
-            </ul>
+              </ul>
+            </aside>
 
-            <div className="min-h-[28rem] bg-surface-1">
+            {/* Thread pane — swaps in on mobile once a conversation is open. */}
+            <section
+              className={cx(
+                "flex min-h-0 min-w-0 flex-col",
+                selectedId ? "flex" : "hidden md:flex"
+              )}
+            >
+            <div className="min-h-[28rem] bg-surface-1 md:flex md:h-full md:flex-col md:min-h-0">
               {selectedConversation ? (
-                <div className="flex h-full flex-col">
+                <div className={cx("flex", "h-full flex-col md:min-h-0")}>
                   <div className="flex items-center justify-between gap-2 border-b border-border p-card-padding">
-                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedId(null)}
+                        aria-label={t("dms.backToList")}
+                        className="-ml-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-pill text-text-secondary transition hover:bg-surface-2 hover:text-text-primary md:hidden"
+                      >
+                        <Icon name="arrowLeft" size={18} />
+                      </button>
                       <span className="relative shrink-0">
                         <UserAvatar
                           name={selectedConversation.otherUser.fullName}
@@ -530,7 +537,7 @@ export default function MessagesPage() {
                     </button>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto p-card-padding" style={{ minHeight: "320px" }}>
+                  <div ref={historyRef} className="min-h-0 flex-1 overflow-y-auto p-card-padding">
                     {messages.length === 0 ? (
                       <p className="text-body text-text-secondary">{t("dms.emptyThreadHint")}</p>
                     ) : (
@@ -560,73 +567,73 @@ export default function MessagesPage() {
                   </div>
 
                   {sendError ? (
-                    <p role="alert" className="px-card-padding pb-2 text-caption text-danger">{sendError}</p>
+                    <p role="alert" className="shrink-0 px-card-padding pb-2 text-caption text-danger">{sendError}</p>
                   ) : null}
 
-                  <form
-                    className="flex gap-2 border-t border-border p-card-padding"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      void sendDraft();
-                    }}
-                  >
-                    <input
-                      type="text"
-                      value={draft}
-                      onChange={(event) => setDraft(event.target.value)}
-                      placeholder={t("dms.placeholder")}
-                      maxLength={2000}
-                      className="min-h-touch-target w-full rounded-pill border border-border bg-surface-2 px-4 text-body text-text-primary placeholder:text-text-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!draft.trim()}
-                      className="inline-flex min-h-touch-target shrink-0 items-center justify-center rounded-pill bg-accent-primary px-4 text-body font-medium text-on-accent transition hover:bg-accent-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-40"
-                    >
-                      {t("dms.send")}
-                    </button>
-                  </form>
-                  <div className="flex flex-col gap-2 border-t border-border px-card-padding py-2">
-                    <div className="flex gap-2">
+                  <DmComposer
+                    key={selectedConversation.id}
+                    className="shrink-0 px-card-padding"
+                    conversationId={selectedConversation.id}
+                    onSent={(message) => handleSentMessage(selectedConversation.id, message)}
+                  />
+                  {extrasOpen ? (
+                    <div className="shrink-0 flex flex-col gap-2 border-t border-border px-card-padding py-2">
+                      <div className="flex gap-2">
+                        <input
+                          type="url"
+                          value={imageUrl}
+                          onChange={(event) => setImageUrl(event.target.value)}
+                          placeholder={t("friends.photoPh")}
+                          aria-label={t("friends.photoPh")}
+                          className="min-h-10 min-w-0 flex-1 rounded-pill border border-border bg-surface-2 px-3 text-meta text-text-primary placeholder:text-text-tertiary"
+                        />
+                        <button
+                          type="button"
+                          disabled={!imageUrl.trim().startsWith("https://")}
+                          onClick={() => void sendShare({ imageUrl: imageUrl.trim() })}
+                          aria-label={t("friends.share")}
+                          className="shrink-0 rounded-pill px-3 py-1.5 text-caption font-medium text-accent-soft disabled:opacity-40"
+                        >
+                          {t("friends.share")}
+                        </button>
+                      </div>
                       <input
-                        type="url"
-                        value={imageUrl}
-                        onChange={(event) => setImageUrl(event.target.value)}
-                        placeholder={t("friends.photoPh")}
-                        className="min-h-10 min-w-0 flex-1 rounded-pill border border-border bg-surface-2 px-3 text-meta text-text-primary placeholder:text-text-tertiary"
+                        type="search"
+                        value={resourceQuery}
+                        onChange={(event) => setResourceQuery(event.target.value)}
+                        placeholder={t("friends.resourcePh")}
+                        aria-label={t("friends.resourcePh")}
+                        className="min-h-10 w-full rounded-pill border border-border bg-surface-2 px-3 text-meta text-text-primary placeholder:text-text-tertiary"
                       />
+                      {resourceHits.length > 0 ? (
+                        <ul className="max-h-32 overflow-y-auto" aria-label={t("friends.resourcePh")}>
+                          {resourceHits.map((resource) => (
+                            <li key={resource.id}>
+                              <button
+                                type="button"
+                                onClick={() => void sendShare({ resourceId: resource.id })}
+                                className="block w-full truncate rounded-control px-2 py-1 text-left text-meta text-text-primary hover:bg-surface-2"
+                              >
+                                {resource.title}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="shrink-0 px-2 pb-2 pt-1">
                       <button
                         type="button"
-                        disabled={!imageUrl.trim().startsWith("https://")}
-                        onClick={() => void sendShare({ imageUrl: imageUrl.trim() })}
-                        className="shrink-0 text-caption font-medium text-accent-soft disabled:opacity-40"
+                        onClick={() => setExtrasOpen(true)}
+                        aria-expanded={extrasOpen}
+                        className="inline-flex min-h-touch-target items-center gap-1.5 rounded-pill px-2 text-caption font-medium text-text-secondary transition hover:bg-surface-2 hover:text-text-primary"
                       >
-                        {t("friends.share")}
+                        <Icon name="plus" size={14} />
+                        {t("dms.extrasShare")}
                       </button>
                     </div>
-                    <input
-                      type="search"
-                      value={resourceQuery}
-                      onChange={(event) => setResourceQuery(event.target.value)}
-                      placeholder={t("friends.resourcePh")}
-                      className="min-h-10 w-full rounded-pill border border-border bg-surface-2 px-3 text-meta text-text-primary placeholder:text-text-tertiary"
-                    />
-                    {resourceHits.length > 0 ? (
-                      <ul className="max-h-32 overflow-y-auto">
-                        {resourceHits.map((resource) => (
-                          <li key={resource.id}>
-                            <button
-                              type="button"
-                              onClick={() => void sendShare({ resourceId: resource.id })}
-                              className="block w-full truncate rounded-control px-2 py-1 text-left text-meta text-text-primary hover:bg-surface-2"
-                            >
-                              {resource.title}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </div>
+                  )}
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center gap-1 p-section-gap text-center">
@@ -635,6 +642,7 @@ export default function MessagesPage() {
                 </div>
               )}
             </div>
+            </section>
           </div>
         )}
       </main>
