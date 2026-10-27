@@ -48,6 +48,12 @@ export default function FriendProfilePage() {
   // renders a concrete action — "Retry" here).
   const [retryKey, setRetryKey] = useState(0);
 
+  // Resetting to "loading" the moment the route param changes (before any async
+  // boundary) is a deliberate sync-with-external-system effect: a previously
+  // viewed friend's profile must never flash while the next friend's fetch is
+  // in flight, and this state cannot be derived during render. Same rationale
+  // as useApiResource.ts.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!isHydrated || !user || !friendIdValid) return; // useAuthedPage redirects; invalid id short-circuits at render below
     let cancelled = false;
@@ -75,6 +81,7 @@ export default function FriendProfilePage() {
       cancelled = true;
     };
   }, [isHydrated, user, friendId, friendIdValid, retryKey]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const invalidParam = isHydrated && user !== null && !friendIdValid;
   const showSkeleton = loading && failure === null && !invalidParam;
