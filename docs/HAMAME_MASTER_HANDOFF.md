@@ -2402,3 +2402,11 @@ mangled em-dashes through the cp850 console and they were restored by
 codepoint-exact replacement (U+00D4 U+00C7 U+00F6 → U+2014). Same standing
 limitation as §33/§34: no authenticated browser e2e exists, so the form fix is
 proven by the API wet-run + gates, not by a click-through screenshot.
+
+**Deploy probes (same day, post-push):** Railway confirmed running the NEW
+image — `POST /auth/register` + `PUT /users/me {phone:"+213000000099"}` on a
+live throwaway probe account (`vf-profile-deploy@verify.hamame.test`):
+old image would have silently stripped the phone (GET → null); the live one
+persisted it (GET → `"+213000000099"`), then `DELETE /api/users/me` → 200 and
+re-login rejected 401 (cleanup via the real API, loudly-fake fixture phone).
+Vercel `/login` → 200.
