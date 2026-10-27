@@ -1,0 +1,86 @@
+# RAW EVIDENCE — profile editing fix (PUT /api/users/me) wet-run (2026-10-27)
+# Harness: tmp-verify-profile-edit.mjs against the real API on http://localhost:3000 (
+#   npm run dev). Throwaway accounts vf-profile-a/b@verify.hamame.test, phones are
+#   loudly fake (+2130000000xx); soft-deleted via the real DELETE /api/users/me.
+# Environment disclosures (both were hit and fixed during this run):
+#  1. First 
+pm run dev start crashed EADDRINUSE — an orphan from the previous
+#     session held port 3000; it cleared and the port was empty moments later.
+#  2. Session pooler (5432) saturated externally: EMAXCONNSESSION pool_size 15 — every
+#     query 500'd. The API was (re)started with DATABASE_URL env-override to the
+#     transaction pooler:6543 + pgbouncer=true (process-local only, .env untouched).
+#     First transform appended '?pgbouncer=true' although the env URL already had a
+#     query string (invalid URL, PrismaClientInitializationError); fixed to '&'.
+#  3. PowerShell tee captured the harness stdout in UTF-16, and em-dashes went
+#     through the cp850 console and render as codepoint U+00D4 U+00C7 U+00F6. The
+#     committed log below is that capture with those three codepoints restored to
+#     the original em-dash (U+2014) — a codepoint-exact restore, not a retype.
+#  4. Harness cosmetic bug: assertEq prints its label twice on each line (record()
+#      receives label twice). Content unaffected; left as-is for fidelity.
+#  5. P08/P10 and the P16-adjacent steps poke phoneVerifiedAt directly via prisma
+#     (transaction pooler) on the THROWN AWAY rows — fixture manipulation on
+#     disposable accounts only, per the snapshot/mutate/restore discipline.
+# Playwright e2e this round: first run 2 failed (dev-server startup flakiness,
+# documented machine behavior), immediate retry 4/4 passed (17s).
+#
+
+PASS R01 register A — status=201 body=""
+PASS R02 register B — status=201
+PASS L01 login A issues accessToken — status=200
+PASS L02 login B issues accessToken — status=200
+PASS P01 GET /users/me baseline reachable 200 — status=200
+PASS P02 fresh email account has phone=null — phone=null
+PASS C00 cleanup baseline: vf-profile-* active rows = 2 — count=2
+PASS P03 PUT fullName -> 200 — status=200 body=""
+PASS P04 fullName persisted after PUT P04 fullName persisted after PUT — actual="Nom Profil Fix A" expected="Nom Profil Fix A"
+PASS P05 PUT phone (new) -> 200 — status=200 body=""
+PASS P06 phone persisted P06 phone persisted — actual="+213000000001" expected="+213000000001"
+PASS P07 phoneVerifiedAt null on a fresh (never-verified) phone add — phoneVerifiedAt=null
+PASS P08 DB poke made phoneVerifiedAt non-null — value="2026-10-27T14:16:07.774Z"
+PASS P09 PUT same phone -> 200 P09 PUT same phone -> 200 — actual=200 expected=200
+PASS P10 same phone leaves phoneVerifiedAt untouched — phoneVerifiedAt="2026-10-27T14:16:07.774Z"
+PASS P11 PUT changed phone -> 200 P11 PUT changed phone -> 200 — actual=200 expected=200
+PASS P12 changed phone persisted P12 changed phone persisted — actual="+213000000002" expected="+213000000002"
+PASS P13 changed phone resets phoneVerifiedAt to null — phoneVerifiedAt=null
+PASS P14 phone clash -> 409 P14 phone clash -> 409 — actual=409 expected=409
+PASS P15 clash code PHONE_IN_USE P15 clash code PHONE_IN_USE — actual="PHONE_IN_USE" expected="PHONE_IN_USE"
+PASS P16 B sets own phone -> 200 P16 B sets own phone -> 200 — actual=200 expected=200
+PASS P17 PUT phone null -> 200 P17 PUT phone null -> 200 — actual=200 expected=200
+PASS P18 phone cleared P18 phone cleared — actual=null expected=null
+PASS P19 clearing phone resets phoneVerifiedAt — phoneVerifiedAt=null
+PASS P20 short phone -> 400 P20 short phone -> 400 — actual=400 expected=400
+PASS P21 short phone code VALIDATION_ERROR P21 short phone code VALIDATION_ERROR — actual="VALIDATION_ERROR" expected="VALIDATION_ERROR"
+PASS P22 PUT faculty+year -> 200 P22 PUT faculty+year -> 200 — actual=200 expected=200
+PASS P23 facultyId persisted P23 facultyId persisted — actual="058f684d-f553-4deb-aa5b-6aeea42e2eae" expected="058f684d-f553-4deb-aa5b-6aeea42e2eae"
+PASS P24 yearId persisted P24 yearId persisted — actual="05782572-5b3c-4f83-81eb-84d4a5969cae" expected="05782572-5b3c-4f83-81eb-84d4a5969cae"
+PASS P25 cross-faculty year -> 400 P25 cross-faculty year -> 400 — actual=400 expected=400
+PASS P26 mismatch code P26 mismatch code — actual="YEAR_FACULTY_MISMATCH" expected="YEAR_FACULTY_MISMATCH"
+PASS P27 PUT wilaya -> 200 P27 PUT wilaya -> 200 — actual=200 expected=200
+PASS P28 wilaya persisted P28 wilaya persisted — actual="Alger" expected="Alger"
+FINAL-A {
+  "id": "f9f0a509-0d8e-411b-9370-74da3a54ba45",
+  "email": "vf-profile-a@verify.hamame.test",
+  "phone": "+213000000002",
+  "fullName": "Nom Profil Fix A",
+  "facultyId": "058f684d-f553-4deb-aa5b-6aeea42e2eae",
+  "yearId": "05782572-5b3c-4f83-81eb-84d4a5969cae",
+  "university": null,
+  "universityId": null,
+  "wilaya": "Alger",
+  "profilePhotoUrl": null,
+  "uiLanguage": "fr",
+  "theme": "light",
+  "status": "active",
+  "emailVerifiedAt": null,
+  "phoneVerifiedAt": null,
+  "createdAt": "2026-10-27T14:15:57.864Z",
+  "roles": [
+    "student_free"
+  ]
+}
+PASS D01 DELETE A -> 200 D01 DELETE A -> 200 — actual=200 expected=200
+PASS D02 DELETE B -> 200 D02 DELETE B -> 200 — actual=200 expected=200
+PASS C01 after delete: vf-profile-* active rows = 0 — count=0
+PASS D03 deleted A cannot login (401) D03 deleted A cannot login (401) — actual=401 expected=401
+
+RESULTS: 37 assertions, 0 failures

@@ -2334,3 +2334,71 @@ Facebook parity. Gates re-run green: web tsc 0, eslint 0 errors, Playwright
 4/4, build 0. Disclosed: still no authenticated browser e2e (no test
 credentials), so the portal fix is verified by DOM semantics, not by
 click-through screenshot.
+
+## 35. Profile editing actually works (name / phone / faculty / year / wilaya) — built & verified (2026-10-27)
+
+Owner report: "when I change the name of user it is not changed and also I can't
+add or modify the phone number, also the faculty and the wilaya and the year."
+All five symptoms traced to two independent defect clusters; both fixed.
+
+**Cluster 1 — the server could never save a phone.**
+`updateProfileSchema` (`src/routes/users.routes.ts`) never carried a `phone`
+key, and `validateBody` strips unknown keys, so `PUT /api/users/me` silently
+discarded any phone it was sent — by construction, no client could ever add or
+modify a phone, even via the API. Fixed: `phone: z.string().trim().min(6)
+.nullable().optional()` (register uses min(6) untrimmed; PUT trims first).
+`User.phone` is `@unique`, so a clash is checked BEFORE the update
+(`findFirst({ phone, id: {not}, status: {not: "deleted"} })`) and again after
+it as a P2002 race backstop (the global error mapper would otherwise emit a
+raw 500) — both surface as **409 PHONE_IN_USE**. Verification honesty:
+`phoneVerifiedAt` binds to the NUMBER, not the account — changing or clearing
+the phone resets it to null; re-sending the identical value leaves it
+untouched (proven by DB-poke fixture on a throwaway row).
+
+**Cluster 2 — the UI hid every successful save and could WIPE the profile.**
+`/settings`' personal-info form (the real editing surface) PUT correctly but
+(a) never called `AuthContext.refreshProfile()`, so the header avatar, /profile
+chips, and any hard-reloaded page kept displaying the PRE-header cached session
+user from localStorage until logout+login — the new name was saved server-side
+but invisible everywhere; and (b) its fields initialized once with
+`useState(user?.x ?? "")` while `user` is still null on a hard reload — the
+form rendered EMPTY, never resynced, and a save in that state sent
+`"" ≠ user?.facultyId → facultyId: null`, which the server honors as an
+explicit clear: reloading /settings and saving could legitimately DELETE the
+user's faculty, year, and wilaya server-side. Fixed in
+`web/src/app/settings/page.tsx`: fields re-sync whenever the session identity
+changes (React's documented render-time adjust pattern — setState-in-effect
+was rejected by the react-hooks ESLint rule); after every successful save it
+`await refreshProfile()` (the hook was literally built for "after onboarding
+or settings saves" and had zero callers); `PHONE_IN_USE` /
+`YEAR_FACULTY_MISMATCH` map to FR/EN toasts (other errors keep the raw
+message). Phone input is now EDITABLE (was deliberately `readOnly`) with a
+6-char client check. `/profile`'s hero gained an outline `ButtonLink`
+"Modifier le profil" → /settings — editing stays in ONE place rather than
+duplicating the form on two pages. i18n: added BOTH sides
+`settings.phoneHint`, `settings.phoneTooShort`, `settings.errPhoneInUse`,
+`settings.errYearMismatch`, `profile.editProfile`; removed dead
+`settings.phoneReadonly`.
+
+**Verification:** raw log `docs/verification/2026-10-27-profile-edit-raw.log`
+(+ paired `.md`) — **37/37 assertions** through the REAL API on :3000 with
+throwaway `vf-profile-a/b@verify.hamame.test` accounts: name change persisted;
+phone add/edit/clear with the exact `phoneVerifiedAt` semantics (same value
+keeps verification, changed/cleared value resets it); duplicate phone → 409
+PHONE_IN_USE; 5-char phone → 400 VALIDATION_ERROR; real faculty+year pair
+persists; cross-faculty year → 400 YEAR_FACULTY_MISMATCH; wilaya persists;
+cleanup counts 2→0 via the real `DELETE /api/users/me` + deleted-account login
+rejected 401. Phones are loudly fake `+2130000000xx`. Gates: backend tsc 0;
+`npm test` 73/73; web tsc 0; eslint 0 errors; `next build` 0; Playwright 4/4
+after one flaky-startup retry (machine-known; second run 17s all green).
+
+**Environment disclosures hit along the way:** first `npm run dev` EADDRINUSE
+(orphan from the prior session); session pooler saturated
+(`EMAXCONNSESSION`, pool_size 15) so the API ran with a process-local
+`DATABASE_URL` override to the transaction pooler 6543+`pgbouncer=true`
+(first transform appended `?pgbouncer=true` to a URL that already had a query
+string → invalid connection string; corrected to `&`); stdout capture
+mangled em-dashes through the cp850 console and they were restored by
+codepoint-exact replacement (U+00D4 U+00C7 U+00F6 → U+2014). Same standing
+limitation as §33/§34: no authenticated browser e2e exists, so the form fix is
+proven by the API wet-run + gates, not by a click-through screenshot.

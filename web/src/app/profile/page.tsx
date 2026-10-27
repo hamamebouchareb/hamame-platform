@@ -7,7 +7,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { useApiResource } from "@/lib/useApiResource";
 import { apiFetch, ApiError } from "@/lib/api";
-import { AppHeader, BadgeShelf, EmptyState, Footer, MetricCard } from "@/components";
+import { AppHeader, BadgeShelf, ButtonLink, EmptyState, Footer, MetricCard } from "@/components";
 import type { EarnedBadge } from "@/components";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import type {
@@ -231,6 +231,12 @@ export default function ProfilePage() {
                     : subscriptionStatusLabel(subscription.data?.subscription ?? null, t)}
                 </span>
               </div>
+              {/* Editing lives on /settings (the one personal-info form); the hero
+                  previously had no edit affordance at all, which read as
+                  "everything here is fixed". Same outline shape as everywhere. */}
+              <ButtonLink href="/settings" variant="outline" size="sm" className="mt-3">
+                {t("profile.editProfile")}
+              </ButtonLink>
             </div>
           </div>
 

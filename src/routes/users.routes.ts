@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { Prisma } from "@prisma/client";
 import { NextFunction, Request, Response, Router } from "express";
 import { z } from "zod";
 import { validateBody, validateQuery } from "../middleware/validate";
@@ -102,14 +103,21 @@ async function searchUsers(req: Request, res: Response, next: NextFunction) {
 
 router.get("/search", validateQuery(searchUsersQuerySchema), searchUsers);
 
-// PUT /api/users/me — FR-4: full_name, faculty, year, university, wilaya, photo.
+// PUT /api/users/me — FR-4: full_name, phone, faculty, year, university, wilaya, photo.
 //
 // universityId is what drives FR-10a content visibility (src/lib/university-scope.ts), so
 // it is validated against the universities table rather than trusted: an unknown id must
 // not be persisted, or the user would silently resolve to a scope that matches nothing.
 // Passing null explicitly clears it, returning the user to global-content-only.
+//
+// phone was missing from this schema since the endpoint was written, which silently
+// stripped any phone the client sent (validateBody drops unknown keys) — profile
+// editing could never add or modify a phone number. It mirrors the register schema
+// (min 6 chars after trim; the DP number is free text per FR-1) plus `nullable` so an
+// explicit null clears it like the other profile fields.
 const updateProfileSchema = z.object({
   fullName: z.string().min(1).nullable().optional(),
+  phone: z.string().trim().min(6).nullable().optional(),
   facultyId: z.string().uuid().nullable().optional(),
   yearId: z.string().uuid().nullable().optional(),
   university: z.string().min(1).nullable().optional(),
@@ -122,6 +130,39 @@ async function updateCurrentProfile(req: Request, res: Response, next: NextFunct
   try {
     const userId = req.auth!.userId;
     const body = req.body as z.infer<typeof updateProfileSchema>;
+
+    // Phone: User.phone is @unique, so a conflicting number must fail as a
+    // 409 PHONE_IN_USE rather than a raw 500 from the unique-violation race.
+    // Verification binds to the NUMBER, not the account: changing (or
+    // clearing) the phone resets phoneVerifiedAt, while re-sending the
+    // identical value leaves verification untouched.
+    let phoneFields: { phone: string | null; phoneVerifiedAt: Date | null } | undefined;
+    if (body.phone !== undefined) {
+      if (body.phone === null) {
+        phoneFields = { phone: null, phoneVerifiedAt: null };
+      } else {
+        const current = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { phone: true },
+        });
+        if (current === null) {
+          throw new ApiError(404, "USER_NOT_FOUND", "User not found.");
+        }
+        if (current.phone !== body.phone) {
+          // Sequential lookups, not Promise.all, per the session pooler's
+          // concurrency limit. Soft-deleted rows only block reuse while they
+          // still belong to a live account.
+          const clash = await prisma.user.findFirst({
+            where: { phone: body.phone, id: { not: userId }, status: { not: "deleted" } },
+            select: { id: true },
+          });
+          if (clash) {
+            throw new ApiError(409, "PHONE_IN_USE", "Another account already uses this phone number.");
+          }
+          phoneFields = { phone: body.phone, phoneVerifiedAt: null };
+        }
+      }
+    }
 
     // Each referenced row is checked sequentially rather than with Promise.all, per the
     // session pooler's concurrency limit.
@@ -157,21 +198,33 @@ async function updateCurrentProfile(req: Request, res: Response, next: NextFunct
       }
     }
 
-    const user = await prisma.user.update({
-      where: { id: userId },
-      // Only keys actually present in the body are written, so omitting a field leaves it
-      // untouched while an explicit null on universityId clears it.
-      data: {
-        ...(body.fullName !== undefined ? { fullName: body.fullName } : {}),
-        ...(body.facultyId !== undefined ? { facultyId: body.facultyId } : {}),
-        ...(body.yearId !== undefined ? { yearId: body.yearId } : {}),
-        ...(body.university !== undefined ? { university: body.university } : {}),
-        ...(body.universityId !== undefined ? { universityId: body.universityId } : {}),
-        ...(body.wilaya !== undefined ? { wilaya: body.wilaya } : {}),
-        ...(body.profilePhotoUrl !== undefined ? { profilePhotoUrl: body.profilePhotoUrl } : {}),
-      },
-      select: safeUserSelect,
-    });
+    let user;
+    try {
+      user = await prisma.user.update({
+        where: { id: userId },
+        // Only keys actually present in the body are written, so omitting a field leaves it
+        // untouched while an explicit null on universityId clears it.
+        data: {
+          ...(body.fullName !== undefined ? { fullName: body.fullName } : {}),
+          ...(body.facultyId !== undefined ? { facultyId: body.facultyId } : {}),
+          ...(body.yearId !== undefined ? { yearId: body.yearId } : {}),
+          ...(body.university !== undefined ? { university: body.university } : {}),
+          ...(body.universityId !== undefined ? { universityId: body.universityId } : {}),
+          ...(body.wilaya !== undefined ? { wilaya: body.wilaya } : {}),
+          ...(body.profilePhotoUrl !== undefined ? { profilePhotoUrl: body.profilePhotoUrl } : {}),
+          ...(phoneFields ?? {}),
+        },
+        select: safeUserSelect,
+      });
+    } catch (err) {
+      // Race backstop: the pre-check above (findFirst) cannot fully serialize
+      // the write — a phone claimed between the check and this update must
+      // still surface as 409 PHONE_IN_USE, not the errorHandler's raw 500.
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+        throw new ApiError(409, "PHONE_IN_USE", "Another account already uses this phone number.");
+      }
+      throw err;
+    }
 
     res.status(200).json(user);
   } catch (err) {

@@ -67,6 +67,7 @@ const PREFERENCE_ROWS: { key: keyof PushPreferences; labelKey: I18nKey; descript
 
 interface FieldErrors {
   fullName?: string;
+  phone?: string;
   facultyId?: string;
   yearId?: string;
   wilaya?: string;
@@ -76,7 +77,7 @@ export default function SettingsPage() {
   const { user, isHydrated, handleLogout } = useAuthedPage();
   // Reuses loginWithToken (the existing OAuth token-staging setter) to swap in
   // the fresh change-password token without logging out — reported per plan.
-  const { loginWithToken } = useAuth();
+  const { loginWithToken, refreshProfile } = useAuth();
   const { t } = useLanguage();
   const { theme, setTheme } = useTheme();
   const toast = useToast();
@@ -232,6 +233,7 @@ export default function SettingsPage() {
 
   /* ── Personal info form ── */
   const [fullName, setFullName] = useState(user?.fullName ?? "");
+  const [phone, setPhone] = useState(user?.phone ?? "");
   const [wilaya, setWilaya] = useState(user?.wilaya ?? "");
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileErrors, setProfileErrors] = useState<FieldErrors>({});
@@ -246,10 +248,37 @@ export default function SettingsPage() {
   );
   const [yearId, setYearId] = useState(user?.yearId ?? "");
 
+  // The fields above initialize from `user` once at mount, but `user` is null on
+  // a hard reload until the localStorage hydration effect lands, and changes
+  // again after refreshProfile() below. Adjust state in RENDER (React's
+  // documented "adjusting state when a prop changes" pattern — a setState
+  // effect here fails the react-hooks lint rule and cascades renders): before
+  // this, forms initialized empty on reload and a save there sent "" → null,
+  // silently wiping faculty/year/wilaya server-side.
+  const identityNow = [
+    user?.id ?? "",
+    user?.fullName ?? "",
+    user?.phone ?? "",
+    user?.facultyId ?? "",
+    user?.yearId ?? "",
+    user?.wilaya ?? "",
+  ].join("|");
+  const [identityLast, setIdentityLast] = useState<string | null>(null);
+  if (user && identityNow !== identityLast) {
+    setIdentityLast(identityNow);
+    setFullName(user.fullName ?? "");
+    setPhone(user.phone ?? "");
+    setFacultyId(user.facultyId ?? "");
+    setYearId(user.yearId ?? "");
+    setWilaya(user.wilaya ?? "");
+  }
+
   async function saveProfile() {
     setProfileErrors({});
     const errors: FieldErrors = {};
     if (!fullName.trim()) errors.fullName = t("settings.nameRequired");
+    const phoneClean = phone.trim();
+    if (phoneClean && phoneClean.length < 6) errors.phone = t("settings.phoneTooShort");
     if (Object.keys(errors).length > 0) {
       setProfileErrors(errors);
       return;
@@ -259,6 +288,7 @@ export default function SettingsPage() {
     try {
       const body: Record<string, unknown> = {};
       if (fullName.trim() !== user?.fullName) body.fullName = fullName.trim();
+      if (phoneClean !== (user?.phone ?? "")) body.phone = phoneClean || null;
       if (facultyId !== user?.facultyId) body.facultyId = facultyId || null;
       if (yearId !== user?.yearId) body.yearId = yearId || null;
       if (wilaya !== (user?.wilaya ?? "")) body.wilaya = wilaya || null;
@@ -273,9 +303,22 @@ export default function SettingsPage() {
         method: "PUT",
         body: JSON.stringify(body),
       });
+      // The PUT only mutates the DB row — the cached session identity in
+      // localStorage that /profile, the header avatar, and even a reloaded
+      // page display stayed stale until logout without this refresh.
+      // refreshProfile exists precisely for post-save syncing.
+      await refreshProfile();
       toast.success({ title: t("settings.profileUpdated") });
     } catch (err) {
-      const message = err instanceof Error ? err.message : t("settings.saveError");
+      // Known profile-save failures get FR/EN copy; anything else (network,
+      // unexpected server states) keeps the raw server message as before.
+      const known: Record<string, string> = {
+        PHONE_IN_USE: t("settings.errPhoneInUse"),
+        YEAR_FACULTY_MISMATCH: t("settings.errYearMismatch"),
+      };
+      const message =
+        (err instanceof ApiError && known[err.code]) ||
+        (err instanceof Error ? err.message : t("settings.saveError"));
       toast.error({ title: message });
     } finally {
       setSavingProfile(false);
@@ -322,15 +365,16 @@ export default function SettingsPage() {
                 className="opacity-60 cursor-not-allowed"
               />
 
-              {/* Phone (read-only) */}
+              {/* Phone (editable as of the profile-edit fix; server maps the
+                  PHONE_IN_USE clash the field error toasts cover) */}
               <Input
                 id="phone"
                 label={t("settings.phone")}
                 type="tel"
-                value={authed.phone ?? "—"}
-                readOnly
-                hint={t("settings.phoneReadonly")}
-                className="opacity-60 cursor-not-allowed"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                error={profileErrors.phone}
+                hint={t("settings.phoneHint")}
               />
 
               {/* Faculty */}
