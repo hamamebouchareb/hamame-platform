@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import { cx } from "@/lib/cx";
 import { useLanguage } from "@/context/LanguageContext";
@@ -486,48 +487,60 @@ export function MessengerDock({ userId }: { userId: string }) {
       </div>
 
       {!onMessagesPage && windows.length > 0 ? (
-        // flex-col-reverse stacks the FIRST child at the bottom: minimized tabs
-        // line the viewport edge, open windows rise above them (messenger.com).
-        <div className="fixed bottom-4 right-4 z-40 hidden flex-col-reverse items-end gap-2 lg:flex">
-          {minimizedTabs.length > 0 ? (
-            <div className="flex items-end gap-1.5">
-              {minimizedTabs.map((win) => {
-                const conversation = chatCache[win.id];
-                if (!conversation) return null;
-                return (
-                  <MiniChat
-                    key={win.id}
-                    conversation={conversation}
-                    userId={userId}
-                    minimized
-                    onClose={() => closeWindow(win.id)}
-                    onMinimize={() => setWindowMinimized(win.id, true)}
-                    onRestore={() => setWindowMinimized(win.id, false)}
-                  />
-                );
-              })}
-            </div>
-          ) : null}
-          {openWindows.length > 0 ? (
-            <div className="flex flex-row-reverse items-end gap-2">
-              {openWindows.map((win) => {
-                const conversation = chatCache[win.id];
-                if (!conversation) return null;
-                return (
-                  <MiniChat
-                    key={win.id}
-                    conversation={conversation}
-                    userId={userId}
-                    minimized={false}
-                    onClose={() => closeWindow(win.id)}
-                    onMinimize={() => setWindowMinimized(win.id, true)}
-                    onRestore={() => setWindowMinimized(win.id, false)}
-                  />
-                );
-              })}
-            </div>
-          ) : null}
-        </div>
+        // React portal to document.body. The dock button lives inside
+        // AppHeader, whose `backdrop-blur` makes the header the containing
+        // block for any `position: fixed` DESCENDANT — windows then anchor to
+        // the header box (appearing top-right, over the user's name) instead
+        // of the viewport corner. This is the same trap the Modal already
+        // escaped by being a `<header>` sibling. Windows open only from
+        // client-side clicks, so the portal never replaces SSR content (no
+        // hydration problem).
+        createPortal(
+          // flex-col-reverse stacks the FIRST child at the bottom: minimized
+          // tabs line the viewport edge, open windows rise above them
+          // (messenger.com).
+          <div className="fixed bottom-4 right-4 z-40 hidden flex-col-reverse items-end gap-2 lg:flex">
+            {minimizedTabs.length > 0 ? (
+              <div className="flex items-end gap-1.5">
+                {minimizedTabs.map((win) => {
+                  const conversation = chatCache[win.id];
+                  if (!conversation) return null;
+                  return (
+                    <MiniChat
+                      key={win.id}
+                      conversation={conversation}
+                      userId={userId}
+                      minimized
+                      onClose={() => closeWindow(win.id)}
+                      onMinimize={() => setWindowMinimized(win.id, true)}
+                      onRestore={() => setWindowMinimized(win.id, false)}
+                    />
+                  );
+                })}
+              </div>
+            ) : null}
+            {openWindows.length > 0 ? (
+              <div className="flex flex-row-reverse items-end gap-2">
+                {openWindows.map((win) => {
+                  const conversation = chatCache[win.id];
+                  if (!conversation) return null;
+                  return (
+                    <MiniChat
+                      key={win.id}
+                      conversation={conversation}
+                      userId={userId}
+                      minimized={false}
+                      onClose={() => closeWindow(win.id)}
+                      onMinimize={() => setWindowMinimized(win.id, true)}
+                      onRestore={() => setWindowMinimized(win.id, false)}
+                    />
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>,
+          document.body
+        )
       ) : null}
     </>
   );

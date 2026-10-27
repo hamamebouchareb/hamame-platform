@@ -2318,3 +2318,19 @@ log only — corrected run is the committed log, the DB step is now
 convId-guarded. Harness DB access runs via the transaction pooler (6543 +
 `pgbouncer=true`) because the session pooler (5432, pool_size 15) is saturated
 by servers outside this machine's control; API keeps 5432.
+
+**§34 correction (same day, owner-reported visual bug):** docked chat windows
+opened "above the user's name in the top-right corner" instead of the
+viewport corner. Root cause confirmed against source: `<MessengerDock />`
+renders inside AppHeader's `<header className="… backdrop-blur">` (header at
+AppHeader.tsx:141, dock mounted at :178) and a `backdrop-filter` ancestor
+becomes the containing block for `position:fixed` descendants — the exact
+trap the header's own Modal-backdrop comment documents. Fix: the dock's
+windows container (open windows + minimized tab strip) now renders through
+`createPortal(…, document.body)` ("use client", click-opened only → no SSR /
+hydration change), so anchoring is true viewport-fixed: `fixed bottom-4
+right-4`, minimized tabs bottom-most, open windows above, newest right-most —
+Facebook parity. Gates re-run green: web tsc 0, eslint 0 errors, Playwright
+4/4, build 0. Disclosed: still no authenticated browser e2e (no test
+credentials), so the portal fix is verified by DOM semantics, not by
+click-through screenshot.
