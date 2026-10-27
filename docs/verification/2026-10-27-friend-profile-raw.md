@@ -111,3 +111,22 @@ Run 2 — **32/32 PASS** (`2026-10-27-friend-profile-raw.log`) with raw bodies:
 - `/users/me/profile` (if anyone were to type it) resolves as
   `/:id/profile` with id="me" → 400 from uuidParam. No real route conflict:
   `GET /me`, `GET /search`, `GET /me/export` are all distinct literal paths.
+
+## Production deploy probes (same day, post-push) — `...-friend-profile-prod.log`
+
+Push `a46c262`; probed with `tmp-prod-probe-friend.mjs` against the LIVE
+stack, polling until each new image was verifiably serving:
+
+| Probe | Result |
+|---|---|
+| Vercel `GET /amis/<uuid>` | **200** after ~80 s (old image 404s this route) |
+| Railway discriminator | `relationship=none` present in prod `/users/search` rows after ~140 s (old image returned the row WITHOUT the field — the log shows both states) |
+| prod friend matrix (2 disposable accounts only) | request 201 → chips `pending_sent` (sender) / `pending_received` (receiver) → pending profile **403 NOT_FRIENDS** → accept 200 → chips `friend` → friend profile **200** with NO email/phone/status keys |
+| prod builder invariant | friend profile `progress` block JSON **=== the target's own `GET /progress/me` body, byte-for-byte** on prod |
+| cleanup | both `vf-prod-friend-{a,b}@verify.hamame.test` deleted via real `DELETE /api/users/me`, each removal proven by fresh re-login → 401; **0 probe accounts remaining on prod** |
+
+`ALL PROD CHECKS PASSED` (raw log committed as
+`docs/verification/2026-10-27-friend-profile-prod.log`; ids in the log are
+deleted accounts). Real users were never touched — the friendship in the
+probe exists only between the two disposable accounts, which no longer exist.
+

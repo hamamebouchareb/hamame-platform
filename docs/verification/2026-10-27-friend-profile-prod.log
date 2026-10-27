@@ -1,0 +1,21 @@
+﻿[PASS] vercel /amis/[id] responds 200 (new route live), after ~80s
+[PASS] frontend /amis/[id] live (200)
+[PASS] register probe accounts: 2 live -- a=true b=true
+ids: A=f5f9e94f-2e67-4e9f-9582-10b249e8735b B=40bbfcf9-7b23-4f8f-bed7-7784d8786d7d
+[PASS] backend discriminator: relationship=none present in prod search rows, after ~140s
+[PASS] backend /users/search carries relationship (new image live) -- relationship absent (row={"id":"40bbfcf9-7b23-4f8f-bed7-7784d8786d7d","fullName":"VfProdBravo HAMAME"})
+[PASS] prod search before request: A sees B as none -- [{"id":"40bbfcf9-7b23-4f8f-bed7-7784d8786d7d","fullName":"VfProdBravo HAMAME","relationship":"none"}]
+[PASS] A /progress/me on prod: 200 -- {"streak":{"currentStreakDays":0,"longestStreakDays":0},"dailyGoal":{"dailyGoalMinutes":20,"minutesStudiedToday":0,"goalMet":false},"totalCompletedSessions":0,"averageScore":null,"accuracy":null,"recentActivity":[]}
+[PASS] prod friend request A->B: 201/200 -- {"friendship":{"userIdA":"f5f9e94f-2e67-4e9f-9582-10b249e8735b","userIdB":"40bbfcf9-7b23-4f8f-bed7-7784d8786d7d","status":"pending"}}
+[PASS] prod: sender-side chip pending_sent -- [{"id":"40bbfcf9-7b23-4f8f-bed7-7784d8786d7d","fullName":"VfProdBravo HAMAME","relationship":"pending_sent"}]
+[PASS] prod: receiver-side chip pending_received -- [{"id":"f5f9e94f-2e67-4e9f-9582-10b249e8735b","fullName":"VfProdAlpha HAMAME","relationship":"pending_received"}]
+[PASS] prod: pending != viewable (403 NOT_FRIENDS) -- {"error":{"code":"NOT_FRIENDS","message":"This profile is visible to friends only."}}
+[PASS] prod: B accepts A: 200 -- {"friendship":{"userIdA":"f5f9e94f-2e67-4e9f-9582-10b249e8735b","userIdB":"40bbfcf9-7b23-4f8f-bed7-7784d8786d7d","status":"accepted"}}
+[PASS] prod: after accept sender chip friend -- [{"id":"40bbfcf9-7b23-4f8f-bed7-7784d8786d7d","fullName":"VfProdBravo HAMAME","relationship":"friend"}]
+[PASS] prod: friend profile 200 -- status=200
+[PASS] prod: no PII keys -- {"id":"f5f9e94f-2e67-4e9f-9582-10b249e8735b","fullName":"VfProdAlpha HAMAME","facultyId":null,"yearId":null,"wilaya":null,"profilePhotoUrl":null,"createdAt":"2026-10-27T16:43:33.030Z","facultyName":null,"yearLabel":null}
+[PASS] prod: progress block === A's own /progress/me byte-for-byte -- profile_progress={"streak":{"currentStreakDays":0,"longestStreakDays":0},"dailyGoal":{"dailyGoalMinutes":20,"minutesStudiedToday":0,"goalMet":false},"totalCompletedSessions":0,"averageScore":null,"accuracy":null,"recentActivity":[]} mine={"streak":{"currentStreakDays":0,"longestStreakDays":0},"dailyGoal":{"dailyGoalMinutes":20,"minutesStudiedToday":0,"goalMet":false},"totalCompletedSessions":0,"averageScore":null,"accuracy":null,"recentActivity":[]}
+--- cleanup ---
+[PASS] prod: delete a -> 200 + re-login 401 -- del=200 relogin=401
+[PASS] prod: delete b -> 200 + re-login 401 -- del=200 relogin=401
+ALL PROD CHECKS PASSED

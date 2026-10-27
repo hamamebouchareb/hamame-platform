@@ -2476,3 +2476,17 @@ DATABASE_URL → 6543 + `&pgbouncer=true`); tsx-watch restart after the gate
 reorder EADDRINUSE'd and had to be relaunched clean (both disclosed). i18n
 keys added both sides: `friends.viewProfile`, `friendPage.*` (9 keys).
 
+**Deploy probes (same day, post-push `a46c262`):** both images confirmed NEW
+in production (`2026-10-27-friend-profile-prod.log`,
+`tmp-prod-probe-friend.mjs`). Vercel `GET /amis/<uuid>` → 200 (~80 s; old
+image 404'd the route). Railway discriminator: `/users/search` rows carry
+`relationship` (~140 s; log shows the old-image row missing the field, then
+the live one with it). Full prod friend matrix between TWO disposable
+accounts only (`vf-prod-friend-{a,b}@verify.hamame.test`; real users never
+touched): request 201 → pending_sent/pending_received chips → pending profile
+403 NOT_FRIENDS → accept → friend chips → friend profile 200, no PII keys,
+progress block byte-identical to the target's own `/progress/me`. Cleanup via
+real `DELETE /api/users/me`: both deleted, re-login 401 each — 0 probe
+accounts remaining on prod.
+
+
