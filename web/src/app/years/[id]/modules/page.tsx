@@ -6,7 +6,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useAuthedPage } from "@/lib/useAuthedPage";
 import { useApiResource } from "@/lib/useApiResource";
 import { useApiList } from "@/lib/useApiList";
-import { Breadcrumb, CourseCard, CurriculumToolbar, EmptyState, LoadingSkeleton, PageShell, curriculumTrail } from "@/components";
+import { Breadcrumb, CourseCard, CurriculumToolbar, EmptyState, LoadingSkeleton, PageShell, ResidanatLadder, curriculumTrail } from "@/components";
 import type { CurriculumContext, CurriculumModule, ModuleProgress, Unit } from "@/lib/types";
 
 type SortValue = "az" | "za" | "progress-desc" | "progress-asc";
@@ -26,6 +26,12 @@ export default function YearModulesPage() {
   );
 
   const modules = useMemo(() => data?.modules ?? [], [data]);
+
+  // MedSpark-parity ladder (owner-approved 2026-10-28): Résidanat year pages
+  // additionally render the 2005–2026 sitting ladder. The modules endpoint's
+  // context carries the year label; only the Résidanat stage gets the ladder.
+  const residanatYearId =
+    data?.context?.year?.label === "Résidanat" ? data.context.year.id : null;
   const progressPaths = modules.map((m) => `/progress/modules/${m.id}`);
   const unitPaths = modules.map((m) => `/modules/${m.id}/units`);
   const { data: progressBatches, isLoading: progressLoading } = useApiList<ModuleProgress>(progressPaths);
@@ -200,6 +206,8 @@ export default function YearModulesPage() {
             );
           })}
         </ul>
+
+        {residanatYearId ? <ResidanatLadder yearId={residanatYearId} className="mt-section-gap" /> : null}
       </>
     </PageShell>
   );
