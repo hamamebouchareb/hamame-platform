@@ -36,6 +36,30 @@
   corps humain, coreModules. Their year->module DATA is server-driven
   (Supabase REST), not embedded.
 
+## 3. Re-verify pass on the résidanat browsing structure (2026-10-28, later)
+### 3a. Auth gate re-check via REA browser capture (ev_dc2e85904f546bed…)
+- https://www.medspark.online/year/y1 -> 200 shell, then client bounce to
+  /landing (logged out). /year/residanat -> /login. ALL year browsing is
+  behind their login; nothing more is observable without an account.
+- Network capture hit the max-events budget late in the run (disclosed);
+  the redirect/URL sequence above is complete from the per-step url artifacts.
+### 3b. Year-picker structure from the [yearId] page chunk (name-level only)
+- Heading call renders i18n keys: "chooseYear"; hint switches between
+  "residanatHintFiveYears" (when the rendered year list length === 5)
+  and "residanatHint" otherwise — i.e. their résidanat surface presents
+  a small set of sitting-year tiles (a five-entry list in that branch).
+- The list renders as a links grid: `href: /year/${e.id}` per tile with
+  card styling (group flex items-center gap-3 rounded-2xl border).
+  Structurally: résidanat browsing = YEAR TILES -> per-year module grid.
+- Their page chunk contains NO .from()/rest query strings: all year/module
+  data is fetched through their authed Supabase client in a shared chunk;
+  pre-auth REST enumeration remains RLS-blocked (only `colleges` select).
+- Hamame mapping implication (name-level only, no content mirrored):
+  our Résidanat Year + specialty Modules match the "modules per year"
+  half already; the visible per-sitting-year ladder (2005-2026 or a
+  recent-5 variant) is the remaining parity surface, gated in handoff §38.
+
+
 ## 3. Auth gate (decisive observation, ev_be8e58...)
 - Scenario start_url /year/residanat: after load, browser sits at /login
   (steps s1_home and s2_settle both report after_url /login).
