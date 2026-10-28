@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { cx } from "@/lib/cx";
 import { useLanguage } from "@/context/LanguageContext";
 import type { I18nKey } from "@/lib/i18n";
@@ -27,8 +27,10 @@ export interface SessionConfig {
   name: string;
   facultyId?: string;
   yearId?: string;
-  moduleId?: string;
-  /** Multi-select of units ("courses") inside the module. Empty = whole module scope. */
+  /** Multi-select of modules. Empty/absent = whole-year scope. */
+  moduleIds?: string[];
+  /** Multi-select of units ("courses") inside THE single ticked module. Only sent
+   * when exactly one module is selected — multi-module scope covers whole modules. */
   unitIds?: string[];
   questionTypes: QuestionType[];
   /** Raw DB `source` value; absent = all sources. */
@@ -54,11 +56,29 @@ export interface SessionBuilderProps {
   /** Preselect the student's own faculty/year once the lists load. */
   initialFacultyId?: string | null;
   initialYearId?: string | null;
+  /** One-shot hydration from a previous session's derived config echo
+   * ("repeat my last quiz"). Applied once on mount; faculty/year still come from
+   * the initialFacultyId/initialYearId preselect (the echo has no faculty/year). */
+  prefill?: SessionBuilderPrefill | null;
   onStart: (config: SessionConfig) => void;
   isStarting?: boolean;
   startError?: string | null;
   questionCountOptions?: number[];
   className?: string;
+}
+
+/** Prefill payload derived from a previous session's config echo. `size` is
+ * snapped to the nearest questionCountOptions value inside the builder (an echo
+ * size can be a daily-limit truncation, not a selectable preset). */
+export interface SessionBuilderPrefill {
+  mode: "practice" | "exam";
+  size: number;
+  timeLimitSeconds?: number | null;
+  resultSort: ResultSort;
+  showStats: boolean;
+  questionTypes: QuestionType[];
+  moduleIds: string[];
+  unitIds: string[];
 }
 
 const QUESTION_TYPE_OPTIONS: { value: QuestionType; labelKey: I18nKey }[] = [
@@ -234,6 +254,7 @@ export function SessionBuilder({
   initialMode = "practice",
   initialFacultyId = null,
   initialYearId = null,
+  prefill = null,
   onStart,
   isStarting = false,
   startError,
@@ -244,7 +265,9 @@ export function SessionBuilder({
   const [mode, setMode] = useState<"practice" | "exam">(initialMode);
   const [facultyId, setFacultyId] = useState("");
   const [yearId, setYearId] = useState("");
-  const [moduleId, setModuleId] = useState("");
+  // Multi-module scope: empty = whole year; exactly one = units selectable; two or
+  // more = whole-module scope per module (units UI hidden, see disclosure below).
+  const [moduleIds, setModuleIds] = useState<string[]>([]);
   const [unitIds, setUnitIds] = useState<string[]>([]);
   const [questionTypes, setQuestionTypes] = useState<QuestionType[]>(["QCM", "QCS"]);
   const [source, setSource] = useState<"" | QuestionSource>("");
@@ -265,7 +288,10 @@ export function SessionBuilder({
   const faculties = useApiResource<{ faculties: Faculty[] }>("/faculties");
   const years = useApiResource<{ years: Year[] }>(facultyId ? `/faculties/${facultyId}/years` : null);
   const modules = useApiResource<{ modules: CurriculumModule[] }>(yearId ? `/years/${yearId}/modules` : null);
-  const units = useApiResource<{ units: Unit[] }>(moduleId ? `/modules/${moduleId}/units` : null);
+  // Units fetch only makes sense for a single ticked module (multi-module scope
+  // covers whole modules, so the units list is not even rendered then).
+  const singleModuleId = moduleIds.length === 1 ? moduleIds[0] : "";
+  const units = useApiResource<{ units: Unit[] }>(singleModuleId ? `/modules/${singleModuleId}/units` : null);
 
   const facultyList = useMemo(() => faculties.data?.faculties ?? [], [faculties.data]);
   const yearList = useMemo(() => years.data?.years ?? [], [years.data]);
@@ -283,7 +309,11 @@ export function SessionBuilder({
     const params = new URLSearchParams();
     if (facultyId) params.append("facultyId", facultyId);
     if (yearId) params.append("yearId", yearId);
-    if (moduleId) params.append("moduleId", moduleId);
+    // moduleId (singular) additionally when exactly one module is ticked — it
+    // unlocks the per-unit badges. moduleIds always carries the ticked set (the
+    // backend treats the pair as the same filter when they coincide).
+    if (moduleIds.length === 1) params.append("moduleId", moduleIds[0]);
+    for (const id of moduleIds) params.append("moduleIds", id);
     for (const type of questionTypes) params.append("types", type);
     if (source) params.append("source", source);
     const pickedYear = parseSittingYear(examYear);
@@ -294,7 +324,7 @@ export function SessionBuilder({
     const to = parseSittingYear(examYearTo);
     if (to !== undefined) params.append("examYearTo", String(to));
     return params.toString();
-  }, [facultyId, yearId, moduleId, questionTypes, source, examYear, sittingLabel, examYearFrom, examYearTo]);
+  }, [facultyId, yearId, moduleIds, questionTypes, source, examYear, sittingLabel, examYearFrom, examYearTo]);
 
   const totalQuery = useMemo(() => {
     if (unitIds.length === 0) return null;
@@ -370,6 +400,50 @@ export function SessionBuilder({
   }, [facultyId, yearId, initialYearId, yearList]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  // One-shot prefill from a previous session's config echo ("repeat my last quiz").
+  // Ref guard keeps it idempotent under StrictMode's double effect invocation.
+  // An echoed time limit counts as a prior explicit choice (timeTouched), so the
+  // P17 sitting preset never overrides it.
+  const prefillAppliedRef = useRef(false);
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!prefill || prefillAppliedRef.current) return;
+    prefillAppliedRef.current = true;
+    setMode(prefill.mode);
+    if (prefill.questionTypes.length > 0) setQuestionTypes(prefill.questionTypes);
+    if (prefill.moduleIds.length > 0) setModuleIds(prefill.moduleIds);
+    if (prefill.unitIds.length > 0) setUnitIds(prefill.unitIds);
+    setResultSort(prefill.resultSort);
+    setShowStats(prefill.showStats);
+    // Echo size can be a daily-limit truncation (e.g. 17) — snap to the nearest
+    // selectable preset so the count select stays consistent.
+    setSize(
+      questionCountOptions.reduce(
+        (best, value) => (Math.abs(value - prefill.size) < Math.abs(best - prefill.size) ? value : best),
+        questionCountOptions[0]
+      )
+    );
+    if (prefill.timeLimitSeconds !== undefined && prefill.timeLimitSeconds !== null) {
+      setTimeLimitSeconds(prefill.timeLimitSeconds);
+      setTimeTouched(true);
+    }
+  }, [prefill, questionCountOptions]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Prefill safety net: drop echoed module ids absent from the loaded year's
+  // module list (student changed faculty/year since that quiz). Runs only when
+  // the list itself changes — ticking modules never touches moduleList.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (moduleList.length === 0) return;
+    setModuleIds((prev) =>
+      prev.length === 0 || prev.every((id) => moduleList.some((m) => m.id === id))
+        ? prev
+        : prev.filter((id) => moduleList.some((m) => m.id === id))
+    );
+  }, [moduleList]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
   // P17 sitting time preset: in exam mode with a sitting picked, propose a time
   // limit from the live counter (count × EXAM_SECONDS_PER_QUESTION, rounded up
   // to a preset). Manual picks win permanently (timeTouchedRef); clearing the
@@ -388,19 +462,25 @@ export function SessionBuilder({
   function handleFacultyChange(value: string) {
     setFacultyId(value);
     setYearId("");
-    setModuleId("");
+    setModuleIds([]);
     setUnitIds([]);
   }
 
   function handleYearChange(value: string) {
     setYearId(value);
-    setModuleId("");
+    setModuleIds([]);
     setUnitIds([]);
   }
 
-  function handleModuleChange(value: string) {
-    setModuleId(value);
-    setUnitIds([]);
+  function toggleModuleId(id: string) {
+    const next = moduleIds.includes(id) ? moduleIds.filter((m) => m !== id) : [...moduleIds, id];
+    setModuleIds(next);
+    // Units belong to one specific module. Whenever the effective single module
+    // changes (ticking the first, the second, or unticking down to a different
+    // one), the unit selection is no longer guaranteed valid — clear it.
+    const nextSingle = next.length === 1 ? next[0] : "";
+    const currentSingle = moduleIds.length === 1 ? moduleIds[0] : "";
+    if (nextSingle !== currentSingle) setUnitIds([]);
   }
 
   function toggleUnitId(id: string) {
@@ -413,18 +493,16 @@ export function SessionBuilder({
 
   const selectedFaculty = facultyList.find((f) => f.id === facultyId);
   const selectedYear = yearList.find((y) => y.id === yearId);
-  const selectedModule = moduleList.find((m) => m.id === moduleId);
-  const selectedUnits = unitList.filter((u) => unitIds.includes(u.id));  // Module option labels carry their live counts once the year scope has loaded.
+  const selectedModules = moduleList.filter((m) => moduleIds.includes(m.id));
+  const selectedUnits = unitList.filter((u) => unitIds.includes(u.id));
+  // Module chip badges carry their live counts once the year scope has loaded.
   const showModuleCounts = scopeCounts.data !== null && yearId !== "";
-  const moduleOptions = moduleList.map((m) => ({
-    value: m.id,
-    label: showModuleCounts ? `${m.name} (${countByModuleId.get(m.id) ?? 0})` : m.name,
-  }));
+  const modulesLabel = selectedModules.map((m) => m.name).join(" + ") || null;
   const scopeName =
-    selectedUnits.length > 1 && selectedModule
-      ? `${selectedModule.name} · ${t("builder.scopeUnits", { count: selectedUnits.length })}`
+    selectedUnits.length > 1 && selectedModules.length === 1
+      ? `${selectedModules[0].name} · ${t("builder.scopeUnits", { count: selectedUnits.length })}`
       : (selectedUnits[0]?.name ??
-        selectedModule?.name ??
+        modulesLabel ??
         selectedYear?.label ??
         selectedFaculty?.name ??
         null);
@@ -434,8 +512,9 @@ export function SessionBuilder({
     name: `${mode === "practice" ? t("builder.namePractice") : t("builder.nameExam")}${scopeName ? ` — ${scopeName}` : ""}`,
     ...(facultyId ? { facultyId } : {}),
     ...(yearId ? { yearId } : {}),
-    ...(moduleId ? { moduleId } : {}),
-    ...(unitIds.length > 0 ? { unitIds } : {}),
+    ...(moduleIds.length > 0 ? { moduleIds } : {}),
+    // Units only travel with a single-module scope (units section is gated to it).
+    ...(moduleIds.length === 1 && unitIds.length > 0 ? { unitIds } : {}),
     questionTypes,
     ...(source ? { source } : {}),
     ...(parseSittingYear(examYear) !== undefined ? { examYear: parseSittingYear(examYear)! } : {}),
@@ -540,17 +619,87 @@ export function SessionBuilder({
             loading={years.isLoading}
             title={!facultyId ? t("builder.needFaculty") : undefined}
           />
-          <LabeledSelect
-            id="builder-module"
-            label={t("builder.module")}
-            value={moduleId}
-            onChange={handleModuleChange}
-            options={moduleOptions}
-            placeholder={t("builder.allModules")}
-            disabled={!yearId}
-            loading={modules.isLoading}
-            title={!yearId ? t("builder.needYear") : undefined}
-          />
+        </div>
+        {/* Module-level multi-select: checkbox chips with live counts, the same
+            pattern as the units list below. Nothing ticked = whole-year scope;
+            two or more ticked = whole-module scope per module (units UI hides). */}
+        <div className="mt-3">
+          <span id="builder-modules-label" className="mb-2 block text-meta font-medium text-text-secondary">
+            {t("builder.modulesLegend")}
+            {moduleIds.length > 0
+              ? ` ${t(
+                  moduleIds.length === 1 ? "builder.modulesSelectedOne" : "builder.modulesSelectedMany",
+                  { count: moduleIds.length }
+                )}`
+              : ""}
+          </span>
+          {!yearId ? (
+            <p className="rounded-panel border border-border bg-surface-2 px-3 py-2.5 text-meta text-text-tertiary">
+              {t("builder.needYear")}
+            </p>
+          ) : modules.isLoading && moduleList.length === 0 ? (
+            <p className="rounded-panel border border-border bg-surface-2 px-3 py-2.5 text-meta text-text-tertiary">
+              {t("builder.loadingShort")}
+            </p>
+          ) : moduleList.length === 0 ? (
+            <p className="rounded-panel border border-border bg-surface-2 px-3 py-2.5 text-meta text-text-tertiary">
+              {t("builder.noModules")}
+            </p>
+          ) : (
+            <>
+              <div className="mb-2 flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setModuleIds(moduleList.map((m) => m.id))}
+                  disabled={isStarting}
+                >
+                  {t("builder.allModules")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setModuleIds([])}
+                  disabled={isStarting}
+                >
+                  {t("builder.modulesNoneWholeYear")}
+                </Button>
+              </div>
+              <ul aria-labelledby="builder-modules-label" className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                {moduleList.map((m) => {
+                  const checked = moduleIds.includes(m.id);
+                  const badge = showModuleCounts ? String(countByModuleId.get(m.id) ?? 0) : "…";
+                  return (
+                    <li key={m.id}>
+                      <label
+                        className={cx(
+                          "flex min-h-touch-target cursor-pointer items-center gap-2 rounded-panel border bg-surface-2 px-3 text-body text-text-primary transition duration-200 hover:bg-surface-3 has-[:checked]:border-accent-qcm has-[:checked]:bg-accent-qcm/10",
+                          checked ? "border-accent-qcm" : "border-border"
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleModuleId(m.id)}
+                          disabled={isStarting}
+                          className="h-4 w-4 shrink-0 accent-[var(--color-accent-qcm)]"
+                        />
+                        <span className="min-w-0 flex-1 truncate">{m.name}</span>
+                        <span
+                          aria-label={t("builder.badgeQuestions", { badge })}
+                          className="shrink-0 rounded-pill border border-border bg-surface-3 px-2 py-0.5 text-meta font-semibold text-text-secondary"
+                        >
+                          {badge}
+                        </span>
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
         </div>
         {/* Course-level multi-select (units carry the questions): checkbox list with
             live count badges. Nothing ticked = whole module scope. */}
@@ -558,9 +707,13 @@ export function SessionBuilder({
           <span id="builder-units-label" className="mb-2 block text-meta font-medium text-text-secondary">
             {t("builder.units")}{unitIds.length > 0 ? ` ${t(unitIds.length === 1 ? "builder.selectedOne" : "builder.selectedMany", { count: unitIds.length })}` : ""}
           </span>
-          {!moduleId ? (
+          {moduleIds.length === 0 ? (
             <p className="rounded-panel border border-border bg-surface-2 px-3 py-2.5 text-meta text-text-tertiary">
               {t("builder.needModule")}
+            </p>
+          ) : moduleIds.length > 1 ? (
+            <p className="rounded-panel border border-border bg-surface-2 px-3 py-2.5 text-meta text-text-tertiary">
+              {t("builder.unitsNeedOneModule")}
             </p>
           ) : units.isLoading && unitList.length === 0 ? (
             <p className="rounded-panel border border-border bg-surface-2 px-3 py-2.5 text-meta text-text-tertiary">

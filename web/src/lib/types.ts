@@ -134,6 +134,25 @@ export interface SessionDetail {
   completedAt: string | null;
   score: number | null;
   questions: SessionQuestionEntry[];
+  /**
+   * Derived creation-config echo (GET detail only) — stored settings plus scope
+   * reconstructed from the questions actually served ("repeat my last quiz").
+   * Absent on list entries; empty scope arrays on an empty-pool session.
+   */
+  config?: SessionConfigEcho;
+}
+
+/** GET /api/sessions/:id `config` — see SessionDetail.config. */
+export interface SessionConfigEcho {
+  mode: "practice" | "exam";
+  /** Number of questions actually served (daily-limit truncation included). */
+  size: number;
+  timeLimitSeconds: number | null;
+  resultSort: "by_year" | "by_course" | "random";
+  showStats: boolean;
+  questionTypes: string[];
+  moduleIds: string[];
+  unitIds: string[];
 }
 
 export interface AnswerAttemptResponse {

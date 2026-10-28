@@ -135,7 +135,9 @@ function loadSessionWithQuestions(sessionId: string) {
               // free-text sittingLabel field.
               examYear: true,
               sittingLabel: true,
-              unit: { select: { name: true, module: { select: { name: true } } } },
+              // moduleId is part of the derived config echo below (Question has no
+              // moduleId column — questions attach at unit level).
+              unit: { select: { name: true, moduleId: true, module: { select: { name: true } } } },
               options: { select: { id: true, bodyText: true } },
               clinicalCaseParts: {
                 orderBy: { partOrder: "asc" },
@@ -167,6 +169,27 @@ function reorderOptions<T extends { id: string }>(options: T[], optionOrder: Pri
 }
 
 function formatSessionForResponse(session: SessionWithQuestions) {
+  // Derived creation-config echo ("repeat my last quiz" — MBset-inspired parity,
+  // no schema change): mode/timeLimit/resultSort/showStats are stored columns;
+  // scope is reconstructed from the questions actually SERVED, not the original
+  // request filters — so an empty-pool session echoes empty arrays, and a session
+  // built from moduleIds A+B that only drew from A echoes [A] (what was real).
+  const config = {
+    mode: session.mode,
+    size: session.sessionQuestions.length,
+    timeLimitSeconds: session.timeLimitSeconds,
+    resultSort: session.resultSort,
+    showStats: session.showStats,
+    questionTypes: [...new Set(session.sessionQuestions.map((sq) => sq.question.type))],
+    moduleIds: [
+      ...new Set(
+        session.sessionQuestions
+          .map((sq) => sq.question.unit.moduleId)
+          .filter((moduleId): moduleId is string => moduleId !== null)
+      ),
+    ],
+    unitIds: [...new Set(session.sessionQuestions.map((sq) => sq.question.unitId))],
+  };
   return {
     id: session.id,
     name: session.name,
@@ -178,6 +201,7 @@ function formatSessionForResponse(session: SessionWithQuestions) {
     startedAt: session.startedAt,
     completedAt: session.completedAt,
     score: serializeScore(session.score),
+    config,
     questions: session.sessionQuestions.map((sessionQuestion) => ({
       sessionQuestionId: sessionQuestion.id,
       presentedOrder: sessionQuestion.presentedOrder,

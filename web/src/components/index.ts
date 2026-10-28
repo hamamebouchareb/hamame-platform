@@ -21,7 +21,7 @@ export { EmptyState } from "@/components/EmptyState";
 export { LoadingSkeleton } from "@/components/LoadingSkeleton";
 export { WeeklyActivity } from "@/components/WeeklyActivity";
 export { ProgressBar } from "@/components/ProgressBar";
-export { SessionBuilder, type SessionConfig } from "@/components/SessionBuilder";
+export { SessionBuilder, type SessionConfig, type SessionBuilderPrefill } from "@/components/SessionBuilder";
 export { ResidanatLadder } from "@/components/ResidanatLadder";
 export { QuestionCard } from "@/components/QuestionCard";
 export { AnswerOption } from "@/components/AnswerOption";

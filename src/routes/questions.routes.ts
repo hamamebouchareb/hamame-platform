@@ -132,6 +132,10 @@ const countsQuerySchema = z.object({
   facultyId: z.string().uuid().optional(),
   yearId: z.string().uuid().optional(),
   moduleId: z.string().uuid().optional(),
+  // Multi-module scope for the session builder's module chips (same uuid-array
+  // preprocessing as unitIds). Combined with the other filters; ignored by the
+  // per-unit/per-module badge sections, which stay year/module-scoped by design.
+  moduleIds: uuidArrayQueryParam,
   unitIds: uuidArrayQueryParam,
   type: questionTypeQueryEnum.optional(),
   types: typeArrayQueryParam,
@@ -148,6 +152,7 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
       facultyId,
       yearId,
       moduleId,
+      moduleIds,
       unitIds,
       type,
       types,
@@ -169,6 +174,7 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
     const totalWhere = buildQuestionWhere({
       unitIds,
       moduleId,
+      moduleIds,
       yearId,
       facultyId,
       types: typeList,
@@ -243,6 +249,7 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
     const sittingsWhere = buildQuestionWhere({
       unitIds,
       moduleId,
+      moduleIds,
       yearId,
       facultyId,
       types: typeList,
