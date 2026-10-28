@@ -7,6 +7,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { parseShare } from "@/lib/share-message";
 import { formatDmBytes } from "@/lib/dm-types";
 import { Icon } from "@/components/Icon";
+import { Modal } from "@/components/Modal";
 
 interface FriendRow {
   id: string;
@@ -14,16 +15,53 @@ interface FriendRow {
 }
 
 export function MessageBody({ body }: { body: string }) {
+  const { t } = useLanguage();
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const share = parseShare(body);
   if (!share) return <p className="whitespace-pre-wrap break-words">{body}</p>;
   const note = share.note ? <p className="mt-1 whitespace-pre-wrap break-words">{share.note}</p> : null;
   if (share.kind === "image") {
+    // Uploaded attachments are data: URLs. <a href={dataUrl} target="_blank">
+    // is blocked by every browser (top-frame navigation to data: URLs is
+    // disallowed — Chrome 60+, Firefox, Safari) and renders the blank/black
+    // tab the receiver reported. So data-URL photos open an in-app lightbox
+    // (no navigation at all); only https photo links — a real external page —
+    // keep the new-tab behaviour.
+    const isAttachment = share.url.startsWith("data:");
+    const img = <img src={share.url} alt={share.name ?? ""} className="max-h-48 max-w-full rounded-control" />;
     return (
       <div>
-        <a href={share.url} target="_blank" rel="noreferrer">
-          <img src={share.url} alt="" className="max-h-48 max-w-full rounded-control" />
-        </a>
+        {isAttachment ? (
+          <button
+            type="button"
+            onClick={() => setLightboxOpen(true)}
+            aria-haspopup="dialog"
+            aria-label={t("dms.viewPhoto")}
+            className="block cursor-zoom-in focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+          >
+            {img}
+          </button>
+        ) : (
+          <a href={share.url} target="_blank" rel="noreferrer">{img}</a>
+        )}
         {note}
+        {isAttachment ? (
+          <Modal
+            open={lightboxOpen}
+            onClose={() => setLightboxOpen(false)}
+            title={share.name ?? "Photo"}
+            className="max-w-lg"
+          >
+            <img src={share.url} alt={share.name ?? ""} className="max-h-[70vh] w-full rounded-control" />
+            <a
+              href={share.url}
+              download={share.name ?? "photo"}
+              className="mt-3 inline-flex rounded-control border border-border px-3 py-1.5 text-caption font-medium text-text-primary transition hover:bg-surface-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+            >
+              {t("dms.downloadPhoto")}
+            </a>
+          </Modal>
+        ) : null}
       </div>
     );
   }
