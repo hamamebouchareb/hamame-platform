@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuthedPage } from "@/lib/useAuthedPage";
 import { useApiResource } from "@/lib/useApiResource";
@@ -13,6 +14,9 @@ import { cx } from "@/lib/cx";
 export default function FacultiesPage() {
   const { user, isHydrated, handleLogout } = useAuthedPage();
   const { t } = useLanguage();
+  // null = auto: default to the faculty the viewer picked during onboarding;
+  // a pill click overrides it. Viewers without a faculty see everything.
+  const [scopeOverride, setScopeOverride] = useState<"mine" | "all" | null>(null);
 
   const { data, error, isLoading, refetch } = useApiResource<{ faculties: Faculty[] }>(
     isHydrated && user ? "/faculties" : null
@@ -31,6 +35,15 @@ export default function FacultiesPage() {
         const myFaculty = myFacultyIndex >= 0 ? faculties[myFacultyIndex] : null;
         const myFacultyYears = myFacultyIndex >= 0 && yearBatches.length > myFacultyIndex ? yearBatches[myFacultyIndex]?.years ?? [] : [];
         const myYear = myFaculty ? myFacultyYears.find((y) => y.id === authedUser.yearId) ?? null : null;
+
+        const hasMyFaculty = myFacultyIndex >= 0;
+        const activeScope: "mine" | "all" = scopeOverride ?? (hasMyFaculty ? "mine" : "all");
+        const visibleFaculties =
+          activeScope === "mine" && hasMyFaculty ? faculties.filter((_, i) => i === myFacultyIndex) : faculties;
+        const pillClass = (active: boolean) =>
+          active
+            ? "min-h-touch-target rounded-pill border border-accent-library/40 bg-accent-library/15 px-4 text-body font-medium text-accent-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+            : "min-h-touch-target rounded-pill border border-border bg-surface-1 px-4 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring";
 
         return (
           <>
@@ -109,10 +122,32 @@ export default function FacultiesPage() {
         ) : null}
 
         <section aria-label={t("library.allFaculties")} className="mx-auto mt-section-gap max-w-4xl">
+          {hasMyFaculty ? (
+            <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t("library.facultyFilter")}>
+              <button
+                type="button"
+                aria-pressed={activeScope === "mine"}
+                onClick={() => setScopeOverride("mine")}
+                className={pillClass(activeScope === "mine")}
+              >
+                {t("library.myFaculty")}
+              </button>
+              <button
+                type="button"
+                aria-pressed={activeScope === "all"}
+                onClick={() => setScopeOverride("all")}
+                className={pillClass(activeScope === "all")}
+              >
+                {t("library.allFaculties")}
+              </button>
+            </div>
+          ) : null}
           <div className="flex items-center justify-between gap-3">
-            <h2 className="font-display text-h3 font-semibold text-text-primary">{t("library.allFaculties")}</h2>
+            <h2 className="font-display text-h3 font-semibold text-text-primary">
+              {activeScope === "mine" && hasMyFaculty ? t("library.myFaculty") : t("library.allFaculties")}
+            </h2>
             <p className="text-meta text-text-tertiary">
-              {isLoading ? t("common.loadingMore") : t(faculties.length === 1 ? "library.facultiesOne" : "library.facultiesMany", { count: faculties.length })}
+              {isLoading ? t("common.loadingMore") : t(visibleFaculties.length === 1 ? "library.facultiesOne" : "library.facultiesMany", { count: visibleFaculties.length })}
             </p>
           </div>
 
@@ -149,7 +184,8 @@ export default function FacultiesPage() {
           ) : null}
 
           <ul className="mt-4 grid gap-card-gap sm:grid-cols-2 lg:grid-cols-3">
-            {faculties.map((faculty, index) => {
+            {visibleFaculties.map((faculty) => {
+              const index = faculties.indexOf(faculty);
               const yearCount = yearBatches[index]?.years.length;
               const isMine = myFacultyIndex === index;
               return (
