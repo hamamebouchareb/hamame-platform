@@ -72,9 +72,24 @@ async function listYearsForFaculty(req: Request, res: Response, next: NextFuncti
       orderBy: { orderIndex: "asc" },
     });
 
+    // One grouped count (a single pooler connection) instead of the client firing one
+    // GET /years/:id/modules PER year: 22 parallel requests from the years page hit
+    // the Supabase pooler's ~10-connection limit, intermittently 500, and the cards
+    // then fell back to a false "0 modules" (observed live 2026-10-28: the Résidanat
+    // médecine card read 0 while the year holds 20 modules). Count semantics match
+    // GET /years/:id/modules exactly — modules by yearId alone; faculty visibility is
+    // already enforced above.
+    const moduleCounts = await prisma.module.groupBy({
+      by: ["yearId"],
+      where: { year: { facultyId: id } },
+      _count: { _all: true },
+    });
+    const countByYearId = new Map(moduleCounts.map((row) => [row.yearId, row._count._all]));
+    const yearsWithCounts = years.map((year) => ({ ...year, moduleCount: countByYearId.get(year.id) ?? 0 }));
+
     res.status(200).json({
       context: { faculty: { id: faculty.id, name: faculty.name } },
-      years,
+      years: yearsWithCounts,
     });
   } catch (err) {
     next(err);

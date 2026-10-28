@@ -20,6 +20,8 @@ export interface Year {
   label: string;
   /** Study track (medecine | dentaire | pharmacie); null on pre-track rows. */
   track?: string | null;
+  /** Modules under this year — grouped count from GET /faculties/:id/years. Absent from older backends. */
+  moduleCount?: number;
   orderIndex: number;
   createdAt: string;
 }

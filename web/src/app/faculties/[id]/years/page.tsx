@@ -36,15 +36,26 @@ export default function FacultyYearsPage() {
   );
 
   const years = useMemo(() => data?.years ?? [], [data]);
-  const modulePaths = years.map((year) => `/years/${year.id}/modules`);
+
+  // moduleCount arrives grouped from GET /faculties/:id/years (one backend query).
+  // Older backends (pre-deploy window) omit it — fall back to per-year fetches for
+  // just those rows, never the whole list (22 parallel requests 500 on the pooler).
+  const fallbackPaths = useMemo(
+    () => years.filter((year) => year.moduleCount === undefined).map((year) => `/years/${year.id}/modules`),
+    [years]
+  );
   const { data: moduleBatches, isLoading: modulesLoading } = useApiList<{ modules: CurriculumModule[] }>(
-    isHydrated && user && years.length > 0 ? modulePaths : null
+    isHydrated && user && fallbackPaths.length > 0 ? fallbackPaths : null
   );
 
   const moduleCountByYear = useMemo(() => {
     const map = new Map<string, number>();
-    years.forEach((year, index) => {
-      const modules = moduleBatches[index]?.modules;
+    years.forEach((year) => {
+      if (year.moduleCount !== undefined) map.set(year.id, year.moduleCount);
+    });
+    const fallbackRows = years.filter((year) => year.moduleCount === undefined);
+    fallbackRows.forEach((year, index) => {
+      const modules = moduleBatches?.[index]?.modules;
       if (modules) map.set(year.id, modules.length);
     });
     return map;
@@ -153,7 +164,21 @@ export default function FacultyYearsPage() {
                       description={
                         modulesLoading && moduleCount === undefined
                           ? t("years.loadingModules")
-                          : t((moduleCount ?? 0) === 1 ? "years.modulesOne" : "years.modulesMany", { count: moduleCount ?? 0 })
+                          : [
+                              // Track label kills the "three identical Résidanat/Year 1
+                              // cards" confusion — the API rows carry track but the card
+                              // never showed it (observed live 2026-10-28).
+                              year.track === "medecine"
+                                ? t("onboard.trackMed")
+                                : year.track === "dentaire"
+                                  ? t("onboard.trackDent")
+                                  : year.track === "pharmacie"
+                                    ? t("onboard.trackPharma")
+                                    : null,
+                              t((moduleCount ?? 0) === 1 ? "years.modulesOne" : "years.modulesMany", { count: moduleCount ?? 0 }),
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")
                       }
                       actionLabel={t("library.explore")}
                       meta={
