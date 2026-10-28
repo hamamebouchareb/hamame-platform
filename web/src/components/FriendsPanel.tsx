@@ -99,9 +99,18 @@ export function FriendsPanel({ className }: { className?: string }) {
   useEffect(() => {
     window.addEventListener("focus", converge);
     document.addEventListener("visibilitychange", converge);
+    // Focus/visibility only fire when the tab is LEFT and re-entered. The
+    // reported flow never leaves the tab: the sender watches this panel while
+    // the friend accepts on their own device, so no event ever fires and the
+    // outgoing row stayed "En attente" until a manual reload. A quiet 20s poll
+    // (converge already no-ops when hidden) closes that hole — same polling
+    // discipline as the bell (45s), the docked chats (12s) and the messages
+    // page (5s).
+    const interval = window.setInterval(converge, 20_000);
     return () => {
       window.removeEventListener("focus", converge);
       document.removeEventListener("visibilitychange", converge);
+      window.clearInterval(interval);
     };
   }, [converge]);
 

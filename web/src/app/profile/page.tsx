@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -118,6 +118,42 @@ export default function ProfilePage() {
   const [userSearched, setUserSearched] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);
 
+  // The query as SUBMITTED (not the live input value): convergence below must
+  // re-run exactly the search that is on screen, even if the user kept typing.
+  const submittedQueryRef = useRef("");
+
+  // The OTHER person accepts the request OUTSIDE this tab while the results
+  // sit on screen; without a re-fetch the chip stayed "Demande envoyée" until
+  // a manual re-search (FriendsPanel had this convergence, /profile did not —
+  // the remaining half of the reported "En attente" bug). Focus, visibility
+  // and a quiet 20s poll re-run the active search so it converges to server
+  // truth without any user action. The friends LIST refreshes on
+  // focus/visibility only: refetch() flips isLoading, which would flicker the
+  // list to a skeleton every 20s if it rode the interval too.
+  const convergeSearch = useCallback((refetchList: boolean) => {
+    if (document.visibilityState !== "visible") return;
+    const q = submittedQueryRef.current.trim();
+    if (userSearched && q.length >= 3) {
+      void apiFetch<{ users: UserSearchResult[] }>(`/users/search?q=${encodeURIComponent(q)}`)
+        .then((data) => setUserResults(data.users))
+        .catch(() => undefined);
+    }
+    if (refetchList) friendsData.refetch();
+  }, [userSearched, friendsData]);
+
+  useEffect(() => {
+    const onFocus = () => convergeSearch(true);
+    const onVisible = () => convergeSearch(true);
+    const interval = window.setInterval(() => convergeSearch(false), 20_000);
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.clearInterval(interval);
+    };
+  }, [convergeSearch]);
+
   async function handleUserSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const query = userQuery.trim();
@@ -125,6 +161,7 @@ export default function ProfilePage() {
       setUserSearchError(t("profile.queryShort"));
       return;
     }
+    submittedQueryRef.current = query;
     setUserSearching(true);
     setUserSearchError(null);
     try {
