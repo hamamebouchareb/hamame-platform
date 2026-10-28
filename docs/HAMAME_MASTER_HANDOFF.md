@@ -2570,4 +2570,19 @@ log `2026-10-28-medspark-residanat-recon.log`. Harness bug found BY the run
 documented transform. Nothing touched: fixture faculties, Question rows,
 frontend.
 
+**Update same day (owner decisions in chat):** (1) owner approved the visible
+ladder — §38's gate above is now RESOLVED: Résidanat year pages render the
+2005–2026 sitting ladder via `web/src/components/ResidanatLadder.tsx`
+(newest-first tiles, REAL per-sitting counts from
+`GET /api/questions/counts?yearId=…`, empty sittings stay visible and
+non-clickable, FR/EN `residanat.*` keys), wired on `/years/[id]/modules`
+when `context.year.label === "Résidanat"`. (2) Content decision: the bank
+stays EMPTY for now — owner chose "nothing yet"; no MedSpark content was or
+will be harvested (§37 stands; legitimate paths unchanged). Evidence:
+`tsc` 0, `lint` 0 (4 pre-existing warnings), `next build` 0 (45/45 routes);
+counts endpoint live-probed 200 `{total:0, sittings:[]}` for the Résidanat
+year (tiles honestly read 0). NOT yet browser-verified (logged-in DOM) —
+verify on the Vercel deploy. MedSpark recon §3b (year tiles +
+`residanatHintFiveYears`) documents the parity target.
+
 
