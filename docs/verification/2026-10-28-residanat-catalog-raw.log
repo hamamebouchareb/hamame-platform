@@ -1,0 +1,95 @@
+# Résidanat catalog scaffold seed — combined raw evidence (2026-10-28)
+# Harness: prisma/seed-residanat.ts (tsx). Three runs + one live API read-back.
+# Disclosed harness bug in an intermediate draft: a URL "corruption guard"
+# replaced `postgresql:/` with `postgresql://` producing `postgresql:///...`
+# (empty authority) -> connector fell back to `localhost:5432` ->
+# PrismaClientInitializationError "Can't reach database server at localhost".
+# Fix: plain documented transform `:5432` -> `:6543` + append `&pgbouncer=true`
+# (handoff §34 precedent). Fix found BY this run; rerun clean.
+
+## RUN A — dry-run (read-only plan), 2026-10-28T11:39Z
+# date: 2026-10-28T11:39:39.334Z
+# mode: dry-run
+# connection: transaction-pooler transform applied (6543 + pgbouncer), process-local.
+BEFORE: residanat year rows=45 (expected 45 = 15 faculties x 3 tracks)
+BEFORE: modules under residanat year rows=0
+faculties resolved: 15/15
+PLAN fac-alger medecine: 20 modules to create (year row exists)
+PLAN fac-alger dentaire: 7 modules to create (year row exists)
+PLAN fac-alger pharmacie: 4 modules to create (year row exists)
+... (identical 20/7/4 pattern for fac-oran, fac-constantine, fac-annaba,
+    fac-blida, fac-tlemcen, fac-setif, fac-batna, fac-bejaia,
+    fac-tizi-ouzou, fac-sidi-bel-abbes, fac-mostaganem, fac-ouargla,
+    fac-tebessa, fac-djelfa — full 45 PLAN lines in the original console run)
+PLAN TOTAL: year creates=0, module creates=465, orderIndex fixes=0
+DRY-RUN: nothing written. Re-run with --apply to write.
+EXIT: 0
+
+## RUN B — --apply (first write), 2026-10-28T11:40Z
+# date: 2026-10-28T11:40:46.913Z
+# mode: APPLY
+BEFORE: residanat year rows=45 (expected 45 = 15 faculties x 3 tracks)
+BEFORE: modules under residanat year rows=0
+faculties resolved: 15/15
+(PLAN lines identical to RUN A for all 15 faculties x 3 tracks)
+PLAN TOTAL: year creates=0, module creates=465, orderIndex fixes=0
+CREATED: years=0, modules=465, order-index fixes=0
+AFTER: residanat year rows=45
+AFTER: modules under residanat year rows=465
+INVARIANT OK (before + created == after)
+SAMPLE fac-alger residanat/medecine yearId=e0af9889-d577-4f34-8ea6-ef4f2736aa8e
+  0 Anesthésie-réanimation
+  1 Cardiologie
+  2 Chirurgie générale
+  3 Chirurgie infantile
+  4 Chirurgie orthopédique
+  5 Chirurgie thoracique et cardio-vasculaire
+  6 Chirurgie urologique
+  7 Dermatologie
+  8 Gastro-entérologie
+  9 Gynécologie-obstétrique
+  10 Néphrologie
+  11 Neurochirurgie
+  12 Neurologie
+  13 Oncologie médicale
+  14 Ophtalmologie
+  15 ORL-chirurgie cervico-faciale
+  16 Pédiatrie
+  17 Pneumologie
+  18 Psychiatrie
+  19 Urgences médicales
+EXIT: 0
+
+## RUN C — --apply re-run (idempotency proof), 2026-10-28T11:45Z
+# date: 2026-10-28T11:45:06.731Z
+# mode: APPLY
+BEFORE: residanat year rows=45 (expected 45 = 15 faculties x 3 tracks)
+BEFORE: modules under residanat year rows=465
+faculties resolved: 15/15
+PLAN (all 45 faculty x track lines): 0 modules to create (year row exists)
+PLAN TOTAL: year creates=0, module creates=0, orderIndex fixes=0
+CREATED: years=0, modules=0, order-index fixes=0
+AFTER: residanat year rows=45
+AFTER: modules under residanat year rows=465
+INVARIANT OK (before + created == after)
+SAMPLE fac-alger: same 20-module list as RUN B, unchanged order 0..19
+EXIT: 0
+
+## PROBE D — live platform read-back through the REAL API (Railway prod)
+GET https://hamame-platform-production.up.railway.app/api/faculties
+  -> 200, fac-alger id=67e26ce8-28e8-453e-8f62-15befa263997
+GET /api/faculties/67e26ce8-28e8-453e-8f62-15befa263997/years
+  -> 200, years_count=22 (medecine ladder 8 + dentaire 7 + pharmacie 7)
+     Résidanat (medecine): id=e0af9889-d577-4f34-8ea6-ef4f2736aa8e,
+     label="Résidanat", track="medecine", orderIndex=7
+GET /api/years/e0af9889-d577-4f34-8ea6-ef4f2736aa8e/modules
+  -> 200, modules_count=20, names+orderIndex EXACT match to RUN B sample
+     (Anesthésie-réanimation ... Urgences médicales, indexes 0..19)
+# Curriculum GET routes served the seeded rows untouched; no code change was
+# needed for visibility (fac-alger rolloutStatus 'beta' passes the gate).
+
+## What this run did NOT create
+- No Year rows for sitting years 2005-2026 (bank-coverage design: sitting
+  years live on Question.examYear/sittingLabel + bank-derived picker).
+- No question/answer/explanation content (MedSpark content is not copied).
+- Fixture faculties ('medicine'/'dentistry') untouched.

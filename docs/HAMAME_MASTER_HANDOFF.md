@@ -2525,4 +2525,49 @@ via Hamame's own authoring workflow (`/api/authoring`, reviewers approve),
 license official exam papers from their institutional sources, or obtain
 MedSparkDZ's permission directly. Treat this as owner-gated work until then.
 
+## 38. Résidanat catalog scaffold — modules seeded; sitting ladder documented (2026-10-28)
+
+Owner follow-up: "use rea to add the same schema of db like modules name,
+years, years of resedanat and other thing." Accepted scope: structural
+catalog parity only (never their question content — §37).
+
+**REA recon additions (same-day, merged into the recon log §2b):** their
+year routes are dynamic (`app/(app)/year/[yearId]`), résidanat pages carry
+a `residanatHintFiveYears` UI hint and a module grid per year; their
+module data is server-driven through Supabase REST — nothing more to
+mirror at content level.
+
+**Delivery 1 — Résidanat specialty modules (DB scaffold):**
+`prisma/seed-residanat.ts` (tracked, tsx, `--apply` required; dry-run
+default) seeds specialty MODULES under every wilaya faculty's existing
+`Résidanat` stage Year rows: track medecine → 20 medicine specialties,
+dentaire → 7, pharmacie → 4 (starter taxonomy, standard Algerian residency
+nomenclature, owner-extendable). 15 faculties × 31 = **465 Module rows**
+created once; idempotent (find-by-(yearId,name), order drift reconciled;
+re-run proved 0 created / 0 fixes). All 45 Résidanat Year rows already
+existed from seed.ts; 0 new Year rows were needed. Sequential awaits,
+process-local `:5432`→`:6543`+`&pgbouncer=true` transform per §34.
+Real-API read-back through Railway (`GET /api/years/<residanat year>/modules`)
+returned 20 modules for fac-alger in exact seeded order — served untouched
+by existing routes (faculty `beta` passes the visibility gate; no code
+changes anywhere).
+
+**Delivery 2 — the Résidanat ladder (2005–2026):** documented as
+`docs/residanat-sittings.md` (canonical `examYear` + `sittingLabel:
+"Résidanat <year>"` conventions for import batches; existing
+`buildQuestionWhere` filters and bank-derived picker already cover it).
+Deliberate decision recorded: NO per-sitting-year Year rows (bank-coverage
+design; a 15 faculties × 3 tracks × 22 years = 990-row fan-out would
+duplicate MedSpark's exam-appearance bookkeeping, exactly what §37 declines).
+**Owner gate:** if the full ladder should render pre-content (empty years),
+that is a new UI/registry feature — say the word and it gets its own design.
+
+**Gates/evidence:** seed typecheck 0; dry-run + apply + idempotent re-run
+raw logs = `docs/verification/2026-10-28-residanat-catalog-raw.log`; recon
+log `2026-10-28-medspark-residanat-recon.log`. Harness bug found BY the run
+(disclosed in the log header): an over-zealous URL transform produced
+`postgresql:///...` → connector fell back to `localhost:5432`; fixed to the
+documented transform. Nothing touched: fixture faculties, Question rows,
+frontend.
+
 

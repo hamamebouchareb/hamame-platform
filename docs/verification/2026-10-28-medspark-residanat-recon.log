@@ -24,6 +24,18 @@
 - URL pattern: /year/<trackSlug>. Bare /residanat -> 404 (len 0, verified).
   /year/residanat -> 200 shell, then client redirect.
 
+### 2b. Year route internals (client bundle)
+- Route is DYNAMIC: app/(app)/year/[yearId]/page-de9826dfdeb32347.js
+  -> their catalog addresses years by id, including 'residanat' pages.
+- UI contains a fr i18n key `residanatHintFiveYears` (residanat year pages
+  advertise a five-year hint) and a module GRID layout per year page.
+- Name-level taxonomy strings observed at static fallback (layout module):
+  Cardiologie, Pneumologie, Pathologies respiratoires, Neurologie,
+  Oncologie, Gynécologie, Psychiatrie, Endocrinologie, Ophtalmologie,
+  Locomoteur et Cutané, Chimie générale et organique, Pharmacologie,
+  corps humain, coreModules. Their year->module DATA is server-driven
+  (Supabase REST), not embedded.
+
 ## 3. Auth gate (decisive observation, ev_be8e58...)
 - Scenario start_url /year/residanat: after load, browser sits at /login
   (steps s1_home and s2_settle both report after_url /login).
