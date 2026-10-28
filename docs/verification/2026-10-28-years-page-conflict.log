@@ -98,6 +98,38 @@ b) **No track on cards.** Cards render `title={year.label}` only: "Internat" ×3
 - No passwords or tokens recorded in this log; the VERIFY- account was used only in
   memory and deleted through the platform API, not SQL.
 
+## 8. Follow-up: years page now defaults to the viewer's own track (commit `4d4b3da`)
+
+Owner question: "but the user choose in first the year and the faculty?" — onboarding
+collects filière → faculty → year (the year step filters by track) and stores
+facultyId + yearId, but the years page ignored it and listed all 22 years across
+every track. Fix (frontend-only):
+
+- Track pills (Médecine / Médecine dentaire / Pharmacie / Toutes les filières),
+  defaulting to the track derived from the viewer's own year row; "Toutes" restores
+  the full list (also the default for viewers without a year).
+- Default sort is now "Ordre du programme" (orderIndex — what the API already
+  returns) instead of the alphabetical scramble; az/za/recent remain available.
+- Reset-filters returns to the same defaults. i18n keys years.trackFilter /
+  years.allTracks / years.sortCurriculum (FR+EN, missing-key tsc guard).
+- Gates: tsc 0, lint 0 (4 pre-existing warnings), next build 0.
+
+Post-deploy verification (fresh VERIFY account verify-track-8816@…, onboarding =
+faculty alger + Résidanat médecine):
+- Default view capture `ev_26227084c21589bd5879ad353f133adec0eef5706893d089404b84bd57a4b4cb`:
+  pills = Médecine [ACTIVE], dentaire/pharmacie/Toutes idle; 8 cards in curriculum
+  order (Year 1 → Year 6 → Internat → Résidanat "Médecine · 20 modules").
+- Switcher capture `ev_0b5245b76984200fd404133e3d3895d4a33e68503b9cadde91eabe98e26d8b3e`
+  (clicked the "Toutes les filières" pill): pill flips to ACTIVE, all 22 cards
+  render, tracks labeled, screenshot reviewed visually.
+  (First default-view attempt `ev_dac3dc28…` captured before the years fetch
+  resolved — 0 cards; re-run above is the valid one, disclosed.)
+- Console garbling in the DOM dump (MǸdecine, fili��res) is the known codepage-850
+  console artifact (handoff §12.2), not a data bug.
+- Cleanup proof: DELETE /api/users/me → 200; old token → 401; relaunch login → 401.
+- Note: a first default-view capture (`ev_dac3dc28…`) fired before the years fetch
+  resolved (0 cards rendered); the valid capture is `ev_26227084…`. Disclosed.
+
 ## Notes / limitations (disclosed)
 
 - The 500s on the Résidanat modules page's own unit/progress calls (40 parallel
