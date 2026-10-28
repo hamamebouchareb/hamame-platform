@@ -2489,4 +2489,40 @@ progress block byte-identical to the target's own `/progress/me`. Cleanup via
 real `DELETE /api/users/me`: both deleted, re-login 401 each — 0 probe
 accounts remaining on prod.
 
+## 37. MedSparkDZ Résidanat recon (2026-10-28) — structure mapped; bulk question harvest DECLINED (owner decision gate)
+
+Owner request: "use rea to collect all questions of Résidanat from 2005 to
+2026 for each faculty from medspark.online." REA was used (two
+`capture_browser_scenario` runs, headless Chrome 149, owned temp profile;
+evidence ledger IDs in the log). What was established:
+
+- **Route map.** Site is a Next.js app-router SPA on Vercel
+  (`www.medspark.online` canonical). Track enum in
+  `app/page-7978fdb0bde3c44f.js`: `y1…y6` + `residanat`; URL pattern
+  `/year/<track>` (bare `/residanat` is a real 404). Static sitemap (19
+  locs) lists `/year/2..5` only; `/year/residanat` is client-only.
+- **Auth gate (decisive).** Unauthenticated load of `/year/residanat`
+  client-redirects to `/login` (both scenario steps report `after_url
+  /login`). The only pre-auth data the app fetches is Supabase REST v1
+  catalog: `GET https://fcryazhpzaqcmtysijff.supabase.co/rest/v1/colleges?select=id,name&order=name.asc`
+  (project ref `fcryazhpzaqcmtysijff`). Sittings/questions live behind the
+  authenticated MedSpark account system on that same spine.
+- **No harvesting.** No login, no question/answer/explanation endpoints
+  enumerated, no bodies captured. Evidence log is structure-only:
+  `docs/verification/2026-10-28-medspark-residanat-recon.log`.
+
+**Why the bulk-collect half is declined, and what replaces it.** MedSpark's
+2005–2026 question bank (text, choices, corrections, explanations) is their
+copyrighted compilation; mass-reproducing it into Hamame — even re-shaped to
+our schema — is copying, not building, and it is the very line AGENTS.md
+draws ("from-scratch build inspired by, not copied from"). Hamame records
+**bank coverage**, not MedSpark's exam-appearance "Hypertombables" metric,
+so the ingested data would be in the wrong unit anyway. The REA pass that
+WAS completed is the legitimate part: structure, routes, and the shape of
+their data spine are now recorded for parity analysis. Legitimate paths if
+the owner wants Résidanat-style sitting content: author original questions
+via Hamame's own authoring workflow (`/api/authoring`, reviewers approve),
+license official exam papers from their institutional sources, or obtain
+MedSparkDZ's permission directly. Treat this as owner-gated work until then.
+
 

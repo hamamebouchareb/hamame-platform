@@ -1,0 +1,46 @@
+# MedSparkDZ Résidanat structural reconnaissance (medspark.online)
+# REA scenarios: capture_browser_scenario (headless Chrome 149, owned temp profile)
+# Evidence IDs (REA ledger):
+#   ev_c71bf202d4d5daa3e8aac5b03a67bf05a27a99ec94b1b19f91129d184b676d69  home, 155 reqs, 0 dropped
+#   ev_be8e589f97ea29d927c24604166edd25071c92699df0f59cd2898d3758c39d8c  /year/residanat, 253 reqs, 0 dropped
+#
+# NOTE: this log records STRUCTURE ONLY (routes, hosts, statuses, cardinalities).
+# It intentionally contains no question bodies: full question/answer/explanation
+# text is MedSparkDZ's copyrighted compilation and is not reproduced or
+# bulk-harvested here.
+
+## 1. Site surface
+- Domain: medspark.online -> www.medspark.online (canonical, Vercel). `?redirect=follow` shows 200.
+- Framework: Next.js app router, locale fr.
+- robots.txt: 200, points to medspark.online/sitemap.xml
+- sitemap.xml: 2 children -> sitemap-static.xml (19 locs), sitemap-lessons.xml (2 locs: root + /lessons)
+- Static sitemap routes: /, /landing, /login, /signup, /forgot-password, /reviews,
+  /study-chat, /suivi-cours, /year/2..5, /verify-email, /activate, /dashboard,
+  /profile, /notifications, /review-settings
+- Client-only routes seen in RSC prefetches: /settings, /spark-drive, /studio, /conditions, /privacy, /support
+
+## 2. Track / year enum (homepage route bundle app/page-7978fdb0bde3c44f.js)
+  trackSlug map: {1:"y1",2:"y2",3:"y3",4:"y4",5:"y5",6:"y6",residanat:"residanat"}
+- URL pattern: /year/<trackSlug>. Bare /residanat -> 404 (len 0, verified).
+  /year/residanat -> 200 shell, then client redirect.
+
+## 3. Auth gate (decisive observation, ev_be8e58...)
+- Scenario start_url /year/residanat: after load, browser sits at /login
+  (steps s1_home and s2_settle both report after_url /login).
+- Same class of redirect: /year/2 (already sitemap-listed) -> identical 200 shell + client gate.
+- Pre-auth data the app still fetches (both scenarios, unauthenticated):
+  GET https://fcryazhpzaqcmtysijff.supabase.co/rest/v1/colleges?select=id,name&order=name.asc
+  Supabase project ref: fcryazhpzaqcmtysijff  (REST v1 / PostgREST)
+- Conclusion: Résidanat sittings/questions are served only to authenticated
+  MedSpark accounts through the same Supabase REST spine; no sitemap-visible
+  public question surface exists.
+
+## 4. Console / errors
+- page_errors: 0 (hub scenario), 0 dropped events in both scenarios.
+
+## 5. What was NOT collected and why
+- No login performed, no question/answer/explanation endpoints enumerated,
+  no bodies harvested. Full 2005-2026 x faculty question text is MedSpark's
+  copyrighted compilation; bulk reproduction for ingestion is out of scope.
+- Hamame's own standing policy (AGENTS.md): parity means structure and
+  interaction patterns, from-scratch content - not copied content.
