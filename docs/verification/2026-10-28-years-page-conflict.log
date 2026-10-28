@@ -1,0 +1,110 @@
+# 2026-10-28 — Years page "conflicting" report: diagnosis + fix evidence
+
+User reported "nn it is conflecting" after the Résidanat ladder shipped. Clarified
+via options: the user picked "ladder looks broken/overlapping". This log records the
+full diagnosis (which turned out NOT to be the ladder) and the fix.
+
+## 1. Ruled out first
+
+- Git: `git fetch` + `status --porcelain` clean; `main` == `origin/main` at `1822f79`
+  (before fix); not ahead/behind. No merge conflict anywhere.
+- Vercel deploy of the ladder: `residanat.ladderTitle` / FR / EN strings present in
+  deployed bundles (`/_next/static/immutable/chunks/1tjjhrp3zc26l.js`,
+  `3ufkdktyipktr.js`) — ladder code WAS live.
+- CSS class audit: every class the ladder uses exists in the deployed compiled CSS
+  (`283u0ey08x4_l.css`, 65,096 bytes). `grid-cols-3` present ⇒ the build scanned the
+  component ⇒ its sibling utilities generated. Not a missing-token bug.
+
+## 2. Live logged-in capture method (disposable VERIFY account)
+
+Registered a throwaway account on prod per the disposable-account discipline:
+- POST /api/auth/register → 201; user id `4fe94176-ff0d-4913-9ea8-b076f56cdc30`;
+  email `verify-residanat-7210@example.com` (password NOT recorded here).
+- Completed onboarding via PUT /api/users/me {facultyId: 67e26ce8…, yearId: e0af9889…}
+  → 200 (faculty/year were required by the /bienvenue gate — first capture bounced
+  to /bienvenue, which is how that gate was discovered).
+- Drove the real login form headless (REA `capture_browser_scenario`, Chrome,
+  `input[type=email]` / `input[type=password]` / `button[type=submit]`).
+
+## 3. Résidanat modules page — RENDERED CORRECTLY (ladder NOT the problem)
+
+Evidence `ev_2e41929de8fb63b2dbca87526828521cf0674716070a3fa353b6f8e249b90091`
+(1280×3600) and `ev_a817975c0f7f482e0ca6cac1e5ea8bbb93c270258b2f00f7f48091afaa311a3b`
+(390×6200 mobile) and `ev_0cf6dc3703bded0aa9fae72709a203f15f539be7048bba9e58d15d6cf690eb94`
+(1280×5800 full):
+- DOM: 20 module cards (`/modules/<uuid>/units` hrefs, 20 unique), ladder section
+  `<section class="mt-section-gap" aria-label="Sessions d'examen — Résidanat">`
+  with 22 tiles, all 22 reading "Aucune question". No overlap, no broken structure.
+- Screenshots reviewed visually (desktop + mobile): clean render.
+- Console: 500s present on this page (pre-existing parallel-fetch issue, see §4 —
+  they affect the MODULE CARDS' unit/progress calls, not the ladder).
+
+## 4. ACTUAL CONFLICT: years list page (found during the same capture pass)
+
+Evidence `ev_cc90c8861c6183f98b42794ee81b0ed616e311fba87a0946bf66817d12584a28`
+(1280×5200, `/faculties/67e26ce8-28e8-453e-8f62-15befa263997/years`):
+
+a) **False module counts.** Console showed 12+ "Failed to load resource … 500".
+   The page fired 22 parallel `GET /years/:id/modules` calls (one per count badge);
+   the Supabase pooler (~10-connection limit) 500'd some, and the card fell back to
+   `?? 0` — a LYING count. Parsed DOM card table (before fix):
+
+   - Résidanat [710e6f03 pharmacie] → "4 modules" (ok)
+   - Résidanat [c046ca5b dentaire] → "7 modules" (ok)
+   - Résidanat [e0af9889 medecine] → **"0 modules"** ← FALSE; the year holds 20
+   - (all Internat/Year 1–6 rows read 0 — truthful, those years are empty)
+
+b) **No track on cards.** Cards render `title={year.label}` only: "Internat" ×3,
+   "Résidanat" ×3, "Year 1" ×3 … side by side, alphabetically sorted. Three
+   identical "Résidanat" cards, one of them claiming 0 modules while its page
+   inside shows 20 — this is the "conflicting" the user saw.
+
+## 5. Fix (commit `a4acbe5`)
+
+- Backend `src/routes/curriculum.routes.ts`: GET /api/faculties/:id/years now
+  returns `moduleCount` per year from ONE grouped query
+  (`prisma.module.groupBy({ by: ["yearId"], where: { year: { facultyId: id } } })`).
+  Semantics match GET /years/:id/modules (modules by yearId alone; faculty
+  visibility enforced above). One pooler connection replaces 22 parallel requests.
+- Frontend `web/src/app/faculties/[id]/years/page.tsx` + `web/src/lib/types.ts`:
+  uses the grouped count; only years lacking the field (old-backend deploy window)
+  still batch-fetch; each card now renders its track label before the count
+  (reuses i18n keys onboard.trackMed / trackDent / trackPharma).
+- Gates: backend `npx tsc --noEmit` 0; frontend tsc 0; lint 0 errors (same 4
+  pre-existing warnings); `next build` 0 (all routes).
+
+## 6. Post-deploy verification (both platforms)
+
+- Railway poll: attempts 1–6 rows lacked `moduleCount`; attempt 7 ALL rows carried
+  it: Résidanat pharmacie=4, dentaire=7, **medecine=20**.
+- Vercel poll: years chunk containing `onboard.trackMed` + `years.modulesMany`
+  live on attempt 1.
+- Fresh capture `ev_987f8c6b933d15a7ca74c961bfced22d9b5d4a48a62a6c90964eace427228921`
+  (1280×4400): console events = 0, 500s = 0 (was 12+). Parsed DOM card table (after):
+  - "Internat [5ebbaf23] Médecine dentaire · 0 modules"
+  - "Internat [96cfec82] Pharmacie · 0 modules"
+  - "Internat [c117c67d] Médecine · 0 modules"
+  - "Résidanat [710e6f03] Pharmacie · 4 modules"
+  - "Résidanat [c046ca5b] Médecine dentaire · 7 modules"
+  - **"Résidanat [e0af9889] Médecine · 20 modules"** ← previously the lying 0
+  - Year 1–6 rows all labeled with their track (22/22 cards parsed).
+- Screenshot reviewed visually: tracks + honest counts on every card.
+
+## 7. Cleanup proof (disposable account)
+
+- DELETE /api/users/me (platform's own soft-delete path) → 200.
+- Old access token on GET /users/me afterwards → **401**.
+- Fresh POST /api/auth/login with the same credentials → **401** `INVALID_CREDENTIALS`.
+- No passwords or tokens recorded in this log; the VERIFY- account was used only in
+  memory and deleted through the platform API, not SQL.
+
+## Notes / limitations (disclosed)
+
+- The 500s on the Résidanat modules page's own unit/progress calls (40 parallel
+  per-module fetches from that page) are a SEPARATE pre-existing pattern
+  (`useApiList` fan-out) — not fixed here; cards degrade gracefully (0 leçons ·
+  0 unités is truthful for this empty bank). Flagged for a future grouped-count
+  pass if it ever shows false data (it currently cannot: those years have no
+  lessons/units/progress rows at all).
+- MedSpark remains untrusted DATA; nothing was copied from it. This fix is purely
+  about Hamame's own years page.
