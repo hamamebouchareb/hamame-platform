@@ -18,7 +18,9 @@ import {
 } from "@/components";
 import type { CurriculumContext, CurriculumModule, Faculty, Year } from "@/lib/types";
 
-type SortValue = "az" | "za" | "recent";
+type SortValue = "az" | "za" | "recent" | "curriculum";
+type TrackFilter = "medecine" | "dentaire" | "pharmacie" | "all";
+const TRACK_ORDER: Array<Exclude<TrackFilter, "all">> = ["medecine", "dentaire", "pharmacie"];
 
 export default function FacultyYearsPage() {
   const params = useParams<{ id: string }>();
@@ -26,7 +28,13 @@ export default function FacultyYearsPage() {
   const { t } = useLanguage();
 
   const [search, setSearch] = useState("");
-  const [sort, setSort] = useState<SortValue>("az");
+  // Curriculum order is the natural ladder (Year 1 → … → Internat → Résidanat) and
+  // is what the API already returns (orderBy orderIndex) — the old alphabetical
+  // default scrambled it and stacked the three tracks' identical labels together.
+  const [sort, setSort] = useState<SortValue>("curriculum");
+  // null = auto: follow the viewer's own track (from the year chosen in onboarding),
+  // or all tracks for viewers without one. A pill click overrides it.
+  const [trackOverride, setTrackOverride] = useState<TrackFilter | null>(null);
 
   const { data, error, isLoading, refetch } = useApiResource<{ years: Year[]; context?: CurriculumContext }>(
     isHydrated && user ? `/faculties/${params.id}/years` : null
@@ -63,18 +71,36 @@ export default function FacultyYearsPage() {
 
   const facultyName = facultiesData?.faculties.find((f) => f.id === params.id)?.name;
 
+  // The viewer's own track rides on the year row they picked during onboarding
+  // (the profile stores facultyId + yearId, not the track itself).
+  const myTrack = useMemo(() => {
+    const own = years.find((year) => year.id === user?.yearId);
+    return own?.track ?? null;
+  }, [years, user?.yearId]);
+
+  const activeTrack: TrackFilter = trackOverride ?? (myTrack && TRACK_ORDER.includes(myTrack as Exclude<TrackFilter, "all">) ? (myTrack as Exclude<TrackFilter, "all">) : "all");
+
+  // Only offer pills for tracks this faculty actually has years for.
+  const presentTracks = useMemo(() => TRACK_ORDER.filter((track) => years.some((year) => year.track === track)), [years]);
+
   const normalizedSearch = search.trim().toLocaleLowerCase("fr");
   const visibleYears = useMemo(() => {
-    const filtered = years.filter((year) =>
-      normalizedSearch === "" ? true : year.label.toLocaleLowerCase("fr").includes(normalizedSearch)
-    );
+    const filtered = years.filter((year) => {
+      if (activeTrack !== "all" && year.track !== activeTrack) return false;
+      if (normalizedSearch !== "" && !year.label.toLocaleLowerCase("fr").includes(normalizedSearch)) return false;
+      return true;
+    });
     const sorted = [...filtered].sort((a, b) => {
+      if (sort === "curriculum") {
+        if (a.orderIndex !== b.orderIndex) return a.orderIndex - b.orderIndex;
+        return a.label.localeCompare(b.label, "fr", { sensitivity: "base" });
+      }
       if (sort === "recent") return b.createdAt.localeCompare(a.createdAt);
       const direction = sort === "za" ? -1 : 1;
       return direction * a.label.localeCompare(b.label, "fr", { sensitivity: "base" });
     });
     return sorted;
-  }, [years, normalizedSearch, sort]);
+  }, [years, activeTrack, normalizedSearch, sort]);
 
   return (
     <PageShell
@@ -100,8 +126,51 @@ export default function FacultyYearsPage() {
         const isMyYear = (year: Year) => year.id === authedUser.yearId;
         return (
           <>
+            <div
+              className="mt-section-gap flex flex-wrap items-center gap-2"
+              role="group"
+              aria-label={t("years.trackFilter")}
+            >
+              {presentTracks.map((track) => {
+                const active = activeTrack === track;
+                const label =
+                  track === "medecine"
+                    ? t("onboard.trackMed")
+                    : track === "dentaire"
+                      ? t("onboard.trackDent")
+                      : t("onboard.trackPharma");
+                return (
+                  <button
+                    key={track}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setTrackOverride(track)}
+                    className={
+                      active
+                        ? "min-h-touch-target rounded-pill border border-accent-library/40 bg-accent-library/15 px-4 text-body font-medium text-accent-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+                        : "min-h-touch-target rounded-pill border border-border bg-surface-1 px-4 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+                    }
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                aria-pressed={activeTrack === "all"}
+                onClick={() => setTrackOverride("all")}
+                className={
+                  activeTrack === "all"
+                    ? "min-h-touch-target rounded-pill border border-accent-library/40 bg-accent-library/15 px-4 text-body font-medium text-accent-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+                    : "min-h-touch-target rounded-pill border border-border bg-surface-1 px-4 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+                }
+              >
+                {t("years.allTracks")}
+              </button>
+            </div>
+
             <CurriculumToolbar
-              className="mt-section-gap"
+              className="mt-4"
               resultCount={visibleYears.length}
               totalCount={years.length}
               searchValue={search}
@@ -110,6 +179,7 @@ export default function FacultyYearsPage() {
               sortValue={sort}
               onSortChange={(value) => setSort(value as SortValue)}
               sortOptions={[
+                { value: "curriculum", label: t("years.sortCurriculum") },
                 { value: "az", label: t("years.sortAz") },
                 { value: "za", label: t("years.sortZa") },
                 { value: "recent", label: t("years.sortRecent") },
@@ -145,7 +215,8 @@ export default function FacultyYearsPage() {
                     label: t("years.resetFilters"),
                     onClick: () => {
                       setSearch("");
-                      setSort("az");
+                      setTrackOverride(null);
+                      setSort("curriculum");
                     },
                   }}
                 />
