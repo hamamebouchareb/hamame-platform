@@ -72,3 +72,8 @@ Thumbs.db
 # stale plan copy. Both stay on disk, never committed.
 docs/verification/import-manifest-*.json
 /export/
+
+# Residanat past-paper PDFs (source material for question ingestion; ~236 MB
+# binaries). Downloaded from public education portals; only the PDFs stay
+# untracked — manifest, inventory, and tooling are tracked.
+/residanat-papers/**/*.pdf
