@@ -1,0 +1,3652 @@
+{
+  "questions": [
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Quelle est, parmi les pathologies suivantes celle qui correspond a un etat precancereux d'origine hereditaire ?",
+      "options": [
+        {
+          "text": "La cystite bilharzienne",
+          "correct": false
+        },
+        {
+          "text": "Le xeroderma pigmentosum",
+          "correct": true
+        },
+        {
+          "text": "La dysplasie du col uterin",
+          "correct": false
+        },
+        {
+          "text": "La recto-colite ulc6ro-h6morragique (RCUH)",
+          "correct": false
+        },
+        {
+          "text": "Le carcinome in situ",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : B. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 5,
+      "_officialAnswers": "B"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Une metastase:",
+      "options": [
+        {
+          "text": "peut se voir dans le carcinome baso-cellulaire",
+          "correct": false
+        },
+        {
+          "text": "se dissemine toujours par voie hematogene",
+          "correct": false
+        },
+        {
+          "text": "peut se voir dans le carcinome spino-cellulaire",
+          "correct": true
+        },
+        {
+          "text": "est toujours mieux differenci^e que la tumeur primitive",
+          "correct": false
+        },
+        {
+          "text": "est un facteur de mauvais pronostic",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : CE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 6,
+      "_officialAnswers": "CE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Le carcinome in situ :",
+      "options": [
+        {
+          "text": "se definit par une hyperplasie epitheliale",
+          "correct": false
+        },
+        {
+          "text": "n'occasionne aucune rupture de la membrane basale",
+          "correct": true
+        },
+        {
+          "text": "peut etre associe a un carcinome invasif",
+          "correct": true
+        },
+        {
+          "text": "s'accompagne de thromboses neoplasiques",
+          "correct": false
+        },
+        {
+          "text": "est synonyme de cancer de stade 0",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : BCE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 7,
+      "_officialAnswers": "BCE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Le carcinome squirrheux mammaire est une tumeur qui se caracterise par:",
+      "options": [
+        {
+          "text": "I'abondance d'un stroma fibreux",
+          "correct": true
+        },
+        {
+          "text": "la richesse du stroma er! mucus",
+          "correct": false
+        },
+        {
+          "text": "la presence de cellules en « bague a chaton »",
+          "correct": false
+        },
+        {
+          "text": "la presence d'une metaplasie osseuse",
+          "correct": false
+        },
+        {
+          "text": "un stroma amyloTde",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : A. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 8,
+      "_officialAnswers": "A"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Un adenome est une tumeur :",
+      "options": [
+        {
+          "text": "a malignite locale",
+          "correct": false
+        },
+        {
+          "text": "form^e par la proliferation d'un v4pithelium glandulaire",
+          "correct": true
+        },
+        {
+          "text": "se transforme toujours en tumeur maligne",
+          "correct": false
+        },
+        {
+          "text": "macroscopiquement plane",
+          "correct": false
+        },
+        {
+          "text": "secretant parfois des hormones",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : BE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 9,
+      "_officialAnswers": "BE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Les lymphocytes T :",
+      "options": [
+        {
+          "text": "controlent les defenses immunitaire.s",
+          "correct": true
+        },
+        {
+          "text": "sont responsables de I'immunite hurnorale",
+          "correct": false
+        },
+        {
+          "text": "forment les centres germinatifs des f ollVcules lymphoTdes",
+          "correct": false
+        },
+        {
+          "text": "sont responsables de la production des lymphokines",
+          "correct": true
+        },
+        {
+          "text": "peuvent se transformer en plasmocytes",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : AD. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 10,
+      "_officialAnswers": "AD"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Parmi les mediateurs plasmatiques du processus inflammatoire, le systeme des kinines",
+      "options": [
+        {
+          "text": "provoque une viva douleur locale",
+          "correct": true
+        },
+        {
+          "text": "est constitue de 04 polypeptides de structure voisine",
+          "correct": false
+        },
+        {
+          "text": "est etroitement lie au complement serique",
+          "correct": true
+        },
+        {
+          "text": "permet la diminution de la permeabilitevasculaire",
+          "correct": false
+        },
+        {
+          "text": "permet I'augmentation de I'adhesion des polynucleaires aux parois vasculaires",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : ACE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 11,
+      "_officialAnswers": "ACE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "La congestion active :",
+      "options": [
+        {
+          "text": "fait partie de la phase de reparation",
+          "correct": false
+        },
+        {
+          "text": "atteint son paroxysme entre 15 et 60 minutes",
+          "correct": true
+        },
+        {
+          "text": "est declenchee exclusivement par le systeme des kinines",
+          "correct": false
+        },
+        {
+          "text": "est caracterisee par des cellules endotheliales aplaties",
+          "correct": false
+        },
+        {
+          "text": "ap.oarait environ 10 minutes apres I'agression",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : BE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 12,
+      "_officialAnswers": "BE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "L'oedeme I'nflammatoire:",
+      "options": [
+        {
+          "text": "est du a tine diminution de la permeabilite capillaire",
+          "correct": false
+        },
+        {
+          "text": "est du a un*.\"? augmentation de la pression hydrostatique",
+          "correct": true
+        },
+        {
+          "text": "est un phenomene passif",
+          "correct": false
+        },
+        {
+          "text": "entraine une concentration des moyt'^ns de defense",
+          "correct": true
+        },
+        {
+          "text": "entraine une diiuti'on des produits toxiques",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : BDE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 13,
+      "_officialAnswers": "BDE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "La tuberculosa:",
+      "options": [
+        {
+          "text": "ne fistulise que dans les organes creux",
+          "correct": false
+        },
+        {
+          "text": "peut prendre macroscopiquement un aspect pseucio-tumoral",
+          "correct": true
+        },
+        {
+          "text": "comporte de la necrose fibrinoide",
+          "correct": false
+        },
+        {
+          "text": "peut donner des lesions disseminees",
+          "correct": true
+        },
+        {
+          "text": "est caracterisee par des foHicules epithelioTdes et giganto-::ellulaires",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : BDE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 14,
+      "_officialAnswers": "BDE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Le processus inflammatoire ne peut avoir lieu au niveau du cartiL^ge, car c'est un tissu :",
+      "options": [
+        {
+          "text": "trfes fragile",
+          "correct": false
+        },
+        {
+          "text": "inaccessible",
+          "correct": false
+        },
+        {
+          "text": "friable",
+          "correct": false
+        },
+        {
+          "text": "non vascularise",
+          "correct": true
+        },
+        {
+          "text": "tresdur",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : D. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 15,
+      "_officialAnswers": "D"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Les cellules geantes resultent de :",
+      "options": [
+        {
+          "text": "plusieurs divisions nucleaires successives",
+          "correct": true
+        },
+        {
+          "text": "plusieurs divisions cytoplasmiques",
+          "correct": false
+        },
+        {
+          "text": "I'augmentation du volume de la cellule",
+          "correct": false
+        },
+        {
+          "text": "la fusion de plusieurs cellules",
+          "correct": true
+        },
+        {
+          "text": "la transformation des macrophages",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : AD. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 16,
+      "_officialAnswers": "AD"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "La cicatrisation:",
+      "options": [
+        {
+          "text": "necessite une detersion de la plaie",
+          "correct": true
+        },
+        {
+          "text": "est la phase secondaire du processus inflammatoire",
+          "correct": false
+        },
+        {
+          "text": "est appelee cal au niveau de I'os",
+          "correct": true
+        },
+        {
+          "text": "aboutit a un botriomycome lorsqu'elle est pathologique au niveau de la peau",
+          "correct": true
+        },
+        {
+          "text": "aboutit a une restitution Ad Integrum au niveau du foie",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : ACD. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 17,
+      "_officialAnswers": "ACD"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Les cellules geantes de la tuberculose sont appelees :",
+      "options": [
+        {
+          "text": "Cellules de Langerhans",
+          "correct": false
+        },
+        {
+          "text": "Cellules deTouton",
+          "correct": false
+        },
+        {
+          "text": "Cellules de Langhans",
+          "correct": true
+        },
+        {
+          "text": "Cellules de Besnier Boeck-Schaumann",
+          "correct": false
+        },
+        {
+          "text": "Cellules d'lto",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : C. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 18,
+      "_officialAnswers": "C"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Les conditions pour une bonne cicatrisation sont:",
+      "options": [
+        {
+          "text": "la margination",
+          "correct": false
+        },
+        {
+          "text": "la coaptation",
+          "correct": true
+        },
+        {
+          "text": "la diap^dese",
+          "correct": false
+        },
+        {
+          "text": "la detersion",
+          "correct": true
+        },
+        {
+          "text": "la vascularisation",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : BDE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 19,
+      "_officialAnswers": "BDE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "La necrose purulente est appelee :",
+      "options": [
+        {
+          "text": "pyodermite, quand elle se localise au niveau de I'hypoderme",
+          "correct": false
+        },
+        {
+          "text": "abces, quand elle est localisee et circonscrite",
+          "correct": true
+        },
+        {
+          "text": "phlegmon, quand elle est diffuse, non collectee",
+          "correct": true
+        },
+        {
+          "text": "empy^me, quand elle se localise dans un organe plein",
+          "correct": false
+        },
+        {
+          "text": "pustule, quand le pus s'accumule dans I'epaisseur de I'epiderme",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : BCE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 20,
+      "_officialAnswers": "BCE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "L'inflammation chronique se caracterise par :",
+      "options": [
+        {
+          "text": "une congestion vasculaire",
+          "correct": false
+        },
+        {
+          "text": "une abondance en fibres de collag^ne",
+          "correct": true
+        },
+        {
+          "text": "une fibrose",
+          "correct": true
+        },
+        {
+          "text": "un infiltrat lympho-plasmocytaire",
+          "correct": true
+        },
+        {
+          "text": "un infiltrat histio-monocytaire",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : BCDE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 21,
+      "_officialAnswers": "BCDE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Le carcinome baso-cellulaire est une tumeur:",
+      "options": [
+        {
+          "text": "a malignite purement locale",
+          "correct": true
+        },
+        {
+          "text": "glandulaire",
+          "correct": false
+        },
+        {
+          "text": "malpighienne",
+          "correct": true
+        },
+        {
+          "text": "qui donne des metastases precoces",
+          "correct": false
+        },
+        {
+          "text": "qui se localise au niveau des muqueuses",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : AC. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 22,
+      "_officialAnswers": "AC"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Quelles sont les tumeurs qui prennent naissance a partir d'un epithelium pavimenteux ?",
+      "options": [
+        {
+          "text": "Le carcinome epidermoTde differencie",
+          "correct": true
+        },
+        {
+          "text": "Le cystadenocarcinome",
+          "correct": false
+        },
+        {
+          "text": "Le carcinome malpighien immature \"",
+          "correct": true
+        },
+        {
+          "text": "Let^ratome",
+          "correct": false
+        },
+        {
+          "text": "Le choriocarcinome",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : AC. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 23,
+      "_officialAnswers": "AC"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Un rhabdomyome est:",
+      "options": [
+        {
+          "text": "une tumeur maligne",
+          "correct": false
+        },
+        {
+          "text": "une tumeur de siege exclusivement uterin",
+          "correct": false
+        },
+        {
+          "text": "une tumeur musculaire lisse",
+          "correct": false
+        },
+        {
+          "text": "une tumeur musculaire striee",
+          "correct": true
+        },
+        {
+          "text": "une tumeur benigne",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : DE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 24,
+      "_officialAnswers": "DE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Quels sont les Elements de mauvais pronostic d'une tumeur maligne ?",
+      "options": [
+        {
+          "text": "La presence de foyers de necrose",
+          "correct": true
+        },
+        {
+          "text": "La presence d'embolestumoraux",
+          "correct": true
+        },
+        {
+          "text": "Le caractere bien differencie de la tumeur",
+          "correct": false
+        },
+        {
+          "text": "Un stroma squirrheux",
+          "correct": false
+        },
+        {
+          "text": "L'effraction de la capsule",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : ABE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 25,
+      "_officialAnswers": "ABE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Un papillome est une tumeur:",
+      "options": [
+        {
+          "text": "epitheliale",
+          "correct": true
+        },
+        {
+          "text": "benigne",
+          "correct": true
+        },
+        {
+          "text": "qui peut comporter des mitoses anormales",
+          "correct": false
+        },
+        {
+          "text": "qui peut etre d'origine virale",
+          "correct": true
+        },
+        {
+          "text": "qui se transforme toujours en carcinome",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : ABD. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 26,
+      "_officialAnswers": "ABD"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Parmi les propositions suivantes, quelles sont celles qui s'appliquent aux carcinomes ?",
+      "options": [
+        {
+          "text": "lis se developpent exclusivement sur les epitheliums de revetement",
+          "correct": false
+        },
+        {
+          "text": "lis sont toujours vegetants et exophytiques",
+          "correct": false
+        },
+        {
+          "text": "lis expriment toujours les cytokeratines en immunohistochimie",
+          "correct": true
+        },
+        {
+          "text": "lis passent toujours par un stade in situ",
+          "correct": true
+        },
+        {
+          "text": "lis se caracterisent toujours par un stroma peu abondant",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : CD. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 27,
+      "_officialAnswers": "CD"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Un immunomarquage HMB45 positif est r^velateur d'un :",
+      "options": [
+        {
+          "text": "carcinome thyroidien",
+          "correct": false
+        },
+        {
+          "text": "carcinome mammaire",
+          "correct": false
+        },
+        {
+          "text": "carcinome prostatique",
+          "correct": false
+        },
+        {
+          "text": "carcinome renal",
+          "correct": false
+        },
+        {
+          "text": "melanome",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : E. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 28,
+      "_officialAnswers": "E"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Un leYomyosarcome:",
+      "options": [
+        {
+          "text": "est une tumeur epitheliale",
+          "correct": false
+        },
+        {
+          "text": "est une tumeur musculaire lisse",
+          "correct": true
+        },
+        {
+          "text": "se caracterise par L',ne extension rapide",
+          "correct": true
+        },
+        {
+          "text": "se caracterise par une evolution lente",
+          "correct": false
+        },
+        {
+          "text": "est une tumeur musculaire striee",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : BC. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 29,
+      "_officialAnswers": "BC"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Dans les adenocarcinornes endocriniens, !a malignite est affirmee sur:",
+      "options": [
+        {
+          "text": "les criteres cytologiques",
+          "correct": false
+        },
+        {
+          "text": "l'effraction capsulaire",
+          "correct": true
+        },
+        {
+          "text": "I'invasion vascula'ire",
+          "correct": true
+        },
+        {
+          "text": "I'apparition des nietastases",
+          "correct": true
+        },
+        {
+          "text": "la croissance tumorale rapide",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : BCD. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 30,
+      "_officialAnswers": "BCD"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Une cellule humaine qui contient 22 autosomes et un gonosome Y est:",
+      "options": [
+        {
+          "text": "une cellule somatique male",
+          "correct": false
+        },
+        {
+          "text": "un zygote",
+          "correct": false
+        },
+        {
+          "text": "une cellule somatique femelle",
+          "correct": false
+        },
+        {
+          "text": "un spermatozoTde",
+          "correct": true
+        },
+        {
+          "text": "une cellule hepatique",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : D. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 31,
+      "_officialAnswers": "D"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "A propos de la structure d'un acide nucieique :",
+      "options": [
+        {
+          "text": "la liaison entre les nucleotides est une liaison phopho-diester",
+          "correct": true
+        },
+        {
+          "text": "I'extrernite 3 libre contient un groupement phosphate",
+          "correct": false
+        },
+        {
+          "text": "chaque nucleotide contient un hexose",
+          "correct": false
+        },
+        {
+          "text": "la fonction OH libre est portee par la base",
+          "correct": false
+        },
+        {
+          "text": "un acide nucieique circulaire n'a pas d'extremites 5 et 3'",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : AE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 32,
+      "_officialAnswers": "AE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Les telomeres sont:",
+      "options": [
+        {
+          "text": "les extremites des chromosomes",
+          "correct": true
+        },
+        {
+          "text": "de localisation centromerique",
+          "correct": false
+        },
+        {
+          "text": "raccourcis au cours de la division cellulaire",
+          "correct": true
+        },
+        {
+          "text": "degradees par la telomerase",
+          "correct": false
+        },
+        {
+          "text": "constituent la premiere con;;triction du chromosome",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : AC. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 33,
+      "_officialAnswers": "AC"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Un ARNm mature ;",
+      "options": [
+        {
+          "text": "assure le transport des proteines du noyau au cytoplasme",
+          "correct": false
+        },
+        {
+          "text": "porte I'information genetique necessaire a la synthese d'une proteine",
+          "correct": true
+        },
+        {
+          "text": "contient des sequences qui ne cedent pas pour des proteines",
+          "correct": true
+        },
+        {
+          "text": "est la copie en ARN du gene correspondant",
+          "correct": false
+        },
+        {
+          "text": "se termine toujours par une sequence polythymidylique",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : BC. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 34,
+      "_officialAnswers": "BC"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Chez I'homme, les cellules musculaires sont differentes des cellules nerveuses car elles :",
+      "options": [
+        {
+          "text": "contiennent des genes differents",
+          "correct": false
+        },
+        {
+          "text": "ont des chromosomes differents",
+          "correct": false
+        },
+        {
+          "text": "sont depourvues de ribosomes",
+          "correct": false
+        },
+        {
+          "text": "utilisent des codes genetiques differents",
+          "correct": false
+        },
+        {
+          "text": "expriment des genes differents",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : E. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 35,
+      "_officialAnswers": "E"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Les molecules du CMH de classe I:",
+      "options": [
+        {
+          "text": "sont portees par toutes les cellules nucleees de l'organisme",
+          "correct": true
+        },
+        {
+          "text": "sont portees uniquement par les cellules presentatrices d'antigene (CPA)",
+          "correct": false
+        },
+        {
+          "text": "presentent les antigenes exogenes aux lymphocytes T helper CD4",
+          "correct": false
+        },
+        {
+          "text": "presentent les antigenes endogfenes aux lymphocytes T CDS",
+          "correct": true
+        },
+        {
+          "text": "sont appeiees molecules HLA de classe I chez I'homme",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : ADE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 36,
+      "_officialAnswers": "ADE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "La P2 microglobuline :",
+      "options": [
+        {
+          "text": "est une chaine codee par des genes portes par le bras court du chromosome 6",
+          "correct": false
+        },
+        {
+          "text": "est une chaine codee par des genes portes par le chromosome 15",
+          "correct": true
+        },
+        {
+          "text": "participe h la presentation de I'antigene aux lymphocytes T",
+          "correct": false
+        },
+        {
+          "text": "ne participe pas a la presentation de I'antigene aux lymphocytes T",
+          "correct": true
+        },
+        {
+          "text": "est entierement extracellulaire",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : BDE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 37,
+      "_officialAnswers": "BDE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Le mastocyte:",
+      "options": [
+        {
+          "text": "prend naissance au niveau de la moelle osseuse .",
+          "correct": true
+        },
+        {
+          "text": "prend naissance au niveau du thymus",
+          "correct": false
+        },
+        {
+          "text": "possede des grains intracytoplasmiques",
+          "correct": true
+        },
+        {
+          "text": "produit de I'histamine",
+          "correct": true
+        },
+        {
+          "text": "possede un recepteur pour les IgE",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : ACDE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 38,
+      "_officialAnswers": "ACDE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Les lymphocytes T helper 1:",
+      "options": [
+        {
+          "text": "sont aussi appeies des lymphocytes T auxilliaires",
+          "correct": true
+        },
+        {
+          "text": "sont des lymphocytes T cytotoxiques",
+          "correct": false
+        },
+        {
+          "text": "agissent par le biais des cytokines",
+          "correct": true
+        },
+        {
+          "text": "agissent par contact direct",
+          "correct": false
+        },
+        {
+          "text": "portent les moieculfis du CMH de classe I",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : ACE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 39,
+      "_officialAnswers": "ACE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Les IgA secretoires sont •.",
+      "options": [
+        {
+          "text": "essentiellement dimeriques",
+          "correct": true
+        },
+        {
+          "text": "essentiellement monomeriques",
+          "correct": false
+        },
+        {
+          "text": "representees uniquement par les IgAl",
+          "correct": false
+        },
+        {
+          "text": "representees uniquement par les lgA2",
+          "correct": false
+        },
+        {
+          "text": "representees par les IgAl et les lgA2",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : AE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 40,
+      "_officialAnswers": "AE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Dans le complement, la fraction C3a :",
+      "options": [
+        {
+          "text": "est liberee suite a I'activation de la voie classique du complement",
+          "correct": true
+        },
+        {
+          "text": "est une anaphylatoxine",
+          "correct": true
+        },
+        {
+          "text": "est une opsonine",
+          "correct": false
+        },
+        {
+          "text": "possede un recepteur sur le macrophage",
+          "correct": false
+        },
+        {
+          "text": "possede un recepteur sur le mastocyte",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : ABE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 41,
+      "_officialAnswers": "ABE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "La secretion de la progesterone pendant les 2*™ et 3*\"\" trimestres de la grossesse reflate I'etat fonctionnel:",
+      "options": [
+        {
+          "text": "du placenta",
+          "correct": true
+        },
+        {
+          "text": "du corps jaune",
+          "correct": false
+        },
+        {
+          "text": "du foie foetal",
+          "correct": false
+        },
+        {
+          "text": "de la surr6nale fcetale",
+          "correct": false
+        },
+        {
+          "text": "de la surr^nale maternelle",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : A. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 42,
+      "_officialAnswers": "A"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "L'hormone choriogonadothrophique (HCG):",
+      "options": [
+        {
+          "text": "est une hormone steroide",
+          "correct": false
+        },
+        {
+          "text": "permet le diagnostic precoce de la grossesse",
+          "correct": true
+        },
+        {
+          "text": "est constitute de 03 sous-unites, alpha, beta et gamma",
+          "correct": false
+        },
+        {
+          "text": "est secretee par I'ovaire",
+          "correct": false
+        },
+        {
+          "text": "peut etre utilisee en tant que marqueur tumoral",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : BE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 43,
+      "_officialAnswers": "BE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Une seule des hormones suivantes n'est pas secretee par les glandes surrenales. Laquelle ?",
+      "options": [
+        {
+          "text": "la dehydroepiandrosterone (DHEA)",
+          "correct": false
+        },
+        {
+          "text": "le Cortisol",
+          "correct": false
+        },
+        {
+          "text": "I'aldosterone",
+          "correct": false
+        },
+        {
+          "text": "la A4 androstenedione",
+          "correct": false
+        },
+        {
+          "text": "I'oestriol",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : E. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 44,
+      "_officialAnswers": "E"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Le Cortisol:",
+      "options": [
+        {
+          "text": "est une hormone sttroTde synthttiste au niveau de la zone reticulee de la corticosurrenale",
+          "correct": false
+        },
+        {
+          "text": "est transport^ dans le plasma par la transcortine",
+          "correct": true
+        },
+        {
+          "text": "est actif sous forme de cortisone",
+          "correct": false
+        },
+        {
+          "text": "augmente considtrablement dans la maladie d'Addison",
+          "correct": false
+        },
+        {
+          "text": "exerce un retrocontrole positif sur la secretion hypophysaire de I'ACTH",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : B. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 45,
+      "_officialAnswers": "B"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "A propos des hormones thyroYdiennes :",
+      "options": [
+        {
+          "text": "leur forme active est la thyroglobuline",
+          "correct": false
+        },
+        {
+          "text": "leur synthese est sous le controle de la post hypophyse",
+          "correct": false
+        },
+        {
+          "text": "leur activity est mediae par des recepteurs nucleaires specifiques",
+          "correct": true
+        },
+        {
+          "text": "elles sont synthetisees par iodation des residus tryptophane de la thyroglobuline",
+          "correct": false
+        },
+        {
+          "text": "elles sont hydrophobes et se lient ^ des proteines de transport",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : CE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 46,
+      "_officialAnswers": "CE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "L'hyperaldosteronisme primaire s'accompagne :",
+      "options": [
+        {
+          "text": "d'une hyponatremie",
+          "correct": false
+        },
+        {
+          "text": "d'une hypokaliemie",
+          "correct": true
+        },
+        {
+          "text": "d'une acidose mttabolique",
+          "correct": false
+        },
+        {
+          "text": "d'une hypovolemie",
+          "correct": true
+        },
+        {
+          "text": "d'une activite renine plasmatique augmentee",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : BD. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 47,
+      "_officialAnswers": "BD"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Quels sont les effets du glucagon sur le metabolisme des glucides ?",
+      "options": [
+        {
+          "text": "Stimulation de la glycogenolyse",
+          "correct": true
+        },
+        {
+          "text": "Inhibition de la glycogenogenese",
+          "correct": true
+        },
+        {
+          "text": "Activation de la voie des pentoses phosphates",
+          "correct": false
+        },
+        {
+          "text": "Facilitation de la penetration intracellulaire du glucose",
+          "correct": false
+        },
+        {
+          "text": "Stimulation de la neoglycogtnese",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : ABE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 48,
+      "_officialAnswers": "ABE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Parmi les enzymes du metabolisme glucidique, lesquelles sont activees par I'insuline ?",
+      "options": [
+        {
+          "text": "La glycogene synthase",
+          "correct": true
+        },
+        {
+          "text": "La fructose 2, 6 biphosphatase",
+          "correct": false
+        },
+        {
+          "text": "La glycogene phosphorylase",
+          "correct": false
+        },
+        {
+          "text": "La glucose phosphatase",
+          "correct": false
+        },
+        {
+          "text": "La pyruvate kinase",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : AE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 49,
+      "_officialAnswers": "AE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Quelles sont les actions biologiques de la parathormone ?",
+      "options": [
+        {
+          "text": "Elle possede une activity hypocalcemiante",
+          "correct": false
+        },
+        {
+          "text": "Elle stimule la liberation du calcium a partir de I'os",
+          "correct": true
+        },
+        {
+          "text": "Elle favorise I'elimination renale du calcium",
+          "correct": false
+        },
+        {
+          "text": "Elle regule I'hydroxylation de la 25-OH vitamine D par la 1-a hydroxylase",
+          "correct": true
+        },
+        {
+          "text": "Elle diminue la reabsorption renale du phosphate",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : BDE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 50,
+      "_officialAnswers": "BDE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "L'exploration du metabolisme phosphocalcique peut comporter les dosages :",
+      "options": [
+        {
+          "text": "de la 25 (OH) Vitamine D",
+          "correct": true
+        },
+        {
+          "text": "des phosphatases alcalines",
+          "correct": true
+        },
+        {
+          "text": "de la calciurie des 24 heures",
+          "correct": true
+        },
+        {
+          "text": "ducalcitriol",
+          "correct": false
+        },
+        {
+          "text": "de la calcitonine",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : ABC. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 51,
+      "_officialAnswers": "ABC"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "L'osteomalacie:",
+      "options": [
+        {
+          "text": "est caracterisee par une calciurie constamment effondree",
+          "correct": true
+        },
+        {
+          "text": "peut s'accompagner d'une calcemie normale",
+          "correct": true
+        },
+        {
+          "text": "est caracterisee par des phosphatases alcalines effondrees",
+          "correct": false
+        },
+        {
+          "text": "se rencontre au cours des grandes carences en vitamine D",
+          "correct": true
+        },
+        {
+          "text": "correspond a un defaut de mineralisation de la trame proteique osseuse",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : ABDE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 52,
+      "_officialAnswers": "ABDE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Concernant la fonction thyroTdienne :",
+      "options": [
+        {
+          "text": "les thyreocytescaptentl'iodecirculantau pole apical",
+          "correct": false
+        },
+        {
+          "text": "la TSH stimule uniquement la captation des iodures",
+          "correct": false
+        },
+        {
+          "text": "une carence alimentaire en lode entraine la formation d'un goitre",
+          "correct": true
+        },
+        {
+          "text": "la secretion des hormones se fait au p6le basal des thyreocytes",
+          "correct": true
+        },
+        {
+          "text": "elle est inhibee par des taux elevts de T3 et T4",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : CD. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 53,
+      "_officialAnswers": "CD"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "A propos de la parathormone :",
+      "options": [
+        {
+          "text": "sa secretion est stimulee par la TRH",
+          "correct": false
+        },
+        {
+          "text": "sa secretion est inhibee par une concentration elevee du calcium ionise",
+          "correct": true
+        },
+        {
+          "text": "apres scission dans le plasma, c'est sa partie C terminale qui est active",
+          "correct": false
+        },
+        {
+          "text": "elle permet une reabsorption tubulaire des phosphates",
+          "correct": false
+        },
+        {
+          "text": "elle agit par I'intermediaire de I'AMP cyciique",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : BE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 54,
+      "_officialAnswers": "BE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "I'insuline:",
+      "options": [
+        {
+          "text": "est une hormone peptidique",
+          "correct": true
+        },
+        {
+          "text": "active la glycogenogenese et la glycogenolyse",
+          "correct": false
+        },
+        {
+          "text": "active la glycogenogenese et inhibe la glycogenolyse",
+          "correct": true
+        },
+        {
+          "text": "inhibe la glycogenogenese et la glycogenolyse",
+          "correct": false
+        },
+        {
+          "text": "inhibe la glycogenogenese et active la glycogenolyse",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : AC. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 55,
+      "_officialAnswers": "AC"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Le catabolisme des hormones thyroTdiennes :",
+      "options": [
+        {
+          "text": "est surtout hepatique",
+          "correct": true
+        },
+        {
+          "text": "est exclusivement renal",
+          "correct": false
+        },
+        {
+          "text": "est suivi de reactions de conjugaison",
+          "correct": true
+        },
+        {
+          "text": "fait intervenir une iodase",
+          "correct": false
+        },
+        {
+          "text": "libere des iodures totalement eiimines au niveau urinaire",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : AC. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 56,
+      "_officialAnswers": "AC"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "L'aldosterone est secretee par:",
+      "options": [
+        {
+          "text": "la zone reticulaire de la surrenale",
+          "correct": false
+        },
+        {
+          "text": "la zone fasciculaire de la surrenale",
+          "correct": false
+        },
+        {
+          "text": "la zone glomerulaire de la surrenale",
+          "correct": true
+        },
+        {
+          "text": "la medullo-surrenale",
+          "correct": false
+        },
+        {
+          "text": "la branche ascendante de I'anse de Henle",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : C. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 57,
+      "_officialAnswers": "C"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "A propos de la synthese de I'insuline :",
+      "options": [
+        {
+          "text": "la pro-insuline est stockee au niveau du reticulum endoplasmique",
+          "correct": false
+        },
+        {
+          "text": "la cellule p synthetise en premier la pre-pro-insuline",
+          "correct": true
+        },
+        {
+          "text": "la pro-insuline possede un peptide signal",
+          "correct": false
+        },
+        {
+          "text": "le glucose en est le principal stimulant",
+          "correct": true
+        },
+        {
+          "text": "le peptide C est un precurseur de la pro-insuline in",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : BD. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 58,
+      "_officialAnswers": "BD"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "La secretion post-prandiale de I'insuline est:",
+      "options": [
+        {
+          "text": "stimulee par le GLPl (Glucagon Like Peptid 1)",
+          "correct": true
+        },
+        {
+          "text": "stimulee par le GIP (Gastric Inhibitory Peptid)",
+          "correct": true
+        },
+        {
+          "text": "inhibee par le glucagon",
+          "correct": false
+        },
+        {
+          "text": "stimulee par la somatostatine",
+          "correct": false
+        },
+        {
+          "text": "stimulee par une baisse de la concentration des acides gras",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : AB. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 59,
+      "_officialAnswers": "AB"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "L'insuline:",
+      "options": [
+        {
+          "text": "augmente la captation des acides amines",
+          "correct": true
+        },
+        {
+          "text": "agit sur le tissu adipeux pour favoriser la lipolyse",
+          "correct": false
+        },
+        {
+          "text": "a notamment comme tissus cibles le foie, le muscle et le tissu adipeux",
+          "correct": true
+        },
+        {
+          "text": "inhibe la synthese des corps cetoniques ^ partir du glucose sanguin",
+          "correct": false
+        },
+        {
+          "text": "favorise I'entree du potassium dans la cellule",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : ACE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 60,
+      "_officialAnswers": "ACE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "La secretion du glucagon est:",
+      "options": [
+        {
+          "text": "stimulee par I'activation du systeme sympathique",
+          "correct": true
+        },
+        {
+          "text": "stimulee par I'insuline",
+          "correct": false
+        },
+        {
+          "text": "inhibee par la diminution de la concentration plasmatique des acides gras",
+          "correct": false
+        },
+        {
+          "text": "inhibee par la somatostatine",
+          "correct": true
+        },
+        {
+          "text": "se fait au niveau des cellules 3 des Tlots de Langerhans",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : AD. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 61,
+      "_officialAnswers": "AD"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Les glucocorticoTdes:",
+      "options": [
+        {
+          "text": "augmentent la concentration des enzymes de la medullosurrenale responsables de la production d'adrtnaline",
+          "correct": true
+        },
+        {
+          "text": "activent la synthese des proteines dans les tissus peripheriques",
+          "correct": false
+        },
+        {
+          "text": "activent la lipolyse dans le tissu adipeux",
+          "correct": true
+        },
+        {
+          "text": "renforcent la secretion du glucagon",
+          "correct": false
+        },
+        {
+          "text": "stimulent les enzymes cles de la neoglucogenese hepatique",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : ACE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 62,
+      "_officialAnswers": "ACE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Lequel des transporteurs de glucose est dependant de I'insuline ?",
+      "options": [
+        {
+          "text": "GLUTl",
+          "correct": false
+        },
+        {
+          "text": "GLUT2",
+          "correct": false
+        },
+        {
+          "text": "GLUT3",
+          "correct": false
+        },
+        {
+          "text": "GLUT4",
+          "correct": true
+        },
+        {
+          "text": "GLUTS",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : D. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 63,
+      "_officialAnswers": "D"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Au cours d'une cytolyse hepatique, on observe une elevation de :",
+      "options": [
+        {
+          "text": "I'activite Alanine Transferase (ALAT)",
+          "correct": true
+        },
+        {
+          "text": "la protidemie",
+          "correct": false
+        },
+        {
+          "text": "la ferritinemie et le fer serique",
+          "correct": true
+        },
+        {
+          "text": "I'activite 5'- nucleotidase",
+          "correct": false
+        },
+        {
+          "text": "la cholesterolemie",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : AC. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 64,
+      "_officialAnswers": "AC"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Une alcalose metabolique compensee est caracterisee par:",
+      "options": [
+        {
+          "text": "un taux eleve des bicarbonates plasmatiques",
+          "correct": true
+        },
+        {
+          "text": "une hyperkaliemie",
+          "correct": false
+        },
+        {
+          "text": "une pCo2 normale",
+          "correct": false
+        },
+        {
+          "text": "un pH sanguin de 7,30",
+          "correct": false
+        },
+        {
+          "text": "une hypoventilation",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : AE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 65,
+      "_officialAnswers": "AE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Une augmentation du calcium ionise peut etre due a une :",
+      "options": [
+        {
+          "text": "acidose metabolique",
+          "correct": true
+        },
+        {
+          "text": "malabsorption intestinale",
+          "correct": false
+        },
+        {
+          "text": "hypermagnesemie",
+          "correct": false
+        },
+        {
+          "text": "hypoalbuminemie",
+          "correct": true
+        },
+        {
+          "text": "hyperparathyroTdie",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : ADE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 66,
+      "_officialAnswers": "ADE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Quels sont les marqueurs biochimiques de la resorption osseuse ?",
+      "options": [
+        {
+          "text": "Les hydroxiprolines urinaires",
+          "correct": true
+        },
+        {
+          "text": "L'osteocalcine",
+          "correct": false
+        },
+        {
+          "text": "Les pyridinolines urinaires",
+          "correct": true
+        },
+        {
+          "text": "Les phosphatases acides tartrate resistantes",
+          "correct": true
+        },
+        {
+          "text": "Les phosphatases alcalines",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : ACD. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 67,
+      "_officialAnswers": "ACD"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "La creatinine plasmatique est:",
+      "options": [
+        {
+          "text": "issue du catabolisme des fibres musculaires",
+          "correct": true
+        },
+        {
+          "text": "liee aux proteines plasmatiques",
+          "correct": false
+        },
+        {
+          "text": "reabsorbee apres filtration glomerulaire",
+          "correct": false
+        },
+        {
+          "text": "augmentee au cours de I'insuffisance renale",
+          "correct": true
+        },
+        {
+          "text": "physiologiquement plus elevee dans le sexe masculin",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : ADE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 68,
+      "_officialAnswers": "ADE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Concernant la fonction renale :",
+      "options": [
+        {
+          "text": "I'uree est le principal dechet azote urinaire",
+          "correct": true
+        },
+        {
+          "text": "la vitamine D est hydroxylee en position 25",
+          "correct": false
+        },
+        {
+          "text": "la diurese est regulee par l'hormone antidiuretique",
+          "correct": true
+        },
+        {
+          "text": "I'albumine est entierement ultra-filtree par le glomerule",
+          "correct": false
+        },
+        {
+          "text": "la branche descendante de I'anse de Henle est permeable a I'eau",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : ACE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 69,
+      "_officialAnswers": "ACE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Quels sont les troubles biochimiques observes lors de la maladie d'Addison ?",
+      "options": [
+        {
+          "text": "Hyperglycemie",
+          "correct": false
+        },
+        {
+          "text": "Augmentation de I'ACTH plasmatique",
+          "correct": true
+        },
+        {
+          "text": "Hyponatremie",
+          "correct": true
+        },
+        {
+          "text": "Hypokaliemie",
+          "correct": false
+        },
+        {
+          "text": "Hypercortisolemie",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : BC. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 70,
+      "_officialAnswers": "BC"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "L'hemoglobine d'un adulte sain est de type :",
+      "options": [
+        {
+          "text": "a2v2",
+          "correct": false
+        },
+        {
+          "text": "a252",
+          "correct": false
+        },
+        {
+          "text": "3262",
+          "correct": false
+        },
+        {
+          "text": "32Y2",
+          "correct": false
+        },
+        {
+          "text": "a232",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : E. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 71,
+      "_officialAnswers": "E"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Les antigenes erythrocytaires du systeme ABO sont:",
+      "options": [
+        {
+          "text": "presents a la surface des globules rouges uniquement",
+          "correct": false
+        },
+        {
+          "text": "mis en evidence par la methode de Beth-Vincent",
+          "correct": true
+        },
+        {
+          "text": "mis en evidence par la methode de Simonin",
+          "correct": false
+        },
+        {
+          "text": "au nombre de deux : A et B",
+          "correct": true
+        },
+        {
+          "text": "de type IgM, rarement de type IgG",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : BDE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 72,
+      "_officialAnswers": "BDE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "LeVGIVI est eleve dans :",
+      "options": [
+        {
+          "text": "les carences en vitamines B12",
+          "correct": true
+        },
+        {
+          "text": "les carences en folates",
+          "correct": true
+        },
+        {
+          "text": "les carences en fer",
+          "correct": false
+        },
+        {
+          "text": "les thalassemies",
+          "correct": false
+        },
+        {
+          "text": "la drepanocytose",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : AB. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 73,
+      "_officialAnswers": "AB"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "L'obstruction bronchique peripherique debutante est detectee par :",
+      "options": [
+        {
+          "text": "la mesure du VEMS",
+          "correct": false
+        },
+        {
+          "text": "I'etude des volumes pulmonaires",
+          "correct": false
+        },
+        {
+          "text": "la realisation de courbes debit-volume",
+          "correct": true
+        },
+        {
+          "text": "la mesure de la capacite de transfert pulmonaire",
+          "correct": false
+        },
+        {
+          "text": "la mesure de la capacite vitale",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : C. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 74,
+      "_officialAnswers": "C"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "En position debout, le rapport ventilation / perfusion :",
+      "options": [
+        {
+          "text": "diminue en se dirigeant vers le sommet",
+          "correct": false
+        },
+        {
+          "text": "est < 1 au niveau des sommets",
+          "correct": false
+        },
+        {
+          "text": "est homogene",
+          "correct": false
+        },
+        {
+          "text": "tend a I'infini au niveau de I'espace mort alveolaire",
+          "correct": true
+        },
+        {
+          "text": "augmente en se dirigeant vers les bases",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : D. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 75,
+      "_officialAnswers": "D"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "La diminution de I'affinite de l'hemoglobine pour I'oxygene est expliquee par",
+      "options": [
+        {
+          "text": "I'effetBohr",
+          "correct": true
+        },
+        {
+          "text": "I'effet Haldane",
+          "correct": false
+        },
+        {
+          "text": "la diminution de la temperature du sang",
+          "correct": false
+        },
+        {
+          "text": "I'accumulation du gaz carbonique",
+          "correct": false
+        },
+        {
+          "text": "I'accumulation des ions H+ —— 13",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : AE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 76,
+      "_officialAnswers": "AE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "La distension pulmonaire est definie par:",
+      "options": [
+        {
+          "text": "une diminution de la capacite vitale",
+          "correct": false
+        },
+        {
+          "text": "une perte de I'elasticite pulmonaire",
+          "correct": true
+        },
+        {
+          "text": "une diminution du VEMS",
+          "correct": false
+        },
+        {
+          "text": "une augmentation des resistances pulmonaires",
+          "correct": false
+        },
+        {
+          "text": "une augmentation de la capacite pulmonaire totale",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : BE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 77,
+      "_officialAnswers": "BE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Le niveau ventilatoire de repos :",
+      "options": [
+        {
+          "text": "correspond au volume courant",
+          "correct": true
+        },
+        {
+          "text": "determine la capacite inspiratoire",
+          "correct": true
+        },
+        {
+          "text": "est au dessus de la capacite residuelle fonctionnelle",
+          "correct": true
+        },
+        {
+          "text": "correspond ci la capacite pulmonaire totale",
+          "correct": false
+        },
+        {
+          "text": "correspond au volume de relaxation",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : ABC. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 78,
+      "_officialAnswers": "ABC"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Au niveau de la plaque motrice, I'acetylcholine :",
+      "options": [
+        {
+          "text": "est degradee par la phosphodiesterase",
+          "correct": false
+        },
+        {
+          "text": "est inhibee par la toxine botulique",
+          "correct": false
+        },
+        {
+          "text": "agit sur un recepteur couple a un canal calcique",
+          "correct": true
+        },
+        {
+          "text": "est synthetisee a I'aide de la mono amine oxydase",
+          "correct": false
+        },
+        {
+          "text": "agit sur un recepteurs M3",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : C. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 79,
+      "_officialAnswers": "C"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Au niveau de la plaque motrice, la toxine botulique inhibe :",
+      "options": [
+        {
+          "text": "la synthese du neurotransmetteur",
+          "correct": false
+        },
+        {
+          "text": "la degradation du neurotransmetteur",
+          "correct": false
+        },
+        {
+          "text": "les enzymes de degradation du neurotransmetteur",
+          "correct": false
+        },
+        {
+          "text": "la liberation du neurotransmetteur",
+          "correct": true
+        },
+        {
+          "text": "les recepteurs post synaptiques",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : D. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 80,
+      "_officialAnswers": "D"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "La stimulation a2 pre-synaptique entraine I'inhibition :",
+      "options": [
+        {
+          "text": "de la liberation des neuromediateurs",
+          "correct": true
+        },
+        {
+          "text": "de la synthese des neuromediateurs",
+          "correct": false
+        },
+        {
+          "text": "des recepteurs P2 pre-synaptiques",
+          "correct": false
+        },
+        {
+          "text": "des phenomenes post-recepteurs",
+          "correct": false
+        },
+        {
+          "text": "de la degradation du neurotransmetteur",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : A. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 81,
+      "_officialAnswers": "A"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "En cas de carence prolongee d'apport alimentaire en calcium",
+      "options": [
+        {
+          "text": "la secretion de PTH diminue",
+          "correct": false
+        },
+        {
+          "text": "la synthese de vitamine D augmente",
+          "correct": true
+        },
+        {
+          "text": "I'absorption digestive de calcium augmente",
+          "correct": true
+        },
+        {
+          "text": "la reabsorption tubulaire renale de calcium diminue",
+          "correct": false
+        },
+        {
+          "text": "la liberation de calcium par I'os augmente 14",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : BCE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 82,
+      "_officialAnswers": "BCE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Au cours du syndrome de Zollinger-Ellison, on constate une augmentation :",
+      "options": [
+        {
+          "text": "du taux serique de gastrine",
+          "correct": true
+        },
+        {
+          "text": "de la s6cretion gastrique de H+",
+          "correct": true
+        },
+        {
+          "text": "de la masse des cellules parietales",
+          "correct": false
+        },
+        {
+          "text": "de la masse des cellules principales",
+          "correct": false
+        },
+        {
+          "text": "de la secretion gastrique de secretine",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : AB. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 83,
+      "_officialAnswers": "AB"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "L'hormone de croissance :",
+      "options": [
+        {
+          "text": "est liberee sous I'effet de la GH-RH",
+          "correct": true
+        },
+        {
+          "text": "est liberie sous I'effet de la somatostatine",
+          "correct": false
+        },
+        {
+          "text": "stimule la degradation des triglycerides",
+          "correct": true
+        },
+        {
+          "text": "est liberee sous I'effet de I'hyperglycemie",
+          "correct": false
+        },
+        {
+          "text": "n'a pas d'effet diabetogene",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : AC. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 84,
+      "_officialAnswers": "AC"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Les glucocorticoTdes:",
+      "options": [
+        {
+          "text": "ont une action anti-inflammatoire",
+          "correct": true
+        },
+        {
+          "text": "stimulent la production d'interleukine 2",
+          "correct": false
+        },
+        {
+          "text": "reduisent la reponse immunitaire",
+          "correct": true
+        },
+        {
+          "text": "n'ont aucune action sur le metabolisme phosphocalcique",
+          "correct": false
+        },
+        {
+          "text": "favorisent la resistance aux facteurs de stress",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : ACE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 85,
+      "_officialAnswers": "ACE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Le flux plasmatique renal correspond h la clearance :",
+      "options": [
+        {
+          "text": "de la creatinine",
+          "correct": false
+        },
+        {
+          "text": "de I'uree",
+          "correct": false
+        },
+        {
+          "text": "du para-aminohippurate (PAH)",
+          "correct": true
+        },
+        {
+          "text": "de I'inuline",
+          "correct": false
+        },
+        {
+          "text": "du cytochrome C",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : C. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 86,
+      "_officialAnswers": "C"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "La filtration glomerulaire :",
+      "options": [
+        {
+          "text": "est un phenomene passif",
+          "correct": true
+        },
+        {
+          "text": "augmente lors de I'exercice physique",
+          "correct": false
+        },
+        {
+          "text": "a lieu dans le corpuscule de Malpighi",
+          "correct": true
+        },
+        {
+          "text": "se fait selon un gradient de concentration",
+          "correct": false
+        },
+        {
+          "text": "concerne les substances & faible poids moleculaire",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : ACE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 87,
+      "_officialAnswers": "ACE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "La renine est secretee en cas :",
+      "options": [
+        {
+          "text": "de stimulation des barorecepteurs",
+          "correct": true
+        },
+        {
+          "text": "d'hypokaliemie",
+          "correct": false
+        },
+        {
+          "text": "d'augmentation de la concentration plasmatique d'angiotensine II",
+          "correct": false
+        },
+        {
+          "text": "d'hypotension arterielle",
+          "correct": true
+        },
+        {
+          "text": "de stimulation des adrenorecepteurs",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : ADE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 88,
+      "_officialAnswers": "ADE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "La secretion pancr^atique enzymatique :",
+      "options": [
+        {
+          "text": "est canalaire",
+          "correct": false
+        },
+        {
+          "text": "est acineuse",
+          "correct": true
+        },
+        {
+          "text": "se fait sous forme active",
+          "correct": false
+        },
+        {
+          "text": "necessite la presence d'enterokinase",
+          "correct": false
+        },
+        {
+          "text": "peut etre responsable d'une auto-digestion de la glande",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : BE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 89,
+      "_officialAnswers": "BE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "La bilirubine est un pigment biliaire :",
+      "options": [
+        {
+          "text": "synthetise au niveau du foie",
+          "correct": false
+        },
+        {
+          "text": "issu de la degradation de l'hemoglobine",
+          "correct": true
+        },
+        {
+          "text": "transform^ en stercobiline au niveau du sang",
+          "correct": false
+        },
+        {
+          "text": "transforme en urobiline au niveau du tube digestif",
+          "correct": false
+        },
+        {
+          "text": "responsable de la coloration de la bile",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : BE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 90,
+      "_officialAnswers": "BE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "La trypsine:",
+      "options": [
+        {
+          "text": "est secretee sous forme active",
+          "correct": false
+        },
+        {
+          "text": "est activee par les enterokinases gastriques",
+          "correct": false
+        },
+        {
+          "text": "agit sur les proteines en liberant des polypeptides",
+          "correct": true
+        },
+        {
+          "text": "agit sur les proteines en liberant des di et tri-peptides",
+          "correct": false
+        },
+        {
+          "text": "inhibe le reste des enzymes pancreatiques",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : C. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 91,
+      "_officialAnswers": "C"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "L'absorption du fer:",
+      "options": [
+        {
+          "text": "s'effectue sous forme de fer ferrique",
+          "correct": false
+        },
+        {
+          "text": "s'effectue sous forme de fer ferreux",
+          "correct": true
+        },
+        {
+          "text": "necessite la presence de Vitamine C",
+          "correct": true
+        },
+        {
+          "text": "est reguiee iors de son passage vers le sang a travers la muqueuse intestina",
+          "correct": true
+        },
+        {
+          "text": "augmente en presence de legumes et de the.",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : BCD. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 92,
+      "_officialAnswers": "BCD"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "La secretion de sels biliaires diminue lors :",
+      "options": [
+        {
+          "text": "d'une cholestase",
+          "correct": true
+        },
+        {
+          "text": "d'une resection de I'iieon",
+          "correct": true
+        },
+        {
+          "text": "d'une mucoviscidose",
+          "correct": false
+        },
+        {
+          "text": "d'une achlorhydrie",
+          "correct": true
+        },
+        {
+          "text": "d'un lymphome",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : ABD. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 93,
+      "_officialAnswers": "ABD"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "La spirometrie de Mr D.A. age de 48 ans, n'ayant jamais fume, suivi dans son enfance pour une rtiinite allergique, platrierde profession depuis plus de 20 ans et presentant actuellement une dyspnee d'effort parfois sifflante, a montre les resultats suivants : Valeur theorique Valeur mesuree Valeur apres broncho-dilatation CV(L) 3,21 2,87 3,11 VEMS(L) 2, 82 1,89 2,01 En utilisant la methode de 80 %, on peut affirmer que ce patient presente une diminution :",
+      "options": [
+        {
+          "text": "de la capacite vitale (CV)",
+          "correct": false
+        },
+        {
+          "text": "du volume expiratoire maximal par seconde (VEMS)",
+          "correct": true
+        },
+        {
+          "text": "de la capacity pulmonaire totale (CPT)",
+          "correct": false
+        },
+        {
+          "text": "du rapport de Tiffeneau",
+          "correct": true
+        },
+        {
+          "text": "du volume residuel (VR)",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : BD. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 94,
+      "_officialAnswers": "BD"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "La spirometrie de Mr D.A. age de 48 ans, n'ayant jamais fume, suivi dans son enfance pour une rtiinite allergique, platrierde profession depuis plus de 20 ans et presentant actuellement une dyspnee d'effort parfois sifflante, a montre les resultats suivants : Valeur theorique Valeur mesuree Valeur apres broncho-dilatation CV(L) 3,21 2,87 3,11 VEMS(L) 2, 82 1,89 2,01 Au total, ce patient est atteint d'un :",
+      "options": [
+        {
+          "text": "deficit ventilatoire de type obstructif reversible",
+          "correct": false
+        },
+        {
+          "text": "deficit ventilatoire de type obstructif non completement reversible",
+          "correct": true
+        },
+        {
+          "text": "deficit ventilatoire de type restrictif",
+          "correct": false
+        },
+        {
+          "text": "deficit ventilatoire de type mixte",
+          "correct": false
+        },
+        {
+          "text": "syndrome de distension thoracique",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : B. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 95,
+      "_officialAnswers": "B"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "La spirometrie de Mr D.A. age de 48 ans, n'ayant jamais fume, suivi dans son enfance pour une rtiinite allergique, platrierde profession depuis plus de 20 ans et presentant actuellement une dyspnee d'effort parfois sifflante, a montre les resultats suivants : Valeur theorique Valeur mesuree Valeur apres broncho-dilatation CV(L) 3,21 2,87 3,11 VEMS(L) 2, 82 1,89 2,01 Les profils clinique et fonctionnel de ce patient plaident en faveur:",
+      "options": [
+        {
+          "text": "d'un asthme bronchique",
+          "correct": false
+        },
+        {
+          "text": "d'un emphyseme pulmonaire",
+          "correct": false
+        },
+        {
+          "text": "d'une fibrose pulmonaire",
+          "correct": false
+        },
+        {
+          "text": "d'une broncho-pneumopathie chronique obstructive (BPCO)",
+          "correct": true
+        },
+        {
+          "text": "d'une dilatation de bronches",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : D. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 96,
+      "_officialAnswers": "D"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "La distribution de I'air inspire au niveau pulmonaire :",
+      "options": [
+        {
+          "text": "se mesure en injectant un bolus de xenon radioactif",
+          "correct": false
+        },
+        {
+          "text": "montre une distribution preferentielle au niveau des sommets en position debout",
+          "correct": false
+        },
+        {
+          "text": "est dependante de la pression pleurale",
+          "correct": true
+        },
+        {
+          "text": "s'homogeneise en position couchee",
+          "correct": true
+        },
+        {
+          "text": "varie en fonction de la compliance de chaque compartiment",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : CDE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 97,
+      "_officialAnswers": "CDE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "On observe une augmentation de la capacite de transfert pulmonaire :",
+      "options": [
+        {
+          "text": "en cas de fibrose pulmonaire evoluee",
+          "correct": false
+        },
+        {
+          "text": "en position couchee",
+          "correct": true
+        },
+        {
+          "text": "apres une perfusion de globules rouges",
+          "correct": true
+        },
+        {
+          "text": "apres la consommation de quelques cigarettes",
+          "correct": false
+        },
+        {
+          "text": "lors de I'effort physique",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : BCE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 98,
+      "_officialAnswers": "BCE"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "Pour differencier entre capacite de diffusion et transfert pulmonaire, on se base sur :",
+      "options": [
+        {
+          "text": "la surface d'echange",
+          "correct": false
+        },
+        {
+          "text": "I'epaisseur de la membrane alveolo-capillaire",
+          "correct": false
+        },
+        {
+          "text": "la quality fonctionnelle de l'hemoglobine",
+          "correct": true
+        },
+        {
+          "text": "la perfusion pulmonaire",
+          "correct": true
+        },
+        {
+          "text": "la solubilitedu gaz carbonique",
+          "correct": false
+        }
+      ],
+      "explanation": "Corrigé type officiel : CD. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 99,
+      "_officialAnswers": "CD"
+    },
+    {
+      "faculty": "fac-constantine",
+      "year": "Résidanat",
+      "track": "medecine",
+      "module": "Anatomie et cytologie pathologiques",
+      "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+      "type": "QCM",
+      "source": "official_exam",
+      "difficulty": null,
+      "body": "L'organisme est soumis h une agression acide journaliere expliquee par la production",
+      "options": [
+        {
+          "text": "d'acide sulfurique (H2SO4)",
+          "correct": true
+        },
+        {
+          "text": "d'acide phosphorique (H3PO4)",
+          "correct": true
+        },
+        {
+          "text": "d'ammoniac",
+          "correct": false
+        },
+        {
+          "text": "de corps cetoniques",
+          "correct": true
+        },
+        {
+          "text": "de gaz carbonique",
+          "correct": true
+        }
+      ],
+      "explanation": "Corrigé type officiel : ABDE. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+      "examYear": 2016,
+      "sittingLabel": "Résidanat Constantine — Octobre 2016",
+      "_qNumber": 100,
+      "_officialAnswers": "ABDE"
+    }
+  ]
+}

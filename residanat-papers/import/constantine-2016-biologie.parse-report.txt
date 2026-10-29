@@ -1,0 +1,46 @@
+source: residanat-papers/extract-2016-bio.txt
+sujet questions parsed: 96 (numbers 5..100)
+corrigé answers parsed: 100 (Q1..Q100 expected)
+corrigé missing: none
+anomalies (1):
+  - cas clinique narrative dropped before Q97 (stem does not reference a patient)
+
+sample Q5:
+{
+  "faculty": "fac-constantine",
+  "year": "Résidanat",
+  "track": "medecine",
+  "module": "Anatomie et cytologie pathologiques",
+  "unit": "Annale 2016 — Épreuve de biologie (Résidanat Constantine)",
+  "type": "QCM",
+  "source": "official_exam",
+  "difficulty": null,
+  "body": "Quelle est, parmi les pathologies suivantes celle qui correspond a un etat precancereux d'origine hereditaire ?",
+  "options": [
+    {
+      "text": "La cystite bilharzienne",
+      "correct": false
+    },
+    {
+      "text": "Le xeroderma pigmentosum",
+      "correct": true
+    },
+    {
+      "text": "La dysplasie du col uterin",
+      "correct": false
+    },
+    {
+      "text": "La recto-colite ulc6ro-h6morragique (RCUH)",
+      "correct": false
+    },
+    {
+      "text": "Le carcinome in situ",
+      "correct": false
+    }
+  ],
+  "explanation": "Corrigé type officiel : B. Provenance : sujet + corrigé officiels, Résidanat de Constantine 2016 (épreuve de biologie, 15-16/10/2016), fichier public ency-education.net. Explication pédagogique à rédiger par un auteur avant approbation.",
+  "examYear": 2016,
+  "sittingLabel": "Résidanat Constantine — Octobre 2016",
+  "_qNumber": 5,
+  "_officialAnswers": "B"
+}
