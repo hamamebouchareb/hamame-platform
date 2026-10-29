@@ -140,3 +140,137 @@ faculty alger + Résidanat médecine):
   lessons/units/progress rows at all).
 - MedSpark remains untrusted DATA; nothing was copied from it. This fix is purely
   about Hamame's own years page.
+
+
+================================================================================
+## Multi-module quiz builder + "repeat my last quiz" — same day, later
+================================================================================
+
+Feature: commit 0aa4d11 (7 files, specific paths) — backend: moduleIds[] accepted by
+GET /api/questions/counts and threaded into the total + sittings queries (badges stay
+single-module/year-scoped by design); GET /api/sessions/:id now echoes a derived
+`config` {mode, size, timeLimitSeconds, resultSort, showStats, questionTypes, moduleIds,
+unitIds} reconstructed from the questions actually SERVED (no schema change). Frontend:
+module dropdown replaced by multi-select checkbox chips with live counts (same pattern
+as units), units section gated to exactly one ticked module (disclosure otherwise),
+"Répéter mon dernier quiz" prefill on /qcm/builder. Gates: backend tsc 0; web tsc 0,
+lint 0 errors (4 pre-existing warnings in untouched files), next build exit 0.
+Vercel + Railway deployed before live verification.
+
+Disposable account verify-mmod-1028@example.com (id cb04cec7-986c-4893-bbd4-b5a76e04e7a8).
+Password NOT recorded here (verification-discipline policy). Tokens below redacted.
+
+### Backend, live on Railway (raw)
+
+counts moduleIds discrimination (one authed GET per line):
+- /questions/counts?moduleIds=3a5129d1-e4a4-46a0-8b17-a24419cc08f5  (alger Cardiologie)
+  -> 200 {"total": 0}
+- /questions/counts?moduleIds=00000000-0000-0000-0000-000000000030  (seed Cardiology)
+  -> 200 {"total": 9}
+- /questions/counts?moduleIds=<alger>&moduleIds=<seed>              (union)
+  -> 200 {"total": 9}
+The 0 on the first line simultaneously proves the NEW backend is live: the old code
+ignored moduleIds entirely and would have returned the year-wide total.
+
+Union session (empty module + populated module):
+POST /api/sessions {name:"VERIFY-mmod-union", moduleIds:[alger-cardio, seed-cardio],
+questionTypes:["QCM","QCS"], size:10, sort:"by_course", showStats:true}
+-> 201, served 8 questions, served_moduleNames ["Cardiology"], served_unitIds
+["00000000-0000-0000-0000-000000000040"] — positive multi-module scope proof.
+
+Config echo, GET /api/sessions/0e6fb263-9fff-400f-8765-4c9bb02ec163:
+  "config": {
+    "mode": "practice", "size": 8, "timeLimitSeconds": null,
+    "resultSort": "by_course", "showStats": true,
+    "questionTypes": ["QCM","QCS"],
+    "moduleIds": ["00000000-0000-0000-0000-000000000030"],
+    "unitIds": ["00000000-0000-0000-0000-000000000040"]
+  }
+Field-exact as designed: scope reconstructed from the questions SERVED — the
+requested-but-empty alger module (3a5129d1) is correctly NOT echoed.
+GET /api/sessions?page=1&limit=1 -> newest session id = 0e6fb263… (the union session),
+i.e. the lookup the repeat button performs resolves to it.
+
+### Browser, live on Vercel (new bundle) — headless Chrome via REA, FR UI,
+auth injected as hamame_auth = {token, user} in localStorage
+
+Capture A — baseline, ev_51fab4b99b1e5d662650c20fa6423e139034f3dfb8e69c238149028405082fbd:
+- DOM: id="builder-modules-label" present (new bundle live); id="builder-module"
+  (old dropdown) ABSENT; "Répéter mon dernier quiz" button present;
+  "Aucun module dans cette année." placeholder (alger Year 1 has no modules).
+- Screenshot: mmod-builder-baseline.png
+
+Capture B — repeat-last click, ev_8d4b5054ca708648dea7e78511f1bfd3d2fed972fa254234e8abf64aa55d7b56
+(network retained 260 events):
+- Requests fired: GET /api/sessions?page=1&limit=1 -> GET /api/sessions/0e6fb263-…
+- Counts refetched with the echo applied:
+  .../questions/counts?facultyId=…&yearId=…&moduleId=00000000-…30&moduleIds=00000000-…30&types=QCM&types=QCS
+  .../questions/counts?facultyId=…&yearId=…&moduleId=…30&moduleIds=…30&types=QCM&types=QCS&unitIds=00000000-…40
+- Screenshot mmod-repeat2-prefilled.png: "Modules — 1 sélectionné", Cardiac Physiology
+  chip checked, size 10 (echo size 8 snapped to nearest preset), sort "Par cours",
+  counter honest 0 (prefilled seed-module scope × alger year = genuinely nothing).
+
+Capture C — populated chips under seed "Medicine" Year 1,
+ev_8e898974f085a050543157bd7e5caeed34c324331aa5df9ba071e858ae82e160:
+- PUT /users/me 200 (moved account to faculty b37b039e-2208-4837-b5d5-28b1c338a2cf /
+  year 00000000-…20, then re-login so the stored user carries the new preselect).
+- Screenshot mmod-seed-chips-ticked.png (final state): faculty "Medicine", year "Year 1",
+  "Modules — 1 sélectionné", Cardiology chip CHECKED badge 8, units section unlocked
+  with "Cardiac Physiology" badge 8, counter "8 questions disponibles", CTA enabled.
+- Network: after the tick, counts gained &moduleId=…30&moduleIds=…30 (single tick).
+- Cross-check: daily banner "4 questions gratuites restantes aujourd'hui (sur 20)" =
+  20 − 16 questions drawn by the two VERIFY sessions. Consistent.
+- Correction to the earlier written expectation: badges show 8, not 9 — byUnit/byModule
+  badge queries apply the type filter (badgeWhere includes types: typeList) and the
+  builder default is QCM+QCS; 9 is the unfiltered total.
+
+Capture D — multi-module disclosure under alger Résidanat,
+ev_d05faa7fada76b0088f6b39a8538df0e8016e669cc21a5e7101f8223d35e49ec (20 modules):
+- Screenshot mmod-multimod-units-loading.png (one module ticked): "Modules — 1
+  sélectionné", Anesthésie-réanimation checked, units section "Chargement des unités…".
+- Screenshot mmod-multimod-disclosure.png (two ticked): "Modules — 2 sélectionnés",
+  Anesthésie-réanimation + Cardiologie checked, units section replaced by
+  "La sélection d'unités demande un seul module coché. Plusieurs modules cochés = quiz
+  sur des modules entiers."
+- Network payload shape exactly as designed:
+  after tick 1: &moduleId=5bb66fa0-aeae-4914-b66f-3e876aaae427&moduleIds=5bb66fa0-…
+  after tick 2: &moduleIds=5bb66fa0-…&moduleIds=3a5129d1-…  (moduleId DROPPED —
+  multi-module scope, no unitIds sent)
+  counter honest 0 (alger bank is empty — owner's choice, truthful 0s).
+
+### Cleanup proof (raw)
+POST /auth/login -> 200; GET /users/me -> 200;
+DELETE /api/users/me -> 200 {"id":"cb04cec7-986c-4893-bbd4-b5a76e04e7a8","status":"deleted"};
+old token GET /users/me -> 401;
+re-login with same credentials -> 401 {"error":{"code":"INVALID_CREDENTIALS"}}.
+The two VERIFY sessions (21074c4b-781b-496a-b3a8-6d08e831823d "VERIFY-mmod-multi",
+0e6fb263-9fff-400f-8765-4c9bb02ec163 "VERIFY-mmod-union") die with the account: per the
+soft-delete policy the rows remain under the deleted user (FKs intact, PII scrubbed) and
+are no longer reachable through the API.
+
+### Disclosures / limitations
+- One repeat capture (ev_5dbe7016…) caught the button mid-load ("Chargement du dernier
+  quiz…"); superseded by ev_8d4b5054… which waits for the button to return to idle.
+- One capture ended cleanup_incomplete after an MCP restart (browser_transport cleanup
+  timed out after 30s). Verified via Win32_Process that no headless/temp-profile
+  chrome.exe remained — all running chrome.exe used the owner's own profile. No orphans.
+- Two more MCP restarts mid-session dropped the REA tool catalog; every evidence bundle
+  had been exported to disk immediately after each capture, so nothing was lost.
+- First multi-module capture failed on a Playwright strict-mode wait (locator resolved
+  to 20 chips — which incidentally proved the chips rendered); the re-run with
+  strict-safe locators is the valid capture.
+- Capture C's mid-step screenshot (after a 3s settle) caught the faculty select still
+  "Chargement…" — preselect fills only after the faculties list resolves; the final
+  at_end screenshot is the valid state.
+- DOM dumps show mojibake for accents (codepage-850 console artifact, handoff §12.2);
+  judged at byte level, DOM text files written UTF-8.
+- React does not serialize `checked`/`selected` into DOM dumps; tick state verified via
+  screenshots + network payloads instead.
+- Bank discovery: the ONLY populated bank is the seed faculty "Medicine"
+  (b37b039e-2208-4837-b5d5-28b1c338a2cf) Year 1 module Cardiology unit Cardiac
+  Physiology — 9 approved global questions. All alger years are truly empty (owner's
+  choice); anonymous counts probed 0 across every alger year.
+- MBset live-UI parity study remains blocked: the owner's password was rejected twice
+  (attempts stopped per policy; probe account hamame.probe.7210@example.com stays
+  unverified on MBset and cannot be deleted from there). Structure-level study used the
+  earlier captures only; no MBset question content was harvested at any point.
