@@ -2585,4 +2585,46 @@ year (tiles honestly read 0). NOT yet browser-verified (logged-in DOM) —
 verify on the Vercel deploy. MedSpark recon §3b (year tiles +
 `residanatHintFiveYears`) documents the parity target.
 
+## 39. Résidanat bank goes live — Constantine 2016 biologie full 96 QCM staged (2026-10-29/31)
+
+Session-builder first (same window as §38's ladder): **multi-module session
+builder + "repeat last settings"** shipped to prod (commits `0aa4d11`,
+`2436683`; count-based `moduleIds[]` + derived `config` echo on
+`GET /api/sessions/:id`).
+
+**Papers archive:** 89 sujets/corrigés from
+`ency-education.net/medecine-residanat/1` verified byte-for-byte (235.7 MB;
+PDFs untracked by design), inventory `residanat-papers/papers-typed-inventory.csv`
+(commits `3833c11`, `458aa09`). Caveat: some PDFs embed typed corrigés (2016
+biologie, 2023) — the README's "listing hosts sujets only" line is stale.
+
+**Constantine 2016 biologie landed:** pilot Q5–Q14 Oct 29, remaining 86 Oct 31,
+via the sanctioned importer against the full 96-row batch file — dedup
+reconciled the 10 pilot rows (`skipped-duplicate=10`), `created questions=86
+options=430`, 0 curriculum creates. State after: `pending_review=97`,
+`official_exam=96`, `approved=9` unchanged; **all 96 flags reproduce the
+official corrigé letters Q5→Q100** (distribution {1:22,2:37,3:33,4:4}); BR-2
+negative holds (0 approved under the unit). OCR noise staged verbatim for
+reviewer editing; explanations carry provenance + "write the real explanation"
+instruction.
+
+**Pooler:** 5432 session pooler stayed `EMAXCONNSESSION`-saturated by the live
+backend's pool Oct 29–31 (10th+ attempt raw error in the evidence file). Every
+harness DB run used the §34 standing workaround — process-local
+`:5432→:6543` + `&pgbouncer=true` (copy of `prisma/seed-residanat.ts:138-152`;
+`.env` untouched). Canonical fix still open: owner appends `?connection_limit=8`
+to Railway's `DATABASE_URL` and redeploys. One tracked importer change
+justified by measurement over 6543: chunk `$transaction` ceiling raised to
+`{ maxWait: 10_000, timeout: 45_000 }` (`src/scripts/import-content.ts`) —
+default 5 s always expires a 25-row chunk there. Evidence (raw):
+`docs/verification/2026-10-31-residanat-constantine-2016-bio-full96-apply.md`
++ pilot doc of 10-29.
+
+**Still open:** Q1–4 (only in degraded copy 2, out of scope); OCR for
+scan-type sujets (no tesseract on the machine); remaining faculties/years of
+the 89-PDF corpus staged one file at a time; **Alger 2026 médecine intake
+awaits the owner's hand-transcription** (sujet + answer letters OK to paste;
+MBset explanations/commentary must NOT be; letters staged as PROVISIONAL keys
+labeled in the explanation field pending official corrigé).
+
 

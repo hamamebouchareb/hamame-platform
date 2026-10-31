@@ -528,6 +528,12 @@ async function main(): Promise<void> {
   let chunkIndex = 0;
   for (const chunk of chunks) {
     chunkIndex++;
+    // Chunk transactions hold ~2 statements per row (question + nested options).
+    // Over the transaction pooler (6543 + pgbouncer, standing logged-in-host
+    // workaround) each statement costs ~150-200ms, so even the default
+    // --batch 25 needs >5s: measured tmp-tx-latency.ts (9 chunks worth of
+    // tx statements), so raise the interactive-transaction ceiling instead of
+    // shrinking the batch below the documented default.
     await prisma.$transaction(async (tx) => {
       for (const { question, resolved } of chunk) {
         const q = question;
@@ -560,7 +566,7 @@ async function main(): Promise<void> {
         manifest.created.questions.push(created.id);
         for (const o of created.options) manifest.created.options.push(o.id);
       }
-    });
+    }, { maxWait: 10_000, timeout: 45_000 });
     console.log(`chunk ${chunkIndex}/${chunks.length}: wrote ${chunk.length} questions`);
   }
 

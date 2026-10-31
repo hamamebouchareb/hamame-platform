@@ -89,8 +89,15 @@ missing (`src/lib/jwt.ts`). Keep that asymmetry.
 PostgreSQL on Supabase via Prisma (45 models in `prisma/schema.prisma`).
 Snake_case tables mapped with `@@map`/`@map`.
 
-**Only the Session pooler works for Prisma:** `aws-0-eu-west-1.pooler.supabase.com`
-on port **5432** (not 6543).
+**Primary pooler for Prisma is the Session pooler:** `aws-0-eu-west-1.pooler.supabase.com`
+on port **5432** — this is the PROD-config choice, not 6543. Exception
+(handoff §34, proven Oct 26–31): when 5432 is `EMAXCONNSESSION`-saturated by
+the live backend's own pool, harness/one-off script runs use the transaction
+pooler — process-local transform `:5432`→`:6543` + `&pgbouncer=true`
+(reference impl `prisma/seed-residanat.ts:138-152`; never `?pgbouncer=true`).
+Also note the importer's chunk `$transaction` ceiling was raised
+(maxWait 10 s / timeout 45 s) because the default 5 s always expires over
+6543 (handoff §39).
 
 ### The pooler-safe migration pattern — the only allowed one
 
