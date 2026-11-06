@@ -54,6 +54,39 @@ describe("buildQuestionWhere (BR-2)", () => {
     assert.deepEqual(where.AND, [{ OR: [{ universityId: null }, { universityId: "uni-1" }] }]);
   });
 
+  it("matches a single residanat facet (period/category/subcategory)", () => {
+    const where = buildQuestionWhere({
+      period: "Biologie",
+      category: "Néphrologie",
+      subcategory: "Néphropathies glomérulaires",
+      viewerUniversityId: null,
+    });
+    assert.equal(where.period, "Biologie");
+    assert.equal(where.category, "Néphrologie");
+    assert.equal(where.subcategory, "Néphropathies glomérulaires");
+  });
+
+  it("accepts facet arrays (multi-select) and prefers singular over plural", () => {
+    const where = buildQuestionWhere({
+      categories: ["Cardiologie", "Néphrologie"],
+      periods: ["Clinique", "Biologie"],
+      viewerUniversityId: null,
+    });
+    assert.deepEqual(where.category, { in: ["Cardiologie", "Néphrologie"] });
+    assert.deepEqual(where.period, { in: ["Clinique", "Biologie"] });
+    const singular = buildQuestionWhere({
+      category: "Cardiologie",
+      categories: ["Néphrologie"],
+      viewerUniversityId: null,
+    });
+    assert.equal(singular.category, "Cardiologie");
+  });
+
+  it("keeps status approved with facet filters present", () => {
+    const where = buildQuestionWhere({ categories: ["Cardiologie"], viewerUniversityId: null });
+    assert.equal(where.status, "approved");
+  });
+
   it("applies the faculty rollout gate even with zero filters", () => {
     const where = buildQuestionWhere(base);
     assert.deepEqual(facultyStatuses(where), { in: ["beta", "live"] });

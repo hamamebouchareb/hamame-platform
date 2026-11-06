@@ -2,7 +2,7 @@
 // No Prisma, no fs, no network — every rule is a pure function so the logic is
 // unit-checkable and reusable by both the dry-run reporter and the writers.
 
-export type QuestionType = "QCM" | "QCS" | "QROC" | "CLINICAL_CASE";
+export type QuestionType = "QCM" | "QCS" | "QROC" | "CLINICAL_CASE" | "Combinaison";
 
 export interface RawOption {
   text?: unknown;
@@ -25,6 +25,10 @@ export interface RawQuestion {
   examYear?: unknown;
   sittingLabel?: unknown;
   university?: unknown;
+  // Résidanat facets (hb-db/MBset parity, migration 20261106000000).
+  category?: unknown;
+  subcategory?: unknown;
+  period?: unknown;
 }
 
 export interface Finding {
@@ -32,13 +36,15 @@ export interface Finding {
   reason: string;
 }
 
-const TYPES: QuestionType[] = ["QCM", "QCS", "QROC", "CLINICAL_CASE"];
+const TYPES: QuestionType[] = ["QCM", "QCS", "QROC", "CLINICAL_CASE", "Combinaison"];
 const SOURCES = ["official_exam", "hamame_authored", "ai_generated"];
 const DIFFICULTIES = ["facile", "moyen", "difficile"];
 const TRACKS = ["medecine", "dentaire", "pharmacie"];
 
 const MAX_BODY = 5000;
-const MAX_OPTION = 200;
+// 1000 (was 200): hb-db Résidanat has 50 long French options >200 chars;
+// truncating them would corrupt meaning. Relaxation only admits more.
+const MAX_OPTION = 1000;
 
 function isBlank(value: unknown): boolean {
   return typeof value !== "string" || value.trim().length === 0;
@@ -116,7 +122,9 @@ export function validateQuestion(
   } else {
     if (options.length < 2) fail("fewer than 2 options");
     const correct = options.filter((o) => o.correct).length;
-    if (type === "QCM" && correct === 0) fail("QCM with no correct option");
+    // Combinaison (hb-db/Résidanat) is QCM semantics: multi-correct allowed,
+    // mapped to QCM at import time since Hamame's DB enum has no Combinaison.
+    if ((type === "QCM" || type === "Combinaison") && correct === 0) fail(`${type} with no correct option`);
     if (type === "QCS" && correct !== 1) fail(`QCS with ${correct} correct options (need exactly 1)`);
     const seen = new Set<string>();
     for (const option of options) {
@@ -143,6 +151,16 @@ export function validateQuestion(
   if (typeof raw.sittingLabel === "string" && raw.sittingLabel.trim().length > 0) {
     if (allowedSittings !== null && !allowedSittings.includes(raw.sittingLabel.trim())) {
       warn(`sittingLabel outside list file: ${raw.sittingLabel.trim()}`);
+    }
+  }
+
+  // Résidanat facets (optional, nullable): any non-empty string allowed.
+  for (const facet of ["category", "subcategory", "period"] as const) {
+    const v = (raw as Record<string, unknown>)[facet];
+    if (v !== undefined && v !== null && typeof v !== "string") {
+      fail(`bad ${facet} (string|null): ${String(v)}`);
+    } else if (typeof v === "string" && v.length > 120) {
+      fail(`${facet} over 120 chars`);
     }
   }
 

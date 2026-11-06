@@ -28,12 +28,32 @@ const listQuestionsQuerySchema = paginationQuery.extend({
   dateTo: z.coerce.date().optional(),
   examYear: z.coerce.number().int().min(1000).max(9999).optional(),
   sittingLabel: z.string().min(1).max(120).optional(),
+  // Résidanat facets (hb-db/MBset parity, migration 20261106000000).
+  // Singular exact-match params for browse; plural arrays live on /counts.
+  category: z.string().min(1).max(120).optional(),
+  subcategory: z.string().min(1).max(120).optional(),
+  period: z.string().min(1).max(120).optional(),
 });
 
 async function listQuestions(req: Request, res: Response, next: NextFunction) {
   try {
-    const { page, limit, facultyId, yearId, moduleId, unitId, type, source, dateFrom, dateTo, examYear, sittingLabel } =
-      req.query as unknown as z.infer<typeof listQuestionsQuerySchema>;
+    const {
+      page,
+      limit,
+      facultyId,
+      yearId,
+      moduleId,
+      unitId,
+      type,
+      source,
+      dateFrom,
+      dateTo,
+      examYear,
+      sittingLabel,
+      category,
+      subcategory,
+      period,
+    } = req.query as unknown as z.infer<typeof listQuestionsQuerySchema>;
 
     // status: 'approved' is enforced inside buildQuestionWhere by default — BR-2
     // mandatory validation gate. pending_review/rejected questions must never reach
@@ -54,6 +74,9 @@ async function listQuestions(req: Request, res: Response, next: NextFunction) {
       dateTo,
       examYear,
       sittingLabel,
+      category,
+      subcategory,
+      period,
       viewerUniversityId,
     });
 
@@ -72,6 +95,11 @@ async function listQuestions(req: Request, res: Response, next: NextFunction) {
           difficulty: true,
           bodyRichtext: true,
           createdAt: true,
+          examYear: true,
+          sittingLabel: true,
+          category: true,
+          subcategory: true,
+          period: true,
           // isCorrect intentionally omitted — never reveal the answer in a browse view.
           options: {
             orderBy: { orderIndex: "asc" },
@@ -106,9 +134,9 @@ router.get("/questions", optionalAuth, validateQuery(listQuestionsQuerySchema), 
 // "mixed" here — the client omits the param for "all sources".
 //
 // Response:
-//   { total, byUnit: [{unitId, count}], byModule: [{moduleId, count}] }
-// - `total` applies the FULL filter set (including unitIds/types/source): the live
-//   "N questions" counter.
+//   { total, byUnit, byModule, sittings, byPeriod, byCategory, bySubcategory }
+// - `total` applies the FULL filter set (including unitIds/types/source +
+//   sitting + Résidanat facets): the live "N questions" counter.
 // - `byUnit` ignores `unitIds` (module scope only) so per-unit badges stay stable while
 //   ticking boxes. Present only when `moduleId` is given, else [].
 // - `byModule` ignores `moduleId`+`unitIds` (year scope only) for module-dropdown labels.
@@ -121,6 +149,14 @@ const uuidArrayQueryParam = z.preprocess((value) => {
 }, z.array(z.string().uuid()).optional());
 
 const questionTypeQueryEnum = z.enum(["QCM", "QCS", "QROC", "CLINICAL_CASE"]);
+
+// Résidanat facet arrays (comma-separated or repeated key, same preprocessing
+// as unitIds/types). Singular wins over plural inside buildQuestionWhere.
+const facetArrayQueryParam = z.preprocess((value) => {
+  if (value === undefined) return undefined;
+  const parts = Array.isArray(value) ? value : String(value).split(",");
+  return parts.map((part) => String(part).trim()).filter((part) => part.length > 0);
+}, z.array(z.string().min(1).max(120)).optional());
 
 const typeArrayQueryParam = z.preprocess((value) => {
   if (value === undefined) return undefined;
@@ -144,6 +180,15 @@ const countsQuerySchema = z.object({
   examYearFrom: z.coerce.number().int().min(1000).max(9999).optional(),
   examYearTo: z.coerce.number().int().min(1000).max(9999).optional(),
   sittingLabel: z.string().min(1).max(120).optional(),
+  // Résidanat facets (hb-db/MBset parity). Singular exact-match + plural
+  // multi-select; both accepted so chips (plural) and deep links (singular)
+  // share one endpoint.
+  category: z.string().min(1).max(120).optional(),
+  categories: facetArrayQueryParam,
+  subcategory: z.string().min(1).max(120).optional(),
+  subcategories: facetArrayQueryParam,
+  period: z.string().min(1).max(120).optional(),
+  periods: facetArrayQueryParam,
 });
 
 async function getQuestionCounts(req: Request, res: Response, next: NextFunction) {
@@ -161,6 +206,12 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
       examYearFrom,
       examYearTo,
       sittingLabel,
+      category,
+      categories,
+      subcategory,
+      subcategories,
+      period,
+      periods,
     } = req.query as unknown as z.infer<typeof countsQuerySchema>;
 
     const typeList = type ? [type] : types;
@@ -168,6 +219,7 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
     const viewerUniversityId = await resolveViewerUniversityId(prisma, req.auth?.userId);
 
     const sittingScope = { examYear, examYearFrom, examYearTo, sittingLabel };
+    const facetScope = { category, categories, subcategory, subcategories, period, periods };
 
     // 1. Live counter: the exact filter set the session would be created with.
     // Sequential awaits throughout (pooler guidance: no large Promise.all).
@@ -180,6 +232,7 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
       types: typeList,
       source,
       ...sittingScope,
+      ...facetScope,
       viewerUniversityId,
     });
     const total = await prisma.question.count({ where: totalWhere });
@@ -194,6 +247,7 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
         types: typeList,
         source,
         ...sittingScope,
+        ...facetScope,
         viewerUniversityId,
       });
       const groups = await prisma.question.groupBy({
@@ -215,6 +269,7 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
         types: typeList,
         source,
         ...sittingScope,
+        ...facetScope,
         viewerUniversityId,
       });
       const yearGroups = await prisma.question.groupBy({
@@ -246,6 +301,7 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
     // types/source + university gate) but excluding the sitting selection itself,
     // so picked options stay visible while choosing. Untagged (NULL/NULL) rows are
     // not sittings and are excluded. Empty array = no tagged sittings in scope.
+    // Facet selections ARE kept here (independent of the sitting choice).
     const sittingsWhere = buildQuestionWhere({
       unitIds,
       moduleId,
@@ -254,6 +310,7 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
       facultyId,
       types: typeList,
       source,
+      ...facetScope,
       viewerUniversityId,
     });
     const sittingGroups = await prisma.question.groupBy({
@@ -273,7 +330,79 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
         return (a.sittingLabel ?? "").localeCompare(b.sittingLabel ?? "");
       });
 
-    res.status(200).json({ total, byUnit, byModule, sittings });
+    // 5. Résidanat facet picker options: distinct (period | category | subcategory)
+    // values with counts, scoped like the sittings (faculty/year/module + sitting +
+    // types/source + university) but each facet EXCLUDES its own selection while
+    // keeping the other two, so chips stay visible while ticking. NULL/empty =
+    // untagged and excluded (same rule as sittings). Empty arrays = no tagged
+    // rows in scope (all pre-import rows behave this way until hb-db lands).
+    const facetBase = {
+      unitIds,
+      moduleId,
+      moduleIds,
+      yearId,
+      facultyId,
+      types: typeList,
+      source,
+      ...sittingScope,
+      viewerUniversityId,
+    };
+    const byPeriod = await prisma.question
+      .groupBy({
+        by: ["period"],
+        where: buildQuestionWhere({
+          ...facetBase,
+          category,
+          categories,
+          subcategory,
+          subcategories,
+        }),
+        _count: { _all: true },
+      })
+      .then((groups) =>
+        groups
+          .filter((g) => g.period !== null && g.period.trim().length > 0)
+          .map((g) => ({ period: g.period as string, count: g._count._all }))
+          .sort((a, b) => b.count - a.count || a.period.localeCompare(b.period))
+      );
+    const byCategory = await prisma.question
+      .groupBy({
+        by: ["category"],
+        where: buildQuestionWhere({
+          ...facetBase,
+          subcategory,
+          subcategories,
+          period,
+          periods,
+        }),
+        _count: { _all: true },
+      })
+      .then((groups) =>
+        groups
+          .filter((g) => g.category !== null && g.category.trim().length > 0)
+          .map((g) => ({ category: g.category as string, count: g._count._all }))
+          .sort((a, b) => b.count - a.count || a.category.localeCompare(b.category))
+      );
+    const bySubcategory = await prisma.question
+      .groupBy({
+        by: ["subcategory"],
+        where: buildQuestionWhere({
+          ...facetBase,
+          category,
+          categories,
+          period,
+          periods,
+        }),
+        _count: { _all: true },
+      })
+      .then((groups) =>
+        groups
+          .filter((g) => g.subcategory !== null && g.subcategory.trim().length > 0)
+          .map((g) => ({ subcategory: g.subcategory as string, count: g._count._all }))
+          .sort((a, b) => b.count - a.count || a.subcategory.localeCompare(b.subcategory))
+      );
+
+    res.status(200).json({ total, byUnit, byModule, sittings, byPeriod, byCategory, bySubcategory });
   } catch (err) {
     next(err);
   }

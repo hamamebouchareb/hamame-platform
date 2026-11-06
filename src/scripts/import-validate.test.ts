@@ -78,7 +78,7 @@ describe("validateQuestion", () => {
       )
     );
     assert.ok(
-      reasons(1, { ...goodQcm(), options: [{ text: "x".repeat(201), correct: true }, { text: "B", correct: false }] }).some(
+      reasons(1, { ...goodQcm(), options: [{ text: "x".repeat(1001), correct: true }, { text: "B", correct: false }] }).some(
         (r) => r.includes("over")
       )
     );

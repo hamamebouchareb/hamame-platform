@@ -30,6 +30,15 @@ export interface QuestionFilterInput {
   examYearFrom?: number;
   examYearTo?: number;
   sittingLabel?: string;
+  // Résidanat facets (hb-db/MBset parity, migration 20261106000000). Same
+  // rule as examYear: NULL/untagged rows never match an explicit facet
+  // filter. Singular wins over plural, mirroring type/types.
+  category?: string;
+  categories?: string[];
+  subcategory?: string;
+  subcategories?: string[];
+  period?: string;
+  periods?: string[];
   // Defaults to 'approved' — per BR-2, non-approved questions must never be surfaced to
   // students through any of these callers.
   status?: string;
@@ -70,6 +79,24 @@ export function buildQuestionWhere(input: QuestionFilterInput): Prisma.QuestionW
 
   if (input.sittingLabel) {
     where.sittingLabel = input.sittingLabel;
+  }
+
+  if (input.category) {
+    where.category = input.category;
+  } else if (input.categories && input.categories.length > 0) {
+    where.category = { in: input.categories };
+  }
+
+  if (input.subcategory) {
+    where.subcategory = input.subcategory;
+  } else if (input.subcategories && input.subcategories.length > 0) {
+    where.subcategory = { in: input.subcategories };
+  }
+
+  if (input.period) {
+    where.period = input.period;
+  } else if (input.periods && input.periods.length > 0) {
+    where.period = { in: input.periods };
   }
 
   if (input.dateFrom || input.dateTo) {

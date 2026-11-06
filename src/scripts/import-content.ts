@@ -95,6 +95,7 @@ const CSV_COLUMNS = [
   "faculty", "year", "track", "module", "unit", "type", "source", "difficulty",
   "body", "option1", "option2", "option3", "option4", "option5", "option6",
   "correct_idx", "explanation", "exam_year", "sitting_label", "university",
+  "category", "subcategory", "period",
 ] as const;
 
 function splitRow(line: string, delimiter: string): string[] {
@@ -169,6 +170,9 @@ function csvToQuestions(text: string): RawQuestion[] {
       question.examYear = Number.isNaN(parsed) ? row.exam_year : parsed;
     }
     if (row.sitting_label !== undefined) question.sittingLabel = row.sitting_label;
+    if (row.category !== undefined) question.category = row.category;
+    if (row.subcategory !== undefined) question.subcategory = row.subcategory;
+    if (row.period !== undefined) question.period = row.period;
     return question;
   });
 }
@@ -217,8 +221,16 @@ export function questionHash(
   options: { text: string; correct: boolean }[],
   examYear: number | null,
   sittingLabel: string | null,
-  explanation: string | null
+  explanation: string | null,
+  // Résidanat facets (migration 20261106000000). Same stem in two facets is
+  // distinct coverage; omitted facets hash as null (legacy rows).
+  category: string | null = null,
+  subcategory: string | null = null,
+  period: string | null = null
 ): string {
+  // Combinaison is stored as QCM — normalize so a Combinaison row and its
+  // stored QCM form hash identically and dedup works across dialects.
+  const storedType = type === "Combinaison" ? "QCM" : type;
   const normalizedOptions = [...options]
     .map((o) => ({ text: o.text.trim().normalize("NFC"), correct: o.correct }))
     .sort((a, b) => (a.text < b.text ? -1 : a.text > b.text ? 1 : 0));
@@ -226,15 +238,24 @@ export function questionHash(
     .update(
       canonical({
         unitId,
-        type,
+        type: storedType,
         body: body.trim().normalize("NFC"),
         options: normalizedOptions,
         examYear,
         sittingLabel,
         explanation: explanation === null ? null : explanation.trim().normalize("NFC"),
+        category,
+        subcategory,
+        period,
       })
     )
     .digest("hex");
+}
+
+function facetOrNull(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const t = v.trim();
+  return t.length > 0 ? t : null;
 }
 
 interface Resolved {
@@ -388,7 +409,7 @@ async function main(): Promise<void> {
       return;
     }
     validQuestions.push({ row, question });
-    if (question.type === "QCM") validQcm++;
+    if (question.type === "QCM" || question.type === "Combinaison") validQcm++;
     else if (question.type === "QCS") validQcs++;
     else if (question.type === "QROC") validQroc++;
     else other++;
@@ -444,7 +465,17 @@ async function main(): Promise<void> {
     if (cached) return cached;
     const existing = await prisma.question.findMany({
       where: { unitId },
-      select: { type: true, bodyRichtext: true, examYear: true, sittingLabel: true, explanationRichtext: true, options: { select: { bodyText: true, isCorrect: true } } },
+      select: {
+        type: true,
+        bodyRichtext: true,
+        examYear: true,
+        sittingLabel: true,
+        category: true,
+        subcategory: true,
+        period: true,
+        explanationRichtext: true,
+        options: { select: { bodyText: true, isCorrect: true } },
+      },
     });
     const set = new Set<string>();
     for (const q of existing) {
@@ -455,7 +486,9 @@ async function main(): Promise<void> {
         ? ((q.explanationRichtext as { text: string }).text)
         : null;
       const opts = q.options.map((o) => ({ text: o.bodyText, correct: o.isCorrect }));
-      set.add(questionHash(unitId, q.type, body, opts, q.examYear, q.sittingLabel, explanation));
+      set.add(
+        questionHash(unitId, q.type, body, opts, q.examYear, q.sittingLabel, explanation, q.category, q.subcategory, q.period)
+      );
     }
     fingerprints.set(unitId, set);
     return set;
@@ -493,7 +526,10 @@ async function main(): Promise<void> {
       opts,
       examYear,
       sittingLabel,
-      typeof q.explanation === "string" ? q.explanation : null
+      typeof q.explanation === "string" ? q.explanation : null,
+      facetOrNull(q.category),
+      facetOrNull(q.subcategory),
+      facetOrNull(q.period)
     );
     const known = await unitHashes(resolved.unitId);
     if (known.has(hash)) {
@@ -545,7 +581,9 @@ async function main(): Promise<void> {
         const created = await tx.question.create({
           data: {
             unitId: resolved.unitId,
-            type: String(q.type),
+            // Combinaison is stored as QCM (Hamame has no Combinaison type;
+            // scoring only auto-grades QCM/QCS — see import-validate).
+            type: String(q.type) === "Combinaison" ? "QCM" : String(q.type),
             source: String(q.source),
             status: "pending_review",
             difficulty: typeof q.difficulty === "string" ? q.difficulty : null,
@@ -556,6 +594,9 @@ async function main(): Promise<void> {
             examYear: typeof q.examYear === "number" ? q.examYear : null,
             sittingLabel:
               typeof q.sittingLabel === "string" && q.sittingLabel.trim() ? q.sittingLabel.trim() : null,
+            category: facetOrNull(q.category),
+            subcategory: facetOrNull(q.subcategory),
+            period: facetOrNull(q.period),
             // Import lands rows directly at pending_review (route submit is bypassed),
             // so the queue-recency column must be stamped here too.
             submittedAt: new Date(),

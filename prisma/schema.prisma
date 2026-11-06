@@ -515,6 +515,14 @@ model Question {
   // ('EMD', 'Résidanat', 'Rattrapage', ...) — no enum/table by decision.
   examYear              Int?    @map("exam_year")
   sittingLabel          String? @map("sitting_label")
+  // Résidanat faceting (hb-db/MBset parity): category = specialty (module),
+  // subcategory = lesson/topic (unit), period = épreuve (Biologie/Clinique/
+  // Chirurgie/Medico-chirurgicale/Sciences fondamentales/Dossiers...). All
+  // nullable — NULL = untagged (legacy rows + 44% of hb-db period gaps) and
+  // never matched by an explicit facet filter (same rule as examYear).
+  category              String? @map("category")
+  subcategory           String? @map("subcategory")
+  period                String? @map("period")
   status                String    @default("pending_review") // BR-2 mandatory validation gate
   difficulty            String?
   bodyRichtext          Json      @map("body_richtext") @db.JsonB
@@ -550,6 +558,11 @@ model Question {
   flashcards        Flashcard[]
 
   @@index([universityId])
+  @@index([examYear])
+  @@index([sittingLabel])
+  @@index([category])
+  @@index([subcategory])
+  @@index([period])
   @@map("questions")
 }
 

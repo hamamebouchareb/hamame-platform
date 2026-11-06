@@ -135,6 +135,9 @@ function loadSessionWithQuestions(sessionId: string) {
               // free-text sittingLabel field.
               examYear: true,
               sittingLabel: true,
+              category: true,
+              subcategory: true,
+              period: true,
               // moduleId is part of the derived config echo below (Question has no
               // moduleId column — questions attach at unit level).
               unit: { select: { name: true, moduleId: true, module: { select: { name: true } } } },
@@ -214,6 +217,9 @@ function formatSessionForResponse(session: SessionWithQuestions) {
         bodyRichtext: sessionQuestion.question.bodyRichtext,
         examYear: sessionQuestion.question.examYear,
         sittingLabel: sessionQuestion.question.sittingLabel,
+        category: sessionQuestion.question.category,
+        subcategory: sessionQuestion.question.subcategory,
+        period: sessionQuestion.question.period,
         unitName: sessionQuestion.question.unit.name,
         moduleName: sessionQuestion.question.unit.module.name,
       },
@@ -252,6 +258,14 @@ const createSessionSchema = z.object({
   examYearFrom: z.number().int().min(1000).max(9999).optional(),
   examYearTo: z.number().int().min(1000).max(9999).optional(),
   sittingLabel: z.string().min(1).max(120).optional(),
+  // Résidanat facets (hb-db/MBset parity, migration 20261106000000).
+  // Singular + plural both accepted; singular wins inside buildQuestionWhere.
+  category: z.string().min(1).max(120).optional(),
+  categories: z.array(z.string().min(1).max(120)).optional(),
+  subcategory: z.string().min(1).max(120).optional(),
+  subcategories: z.array(z.string().min(1).max(120)).optional(),
+  period: z.string().min(1).max(120).optional(),
+  periods: z.array(z.string().min(1).max(120)).optional(),
   size: z.number().int().min(1).max(200),
   isOfficialMock: z.boolean().optional().default(false),
   timeLimitSeconds: z.number().int().min(1).optional(),
@@ -280,6 +294,12 @@ export interface BuildSessionParams {
   examYearFrom?: number;
   examYearTo?: number;
   sittingLabel?: string;
+  category?: string;
+  categories?: string[];
+  subcategory?: string;
+  subcategories?: string[];
+  period?: string;
+  periods?: string[];
   size: number;
   isOfficialMock?: boolean;
   timeLimitSeconds?: number;
@@ -305,6 +325,12 @@ export async function buildSessionForUser(userId: string, params: BuildSessionPa
     examYearFrom,
     examYearTo,
     sittingLabel,
+    category,
+    categories,
+    subcategory,
+    subcategories,
+    period,
+    periods,
     size,
     isOfficialMock = false,
     timeLimitSeconds,
@@ -347,6 +373,12 @@ export async function buildSessionForUser(userId: string, params: BuildSessionPa
     examYearFrom,
     examYearTo,
     sittingLabel,
+    category,
+    categories,
+    subcategory,
+    subcategories,
+    period,
+    periods,
     viewerUniversityId,
   });
 
@@ -506,6 +538,12 @@ async function createSession(req: Request, res: Response, next: NextFunction) {
       examYearFrom: body.examYearFrom,
       examYearTo: body.examYearTo,
       sittingLabel: body.sittingLabel,
+      category: body.category,
+      categories: body.categories,
+      subcategory: body.subcategory,
+      subcategories: body.subcategories,
+      period: body.period,
+      periods: body.periods,
       size: body.size,
       isOfficialMock: body.isOfficialMock,
       timeLimitSeconds: body.timeLimitSeconds,
