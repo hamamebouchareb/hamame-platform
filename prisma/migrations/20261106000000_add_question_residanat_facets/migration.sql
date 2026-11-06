@@ -10,21 +10,26 @@
 -- previous migrations' exclusion notes.
 
 -- AlterTable
-ALTER TABLE "questions" ADD COLUMN     "category" TEXT,
-ADD COLUMN     "subcategory" TEXT,
-ADD COLUMN     "period" TEXT;
+-- IF NOT EXISTS: `prisma migrate deploy` could not acquire a session-pool
+-- connection (EMAXCONNSESSION), so this was applied manually over the
+-- transaction pooler first. Idempotency makes the later `migrate deploy`
+-- a no-op. Safe to amend here: the migration has never been deployed, so
+-- no checksum exists anywhere yet.
+ALTER TABLE "questions" ADD COLUMN IF NOT EXISTS "category" TEXT,
+ADD COLUMN IF NOT EXISTS "subcategory" TEXT,
+ADD COLUMN IF NOT EXISTS "period" TEXT;
 
 -- CreateIndex
-CREATE INDEX "questions_exam_year_idx" ON "questions"("exam_year");
+CREATE INDEX IF NOT EXISTS "questions_exam_year_idx" ON "questions"("exam_year");
 
 -- CreateIndex
-CREATE INDEX "questions_sitting_label_idx" ON "questions"("sitting_label");
+CREATE INDEX IF NOT EXISTS "questions_sitting_label_idx" ON "questions"("sitting_label");
 
 -- CreateIndex
-CREATE INDEX "questions_category_idx" ON "questions"("category");
+CREATE INDEX IF NOT EXISTS "questions_category_idx" ON "questions"("category");
 
 -- CreateIndex
-CREATE INDEX "questions_subcategory_idx" ON "questions"("subcategory");
+CREATE INDEX IF NOT EXISTS "questions_subcategory_idx" ON "questions"("subcategory");
 
 -- CreateIndex
-CREATE INDEX "questions_period_idx" ON "questions"("period");
+CREATE INDEX IF NOT EXISTS "questions_period_idx" ON "questions"("period");
