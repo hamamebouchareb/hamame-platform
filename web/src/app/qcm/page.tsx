@@ -229,6 +229,15 @@ export default function QcmPage() {
     >
       <section aria-label={t("qcm.modeAria")} className="mt-section-gap grid grid-cols-1 gap-card-gap md:grid-cols-2">
         <DecisionCard
+          href="/qcm/quiz"
+          title={t("qcm.quizTitle")}
+          description={t("qcm.quizDesc")}
+          points={[t("qcm.quizP1"), t("qcm.quizP2"), t("qcm.quizP3")]}
+          cta={t("qcm.quizCta")}
+          tone="qcm"
+          icon="qcm"
+        />
+        <DecisionCard
           href="/qcm/builder?mode=practice"
           title={t("qcm.practiceTitle")}
           description={t("qcm.practiceDesc")}

@@ -712,6 +712,13 @@ const fr = {
   "qcm.modeAria": "Choix du mode",
   "qcm.freeBadge": "100% gratuit",
   "qcm.practiceTitle": "Créer une session",
+  "qcm.quizTitle": "Créer un Quiz",
+  "qcm.quizDesc":
+    "Quiz Résidanat : choisissez l'épreuve, la spécialité et le thème, puis lancez — correction immédiate avec explications.",
+  "qcm.quizP1": "Filtres Résidanat : épreuve, spécialité, thème",
+  "qcm.quizP2": "10 à 200 questions par quiz",
+  "qcm.quizP3": "Banque des annales officielles par faculté et année",
+  "qcm.quizCta": "Créer un quiz",
   "qcm.practiceDesc":
     "Choisissez votre module, les types de questions et le nombre. Chaque réponse est corrigée immédiatement avec son explication.",
   "qcm.practiceP1": "Filtres par faculté, année, module et unité",
@@ -736,6 +743,11 @@ const fr = {
     "Filtrez par domaine, choisissez les types de questions, puis lancez votre session — la correction suit le mode sélectionné.",
   "qcmBuilder.startError": "Impossible de créer la session. Vérifiez votre connexion et réessayez.",
   "qcmBuilder.footnote": "Les sessions QCM sont gratuites et illimitées pour tous les membres.",
+  // ── Quiz creator (/qcm/quiz) ──
+  "quizBuilder.title": "Créer un Quiz",
+  "quizBuilder.subtitle":
+    "Filtrez par épreuve, spécialité et thème (Résidanat), choisissez le nombre de questions, puis lancez votre quiz — correction immédiate avec explications.",
+  "quizBuilder.footnote": "Les quiz QCM sont gratuits et illimités pour tous les membres.",
   // ── Onboarding (/bienvenue) ──
   "onboard.welcome": "Bienvenue sur Hamame",
   "onboard.intro": "Quatre étapes pour préparer votre espace d'étude.",
@@ -2436,6 +2448,13 @@ const en: Record<I18nKey, string> = {
   "qcm.modeAria": "Choose a mode",
   "qcm.freeBadge": "100% free",
   "qcm.practiceTitle": "Create a session",
+  "qcm.quizTitle": "Create a Quiz",
+  "qcm.quizDesc":
+    "Résidanat quiz: pick the épreuve, specialty, and topic, then launch — immediate grading with explanations.",
+  "qcm.quizP1": "Résidanat filters: épreuve, specialty, topic",
+  "qcm.quizP2": "10 to 200 questions per quiz",
+  "qcm.quizP3": "Official past-paper bank by faculty and year",
+  "qcm.quizCta": "Create a quiz",
   "qcm.practiceDesc":
     "Pick your module, question types, and count. Each answer is graded immediately with its explanation.",
   "qcm.practiceP1": "Filters by faculty, year, module, and unit",
@@ -2459,6 +2478,11 @@ const en: Record<I18nKey, string> = {
   "qcmBuilder.subtitle":
     "Filter by scope, pick question types, then launch your session — grading follows the selected mode.",
   "qcmBuilder.startError": "Could not create the session. Check your connection and try again.",
+  // ── Quiz creator (/qcm/quiz) ──
+  "quizBuilder.title": "Create a Quiz",
+  "quizBuilder.subtitle":
+    "Filter by épreuve, specialty, and topic (Résidanat), pick the question count, then launch — immediate grading with explanations.",
+  "quizBuilder.footnote": "QCM quizzes are free and unlimited for all members.",
   // ── Onboarding (/bienvenue) ──
   "onboard.welcome": "Welcome to Hamame",
   "onboard.intro": "Four steps to set up your study space.",
