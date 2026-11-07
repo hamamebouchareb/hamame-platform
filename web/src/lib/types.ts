@@ -61,6 +61,10 @@ export interface QuestionCountsResponse {
   byModule: Array<{ moduleId: string; count: number }>;
   /** Distinct sittings actually present in scope (untagged rows excluded). */
   sittings: Array<{ examYear: number | null; sittingLabel: string | null; count: number }>;
+  /** Distinct Résidanat facets present in scope (untagged rows excluded). Optional for backward compat with older API shapes. */
+  byPeriod?: Array<{ period: string; count: number }>;
+  byCategory?: Array<{ category: string; count: number }>;
+  bySubcategory?: Array<{ subcategory: string; count: number }>;
 }
 
 export interface LessonSummary {
@@ -113,6 +117,10 @@ export interface SessionQuestionEntry {
     /** P5 player chips (Phase 1 sitting taxonomy; paper-number suffixes fit sittingLabel). */
     examYear: number | null;
     sittingLabel: string | null;
+    /** Résidanat facets (hb-db/MBset parity, null until imported). */
+    category?: string | null;
+    subcategory?: string | null;
+    period?: string | null;
     unitName: string;
     moduleName: string;
   };

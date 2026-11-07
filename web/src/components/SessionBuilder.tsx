@@ -41,6 +41,10 @@ export interface SessionConfig {
   /** Inclusive exam-year range ends; each absent = open-ended. */
   examYearFrom?: number;
   examYearTo?: number;
+  /** Résidanat facets (hb-db/MBset parity); absent = untagged + tagged alike. */
+  category?: string;
+  subcategory?: string;
+  period?: string;
   size: number;
   /** Present only when exam mode with an explicit limit. */
   timeLimitSeconds?: number | null;
@@ -277,6 +281,11 @@ export function SessionBuilder({
   const [sittingLabel, setSittingLabel] = useState("");
   const [examYearFrom, setExamYearFrom] = useState("");
   const [examYearTo, setExamYearTo] = useState("");
+  // Résidanat facets (hb-db/MBset parity). Single-select dropdowns fed by the
+  // counts response's byPeriod/byCategory/bySubcategory (DB-driven, never hardcoded).
+  const [period, setPeriod] = useState("");
+  const [category, setCategory] = useState("");
+  const [subcategory, setSubcategory] = useState("");
   const [size, setSize] = useState(questionCountOptions.includes(20) ? 20 : questionCountOptions[0]);
   const [timeLimitSeconds, setTimeLimitSeconds] = useState<number | null>(null);
   const [resultSort, setResultSort] = useState<ResultSort>("random");
@@ -323,8 +332,24 @@ export function SessionBuilder({
     if (from !== undefined) params.append("examYearFrom", String(from));
     const to = parseSittingYear(examYearTo);
     if (to !== undefined) params.append("examYearTo", String(to));
+    if (period) params.append("period", period);
+    if (category) params.append("category", category);
+    if (subcategory) params.append("subcategory", subcategory);
     return params.toString();
-  }, [facultyId, yearId, moduleIds, questionTypes, source, examYear, sittingLabel, examYearFrom, examYearTo]);
+  }, [
+    facultyId,
+    yearId,
+    moduleIds,
+    questionTypes,
+    source,
+    examYear,
+    sittingLabel,
+    examYearFrom,
+    examYearTo,
+    period,
+    category,
+    subcategory,
+  ]);
 
   const totalQuery = useMemo(() => {
     if (unitIds.length === 0) return null;
@@ -346,6 +371,31 @@ export function SessionBuilder({
     () => new Map((scopeCounts.data?.byModule ?? []).map((entry) => [entry.moduleId, entry.count])),
     [scopeCounts.data]
   );
+
+  // Résidanat facet options: distinct period/category/subcategory actually
+  // present in scope, straight from the counts response — never hardcoded.
+  // Sorted by count desc (server order), label alpha as tiebreak inside option text.
+  const periodOptions = useMemo(
+    () => (scopeCounts.data?.byPeriod ?? []).map((e) => ({ value: e.period, label: `${e.period} (${e.count})` })),
+    [scopeCounts.data]
+  );
+  const categoryOptions = useMemo(
+    () => (scopeCounts.data?.byCategory ?? []).map((e) => ({ value: e.category, label: `${e.category} (${e.count})` })),
+    [scopeCounts.data]
+  );
+  const subcategoryOptions = useMemo(
+    () =>
+      (scopeCounts.data?.bySubcategory ?? []).map((e) => ({
+        value: e.subcategory,
+        label: `${e.subcategory} (${e.count})`,
+      })),
+    [scopeCounts.data]
+  );
+  const hasFacets =
+    (scopeCounts.data?.byPeriod?.length ?? 0) +
+      (scopeCounts.data?.byCategory?.length ?? 0) +
+      (scopeCounts.data?.bySubcategory?.length ?? 0) >
+    0;
 
   // Past-exam picker options: distinct sittings actually present in scope, straight
   // from the counts response — never hardcoded. Year list narrows the label list.
@@ -521,6 +571,9 @@ export function SessionBuilder({
     ...(sittingLabel.trim() ? { sittingLabel: sittingLabel.trim() } : {}),
     ...(parseSittingYear(examYearFrom) !== undefined ? { examYearFrom: parseSittingYear(examYearFrom)! } : {}),
     ...(parseSittingYear(examYearTo) !== undefined ? { examYearTo: parseSittingYear(examYearTo)! } : {}),
+    ...(period ? { period } : {}),
+    ...(category ? { category } : {}),
+    ...(subcategory ? { subcategory } : {}),
     size,
     resultSort,
     showStats,
@@ -909,6 +962,66 @@ export function SessionBuilder({
             disabled={isStarting}
           />
         </div>
+      </fieldset>
+
+      {/* Résidanat facets (hb-db/MBset parity). Options come from the counts
+          response's byPeriod/byCategory/bySubcategory arrays (distinct values
+          actually in scope) — never hardcoded. */}
+      <fieldset>
+        <legend className="mb-2 text-meta font-medium text-text-secondary">{t("builder.residanatFacets")}</legend>
+        {!hasFacets && !scopeCounts.isLoading ? (
+          <p className="rounded-panel border border-border bg-surface-2 px-3 py-2.5 text-meta text-text-tertiary">
+            {t("builder.noFacetDesc")}
+          </p>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Select
+              id="builder-period"
+              label={t("builder.facetPeriod")}
+              value={period}
+              onChange={(event) => setPeriod(event.target.value)}
+              disabled={isStarting || periodOptions.length === 0}
+              title={periodOptions.length === 0 ? t("builder.noFacet") : undefined}
+            >
+              <option value="">{t("builder.allPeriods")}</option>
+              {periodOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+            <Select
+              id="builder-category"
+              label={t("builder.facetCategory")}
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
+              disabled={isStarting || categoryOptions.length === 0}
+              title={categoryOptions.length === 0 ? t("builder.noFacet") : undefined}
+            >
+              <option value="">{t("builder.allCategories")}</option>
+              {categoryOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+            <Select
+              id="builder-subcategory"
+              label={t("builder.facetSubcategory")}
+              value={subcategory}
+              onChange={(event) => setSubcategory(event.target.value)}
+              disabled={isStarting || subcategoryOptions.length === 0}
+              title={subcategoryOptions.length === 0 ? t("builder.noFacet") : undefined}
+            >
+              <option value="">{t("builder.allSubcategories")}</option>
+              {subcategoryOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
       </fieldset>
 
       <div className="grid gap-4 sm:grid-cols-2">
