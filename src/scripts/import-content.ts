@@ -273,6 +273,33 @@ interface CreatedIds {
 
 type Prisma = PrismaClient;
 
+// Supabase pooler drops connections mid-session (P1001/P1017/ENOTFOUND —
+// handoff §34; a single one on a clean path is noise). On a 24k-row batch even
+// a 1% drop rate aborts the run, so every DB call goes through this retry
+// with backoff (max 8 attempts, 1s→16s). Non-transient errors (validation,
+// P2002, etc.) still throw immediately — only connectivity-class errors retry.
+function isTransient(err: unknown): boolean {
+  const code = (err as { code?: string })?.code;
+  if (code === "P1001" || code === "P1017" || code === "P2024") return true;
+  const msg = String((err as Error)?.message ?? "");
+  return /Can't reach database|server has closed|ECONNRESET|ENOTFOUND|EMAXCONNSESSION/i.test(msg);
+}
+
+async function withRetry<T>(label: string, fn: () => Promise<T>): Promise<T> {
+  let delay = 1000;
+  for (let attempt = 1; attempt <= 8; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (!isTransient(err) || attempt === 8) throw err;
+      console.error(`transient DB error at ${label} (attempt ${attempt}/8): ${(err as Error).message.slice(0, 120)} — retrying in ${delay}ms`);
+      await new Promise((r) => setTimeout(r, delay));
+      delay *= 2;
+    }
+  }
+  throw new Error(`unreachable: retry loop exhausted at ${label}`);
+}
+
 /** Lookup-or-create for year/module/unit. Behind --apply only when
  *  `write` is true; with write=false it only reports what WOULD be created
  *  (rows the dry-run flags, since BR-2 never covers curriculum). */
@@ -285,61 +312,81 @@ async function resolveScope(
   plan: string[],
   created: CreatedIds
 ): Promise<Resolved | null> {
-  const faculty = await db.faculty.findUnique({ where: { slug: scope.faculty }, select: { id: true } });
+  const faculty = await withRetry("faculty.findUnique", () =>
+    db.faculty.findUnique({ where: { slug: scope.faculty }, select: { id: true } })
+  );
   if (!faculty) return null;
-  const year = await db.year.findFirst({
-    where: { facultyId: faculty.id, label: scope.year, track: scope.track },
-    select: { id: true },
-  });
+  const year = await withRetry("year.findFirst", () =>
+    db.year.findFirst({
+      where: { facultyId: faculty.id, label: scope.year, track: scope.track },
+      select: { id: true },
+    })
+  );
   let yearId = year?.id ?? null;
   if (!yearId) {
     plan.push(`CREATE year "${scope.year}" [${scope.track}] under ${scope.faculty}`);
     if (!write) return null;
-    const maxYear = await db.year.findFirst({
-      where: { facultyId: faculty.id },
-      orderBy: { orderIndex: "desc" },
-      select: { orderIndex: true },
-    });
-    const createdYear = await db.year.create({
-      data: { facultyId: faculty.id, label: scope.year, track: scope.track, orderIndex: (maxYear?.orderIndex ?? -1) + 1 },
-      select: { id: true },
-    });
+    const maxYear = await withRetry("year.maxOrder", () =>
+      db.year.findFirst({
+        where: { facultyId: faculty.id },
+        orderBy: { orderIndex: "desc" },
+        select: { orderIndex: true },
+      })
+    );
+    const createdYear = await withRetry("year.create", () =>
+      db.year.create({
+        data: { facultyId: faculty.id, label: scope.year, track: scope.track, orderIndex: (maxYear?.orderIndex ?? -1) + 1 },
+        select: { id: true },
+      })
+    );
     yearId = createdYear.id;
     created.years.push(yearId);
     plan.push(`  -> created ${yearId}`);
   }
-  const mod = await db.module.findFirst({ where: { yearId, name: scope.module }, select: { id: true } });
+  const mod = await withRetry("module.findFirst", () =>
+    db.module.findFirst({ where: { yearId, name: scope.module }, select: { id: true } })
+  );
   let moduleId = mod?.id ?? null;
   if (!moduleId) {
     plan.push(`CREATE module "${scope.module}" under year ${yearId}`);
     if (!write) return null;
-    const maxMod = await db.module.findFirst({
-      where: { yearId },
-      orderBy: { orderIndex: "desc" },
-      select: { orderIndex: true },
-    });
-    const createdModule = await db.module.create({
-      data: { yearId, name: scope.module, orderIndex: moduleOrder ?? (maxMod?.orderIndex ?? -1) + 1 },
-      select: { id: true },
-    });
+    const maxMod = await withRetry("module.maxOrder", () =>
+      db.module.findFirst({
+        where: { yearId },
+        orderBy: { orderIndex: "desc" },
+        select: { orderIndex: true },
+      })
+    );
+    const createdModule = await withRetry("module.create", () =>
+      db.module.create({
+        data: { yearId, name: scope.module, orderIndex: moduleOrder ?? (maxMod?.orderIndex ?? -1) + 1 },
+        select: { id: true },
+      })
+    );
     moduleId = createdModule.id;
     created.modules.push(moduleId);
     plan.push(`  -> created ${moduleId}`);
   }
-  const existingUnit = await db.unit.findFirst({ where: { moduleId, name: scope.unit }, select: { id: true } });
+  const existingUnit = await withRetry("unit.findFirst", () =>
+    db.unit.findFirst({ where: { moduleId, name: scope.unit }, select: { id: true } })
+  );
   let unitId = existingUnit?.id ?? null;
   if (!unitId) {
     plan.push(`CREATE unit "${scope.unit}" under module ${moduleId}`);
     if (!write) return null;
-    const maxUnit = await db.unit.findFirst({
-      where: { moduleId },
-      orderBy: { orderIndex: "desc" },
-      select: { orderIndex: true },
-    });
-    const createdUnit = await db.unit.create({
-      data: { moduleId, name: scope.unit, orderIndex: unitOrder ?? (maxUnit?.orderIndex ?? -1) + 1 },
-      select: { id: true },
-    });
+    const maxUnit = await withRetry("unit.maxOrder", () =>
+      db.unit.findFirst({
+        where: { moduleId },
+        orderBy: { orderIndex: "desc" },
+        select: { orderIndex: true },
+      })
+    );
+    const createdUnit = await withRetry("unit.create", () =>
+      db.unit.create({
+        data: { moduleId, name: scope.unit, orderIndex: unitOrder ?? (maxUnit?.orderIndex ?? -1) + 1 },
+        select: { id: true },
+      })
+    );
     unitId = createdUnit.id;
     created.units.push(unitId);
     plan.push(`  -> created ${unitId}`);
@@ -463,20 +510,22 @@ async function main(): Promise<void> {
   async function unitHashes(unitId: string): Promise<Set<string>> {
     const cached = fingerprints.get(unitId);
     if (cached) return cached;
-    const existing = await prisma.question.findMany({
-      where: { unitId },
-      select: {
-        type: true,
-        bodyRichtext: true,
-        examYear: true,
-        sittingLabel: true,
-        category: true,
-        subcategory: true,
-        period: true,
-        explanationRichtext: true,
-        options: { select: { bodyText: true, isCorrect: true } },
-      },
-    });
+    const existing = await withRetry("unitHashes.select", () =>
+      prisma.question.findMany({
+        where: { unitId },
+        select: {
+          type: true,
+          bodyRichtext: true,
+          examYear: true,
+          sittingLabel: true,
+          category: true,
+          subcategory: true,
+          period: true,
+          explanationRichtext: true,
+          options: { select: { bodyText: true, isCorrect: true } },
+        },
+      })
+    );
     const set = new Set<string>();
     for (const q of existing) {
       const body = typeof (q.bodyRichtext as { text?: unknown })?.text === "string"
@@ -570,8 +619,9 @@ async function main(): Promise<void> {
     // --batch 25 needs >5s: measured tmp-tx-latency.ts (9 chunks worth of
     // tx statements), so raise the interactive-transaction ceiling instead of
     // shrinking the batch below the documented default.
-    await prisma.$transaction(async (tx) => {
-      for (const { question, resolved } of chunk) {
+    await withRetry(`chunk ${chunkIndex}`, () =>
+      prisma.$transaction(async (tx) => {
+        for (const { question, resolved } of chunk) {
         const q = question;
         const opts = ((q.options ?? []) as { text?: unknown; correct?: unknown }[]).map((o, orderIndex) => ({
           bodyText: typeof o.text === "string" ? o.text : "",
@@ -602,12 +652,13 @@ async function main(): Promise<void> {
             submittedAt: new Date(),
             options: opts.length > 0 ? { create: opts } : undefined,
           },
-          select: { id: true, options: { select: { id: true } } },
-        });
-        manifest.created.questions.push(created.id);
-        for (const o of created.options) manifest.created.options.push(o.id);
-      }
-    }, { maxWait: 10_000, timeout: 45_000 });
+            select: { id: true, options: { select: { id: true } } },
+          });
+          manifest.created.questions.push(created.id);
+          for (const o of created.options) manifest.created.options.push(o.id);
+        }
+      }, { maxWait: 10_000, timeout: 45_000 })
+    );
     console.log(`chunk ${chunkIndex}/${chunks.length}: wrote ${chunk.length} questions`);
   }
 
