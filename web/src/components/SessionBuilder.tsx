@@ -19,6 +19,8 @@ import type {
   Year,
 } from "@/lib/types";
 
+export type ExamTrack = "all" | "residanat" | "externat";
+
 export type ResultSort = "by_year" | "by_course" | "random";
 
 export interface SessionConfig {
@@ -293,6 +295,12 @@ export function SessionBuilder({
   // P17: once the student picks a time manually, proposals stop overriding it.
   // State (not a ref) so the time-basis hint below can read it during render.
   const [timeTouched, setTimeTouched] = useState(false);
+  // MBset-order filters (hb-db): faculty-name search + Résidanat/Externat track.
+  // Track is derived from the chosen Year label (Résidanat = Year.label==="Résidanat",
+  // Externat = Year 4-6 clinical labels); it only steers yearId, the single source
+  // of truth for the counts query. Externat currently yields 0 — hb-db is Résidanat only.
+  const [facultySearch, setFacultySearch] = useState("");
+  const [examTrack, setExamTrack] = useState<ExamTrack>("all");
 
   const faculties = useApiResource<{ faculties: Faculty[] }>("/faculties");
   const years = useApiResource<{ years: Year[] }>(facultyId ? `/faculties/${facultyId}/years` : null);
@@ -304,6 +312,11 @@ export function SessionBuilder({
 
   const facultyList = useMemo(() => faculties.data?.faculties ?? [], [faculties.data]);
   const yearList = useMemo(() => years.data?.years ?? [], [years.data]);
+  const filteredFacultyList = useMemo(() => {
+    const needle = facultySearch.trim().toLocaleLowerCase("fr");
+    if (!needle) return facultyList;
+    return facultyList.filter((f) => f.name.toLocaleLowerCase("fr").includes(needle));
+  }, [facultyList, facultySearch]);
   const moduleList = useMemo(() => modules.data?.modules ?? [], [modules.data]);
   const unitList = useMemo(
     () => [...(units.data?.units ?? [])].sort((a, b) => a.orderIndex - b.orderIndex),
@@ -407,6 +420,14 @@ export function SessionBuilder({
         .sort((a, b) => b - a),
     [sittings]
   );
+  const sittingYearCounts = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const entry of sittings) {
+      if (entry.examYear === null) continue;
+      map.set(entry.examYear, (map.get(entry.examYear) ?? 0) + entry.count);
+    }
+    return map;
+  }, [sittings]);
   const sittingLabels = useMemo(() => {
     const pickedYear = parseSittingYear(examYear);
     const labels = sittings
@@ -514,12 +535,39 @@ export function SessionBuilder({
     setYearId("");
     setModuleIds([]);
     setUnitIds([]);
+    setFacultySearch("");
+    setExamTrack("all");
   }
 
   function handleYearChange(value: string) {
     setYearId(value);
     setModuleIds([]);
     setUnitIds([]);
+    const label = yearList.find((y) => y.id === value)?.label;
+    if (label === "Résidanat") setExamTrack("residanat");
+    else if (["Year 4", "Year 5", "Year 6"].includes(label ?? "")) setExamTrack("externat");
+    else setExamTrack("all");
+  }
+
+  // MBset order: Résidanat = Year.label "Résidanat", Externat = Year 4-6 clinical
+  // labels. The segmented control only steers yearId (single source of truth);
+  // Externat yields 0 until an externat batch lands — hb-db is Résidanat only.
+  function handleTrackChange(track: ExamTrack) {
+    setExamTrack(track);
+    if (track === "all") {
+      handleYearChange("");
+      return;
+    }
+    const match =
+      track === "residanat"
+        ? yearList.find((y) => y.label === "Résidanat")
+        : yearList.find((y) => ["Year 4", "Year 5", "Year 6"].includes(y.label));
+    handleYearChange(match?.id ?? "");
+  }
+
+  function handleYearChip(value: string) {
+    setExamYear((prev) => (prev === value ? "" : value));
+    setSittingLabel("");
   }
 
   function toggleModuleId(id: string) {
@@ -652,12 +700,23 @@ export function SessionBuilder({
       <fieldset>
         <legend className="mb-2 text-meta font-medium text-text-secondary">{t("builder.scope")}</legend>
         <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <Input
+              id="builder-faculty-search"
+              label={t("builder.facultySearch")}
+              value={facultySearch}
+              onChange={(event) => setFacultySearch(event.target.value)}
+              disabled={isStarting || faculties.isLoading}
+              placeholder={t("builder.facultySearch")}
+            />
+          </div>
+          <div />
           <LabeledSelect
             id="builder-faculty"
             label={t("builder.faculty")}
             value={facultyId}
             onChange={handleFacultyChange}
-            options={facultyList.map((f) => ({ value: f.id, label: f.name }))}
+            options={filteredFacultyList.map((f) => ({ value: f.id, label: f.name }))}
             placeholder={t("builder.allFaculties")}
             loading={faculties.isLoading}
           />
@@ -672,6 +731,34 @@ export function SessionBuilder({
             loading={years.isLoading}
             title={!facultyId ? t("builder.needFaculty") : undefined}
           />
+        </div>
+        <div className="mt-3">
+          <span className="mb-2 block text-meta font-medium text-text-secondary">{t("builder.examTrack")}</span>
+          <div className="flex flex-wrap gap-2" role="group" aria-label={t("builder.examTrack")}>
+            {(
+              [
+                { value: "all", key: "builder.trackAll" },
+                { value: "residanat", key: "builder.trackResidanat" },
+                { value: "externat", key: "builder.trackExternat" },
+              ] as const
+            ).map((option) => (
+              <Button
+                key={option.value}
+                type="button"
+                variant={examTrack === option.value ? "primary" : "outline"}
+                size="sm"
+                onClick={() => handleTrackChange(option.value)}
+                disabled={isStarting || !facultyId}
+                aria-pressed={examTrack === option.value}
+                title={!facultyId ? t("builder.needFaculty") : undefined}
+              >
+                {t(option.key)}
+              </Button>
+            ))}
+          </div>
+          {examTrack === "externat" && countsResolved && liveTotal === 0 ? (
+            <p className="mt-2 text-meta text-text-tertiary">{t("builder.trackExternatEmpty")}</p>
+          ) : null}
         </div>
         {/* Module-level multi-select: checkbox chips with live counts, the same
             pattern as the units list below. Nothing ticked = whole-year scope;
@@ -901,6 +988,40 @@ export function SessionBuilder({
           sittings array (distinct values actually in scope) — never hardcoded. */}
       <fieldset>
         <legend className="mb-2 text-meta font-medium text-text-secondary">{t("builder.pastExam")}</legend>
+        {sittingYears.length > 0 ? (
+          <div className="mb-3">
+            <span className="mb-2 block text-meta font-medium text-text-secondary">{t("builder.yearChips")}</span>
+            <div className="flex flex-wrap gap-2" role="group" aria-label={t("builder.yearChips")}>
+              <Button
+                type="button"
+                variant={examYear === "" ? "primary" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setExamYear("");
+                  setSittingLabel("");
+                }}
+                disabled={isStarting}
+                aria-pressed={examYear === ""}
+              >
+                {t("builder.yearChipsAll")}
+              </Button>
+              {sittingYears.map((year) => (
+                <Button
+                  key={year}
+                  type="button"
+                  variant={examYear === String(year) ? "primary" : "outline"}
+                  size="sm"
+                  onClick={() => handleYearChip(String(year))}
+                  disabled={isStarting}
+                  aria-pressed={examYear === String(year)}
+                >
+                  {year}
+                  <span className="ml-1 opacity-80">{sittingYearCounts.get(year) ?? 0}</span>
+                </Button>
+              ))}
+            </div>
+          </div>
+        ) : null}
         {sittings.length === 0 && !scopeCounts.isLoading ? (
           <p className="rounded-panel border border-border bg-surface-2 px-3 py-2.5 text-meta text-text-tertiary">
             {t("builder.noSittingDesc")}
