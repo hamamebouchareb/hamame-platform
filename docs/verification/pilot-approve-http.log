@@ -1,0 +1,11 @@
+Approval via real API (REVIEWER token minted with src/lib/jwt.ts, reviewer=b5119037 owner, author=27f52f12 seed-author)
+POST /api/review/question/:id/approve for each of the 20 pilot manifest IDs -> all 20 returned 2xx (see pilot-approve.log)
+
+GET /api/questions/counts?yearId=e0af9889-d577-4f34-8ea6-ef4f2736aa8e&types=QCS (guest, no token)
+total=20 sittings=[{2002,"Résidanat 2002",20}] byPeriod=[Clinique 18, Biologie 2] byCategory=[Neurologie 10, Ophtalmologie 3, ORL 3, Parasitologie 2, UMC 2] bySubcategory=16 entries
+
+GET /api/questions?limit=1&category=Parasitologie
+total=2; first question carries examYear=2002, sittingLabel="Résidanat 2002", category="Parasitologie", subcategory="Plasmodium et Paludisme", period="Biologie"; options have NO isCorrect (no answer leak in browse view)
+
+GET /api/questions/counts?yearId=...&category=Parasitologie&types=QCS
+total=2 (narrowed from 20); byModule=[Parasitologie 2]; byPeriod=[Biologie 2]; byCategory stays full [10,3,3,2,2] (chips stay visible while ticking — by design); bySubcategory=2 entries
