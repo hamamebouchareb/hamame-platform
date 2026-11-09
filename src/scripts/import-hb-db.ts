@@ -5,9 +5,12 @@
 // ({ questions: RawQuestion[] }) that src/scripts/import-content.ts can
 // dry-run (`--file ...` no writes) or apply (`--apply --author <uid>`).
 //
-// This script itself NEVER touches the DB — conversion only. It mirrors the
-// import-content curriculum resolution: faculty=slug map, year='Résidanat',
-// track='medecine', module=category, unit=subcategory|'Général'.
+// This script itself NEVER touches the DB — conversion only. Every label goes
+// through src/lib/residanat-taxonomy.ts: faculty=slug map, year='Résidanat',
+// track='medecine', module=category=canonical specialty, unit=subcategory
+// (tidied)|'Général', period=one of the three épreuves, sittingLabel=
+// 'Résidanat <year>[ — <session>]'. Exact repeats inside one paper are
+// dropped; sections dated more than a year ahead are skipped as mislabeled.
 // Combinaison is kept as "Combinaison" here; import-content maps it to QCM
 // at write time (DB has no Combinaison type; scoring grades QCM/QCS only).
 //
@@ -26,22 +29,25 @@
 import { readdirSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { validateQuestion, type RawQuestion } from "./import-validate";
+import {
+  canonicalEpreuve,
+  canonicalSpecialty,
+  facultyByCode,
+  labelKey,
+  RESIDANAT_TRACK,
+  RESIDANAT_YEAR_LABEL,
+  sittingLabelFor,
+  tidyLabel,
+} from "../lib/residanat-taxonomy";
 
 const SRC_ROOT = "hb-db/out-years";
+// Sittings are named by the residency year they open (MBset lists 2027), so
+// next year is valid; anything later is a mislabeled section.
+const LATEST_EXAM_YEAR = new Date().getUTCFullYear() + 1;
 
-// hb-db codes (README_DB.md) → Hamame wilaya faculty slugs (prisma/seed.ts).
-const SLUG_BY_CODE: Record<string, string> = {
-  alg: "fac-alger",
-  set: "fac-setif",
-  ora: "fac-oran",
-  bat: "fac-batna",
-  con: "fac-constantine",
-  ann: "fac-annaba",
-  tiz: "fac-tizi-ouzou",
-  tle: "fac-tlemcen",
-  sba: "fac-sidi-bel-abbes",
-  bli: "fac-blida",
-};
+// Raw categories with no taxonomy entry — reported, never silently renamed.
+const unmapped = new Map<string, number>();
+let droppedDuplicates = 0;
 
 interface Args {
   out: string;
@@ -152,28 +158,35 @@ function convertSection(sectionName: string, sectionDir: string, limit: number |
   const code = sectionName.slice(0, dash);
   const yearStr = sectionName.slice(dash + 1);
   const examYear = Number(yearStr);
-  const faculty = SLUG_BY_CODE[code];
-  if (!faculty || !Number.isInteger(examYear)) return [];
+  const faculty = facultyByCode(code)?.slug;
+  if (!faculty || !Number.isInteger(examYear) || examYear > LATEST_EXAM_YEAR) return [];
 
   const quizPath = join(sectionDir, "quiz.json");
   const raw = JSON.parse(readFileSync(quizPath, "utf8")) as HbQuestion[];
   const expl = loadExpl(sectionDir);
 
   const rows: RawQuestion[] = [];
+  const seenInPaper = new Set<string>();
   const slice = limit === null ? raw : raw.slice(0, limit);
   for (const q of slice) {
-    const category = str(q.category);
-    if (!category) continue; // noCat=0 in data; skip defensively (no module)
-    const subcategoryRaw = str(q.subcategory) || "Général";
-    const subcategory = subcategoryRaw.slice(0, 120); // validator cap; labels only
-    const period = facet(q.period) ? facet(q.period)!.slice(0, 120) : null;
-    const type = str(q.type) || "QCM";
-    const body =
-      q.isGroup === true || (q.casStory && str(q.casStory).length > 0)
-        ? str(q.casStory)
-          ? `${str(q.casStory)}\n\n${str(q.text)}`
-          : str(q.text)
-        : str(q.text);
+    const rawCategory = tidyLabel(str(q.category));
+    if (!rawCategory) continue;
+    const specialty = canonicalSpecialty(rawCategory);
+    if (!specialty) unmapped.set(rawCategory, (unmapped.get(rawCategory) ?? 0) + 1);
+    const category = (specialty ?? rawCategory).slice(0, 120);
+    const topic = tidyLabel(str(q.subcategory)).slice(0, 120);
+    const unit = topic || "Général";
+    const isClinicalCase = q.isGroup === true || str(q.casStory).length > 0;
+    const period = canonicalEpreuve(str(q.period), category, isClinicalCase);
+    const body = str(q.casStory) ? `${str(q.casStory)}\n\n${str(q.text)}` : str(q.text);
+
+    const choices = Array.isArray(q.choices) ? (q.choices as HbChoice[]) : [];
+    const dedupeKey = labelKey(body) + "#" + choices.map((c) => labelKey(str(c.text))).join("|");
+    if (seenInPaper.has(dedupeKey)) {
+      droppedDuplicates++;
+      continue;
+    }
+    seenInPaper.add(dedupeKey);
 
     // Combinaison stores the key as combined strings ("ABCDE" = all five),
     // QCM/QCS as single letters. Expand combined strings into letters.
@@ -186,34 +199,39 @@ function convertSection(sectionName: string, sectionDir: string, limit: number |
         }
       }
     }
-    const mappedType = type === "Combinaison" ? "Combinaison" : type;
+    const rawType = str(q.type) || "QCM";
+    // A "QCS" keyed with several letters is graded as a QCM in the real paper.
+    const type = rawType === "QCS" && correctLetters.size > 1 ? "QCM" : rawType;
     let options: { text: string; correct: boolean }[] = [];
-    if (mappedType !== "QROC") {
-      const choices = Array.isArray(q.choices) ? (q.choices as HbChoice[]) : [];
+    if (type !== "QROC") {
       options = choices.map((c) => ({
         text: str(c.text),
         correct: correctLetters.has(str(c.letter)),
       }));
     }
-    const explanation = buildExplanation(q, expl);
+    // Source gap (no expl/main): state the key only, never invent reasoning —
+    // ai:backfill-explanations enriches these later.
+    const explanation =
+      buildExplanation(q, expl) ||
+      (correctLetters.size > 0 ? `Réponse${correctLetters.size > 1 ? "s" : ""} : ${[...correctLetters].sort().join(", ")}.` : "");
 
     rows.push({
       faculty,
-      year: "Résidanat",
-      track: "medecine",
+      year: RESIDANAT_YEAR_LABEL,
+      track: RESIDANAT_TRACK,
       module: category,
-      unit: subcategory,
-      type: mappedType,
+      unit,
+      type,
       source: "official_exam",
       difficulty: null,
       body,
       options,
       explanation,
       examYear,
-      sittingLabel: `Résidanat ${examYear}`,
+      sittingLabel: sittingLabelFor(examYear, str(q.period)),
       university: null,
       category,
-      subcategory: subcategory === "Général" ? facet(q.subcategory) : subcategory.slice(0, 120),
+      subcategory: topic || null,
       period,
     });
   }
@@ -263,7 +281,16 @@ function main(): void {
       for (const e of errors) rejectReasons.set(e.reason, (rejectReasons.get(e.reason) ?? 0) + 1);
     }
   }
-  console.log(`converted=${questions.length} valid=${valid} rejected=${rejected}`);
+  console.log(`converted=${questions.length} valid=${valid} rejected=${rejected} droppedDuplicates=${droppedDuplicates}`);
+  const specialties = new Map<string, number>();
+  for (const q of questions) specialties.set(String(q.category), (specialties.get(String(q.category)) ?? 0) + 1);
+  console.log(`specialties: ${specialties.size}`);
+  for (const [name, n] of [...specialties.entries()].sort((a, b) => b[1] - a[1])) console.log(`  ${n}  ${name}`);
+  const periods = new Map<string, number>();
+  for (const q of questions) periods.set(String(q.period), (periods.get(String(q.period)) ?? 0) + 1);
+  console.log(`épreuves: ${JSON.stringify(Object.fromEntries(periods))}`);
+  console.log(`unmapped raw categories (kept as-is): ${unmapped.size}`);
+  for (const [name, n] of unmapped) console.log(`  ${n}x ${name}`);
   console.log("reject reasons (top 20):");
   for (const [reason, n] of [...rejectReasons.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20)) {
     console.log(`  ${n}x ${reason}`);

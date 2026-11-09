@@ -16,6 +16,8 @@ export interface QuestionFilterInput {
   moduleId?: string;
   moduleIds?: string[];
   yearId?: string;
+  // Stage label ('Résidanat') — scopes across faculties without year ids.
+  yearLabel?: string;
   facultyId?: string;
   type?: string;
   types?: string[];
@@ -27,6 +29,8 @@ export interface QuestionFilterInput {
   // NULL (untagged) questions never match a sitting filter — only an explicit
   // choice the student made should narrow to tagged sittings.
   examYear?: number;
+  // Multi-sitting pick (MedSpark year tiles). Ignored when examYear is set.
+  examYears?: number[];
   examYearFrom?: number;
   examYearTo?: number;
   sittingLabel?: string;
@@ -70,6 +74,8 @@ export function buildQuestionWhere(input: QuestionFilterInput): Prisma.QuestionW
 
   if (input.examYear !== undefined) {
     where.examYear = input.examYear;
+  } else if (input.examYears && input.examYears.length > 0) {
+    where.examYear = { in: input.examYears };
   } else if (input.examYearFrom !== undefined || input.examYearTo !== undefined) {
     where.examYear = {
       ...(input.examYearFrom !== undefined ? { gte: input.examYearFrom } : {}),
@@ -116,6 +122,9 @@ export function buildQuestionWhere(input: QuestionFilterInput): Prisma.QuestionW
   };
   if (input.facultyId) {
     yearFilter.facultyId = input.facultyId;
+  }
+  if (input.yearLabel) {
+    yearFilter.label = input.yearLabel;
   }
 
   const moduleFilter: Prisma.ModuleWhereInput = { year: yearFilter };

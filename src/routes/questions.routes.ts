@@ -164,6 +164,12 @@ const typeArrayQueryParam = z.preprocess((value) => {
   return parts.map((part) => String(part).trim()).filter((part) => part.length > 0);
 }, z.array(questionTypeQueryEnum).optional());
 
+const yearArrayQueryParam = z.preprocess((value) => {
+  if (value === undefined) return undefined;
+  const parts = Array.isArray(value) ? value : String(value).split(",");
+  return parts.map((part) => Number(String(part).trim())).filter((part) => Number.isFinite(part));
+}, z.array(z.number().int().min(1000).max(9999)).max(60).optional());
+
 const countsQuerySchema = z.object({
   facultyId: z.string().uuid().optional(),
   yearId: z.string().uuid().optional(),
@@ -177,9 +183,11 @@ const countsQuerySchema = z.object({
   types: typeArrayQueryParam,
   source: z.enum(["official_exam", "hamame_authored", "ai_generated"]).optional(),
   examYear: z.coerce.number().int().min(1000).max(9999).optional(),
+  examYears: yearArrayQueryParam,
   examYearFrom: z.coerce.number().int().min(1000).max(9999).optional(),
   examYearTo: z.coerce.number().int().min(1000).max(9999).optional(),
   sittingLabel: z.string().min(1).max(120).optional(),
+  yearLabel: z.string().min(1).max(60).optional(),
   // Résidanat facets (hb-db/MBset parity). Singular exact-match + plural
   // multi-select; both accepted so chips (plural) and deep links (singular)
   // share one endpoint.
@@ -203,9 +211,11 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
       types,
       source,
       examYear,
+      examYears,
       examYearFrom,
       examYearTo,
       sittingLabel,
+      yearLabel,
       category,
       categories,
       subcategory,
@@ -218,7 +228,7 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
     // Same scoping as the list endpoint: guests resolve to null = global only.
     const viewerUniversityId = await resolveViewerUniversityId(prisma, req.auth?.userId);
 
-    const sittingScope = { examYear, examYearFrom, examYearTo, sittingLabel };
+    const sittingScope = { examYear, examYears, examYearFrom, examYearTo, sittingLabel };
     const facetScope = { category, categories, subcategory, subcategories, period, periods };
 
     // 1. Live counter: the exact filter set the session would be created with.
@@ -229,6 +239,7 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
       moduleIds,
       yearId,
       facultyId,
+      yearLabel,
       types: typeList,
       source,
       ...sittingScope,
@@ -244,6 +255,7 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
         moduleId,
         yearId,
         facultyId,
+        yearLabel,
         types: typeList,
         source,
         ...sittingScope,
@@ -266,6 +278,7 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
       const yearWhere = buildQuestionWhere({
         yearId,
         facultyId,
+        yearLabel,
         types: typeList,
         source,
         ...sittingScope,
@@ -308,6 +321,7 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
       moduleIds,
       yearId,
       facultyId,
+      yearLabel,
       types: typeList,
       source,
       ...facetScope,
@@ -342,6 +356,7 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
       moduleIds,
       yearId,
       facultyId,
+      yearLabel,
       types: typeList,
       source,
       ...sittingScope,
@@ -383,26 +398,98 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
           .map((g) => ({ category: g.category as string, count: g._count._all }))
           .sort((a, b) => b.count - a.count || a.category.localeCompare(b.category))
       );
-    const bySubcategory = await prisma.question
+    // Topics only make sense inside picked specialties (thousands otherwise).
+    const hasSpecialty = Boolean(category) || (categories?.length ?? 0) > 0;
+    const bySubcategory = !hasSpecialty
+      ? []
+      : await prisma.question
+          .groupBy({
+            by: ["subcategory"],
+            where: buildQuestionWhere({
+              ...facetBase,
+              category,
+              categories,
+              period,
+              periods,
+            }),
+            _count: { _all: true },
+          })
+          .then((groups) =>
+            groups
+              .filter((g) => g.subcategory !== null && g.subcategory.trim().length > 0)
+              .map((g) => ({ subcategory: g.subcategory as string, count: g._count._all }))
+              .sort((a, b) => b.count - a.count || a.subcategory.localeCompare(b.subcategory))
+          );
+
+    // 6. Résidanat builder chips (MBset "whose paper" + "years"): per-exam-year
+    // counts without the year selection, per-faculty counts without the
+    // faculty selection; every other filter kept.
+    const byExamYear = await prisma.question
       .groupBy({
-        by: ["subcategory"],
+        by: ["examYear"],
         where: buildQuestionWhere({
-          ...facetBase,
-          category,
-          categories,
-          period,
-          periods,
+          unitIds,
+          moduleId,
+          moduleIds,
+          yearId,
+          facultyId,
+          yearLabel,
+          types: typeList,
+          source,
+          sittingLabel,
+          ...facetScope,
+          viewerUniversityId,
         }),
         _count: { _all: true },
       })
       .then((groups) =>
         groups
-          .filter((g) => g.subcategory !== null && g.subcategory.trim().length > 0)
-          .map((g) => ({ subcategory: g.subcategory as string, count: g._count._all }))
-          .sort((a, b) => b.count - a.count || a.subcategory.localeCompare(b.subcategory))
+          .filter((g) => g.examYear !== null)
+          .map((g) => ({ examYear: g.examYear as number, count: g._count._all }))
+          .sort((a, b) => b.examYear - a.examYear)
       );
 
-    res.status(200).json({ total, byUnit, byModule, sittings, byPeriod, byCategory, bySubcategory });
+    const facultyUnitGroups = await prisma.question.groupBy({
+      by: ["unitId"],
+      where: buildQuestionWhere({
+        yearLabel,
+        types: typeList,
+        source,
+        ...sittingScope,
+        ...facetScope,
+        viewerUniversityId,
+      }),
+      _count: { _all: true },
+    });
+    let byFaculty: Array<{ facultyId: string; count: number }> = [];
+    if (facultyUnitGroups.length > 0) {
+      const units = await prisma.unit.findMany({
+        where: { id: { in: facultyUnitGroups.map((group) => group.unitId) } },
+        select: { id: true, module: { select: { year: { select: { facultyId: true } } } } },
+      });
+      const facultyByUnitId = new Map(units.map((unit) => [unit.id, unit.module.year.facultyId]));
+      const countByFacultyId = new Map<string, number>();
+      for (const group of facultyUnitGroups) {
+        const rolledFacultyId = facultyByUnitId.get(group.unitId);
+        if (!rolledFacultyId) continue;
+        countByFacultyId.set(rolledFacultyId, (countByFacultyId.get(rolledFacultyId) ?? 0) + group._count._all);
+      }
+      byFaculty = [...countByFacultyId.entries()]
+        .map(([rolledId, count]) => ({ facultyId: rolledId, count }))
+        .sort((a, b) => b.count - a.count);
+    }
+
+    res.status(200).json({
+      total,
+      byUnit,
+      byModule,
+      sittings,
+      byPeriod,
+      byCategory,
+      bySubcategory,
+      byExamYear,
+      byFaculty,
+    });
   } catch (err) {
     next(err);
   }

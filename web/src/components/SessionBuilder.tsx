@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { cx } from "@/lib/cx";
 import { useLanguage } from "@/context/LanguageContext";
 import type { I18nKey } from "@/lib/i18n";
@@ -9,71 +9,34 @@ import { Button } from "@/components/Button";
 import { ErrorState } from "@/components/ErrorState";
 import { Input, Select } from "@/components/Field";
 import { Icon } from "@/components/Icon";
-import type {
-  CurriculumModule,
-  Faculty,
-  QuestionCountsResponse,
-  QuestionSource,
-  QuestionType,
-  Unit,
-  Year,
-} from "@/lib/types";
+import type { Faculty, QuestionCountsResponse, QuestionType } from "@/lib/types";
 
 export type ResultSort = "by_year" | "by_course" | "random";
 
+/** Stage every Résidanat question lives under (src/lib/residanat-taxonomy.ts). */
+export const RESIDANAT_YEAR_LABEL = "Résidanat";
+
 export interface SessionConfig {
   mode: "practice" | "exam";
-  /** Auto-generated display name sent as the session's `name`. */
   name: string;
+  yearLabel: string;
   facultyId?: string;
-  yearId?: string;
-  /** Multi-select of modules. Empty/absent = whole-year scope. */
-  moduleIds?: string[];
-  /** Multi-select of units ("courses") inside THE single ticked module. Only sent
-   * when exactly one module is selected — multi-module scope covers whole modules. */
-  unitIds?: string[];
+  /** Sitting years; empty = every year. */
+  examYears: number[];
+  /** Épreuves; empty = the whole paper. */
+  periods: string[];
+  /** Canonical specialties; empty = every specialty. */
+  categories: string[];
+  /** Topics inside the picked specialties; empty = every topic. */
+  subcategories: string[];
   questionTypes: QuestionType[];
-  /** Raw DB `source` value; absent = all sources. */
-  source?: QuestionSource;
-  /** Past-exam sitting scope; absent = untagged + tagged alike. */
-  examYear?: number;
-  sittingLabel?: string;
-  /** Inclusive exam-year range ends; each absent = open-ended. */
-  examYearFrom?: number;
-  examYearTo?: number;
-  /** Résidanat facets (hb-db/MBset parity); absent = untagged + tagged alike. */
-  category?: string;
-  subcategory?: string;
-  period?: string;
   size: number;
-  /** Present only when exam mode with an explicit limit. */
   timeLimitSeconds?: number | null;
-  /** FR-15 — result ordering, sent as the API's `sort` param. */
   resultSort: ResultSort;
-  /** FR-16 — detailed statistics on the results screen (inline switch). */
   showStats: boolean;
 }
 
-export interface SessionBuilderProps {
-  /** Preselected correction mode (used by the QCM entry point's "Examen" action). */
-  initialMode?: "practice" | "exam";
-  /** Preselect the student's own faculty/year once the lists load. */
-  initialFacultyId?: string | null;
-  initialYearId?: string | null;
-  /** One-shot hydration from a previous session's derived config echo
-   * ("repeat my last quiz"). Applied once on mount; faculty/year still come from
-   * the initialFacultyId/initialYearId preselect (the echo has no faculty/year). */
-  prefill?: SessionBuilderPrefill | null;
-  onStart: (config: SessionConfig) => void;
-  isStarting?: boolean;
-  startError?: string | null;
-  questionCountOptions?: number[];
-  className?: string;
-}
-
-/** Prefill payload derived from a previous session's config echo. `size` is
- * snapped to the nearest questionCountOptions value inside the builder (an echo
- * size can be a daily-limit truncation, not a selectable preset). */
+/** "Repeat my last quiz" hydration (the session echo carries settings, not scope). */
 export interface SessionBuilderPrefill {
   mode: "practice" | "exam";
   size: number;
@@ -81,1056 +44,612 @@ export interface SessionBuilderPrefill {
   resultSort: ResultSort;
   showStats: boolean;
   questionTypes: QuestionType[];
-  moduleIds: string[];
-  unitIds: string[];
 }
 
-const QUESTION_TYPE_OPTIONS: { value: QuestionType; labelKey: I18nKey }[] = [
-  { value: "QCM", labelKey: "builder.typeQcm" },
-  { value: "QCS", labelKey: "builder.typeQcs" },
-  { value: "QROC", labelKey: "builder.typeQroc" },
-  { value: "CLINICAL_CASE", labelKey: "builder.typeClinical" },
-];
+export interface SessionBuilderProps {
+  initialMode?: "practice" | "exam";
+  initialFacultyId?: string | null;
+  prefill?: SessionBuilderPrefill | null;
+  onStart: (config: SessionConfig) => void;
+  isStarting?: boolean;
+  startError?: string | null;
+  className?: string;
+}
 
+const MAX_SIZE = 200;
+const SIZE_PRESETS = [10, 20, 40, 60, 100, 200];
 const TIME_LIMIT_VALUES_MINUTES: (number | null)[] = [null, 10, 15, 30, 45, 60, 90, 120];
 
-/** Fixed preset labels (minutes/hours inflect per language — never hard-code). */
-function timeLimitLabel(
-  value: number | null,
-  t: (
-    key: "builder.noLimit" | "builder.minutes" | "builder.oneHour" | "builder.oneHourThirty" | "builder.twoHours",
-    vars?: Record<string, string | number | null | undefined>
-  ) => string
-): string {
-  if (value === null) return t("builder.noLimit");
-  if (value === 60) return t("builder.oneHour");
-  if (value === 90) return t("builder.oneHourThirty");
-  if (value === 120) return t("builder.twoHours");
-  return t("builder.minutes", { n: value });
+const TYPE_OPTIONS: { value: QuestionType; labelKey: I18nKey }[] = [
+  { value: "QCS", labelKey: "rb.typeQcs" },
+  { value: "QCM", labelKey: "rb.typeQcm" },
+  { value: "QROC", labelKey: "rb.typeQroc" },
+];
+
+const ORDER_OPTIONS: { value: ResultSort; labelKey: I18nKey }[] = [
+  { value: "random", labelKey: "rb.orderRandom" },
+  { value: "by_year", labelKey: "rb.orderYear" },
+  { value: "by_course", labelKey: "rb.orderCourse" },
+];
+
+function toggle<T>(list: T[], value: T): T[] {
+  return list.includes(value) ? list.filter((entry) => entry !== value) : [...list, value];
+}
+
+/** "Faculté de Médecine d'Alger" → "Alger" for chips and quiz names. */
+function facultyShortName(name: string): string {
+  return name.replace(/^Facult[ée] de M[ée]decine\s*(—\s*|d'|de\s+)/i, "").trim() || name;
+}
+
+function yearsLabel(years: number[]): string {
+  const sorted = [...years].sort((a, b) => a - b);
+  if (sorted.length === 0) return "";
+  if (sorted.length <= 5) return sorted.join(", ");
+  return `${sorted[0]}–${sorted[sorted.length - 1]}`;
+}
+
+function Chip({
+  selected,
+  onClick,
+  disabled,
+  count,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+  count?: number;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onClick}
+      disabled={disabled}
+      className={cx(
+        "inline-flex min-h-touch-target items-center gap-2 rounded-pill border px-3 text-body transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50",
+        selected
+          ? "border-accent-qcm bg-accent-qcm text-white"
+          : "border-border bg-surface-2 text-text-primary hover:bg-surface-3"
+      )}
+    >
+      <span className="truncate">{children}</span>
+      {count !== undefined ? (
+        <span
+          className={cx(
+            "shrink-0 rounded-pill px-1.5 text-meta font-semibold",
+            selected ? "bg-white/20 text-white" : "bg-surface-3 text-text-secondary"
+          )}
+        >
+          {count}
+        </span>
+      ) : null}
+    </button>
+  );
+}
+
+function Step({
+  index,
+  title,
+  done,
+  hint,
+  aside,
+  children,
+}: {
+  index: number;
+  title: string;
+  done: boolean;
+  hint?: string;
+  aside?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
+      <header className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="inline-flex items-center gap-2 text-meta font-semibold uppercase tracking-wide text-text-secondary">
+          <span
+            aria-hidden
+            className={cx(
+              "inline-flex h-6 w-6 items-center justify-center rounded-control text-meta font-bold",
+              done ? "bg-accent-qcm text-white" : "bg-surface-3 text-text-secondary"
+            )}
+          >
+            {done ? "✓" : index}
+          </span>
+          {title}
+        </h2>
+        {aside}
+      </header>
+      {children}
+      {hint ? <p className="mt-2 text-meta text-text-tertiary">{hint}</p> : null}
+    </section>
+  );
 }
 
 /**
- * P17 sitting time preset: seconds of exam time budgeted per question when a
- * sitting is selected in exam mode. HAMAME'S OWN CONVENTION — not copied from
- * anywhere: the live reference shows no per-paper time, so this derives from
- * the live question counter instead (count × this constant, rounded up to the
- * nearest TIME_LIMIT_VALUES_MINUTES preset). The student can always override.
+ * Résidanat session builder, MBset "by exam paper" flow on Hamame's own bank:
+ * faculty → sitting years → épreuve → (optional) specialties → topics, then
+ * the settings panel. Every chip and count comes from GET /questions/counts,
+ * where each facet excludes its own selection so picked chips stay visible.
  */
-const EXAM_SECONDS_PER_QUESTION = 90;
-
-/** Smallest TIME_LIMIT_VALUES_MINUTES preset >= seconds (null = no-limit excluded). */
-function presetForSeconds(seconds: number): number | null {
-  const minutes = seconds / 60;
-  for (const value of TIME_LIMIT_VALUES_MINUTES) {
-    if (value !== null && value >= minutes) return value * 60;
-  }
-  return 120 * 60;
-}
-
-const RESULT_SORT_OPTIONS: { value: ResultSort; labelKey: I18nKey }[] = [
-  { value: "random", labelKey: "builder.sortRandom" },
-  { value: "by_year", labelKey: "builder.sortByYear" },
-  { value: "by_course", labelKey: "builder.sortByCourse" },
-];
-
-/** Raw DB source values with the same labels as the session player's
- * formatSource — deliberately NOT Externat/Résidanat: the questions table has no
- * sitting taxonomy, and relabeling provenance as sittings would invent a mapping. */
-const SOURCE_OPTIONS: { value: "" | QuestionSource; labelKey: I18nKey }[] = [
-  { value: "", labelKey: "builder.sourceAll" },
-  { value: "official_exam", labelKey: "builder.sourceOfficial" },
-  { value: "hamame_authored", labelKey: "builder.sourceHamame" },
-  { value: "ai_generated", labelKey: "builder.sourceAi" },
-];
-
-/** Parses a sitting-year input; undefined unless a plausible 4-digit year. */
-function parseSittingYear(value: string): number | undefined {
-  if (!/^\d{4}$/.test(value.trim())) return undefined;
-  const year = Number(value);
-  return year >= 1000 && year <= 9999 ? year : undefined;
-}
-
-interface SelectOption {
-  value: string;
-  label: string;
-}
-
-/** Cascade select: shared Select with the builder's loading-placeholder row.
- *  `title` carries the disabled-with-reason microcopy (valid select attr,
- *  passed straight through). */
-function LabeledSelect({
-  id,
-  label,
-  value,
-  onChange,
-  options,
-  placeholder,
-  disabled,
-  loading,
-  title,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: SelectOption[];
-  placeholder: string;
-  disabled?: boolean;
-  loading?: boolean;
-  /** Task 3c reason microcopy, mirroring the reference disabled-with-reason pattern. */
-  title?: string;
-}) {
-  const { t } = useLanguage();
-  return (
-    <Select
-      id={id}
-      label={label}
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      disabled={disabled || loading}
-      title={title}
-    >
-      <option value="">{loading ? t("builder.loadingShort") : placeholder}</option>
-      {options.map((option) => (
-        <option key={option.value} value={option.value}>
-          {option.label}
-        </option>
-      ))}
-    </Select>
-  );
-}
-
-/** Inline switch row (FR-16: exam mode and statistics toggles live inside the builder,
- * not on a separate screen). role="switch" keeps it accessible without a UI kit. */
-function SwitchRow({
-  id,
-  label,
-  description,
-  checked,
-  onChange,
-  disabled,
-}: {
-  id: string;
-  label: string;
-  description: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  disabled?: boolean;
-}) {
-  const { t } = useLanguage();
-  return (
-    <div className="flex items-start justify-between gap-4 rounded-panel border border-border bg-surface-2 px-3 py-2.5">
-      <span className="min-w-0">
-        <label htmlFor={id} className="block text-body text-text-primary">
-          {label}
-        </label>
-        <span className="mt-0.5 block text-meta text-text-tertiary">{description}</span>
-      </span>
-      <button
-        type="button"
-        id={id}
-        role="switch"
-        aria-checked={checked}
-        aria-label={`${label} — ${checked ? t("builder.switchOn") : t("builder.switchOff")}`}
-        disabled={disabled}
-        onClick={() => onChange(!checked)}
-        className={cx(
-          "relative mt-0.5 inline-flex h-6 w-11 shrink-0 rounded-pill border transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50",
-          checked ? "border-accent-qcm bg-accent-qcm" : "border-border bg-surface-3"
-        )}
-      >
-        <span
-          aria-hidden
-          className={cx(
-            "pointer-events-none absolute left-[2px] top-[2px] inline-block h-[18px] w-[18px] rounded-pill bg-surface-1 shadow transition-transform",
-            checked && "translate-x-[22px]"
-          )}
-        />
-      </button>
-    </div>
-  );
-}
-
-/** Session configuration form: correction mode, curriculum cascade, question types,
- * count, result ordering, and the FR-16 inline exam/statistics switches. Emits a
- * ready-to-post SessionConfig. */
 export function SessionBuilder({
   initialMode = "practice",
   initialFacultyId = null,
-  initialYearId = null,
   prefill = null,
   onStart,
   isStarting = false,
   startError,
-  questionCountOptions = [5, 10, 20, 30, 50],
   className,
 }: SessionBuilderProps) {
   const { t } = useLanguage();
   const [mode, setMode] = useState<"practice" | "exam">(initialMode);
   const [facultyId, setFacultyId] = useState("");
-  const [yearId, setYearId] = useState("");
-  // Multi-module scope: empty = whole year; exactly one = units selectable; two or
-  // more = whole-module scope per module (units UI hidden, see disclosure below).
-  const [moduleIds, setModuleIds] = useState<string[]>([]);
-  const [unitIds, setUnitIds] = useState<string[]>([]);
-  const [questionTypes, setQuestionTypes] = useState<QuestionType[]>(["QCM", "QCS"]);
-  const [source, setSource] = useState<"" | QuestionSource>("");
-  // Past-exam picker + period filter. Year stored as string for the select; the
-  // sitting list stays DB-driven (distinct values present in scope, never hardcoded).
-  const [examYear, setExamYear] = useState("");
-  const [sittingLabel, setSittingLabel] = useState("");
-  const [examYearFrom, setExamYearFrom] = useState("");
-  const [examYearTo, setExamYearTo] = useState("");
-  // Résidanat facets (hb-db/MBset parity). Single-select dropdowns fed by the
-  // counts response's byPeriod/byCategory/bySubcategory (DB-driven, never hardcoded).
-  const [period, setPeriod] = useState("");
-  const [category, setCategory] = useState("");
-  const [subcategory, setSubcategory] = useState("");
-  const [size, setSize] = useState(questionCountOptions.includes(20) ? 20 : questionCountOptions[0]);
+  const [examYears, setExamYears] = useState<number[]>([]);
+  const [periods, setPeriods] = useState<string[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [subcategories, setSubcategories] = useState<string[]>([]);
+  const [specialtySearch, setSpecialtySearch] = useState("");
+  const [topicSearch, setTopicSearch] = useState("");
+  const [questionTypes, setQuestionTypes] = useState<QuestionType[]>(["QCS", "QCM"]);
+  const [size, setSize] = useState(40);
   const [timeLimitSeconds, setTimeLimitSeconds] = useState<number | null>(null);
   const [resultSort, setResultSort] = useState<ResultSort>("random");
   const [showStats, setShowStats] = useState(true);
-  // P17: once the student picks a time manually, proposals stop overriding it.
-  // State (not a ref) so the time-basis hint below can read it during render.
-  const [timeTouched, setTimeTouched] = useState(false);
+  const [name, setName] = useState("");
+  const [nameTouched, setNameTouched] = useState(false);
 
   const faculties = useApiResource<{ faculties: Faculty[] }>("/faculties");
-  const years = useApiResource<{ years: Year[] }>(facultyId ? `/faculties/${facultyId}/years` : null);
-  const modules = useApiResource<{ modules: CurriculumModule[] }>(yearId ? `/years/${yearId}/modules` : null);
-  // Units fetch only makes sense for a single ticked module (multi-module scope
-  // covers whole modules, so the units list is not even rendered then).
-  const singleModuleId = moduleIds.length === 1 ? moduleIds[0] : "";
-  const units = useApiResource<{ units: Unit[] }>(singleModuleId ? `/modules/${singleModuleId}/units` : null);
 
-  const facultyList = useMemo(() => faculties.data?.faculties ?? [], [faculties.data]);
-  const yearList = useMemo(() => years.data?.years ?? [], [years.data]);
-  const moduleList = useMemo(() => modules.data?.modules ?? [], [modules.data]);
-  const unitList = useMemo(
-    () => [...(units.data?.units ?? [])].sort((a, b) => a.orderIndex - b.orderIndex),
-    [units.data]
-  );
-
-  // Live counts (GET /api/questions/counts, same visibility rules as the list).  // Two queries: the scope call (no unitIds) feeds stable per-unit/per-module badges
-  // plus the counter when nothing is ticked; the total call adds the ticked unitIds
-  // and feeds the counter only when boxes are checked. Badges deliberately exclude
-  // the unit selection so they don't jitter while ticking.
-  const scopeQuery = useMemo(() => {
+  const countsQuery = useMemo(() => {
     const params = new URLSearchParams();
+    params.append("yearLabel", RESIDANAT_YEAR_LABEL);
     if (facultyId) params.append("facultyId", facultyId);
-    if (yearId) params.append("yearId", yearId);
-    // moduleId (singular) additionally when exactly one module is ticked — it
-    // unlocks the per-unit badges. moduleIds always carries the ticked set (the
-    // backend treats the pair as the same filter when they coincide).
-    if (moduleIds.length === 1) params.append("moduleId", moduleIds[0]);
-    for (const id of moduleIds) params.append("moduleIds", id);
+    if (examYears.length > 0) params.append("examYears", examYears.join(","));
+    for (const period of periods) params.append("periods", period);
+    for (const category of categories) params.append("categories", category);
+    for (const subcategory of subcategories) params.append("subcategories", subcategory);
     for (const type of questionTypes) params.append("types", type);
-    if (source) params.append("source", source);
-    const pickedYear = parseSittingYear(examYear);
-    if (pickedYear !== undefined) params.append("examYear", String(pickedYear));
-    if (sittingLabel.trim()) params.append("sittingLabel", sittingLabel.trim());
-    const from = parseSittingYear(examYearFrom);
-    if (from !== undefined) params.append("examYearFrom", String(from));
-    const to = parseSittingYear(examYearTo);
-    if (to !== undefined) params.append("examYearTo", String(to));
-    if (period) params.append("period", period);
-    if (category) params.append("category", category);
-    if (subcategory) params.append("subcategory", subcategory);
     return params.toString();
-  }, [
-    facultyId,
-    yearId,
-    moduleIds,
-    questionTypes,
-    source,
-    examYear,
-    sittingLabel,
-    examYearFrom,
-    examYearTo,
-    period,
-    category,
-    subcategory,
-  ]);
+  }, [facultyId, examYears, periods, categories, subcategories, questionTypes]);
 
-  const totalQuery = useMemo(() => {
-    if (unitIds.length === 0) return null;
-    const params = new URLSearchParams(scopeQuery);
-    for (const id of unitIds) params.append("unitIds", id);
-    return params.toString();
-  }, [scopeQuery, unitIds]);
+  const counts = useApiResource<QuestionCountsResponse>(`/questions/counts?${countsQuery}`);
+  const data = counts.data;
 
-  const scopeCounts = useApiResource<QuestionCountsResponse>(`/questions/counts?${scopeQuery}`);
-  const totalCounts = useApiResource<QuestionCountsResponse>(
-    totalQuery ? `/questions/counts?${totalQuery}` : null
+  const facultyById = useMemo(
+    () => new Map((faculties.data?.faculties ?? []).map((faculty) => [faculty.id, faculty])),
+    [faculties.data]
   );
-
-  const countByUnitId = useMemo(
-    () => new Map((scopeCounts.data?.byUnit ?? []).map((entry) => [entry.unitId, entry.count])),
-    [scopeCounts.data]
-  );
-  const countByModuleId = useMemo(
-    () => new Map((scopeCounts.data?.byModule ?? []).map((entry) => [entry.moduleId, entry.count])),
-    [scopeCounts.data]
-  );
-
-  // Résidanat facet options: distinct period/category/subcategory actually
-  // present in scope, straight from the counts response — never hardcoded.
-  // Sorted by count desc (server order), label alpha as tiebreak inside option text.
-  const periodOptions = useMemo(
-    () => (scopeCounts.data?.byPeriod ?? []).map((e) => ({ value: e.period, label: `${e.period} (${e.count})` })),
-    [scopeCounts.data]
-  );
-  const categoryOptions = useMemo(
-    () => (scopeCounts.data?.byCategory ?? []).map((e) => ({ value: e.category, label: `${e.category} (${e.count})` })),
-    [scopeCounts.data]
-  );
-  const subcategoryOptions = useMemo(
+  const facultyChips = useMemo(
     () =>
-      (scopeCounts.data?.bySubcategory ?? []).map((e) => ({
-        value: e.subcategory,
-        label: `${e.subcategory} (${e.count})`,
-      })),
-    [scopeCounts.data]
+      (data?.byFaculty ?? [])
+        .filter((entry) => facultyById.has(entry.facultyId))
+        .map((entry) => ({
+          id: entry.facultyId,
+          label: facultyShortName(facultyById.get(entry.facultyId)!.name),
+          count: entry.count,
+        })),
+    [data, facultyById]
   );
-  const hasFacets =
-    (scopeCounts.data?.byPeriod?.length ?? 0) +
-      (scopeCounts.data?.byCategory?.length ?? 0) +
-      (scopeCounts.data?.bySubcategory?.length ?? 0) >
-    0;
+  const yearChips = useMemo(() => data?.byExamYear ?? [], [data]);
+  const availableYears = useMemo(() => yearChips.map((entry) => entry.examYear), [yearChips]);
+  const periodChips = useMemo(() => data?.byPeriod ?? [], [data]);
+  const specialtyChips = useMemo(() => {
+    const needle = specialtySearch.trim().toLowerCase();
+    return (data?.byCategory ?? []).filter(
+      (entry) => categories.includes(entry.category) || entry.category.toLowerCase().includes(needle)
+    );
+  }, [data, specialtySearch, categories]);
+  const topicChips = useMemo(() => {
+    const needle = topicSearch.trim().toLowerCase();
+    return (data?.bySubcategory ?? []).filter(
+      (entry) => subcategories.includes(entry.subcategory) || entry.subcategory.toLowerCase().includes(needle)
+    );
+  }, [data, topicSearch, subcategories]);
 
-  // Past-exam picker options: distinct sittings actually present in scope, straight
-  // from the counts response — never hardcoded. Year list narrows the label list.
-  const sittings = useMemo(() => scopeCounts.data?.sittings ?? [], [scopeCounts.data]);
-  const sittingYears = useMemo(
-    () =>
-      [...new Set(sittings.map((entry) => entry.examYear))]
-        .filter((year): year is number => year !== null)
-        .sort((a, b) => b - a),
-    [sittings]
-  );
-  const sittingLabels = useMemo(() => {
-    const pickedYear = parseSittingYear(examYear);
-    const labels = sittings
-      .filter(
-        (entry) =>
-          entry.sittingLabel !== null && (pickedYear === undefined || entry.examYear === pickedYear)
-      )
-      .map((entry) => entry.sittingLabel as string);
-    return [...new Set(labels)].sort((a, b) => a.localeCompare(b, "fr"));
-  }, [sittings, examYear]);
+  const total = data?.total;
+  const effectiveSize = Math.max(1, Math.min(size, MAX_SIZE, total ?? MAX_SIZE));
 
-  // Effective live counter: scope total when nothing is ticked (no second request),
-  // unit-restricted total otherwise.
-  const liveTotal = unitIds.length === 0 ? scopeCounts.data?.total : totalCounts.data?.total;
-  const countsLoading =
-    unitIds.length === 0 ? scopeCounts.isLoading : totalCounts.isLoading || scopeCounts.isLoading;
-  const countsError = totalQuery ? (totalCounts.error ?? scopeCounts.error) : scopeCounts.error;
-  const countsResolved = liveTotal !== undefined && !countsLoading;
-  const emptyResult = countsResolved && liveTotal === 0;
-
-  function refetchCounts() {
-    scopeCounts.refetch();
-    if (totalQuery) totalCounts.refetch();
-  }
-
-  // Preselect the student's own faculty/year once their lists resolve (guarded by
-  // existence checks so a hidden faculty or stale year id simply leaves the fields
-  // untouched). Same sync-with-external-system convention as useApiResource / the
-  // dashboard's localStorage read.
+  // Preselect the student's own faculty once it is known to carry questions.
+  const facultyPreselected = useRef(false);
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (!facultyId && initialFacultyId && facultyList.some((f) => f.id === initialFacultyId)) {
+    if (facultyPreselected.current || !initialFacultyId) return;
+    if (facultyChips.some((chip) => chip.id === initialFacultyId)) {
+      facultyPreselected.current = true;
       setFacultyId(initialFacultyId);
     }
-  }, [facultyId, initialFacultyId, facultyList]);
+  }, [initialFacultyId, facultyChips]);
 
+  const prefillApplied = useRef(false);
   useEffect(() => {
-    if (facultyId && !yearId && initialYearId && yearList.some((y) => y.id === initialYearId)) {
-      setYearId(initialYearId);
-    }
-  }, [facultyId, yearId, initialYearId, yearList]);
-  /* eslint-enable react-hooks/set-state-in-effect */
-
-  // One-shot prefill from a previous session's config echo ("repeat my last quiz").
-  // Ref guard keeps it idempotent under StrictMode's double effect invocation.
-  // An echoed time limit counts as a prior explicit choice (timeTouched), so the
-  // P17 sitting preset never overrides it.
-  const prefillAppliedRef = useRef(false);
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    if (!prefill || prefillAppliedRef.current) return;
-    prefillAppliedRef.current = true;
+    if (!prefill || prefillApplied.current) return;
+    prefillApplied.current = true;
     setMode(prefill.mode);
-    if (prefill.questionTypes.length > 0) setQuestionTypes(prefill.questionTypes);
-    if (prefill.moduleIds.length > 0) setModuleIds(prefill.moduleIds);
-    if (prefill.unitIds.length > 0) setUnitIds(prefill.unitIds);
+    setSize(Math.min(Math.max(prefill.size, 1), MAX_SIZE));
     setResultSort(prefill.resultSort);
     setShowStats(prefill.showStats);
-    // Echo size can be a daily-limit truncation (e.g. 17) — snap to the nearest
-    // selectable preset so the count select stays consistent.
-    setSize(
-      questionCountOptions.reduce(
-        (best, value) => (Math.abs(value - prefill.size) < Math.abs(best - prefill.size) ? value : best),
-        questionCountOptions[0]
-      )
-    );
-    if (prefill.timeLimitSeconds !== undefined && prefill.timeLimitSeconds !== null) {
-      setTimeLimitSeconds(prefill.timeLimitSeconds);
-      setTimeTouched(true);
-    }
-  }, [prefill, questionCountOptions]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+    const types = prefill.questionTypes.filter((type) => TYPE_OPTIONS.some((option) => option.value === type));
+    if (types.length > 0) setQuestionTypes(types);
+    if (prefill.timeLimitSeconds) setTimeLimitSeconds(prefill.timeLimitSeconds);
+  }, [prefill]);
 
-  // Prefill safety net: drop echoed module ids absent from the loaded year's
-  // module list (student changed faculty/year since that quiz). Runs only when
-  // the list itself changes — ticking modules never touches moduleList.
-  /* eslint-disable react-hooks/set-state-in-effect */
+  // Topics belong to specialties: dropping a specialty drops its topics.
   useEffect(() => {
-    if (moduleList.length === 0) return;
-    setModuleIds((prev) =>
-      prev.length === 0 || prev.every((id) => moduleList.some((m) => m.id === id))
-        ? prev
-        : prev.filter((id) => moduleList.some((m) => m.id === id))
-    );
-  }, [moduleList]);
+    if (categories.length === 0 && subcategories.length > 0) setSubcategories([]);
+  }, [categories, subcategories.length]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // P17 sitting time preset: in exam mode with a sitting picked, propose a time
-  // limit from the live counter (count × EXAM_SECONDS_PER_QUESTION, rounded up
-  // to a preset). Manual picks win permanently (timeTouchedRef); clearing the
-  // sitting leaves the current value alone rather than yanking it.
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    if (mode !== "exam" || timeTouched) return;
-    const sittingPicked =
-      parseSittingYear(examYear) !== undefined || sittingLabel.trim() !== "";
-    if (!sittingPicked) return;
-    if (liveTotal === undefined || liveTotal <= 0) return;
-    setTimeLimitSeconds(presetForSeconds(liveTotal * EXAM_SECONDS_PER_QUESTION));
-  }, [mode, examYear, sittingLabel, liveTotal, timeTouched]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  const facultyLabel = facultyId ? facultyShortName(facultyById.get(facultyId)?.name ?? "") : "";
+  const autoName = [RESIDANAT_YEAR_LABEL, facultyLabel, yearsLabel(examYears)].filter(Boolean).join(" ");
+  const sessionName = nameTouched && name.trim() ? name.trim() : autoName;
 
-  function handleFacultyChange(value: string) {
-    setFacultyId(value);
-    setYearId("");
-    setModuleIds([]);
-    setUnitIds([]);
+  function pickLastYears(n: number | null) {
+    setExamYears(n === null ? [] : availableYears.slice(0, n));
   }
 
-  function handleYearChange(value: string) {
-    setYearId(value);
-    setModuleIds([]);
-    setUnitIds([]);
-  }
-
-  function toggleModuleId(id: string) {
-    const next = moduleIds.includes(id) ? moduleIds.filter((m) => m !== id) : [...moduleIds, id];
-    setModuleIds(next);
-    // Units belong to one specific module. Whenever the effective single module
-    // changes (ticking the first, the second, or unticking down to a different
-    // one), the unit selection is no longer guaranteed valid — clear it.
-    const nextSingle = next.length === 1 ? next[0] : "";
-    const currentSingle = moduleIds.length === 1 ? moduleIds[0] : "";
-    if (nextSingle !== currentSingle) setUnitIds([]);
-  }
-
-  function toggleUnitId(id: string) {
-    setUnitIds((prev) => (prev.includes(id) ? prev.filter((entry) => entry !== id) : [...prev, id]));
-  }
-
-  function toggleQuestionType(type: QuestionType) {
-    setQuestionTypes((prev) => (prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]));
-  }
-
-  const selectedFaculty = facultyList.find((f) => f.id === facultyId);
-  const selectedYear = yearList.find((y) => y.id === yearId);
-  const selectedModules = moduleList.filter((m) => moduleIds.includes(m.id));
-  const selectedUnits = unitList.filter((u) => unitIds.includes(u.id));
-  // Module chip badges carry their live counts once the year scope has loaded.
-  const showModuleCounts = scopeCounts.data !== null && yearId !== "";
-  const modulesLabel = selectedModules.map((m) => m.name).join(" + ") || null;
-  const scopeName =
-    selectedUnits.length > 1 && selectedModules.length === 1
-      ? `${selectedModules[0].name} · ${t("builder.scopeUnits", { count: selectedUnits.length })}`
-      : (selectedUnits[0]?.name ??
-        modulesLabel ??
-        selectedYear?.label ??
-        selectedFaculty?.name ??
-        null);
+  const yearPreset =
+    examYears.length === 0
+      ? "all"
+      : [3, 5].find(
+          (n) => examYears.length === n && availableYears.slice(0, n).every((year) => examYears.includes(year))
+        ) ?? null;
 
   const config: SessionConfig = {
     mode,
-    name: `${mode === "practice" ? t("builder.namePractice") : t("builder.nameExam")}${scopeName ? ` — ${scopeName}` : ""}`,
+    name: sessionName,
+    yearLabel: RESIDANAT_YEAR_LABEL,
     ...(facultyId ? { facultyId } : {}),
-    ...(yearId ? { yearId } : {}),
-    ...(moduleIds.length > 0 ? { moduleIds } : {}),
-    // Units only travel with a single-module scope (units section is gated to it).
-    ...(moduleIds.length === 1 && unitIds.length > 0 ? { unitIds } : {}),
+    examYears,
+    periods,
+    categories,
+    subcategories,
     questionTypes,
-    ...(source ? { source } : {}),
-    ...(parseSittingYear(examYear) !== undefined ? { examYear: parseSittingYear(examYear)! } : {}),
-    ...(sittingLabel.trim() ? { sittingLabel: sittingLabel.trim() } : {}),
-    ...(parseSittingYear(examYearFrom) !== undefined ? { examYearFrom: parseSittingYear(examYearFrom)! } : {}),
-    ...(parseSittingYear(examYearTo) !== undefined ? { examYearTo: parseSittingYear(examYearTo)! } : {}),
-    ...(period ? { period } : {}),
-    ...(category ? { category } : {}),
-    ...(subcategory ? { subcategory } : {}),
-    size,
+    size: effectiveSize,
     resultSort,
     showStats,
     ...(mode === "exam" ? { timeLimitSeconds } : {}),
   };
 
+  const canStart = !isStarting && questionTypes.length > 0 && (total ?? 0) > 0;
+
   return (
     <form
-      className={cx("flex flex-col gap-5 rounded-card border border-border bg-surface-1 p-card-padding shadow-card", className)}
+      className={cx("flex flex-col gap-4", className)}
       onSubmit={(event) => {
         event.preventDefault();
-        onStart(config);
+        if (canStart) onStart(config);
       }}
     >
-      {/* FR-16 — exam mode + statistics as inline switches, same flow as the rest of
-          the builder (no separate screen/step). */}
-      <fieldset>
-        <legend className="mb-2 text-meta font-medium text-text-secondary">{t("builder.modeDisplay")}</legend>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => setMode("practice")}
-            disabled={isStarting}
-            aria-pressed={mode === "practice"}
-            className={cx(
-              "flex min-h-touch-target flex-col items-start gap-1 rounded-control border px-3 py-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50",
-              mode === "practice"
-                ? "border-accent-qcm bg-accent-qcm/15 text-text-primary"
-                : "border-border bg-surface-2 text-text-secondary hover:bg-surface-3"
-            )}
-          >
-            <span className="inline-flex items-center gap-2 text-body font-semibold">
-              <Icon name="qcm" size={18} />
-              {t("qcm.practiceTitle")}
-            </span>
-            <span className="text-caption">{t("builder.examModeOff")}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("exam")}
-            disabled={isStarting}
-            aria-pressed={mode === "exam"}
-            className={cx(
-              "flex min-h-touch-target flex-col items-start gap-1 rounded-control border px-3 py-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50",
-              mode === "exam"
-                ? "border-accent-secondary bg-accent-secondary/15 text-text-primary"
-                : "border-border bg-surface-2 text-text-secondary hover:bg-surface-3"
-            )}
-          >
-            <span className="inline-flex items-center gap-2 text-body font-semibold">
-              <Icon name="simulations" size={18} />
-              {t("builder.nameExam")}
-            </span>
-            <span className="text-caption">{t("builder.examModeOn")}</span>
-          </button>
-        </div>
-        <div className="mt-2 flex flex-col gap-2">
-          <SwitchRow
-            id="builder-show-stats"
-            label={t("builder.showStats")}
-            description={t("builder.showStatsDesc")}
-            checked={showStats}
-            onChange={setShowStats}
-            disabled={isStarting}
-          />
-        </div>
-        {/* 3d trust copy: exam-mode withholding, stated exactly as implemented
-            (Phase 2 rule) — renders in exam mode only, next to the switch. */}
-        {mode === "exam" ? (
-          <p className="mt-2 rounded-panel border border-border bg-surface-2 px-3 py-2.5 text-meta text-text-secondary">
-            {t("builder.examTrust")}
-          </p>
-        ) : null}
-      </fieldset>
+      <Input
+        id="builder-name"
+        label={t("rb.quizName")}
+        value={nameTouched ? name : autoName}
+        onChange={(event) => {
+          setNameTouched(true);
+          setName(event.target.value);
+        }}
+        disabled={isStarting}
+      />
 
-      <fieldset>
-        <legend className="mb-2 text-meta font-medium text-text-secondary">{t("builder.scope")}</legend>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <LabeledSelect
-            id="builder-faculty"
-            label={t("builder.faculty")}
-            value={facultyId}
-            onChange={handleFacultyChange}
-            options={facultyList.map((f) => ({ value: f.id, label: f.name }))}
-            placeholder={t("builder.allFaculties")}
-            loading={faculties.isLoading}
-          />
-          <LabeledSelect
-            id="builder-year"
-            label={t("builder.year")}
-            value={yearId}
-            onChange={handleYearChange}
-            options={yearList.map((y) => ({ value: y.id, label: y.label }))}
-            placeholder={t("builder.allYears")}
-            disabled={!facultyId}
-            loading={years.isLoading}
-            title={!facultyId ? t("builder.needFaculty") : undefined}
-          />
-        </div>
-        {/* Module-level multi-select: checkbox chips with live counts, the same
-            pattern as the units list below. Nothing ticked = whole-year scope;
-            two or more ticked = whole-module scope per module (units UI hides). */}
-        <div className="mt-3">
-          <span id="builder-modules-label" className="mb-2 block text-meta font-medium text-text-secondary">
-            {t("builder.modulesLegend")}
-            {moduleIds.length > 0
-              ? ` ${t(
-                  moduleIds.length === 1 ? "builder.modulesSelectedOne" : "builder.modulesSelectedMany",
-                  { count: moduleIds.length }
-                )}`
-              : ""}
-          </span>
-          {!yearId ? (
-            <p className="rounded-panel border border-border bg-surface-2 px-3 py-2.5 text-meta text-text-tertiary">
-              {t("builder.needYear")}
-            </p>
-          ) : modules.isLoading && moduleList.length === 0 ? (
-            <p className="rounded-panel border border-border bg-surface-2 px-3 py-2.5 text-meta text-text-tertiary">
-              {t("builder.loadingShort")}
-            </p>
-          ) : moduleList.length === 0 ? (
-            <p className="rounded-panel border border-border bg-surface-2 px-3 py-2.5 text-meta text-text-tertiary">
-              {t("builder.noModules")}
-            </p>
-          ) : (
-            <>
-              <div className="mb-2 flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setModuleIds(moduleList.map((m) => m.id))}
-                  disabled={isStarting}
-                >
-                  {t("builder.allModules")}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setModuleIds([])}
-                  disabled={isStarting}
-                >
-                  {t("builder.modulesNoneWholeYear")}
-                </Button>
-              </div>
-              <ul aria-labelledby="builder-modules-label" className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                {moduleList.map((m) => {
-                  const checked = moduleIds.includes(m.id);
-                  const badge = showModuleCounts ? String(countByModuleId.get(m.id) ?? 0) : "…";
-                  return (
-                    <li key={m.id}>
-                      <label
-                        className={cx(
-                          "flex min-h-touch-target cursor-pointer items-center gap-2 rounded-panel border bg-surface-2 px-3 text-body text-text-primary transition duration-200 hover:bg-surface-3 has-[:checked]:border-accent-qcm has-[:checked]:bg-accent-qcm/10",
-                          checked ? "border-accent-qcm" : "border-border"
-                        )}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleModuleId(m.id)}
-                          disabled={isStarting}
-                          className="h-4 w-4 shrink-0 accent-[var(--color-accent-qcm)]"
-                        />
-                        <span className="min-w-0 flex-1 truncate">{m.name}</span>
-                        <span
-                          aria-label={t("builder.badgeQuestions", { badge })}
-                          className="shrink-0 rounded-pill border border-border bg-surface-3 px-2 py-0.5 text-meta font-semibold text-text-secondary"
-                        >
-                          {badge}
-                        </span>
-                      </label>
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
-          )}
-        </div>
-        {/* Course-level multi-select (units carry the questions): checkbox list with
-            live count badges. Nothing ticked = whole module scope. */}
-        <div className="mt-3">
-          <span id="builder-units-label" className="mb-2 block text-meta font-medium text-text-secondary">
-            {t("builder.units")}{unitIds.length > 0 ? ` ${t(unitIds.length === 1 ? "builder.selectedOne" : "builder.selectedMany", { count: unitIds.length })}` : ""}
-          </span>
-          {moduleIds.length === 0 ? (
-            <p className="rounded-panel border border-border bg-surface-2 px-3 py-2.5 text-meta text-text-tertiary">
-              {t("builder.needModule")}
-            </p>
-          ) : moduleIds.length > 1 ? (
-            <p className="rounded-panel border border-border bg-surface-2 px-3 py-2.5 text-meta text-text-tertiary">
-              {t("builder.unitsNeedOneModule")}
-            </p>
-          ) : units.isLoading && unitList.length === 0 ? (
-            <p className="rounded-panel border border-border bg-surface-2 px-3 py-2.5 text-meta text-text-tertiary">
-              {t("builder.loadingUnits")}
-            </p>
-          ) : unitList.length === 0 ? (
-            <p className="rounded-panel border border-border bg-surface-2 px-3 py-2.5 text-meta text-text-tertiary">
-              {t("builder.noUnits")}
-            </p>
-          ) : (
-            <>
-              <div className="mb-2 flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setUnitIds(unitList.map((u) => u.id))}
-                  disabled={isStarting}
-                >
-                  {t("builder.all")}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setUnitIds([])}
-                  disabled={isStarting}
-                >
-                  {t("builder.noneWholeModule")}
-                </Button>
-              </div>
-              <ul aria-labelledby="builder-units-label" className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                {unitList.map((unit) => {
-                  const checked = unitIds.includes(unit.id);
-                  const badge =
-                    scopeCounts.data !== null ? String(countByUnitId.get(unit.id) ?? 0) : "…";
-                  return (
-                    <li key={unit.id}>
-                      <label
-                        className={cx(
-                          "flex min-h-touch-target cursor-pointer items-center gap-2 rounded-panel border bg-surface-2 px-3 text-body text-text-primary transition duration-200 hover:bg-surface-3 has-[:checked]:border-accent-qcm has-[:checked]:bg-accent-qcm/10",
-                          checked ? "border-accent-qcm" : "border-border"
-                        )}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleUnitId(unit.id)}
-                          disabled={isStarting}
-                          className="h-4 w-4 shrink-0 accent-[var(--color-accent-qcm)]"
-                        />
-                        <span className="min-w-0 flex-1 truncate">{unit.name}</span>
-                        <span
-                          aria-label={t("builder.badgeQuestions", { badge })}
-                          className="shrink-0 rounded-pill border border-border bg-surface-3 px-2 py-0.5 text-meta font-semibold text-text-secondary"
-                        >
-                          {badge}
-                        </span>
-                      </label>
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
-          )}
+      <Step index={1} title={t("rb.stepFaculty")} done={facultyId !== ""}>
+        <div className="flex flex-wrap gap-2">
+          <Chip selected={facultyId === ""} onClick={() => setFacultyId("")} disabled={isStarting}>
+            {t("rb.allFaculties")}
+          </Chip>
+          {facultyChips.map((chip) => (
+            <Chip
+              key={chip.id}
+              selected={facultyId === chip.id}
+              onClick={() => setFacultyId(facultyId === chip.id ? "" : chip.id)}
+              count={chip.count}
+              disabled={isStarting}
+            >
+              {chip.label}
+            </Chip>
+          ))}
         </div>
         {faculties.error ? (
-          <ErrorState
-            className="mt-2"
-            message={t("builder.facultiesError")}
-            onRetry={faculties.refetch}
-          />
+          <ErrorState className="mt-2" message={t("builder.facultiesError")} onRetry={faculties.refetch} />
         ) : null}
-      </fieldset>
+      </Step>
 
-      <fieldset>
-        <legend className="mb-2 text-meta font-medium text-text-secondary">{t("builder.questionTypes")}</legend>
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
-          {QUESTION_TYPE_OPTIONS.map((option) => {
-            const checked = questionTypes.includes(option.value);
-            return (
-              <label
-                key={option.value}
+      <Step
+        index={2}
+        title={t("rb.stepYears")}
+        done={examYears.length > 0}
+        hint={examYears.length > 0 ? yearsLabel(examYears) : t("rb.noYear")}
+      >
+        <div className="mb-3 flex flex-wrap gap-2">
+          <Chip selected={yearPreset === 3} onClick={() => pickLastYears(3)} disabled={isStarting}>
+            {t("rb.last3")}
+          </Chip>
+          <Chip selected={yearPreset === 5} onClick={() => pickLastYears(5)} disabled={isStarting}>
+            {t("rb.last5")}
+          </Chip>
+          <Chip selected={yearPreset === "all"} onClick={() => pickLastYears(null)} disabled={isStarting}>
+            {t("rb.allYears")}
+          </Chip>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {yearChips.map((entry) => (
+            <Chip
+              key={entry.examYear}
+              selected={examYears.includes(entry.examYear)}
+              onClick={() => setExamYears(toggle(examYears, entry.examYear))}
+              count={entry.count}
+              disabled={isStarting}
+            >
+              {entry.examYear}
+            </Chip>
+          ))}
+        </div>
+      </Step>
+
+      <Step index={3} title={t("rb.stepPaper")} done={periods.length > 0}>
+        <div className="flex flex-wrap gap-2">
+          <Chip selected={periods.length === 0} onClick={() => setPeriods([])} disabled={isStarting}>
+            {t("rb.allPaper")}
+          </Chip>
+          {periodChips.map((entry) => (
+            <Chip
+              key={entry.period}
+              selected={periods.includes(entry.period)}
+              onClick={() => setPeriods(toggle(periods, entry.period))}
+              count={entry.count}
+              disabled={isStarting}
+            >
+              {entry.period}
+            </Chip>
+          ))}
+        </div>
+      </Step>
+
+      <Step
+        index={4}
+        title={t("rb.stepSpecialties")}
+        done={categories.length > 0}
+        hint={t("rb.specialtiesHint")}
+        aside={
+          categories.length > 0 ? (
+            <Button type="button" variant="ghost" size="sm" onClick={() => setCategories([])} disabled={isStarting}>
+              {t("rb.clear")}
+            </Button>
+          ) : null
+        }
+      >
+        <Input
+          id="builder-specialty-search"
+          label={t("rb.searchSpecialty")}
+          value={specialtySearch}
+          onChange={(event) => setSpecialtySearch(event.target.value)}
+          disabled={isStarting}
+        />
+        <div className="mt-3 flex max-h-80 flex-wrap gap-2 overflow-y-auto">
+          {specialtyChips.map((entry) => (
+            <Chip
+              key={entry.category}
+              selected={categories.includes(entry.category)}
+              onClick={() => setCategories(toggle(categories, entry.category))}
+              count={entry.count}
+              disabled={isStarting}
+            >
+              {entry.category}
+            </Chip>
+          ))}
+        </div>
+      </Step>
+
+      {categories.length > 0 ? (
+        <Step
+          index={5}
+          title={t("rb.stepTopics")}
+          done={subcategories.length > 0}
+          hint={t("rb.topicsHint")}
+          aside={
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setSubcategories(topicChips.map((entry) => entry.subcategory))}
+                disabled={isStarting || topicChips.length === 0}
+              >
+                {t("rb.selectAll")}
+              </Button>
+              {subcategories.length > 0 ? (
+                <Button type="button" variant="ghost" size="sm" onClick={() => setSubcategories([])} disabled={isStarting}>
+                  {t("rb.clear")}
+                </Button>
+              ) : null}
+            </div>
+          }
+        >
+          <Input
+            id="builder-topic-search"
+            label={t("rb.searchTopic")}
+            value={topicSearch}
+            onChange={(event) => setTopicSearch(event.target.value)}
+            disabled={isStarting}
+          />
+          <div className="mt-3 flex max-h-80 flex-wrap gap-2 overflow-y-auto">
+            {topicChips.map((entry) => (
+              <Chip
+                key={entry.subcategory}
+                selected={subcategories.includes(entry.subcategory)}
+                onClick={() => setSubcategories(toggle(subcategories, entry.subcategory))}
+                count={entry.count}
+                disabled={isStarting}
+              >
+                {entry.subcategory}
+              </Chip>
+            ))}
+          </div>
+        </Step>
+      ) : null}
+
+      <section className="flex flex-col gap-4 rounded-card border border-border bg-surface-1 p-card-padding shadow-card">
+        <h2 className="text-meta font-semibold uppercase tracking-wide text-text-secondary">{t("rb.settings")}</h2>
+
+        <fieldset>
+          <legend className="mb-2 text-meta font-medium text-text-secondary">{t("rb.mode")}</legend>
+          <div className="grid grid-cols-2 gap-2">
+            {(["practice", "exam"] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={mode === value}
+                onClick={() => setMode(value)}
+                disabled={isStarting}
                 className={cx(
-                          "flex min-h-touch-target cursor-pointer items-center gap-2 rounded-panel border bg-surface-2 px-3 text-body text-text-primary transition duration-200 hover:bg-surface-3 has-[:checked]:border-accent-qcm has-[:checked]:bg-accent-qcm/10",
-                  checked ? "border-accent-qcm" : "border-border"
+                  "flex min-h-touch-target flex-col items-start gap-1 rounded-control border px-3 py-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50",
+                  mode === value
+                    ? "border-accent-qcm bg-accent-qcm/15 text-text-primary"
+                    : "border-border bg-surface-2 text-text-secondary hover:bg-surface-3"
                 )}
               >
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() => toggleQuestionType(option.value)}
-                  disabled={isStarting}
-                  className="h-4 w-4 shrink-0 accent-[var(--color-accent-qcm)]"
-                />
-                {t(option.labelKey)}
-              </label>
-            );
-          })}
-        </div>
-      </fieldset>
+                <span className="inline-flex items-center gap-2 text-body font-semibold">
+                  <Icon name={value === "practice" ? "qcm" : "simulations"} size={18} />
+                  {t(value === "practice" ? "rb.practice" : "rb.exam")}
+                </span>
+                <span className="text-caption">{t(value === "practice" ? "rb.practiceDesc" : "rb.examDesc")}</span>
+              </button>
+            ))}
+          </div>
+          {mode === "exam" ? (
+            <p className="mt-2 rounded-panel border border-border bg-surface-2 px-3 py-2.5 text-meta text-text-secondary">
+              {t("builder.examTrust")}
+            </p>
+          ) : null}
+        </fieldset>
 
-      <fieldset>
-        <legend className="mb-2 text-meta font-medium text-text-secondary">{t("builder.source")}</legend>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          {SOURCE_OPTIONS.map((option) => {
-            const checked = source === option.value;
-            return (
-              <label
-                key={option.labelKey}
-                className={cx(
-                          "flex min-h-touch-target cursor-pointer items-center gap-2 rounded-panel border bg-surface-2 px-3 text-body text-text-primary transition duration-200 hover:bg-surface-3 has-[:checked]:border-accent-qcm has-[:checked]:bg-accent-qcm/10",
-                  checked ? "border-accent-qcm" : "border-border"
-                )}
+        <fieldset>
+          <legend className="mb-2 text-meta font-medium text-text-secondary">{t("rb.count")}</legend>
+          <div className="flex flex-wrap items-center gap-2">
+            {SIZE_PRESETS.map((preset) => (
+              <Chip
+                key={preset}
+                selected={effectiveSize === preset}
+                onClick={() => setSize(preset)}
+                disabled={isStarting || (total !== undefined && preset > total && preset !== SIZE_PRESETS[0])}
               >
-                <input
-                  type="radio"
-                  name="builder-source"
-                  checked={checked}
-                  onChange={() => setSource(option.value)}
-                  disabled={isStarting}
-                  className="h-4 w-4 shrink-0 accent-[var(--color-accent-qcm)]"
-                />
-                {t(option.labelKey)}
-              </label>
-            );
-          })}
-        </div>
-      </fieldset>
-
-      {/* Past-exam picker + period filter. Options come from the counts response's
-          sittings array (distinct values actually in scope) — never hardcoded. */}
-      <fieldset>
-        <legend className="mb-2 text-meta font-medium text-text-secondary">{t("builder.pastExam")}</legend>
-        {sittings.length === 0 && !scopeCounts.isLoading ? (
-          <p className="rounded-panel border border-border bg-surface-2 px-3 py-2.5 text-meta text-text-tertiary">
-            {t("builder.noSittingDesc")}
-          </p>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Select
-              id="builder-exam-year"
-              label={t("builder.sittingYear")}
-              value={examYear}
+                {preset}
+              </Chip>
+            ))}
+            <Input
+              id="builder-size"
+              label={t("rb.countCustom")}
+              inputMode="numeric"
+              value={String(effectiveSize)}
               onChange={(event) => {
-                setExamYear(event.target.value);
-                setSittingLabel("");
+                const next = Number(event.target.value.replace(/\D/g, ""));
+                if (Number.isFinite(next) && next > 0) setSize(next);
               }}
-              disabled={isStarting || sittings.length === 0}
-              title={sittings.length === 0 ? t("builder.noSitting") : undefined}
-            >
-              <option value="">{t("builder.allSittingYears")}</option>
-              {sittingYears.map((year) => (
-                <option key={year} value={String(year)}>
-                  {year}
-                </option>
-              ))}
-            </Select>
-            <Select
-              id="builder-sitting-label"
-              label={t("builder.sitting")}
-              value={sittingLabel}
-              onChange={(event) => setSittingLabel(event.target.value)}
-              disabled={isStarting || sittings.length === 0}
-              title={sittings.length === 0 ? t("builder.noSitting") : undefined}
-            >
-              <option value="">{t("builder.allSittings")}</option>
-              {sittingLabels.map((label) => (
-                <option key={label} value={label}>
-                  {label}
-                </option>
-              ))}
-            </Select>
+              disabled={isStarting}
+              fieldClassName="w-28"
+            />
           </div>
-        )}
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <Input
-            id="builder-year-from"
-            label={t("builder.periodFrom")}
-            inputMode="numeric"
-            placeholder={t("builder.yearExample", { year: 2020 })}
-            value={examYearFrom}
-            onChange={(event) => setExamYearFrom(event.target.value)}
-            disabled={isStarting}
-          />
-          <Input
-            id="builder-year-to"
-            label={t("builder.periodTo")}
-            inputMode="numeric"
-            placeholder={t("builder.yearExample", { year: 2025 })}
-            value={examYearTo}
-            onChange={(event) => setExamYearTo(event.target.value)}
-            disabled={isStarting}
-          />
-        </div>
-      </fieldset>
+          {total !== undefined ? (
+            <p className="mt-1 text-meta text-text-tertiary">{t("rb.countHint", { count: total })}</p>
+          ) : null}
+        </fieldset>
 
-      {/* Résidanat facets (hb-db/MBset parity). Options come from the counts
-          response's byPeriod/byCategory/bySubcategory arrays (distinct values
-          actually in scope) — never hardcoded. */}
-      <fieldset>
-        <legend className="mb-2 text-meta font-medium text-text-secondary">{t("builder.residanatFacets")}</legend>
-        {!hasFacets && !scopeCounts.isLoading ? (
-          <p className="rounded-panel border border-border bg-surface-2 px-3 py-2.5 text-meta text-text-tertiary">
-            {t("builder.noFacetDesc")}
-          </p>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Select
-              id="builder-period"
-              label={t("builder.facetPeriod")}
-              value={period}
-              onChange={(event) => setPeriod(event.target.value)}
-              disabled={isStarting || periodOptions.length === 0}
-              title={periodOptions.length === 0 ? t("builder.noFacet") : undefined}
-            >
-              <option value="">{t("builder.allPeriods")}</option>
-              {periodOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </Select>
-            <Select
-              id="builder-category"
-              label={t("builder.facetCategory")}
-              value={category}
-              onChange={(event) => setCategory(event.target.value)}
-              disabled={isStarting || categoryOptions.length === 0}
-              title={categoryOptions.length === 0 ? t("builder.noFacet") : undefined}
-            >
-              <option value="">{t("builder.allCategories")}</option>
-              {categoryOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </Select>
-            <Select
-              id="builder-subcategory"
-              label={t("builder.facetSubcategory")}
-              value={subcategory}
-              onChange={(event) => setSubcategory(event.target.value)}
-              disabled={isStarting || subcategoryOptions.length === 0}
-              title={subcategoryOptions.length === 0 ? t("builder.noFacet") : undefined}
-            >
-              <option value="">{t("builder.allSubcategories")}</option>
-              {subcategoryOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </Select>
+        <fieldset>
+          <legend className="mb-2 text-meta font-medium text-text-secondary">{t("rb.types")}</legend>
+          <div className="flex flex-wrap gap-2">
+            {TYPE_OPTIONS.map((option) => (
+              <Chip
+                key={option.value}
+                selected={questionTypes.includes(option.value)}
+                onClick={() => setQuestionTypes(toggle(questionTypes, option.value))}
+                disabled={isStarting}
+              >
+                {t(option.labelKey)}
+              </Chip>
+            ))}
           </div>
-        )}
-      </fieldset>
+        </fieldset>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Select
-          id="builder-question-count"
-          label={t("builder.questionCount")}
-          value={String(size)}
-          onChange={(event) => setSize(Number(event.target.value))}
-          disabled={isStarting}
-        >
-          {questionCountOptions.map((count) => (
-            <option key={count} value={count}>
-              {count}
-            </option>
-          ))}
-        </Select>
-
-        {/* FR-15 — result ordering (by year / by course / randomized). */}
-        <Select
-          id="builder-result-sort"
-          label={t("builder.resultSort")}
-          value={resultSort}
-          onChange={(event) => setResultSort(event.target.value as ResultSort)}
-          disabled={isStarting}
-        >
-          {RESULT_SORT_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {t(option.labelKey)}
-            </option>
-          ))}
-        </Select>
-
-        {mode === "exam" ? (
+        <div className="grid gap-4 sm:grid-cols-2">
           <Select
-            id="builder-time-limit"
-            label={t("builder.timeLimit")}
-            value={timeLimitSeconds === null ? "" : String(timeLimitSeconds / 60)}
-            onChange={(event) => {
-              setTimeTouched(true);
-              setTimeLimitSeconds(event.target.value === "" ? null : Number(event.target.value) * 60);
-            }}
+            id="builder-order"
+            label={t("rb.order")}
+            value={resultSort}
+            onChange={(event) => setResultSort(event.target.value as ResultSort)}
             disabled={isStarting}
-            hint={
-              !timeTouched &&
-              (parseSittingYear(examYear) !== undefined || sittingLabel.trim() !== "") &&
-              liveTotal !== undefined &&
-              liveTotal > 0
-                ? t(liveTotal === 1 ? "builder.timeBasisOne" : "builder.timeBasisMany", {
-                    count: liveTotal,
-                    per: EXAM_SECONDS_PER_QUESTION,
-                  })
-                : undefined
-            }
           >
-            {TIME_LIMIT_VALUES_MINUTES.map((value) => (
-              <option key={value ?? "none"} value={value ?? ""}>
-                {timeLimitLabel(value, t)}
+            {ORDER_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {t(option.labelKey)}
               </option>
             ))}
           </Select>
-        ) : null}
-      </div>
+          {mode === "exam" ? (
+            <Select
+              id="builder-time-limit"
+              label={t("builder.timeLimit")}
+              value={timeLimitSeconds === null ? "" : String(timeLimitSeconds / 60)}
+              onChange={(event) =>
+                setTimeLimitSeconds(event.target.value === "" ? null : Number(event.target.value) * 60)
+              }
+              disabled={isStarting}
+            >
+              {TIME_LIMIT_VALUES_MINUTES.map((value) => (
+                <option key={value ?? "none"} value={value ?? ""}>
+                  {value === null ? t("builder.noLimit") : t("builder.minutes", { n: value })}
+                </option>
+              ))}
+            </Select>
+          ) : null}
+        </div>
+
+        <label className="flex items-start justify-between gap-4 rounded-panel border border-border bg-surface-2 px-3 py-2.5">
+          <span className="min-w-0">
+            <span className="block text-body text-text-primary">{t("builder.showStats")}</span>
+            <span className="mt-0.5 block text-meta text-text-tertiary">{t("builder.showStatsDesc")}</span>
+          </span>
+          <input
+            type="checkbox"
+            checked={showStats}
+            onChange={(event) => setShowStats(event.target.checked)}
+            disabled={isStarting}
+            className="mt-1 h-4 w-4 shrink-0 accent-[var(--color-accent-qcm)]"
+          />
+        </label>
+      </section>
 
       {startError ? <ErrorState message={startError} /> : null}
 
-      {/* Live counter: exact match count for the current filters, before starting. */}
       <div
         aria-live="polite"
         className="flex min-h-touch-target items-center justify-between gap-3 rounded-panel border border-border bg-surface-2 px-3 py-2.5"
       >
-        {countsError ? (
+        {counts.error ? (
           <>
             <span className="text-meta text-danger">{t("builder.countError")}</span>
             <button
               type="button"
-              onClick={refetchCounts}
-              className="shrink-0 font-medium text-accent-soft underline underline-offset-2 hover:text-accent-soft/80 text-meta"
+              onClick={counts.refetch}
+              className="shrink-0 text-meta font-medium text-accent-soft underline underline-offset-2"
             >
               {t("common.retry")}
             </button>
           </>
-        ) : liveTotal === undefined ? (
+        ) : total === undefined ? (
           <span className="text-meta text-text-tertiary">{t("builder.counting")}</span>
         ) : (
-          <>
-            <span className="text-body font-semibold text-text-primary">
-              {t(liveTotal === 1 ? "builder.countOne" : "builder.countMany", { count: liveTotal })}
-            </span>
-            {emptyResult ? (
-              <span className="text-meta text-text-tertiary">{t("builder.widenFilters")}</span>
-            ) : null}
-          </>
+          <span className="min-w-0 truncate text-body font-semibold text-text-primary">
+            {t("rb.summary")} · {sessionName}
+          </span>
         )}
       </div>
 
-      <Button
-        type="submit"
-        width="full"
-        accent="qcm"
-        disabled={isStarting || questionTypes.length === 0 || size <= 0 || emptyResult}
-        title={
-          emptyResult
-            ? t("builder.emptyHint")
-            : questionTypes.length === 0
-              ? t("builder.needType")
-              : undefined
-        }
-      >
-        {isStarting ? t("builder.starting") : mode === "practice" ? t("builder.startPractice") : t("builder.startExam")}
+      <Button type="submit" width="full" accent="qcm" disabled={!canStart}>
+        {isStarting
+          ? t("builder.starting")
+          : total === 0
+            ? t("rb.startZero")
+            : t("rb.start", { count: effectiveSize })}
       </Button>
     </form>
   );

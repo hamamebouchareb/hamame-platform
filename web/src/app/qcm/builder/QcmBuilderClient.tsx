@@ -62,10 +62,8 @@ export default function QcmBuilderClient({ initialMode = "practice" }: QcmBuilde
         showStats: echo.showStats,
         questionTypes: echo.questionTypes.filter(
           (type): type is SessionBuilderPrefill["questionTypes"][number] =>
-            type === "QCM" || type === "QCS" || type === "QROC" || type === "CLINICAL_CASE"
+            type === "QCM" || type === "QCS" || type === "QROC"
         ),
-        moduleIds: echo.moduleIds,
-        unitIds: echo.unitIds,
       });
       setRepeatState("idle");
     } catch {
@@ -82,19 +80,13 @@ export default function QcmBuilderClient({ initialMode = "practice" }: QcmBuilde
         body: JSON.stringify({
           name: config.name,
           mode: config.mode,
+          yearLabel: config.yearLabel,
           ...(config.facultyId ? { facultyId: config.facultyId } : {}),
-          ...(config.yearId ? { yearId: config.yearId } : {}),
-          ...(config.moduleIds && config.moduleIds.length > 0 ? { moduleIds: config.moduleIds } : {}),
-          ...(config.unitIds && config.unitIds.length > 0 ? { unitIds: config.unitIds } : {}),
+          ...(config.examYears.length > 0 ? { examYears: config.examYears } : {}),
+          ...(config.periods.length > 0 ? { periods: config.periods } : {}),
+          ...(config.categories.length > 0 ? { categories: config.categories } : {}),
+          ...(config.subcategories.length > 0 ? { subcategories: config.subcategories } : {}),
           questionTypes: config.questionTypes,
-          ...(config.source ? { source: config.source } : {}),
-          ...(config.examYear !== undefined ? { examYear: config.examYear } : {}),
-          ...(config.sittingLabel ? { sittingLabel: config.sittingLabel } : {}),
-          ...(config.examYearFrom !== undefined ? { examYearFrom: config.examYearFrom } : {}),
-          ...(config.examYearTo !== undefined ? { examYearTo: config.examYearTo } : {}),
-          ...(config.period ? { period: config.period } : {}),
-          ...(config.category ? { category: config.category } : {}),
-          ...(config.subcategory ? { subcategory: config.subcategory } : {}),
           size: config.size,
           sort: config.resultSort,
           showStats: config.showStats,
@@ -120,7 +112,7 @@ export default function QcmBuilderClient({ initialMode = "practice" }: QcmBuilde
       user={user}
       isHydrated={isHydrated}
       onLogout={handleLogout}
-      width="narrow"
+      width="content"
       back={{ href: "/qcm", label: t("qcmBuilder.back") }}
       title={t("qcmBuilder.title")}
       description={t("qcmBuilder.subtitle")}
@@ -149,7 +141,6 @@ export default function QcmBuilderClient({ initialMode = "practice" }: QcmBuilde
             className="mt-section-gap"
             initialMode={initialMode}
             initialFacultyId={authed.facultyId ?? null}
-            initialYearId={authed.yearId ?? null}
             prefill={prefill}
             onStart={handleStart}
             isStarting={isStarting}

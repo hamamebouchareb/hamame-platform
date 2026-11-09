@@ -64,7 +64,12 @@ export interface QuestionCountsResponse {
   /** Distinct Résidanat facets present in scope (untagged rows excluded). Optional for backward compat with older API shapes. */
   byPeriod?: Array<{ period: string; count: number }>;
   byCategory?: Array<{ category: string; count: number }>;
+  /** Topics — only returned once at least one specialty (category) is picked. */
   bySubcategory?: Array<{ subcategory: string; count: number }>;
+  /** Sitting-year chips (year selection excluded), newest first. */
+  byExamYear?: Array<{ examYear: number; count: number }>;
+  /** "Whose paper" chips (faculty selection excluded), largest first. */
+  byFaculty?: Array<{ facultyId: string; count: number }>;
 }
 
 export interface LessonSummary {

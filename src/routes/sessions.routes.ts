@@ -255,9 +255,11 @@ const createSessionSchema = z.object({
   // Exam-sitting scope (past-exam picker + period filter). Passed straight into the
   // shared buildQuestionWhere — the candidate-pool query itself needed no other change.
   examYear: z.number().int().min(1000).max(9999).optional(),
+  examYears: z.array(z.number().int().min(1000).max(9999)).max(60).optional(),
   examYearFrom: z.number().int().min(1000).max(9999).optional(),
   examYearTo: z.number().int().min(1000).max(9999).optional(),
   sittingLabel: z.string().min(1).max(120).optional(),
+  yearLabel: z.string().min(1).max(60).optional(),
   // Résidanat facets (hb-db/MBset parity, migration 20261106000000).
   // Singular + plural both accepted; singular wins inside buildQuestionWhere.
   category: z.string().min(1).max(120).optional(),
@@ -291,9 +293,11 @@ export interface BuildSessionParams {
   dateFrom?: Date;
   dateTo?: Date;
   examYear?: number;
+  examYears?: number[];
   examYearFrom?: number;
   examYearTo?: number;
   sittingLabel?: string;
+  yearLabel?: string;
   category?: string;
   categories?: string[];
   subcategory?: string;
@@ -322,9 +326,11 @@ export async function buildSessionForUser(userId: string, params: BuildSessionPa
     dateFrom,
     dateTo,
     examYear,
+    examYears,
     examYearFrom,
     examYearTo,
     sittingLabel,
+    yearLabel,
     category,
     categories,
     subcategory,
@@ -370,9 +376,11 @@ export async function buildSessionForUser(userId: string, params: BuildSessionPa
     dateFrom,
     dateTo,
     examYear,
+    examYears,
     examYearFrom,
     examYearTo,
     sittingLabel,
+    yearLabel,
     category,
     categories,
     subcategory,
@@ -535,9 +543,11 @@ async function createSession(req: Request, res: Response, next: NextFunction) {
       dateFrom: body.dateFrom,
       dateTo: body.dateTo,
       examYear: body.examYear,
+      examYears: body.examYears,
       examYearFrom: body.examYearFrom,
       examYearTo: body.examYearTo,
       sittingLabel: body.sittingLabel,
+      yearLabel: body.yearLabel,
       category: body.category,
       categories: body.categories,
       subcategory: body.subcategory,
