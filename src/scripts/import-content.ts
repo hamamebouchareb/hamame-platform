@@ -474,6 +474,96 @@ async function main(): Promise<void> {
   const resolvedLessons: { row: number; lesson: RawLesson; resolved: Resolved }[] = [];
   let skipped = 0;
 
+  // A full hb-db batch shares a few thousand scopes across ~24k rows; without
+  // this every row costs 4 pooler round-trips before any write happens.
+  const scopeCache = new Map<string, Resolved>();
+  async function resolveCached(scope: Scope): Promise<Resolved | null> {
+    const key = JSON.stringify([scope.faculty, scope.year, scope.track, scope.module, scope.unit]);
+    const hit = scopeCache.get(key);
+    if (hit) return hit;
+    const resolved = await resolveScope(prisma, scope, null, null, args.apply, plan, created);
+    if (resolved) scopeCache.set(key, resolved);
+    return resolved;
+  }
+
+  // --apply: create the missing modules/units of every year in bulk (one read +
+  // one createMany per level) and fill scopeCache, instead of 3 round-trips per unit.
+  async function prewarmScopes(scopes: Scope[]): Promise<void> {
+    const byYear = new Map<string, Scope[]>();
+    for (const s of scopes) {
+      const k = JSON.stringify([s.faculty, s.year, s.track]);
+      const list = byYear.get(k);
+      if (list) list.push(s);
+      else byYear.set(k, [s]);
+    }
+    for (const group of byYear.values()) {
+      const first = group[0] as Scope;
+      const base = await resolveScope(prisma, first, null, null, true, plan, created);
+      if (!base) continue;
+      const { facultyId, yearId } = base;
+
+      const loadModules = () =>
+        withRetry("prewarm.modules", () =>
+          prisma.module.findMany({
+            where: { yearId },
+            select: { id: true, name: true, orderIndex: true, units: { select: { id: true, name: true, orderIndex: true } } },
+          })
+        );
+      let modules = await loadModules();
+      const knownModules = new Set(modules.map((m) => m.name));
+      const missingModules = [...new Set(group.map((s) => s.module))].filter((n) => !knownModules.has(n));
+      if (missingModules.length > 0) {
+        let order = Math.max(-1, ...modules.map((m) => m.orderIndex)) + 1;
+        await withRetry("prewarm.createModules", () =>
+          prisma.module.createMany({ data: missingModules.map((name) => ({ yearId, name, orderIndex: order++ })) })
+        );
+        modules = await loadModules();
+        for (const m of modules) if (missingModules.includes(m.name)) created.modules.push(m.id);
+      }
+
+      const moduleByName = new Map(modules.map((m) => [m.name, m]));
+      const unitRows: { moduleId: string; name: string; orderIndex: number }[] = [];
+      const nextOrder = new Map<string, number>();
+      const pending = new Set<string>();
+      for (const s of group) {
+        const mod = moduleByName.get(s.module);
+        if (!mod || mod.units.some((u) => u.name === s.unit)) continue;
+        const k = JSON.stringify([mod.id, s.unit]);
+        if (pending.has(k)) continue;
+        pending.add(k);
+        const order = nextOrder.get(mod.id) ?? Math.max(-1, ...mod.units.map((u) => u.orderIndex)) + 1;
+        nextOrder.set(mod.id, order + 1);
+        unitRows.push({ moduleId: mod.id, name: s.unit, orderIndex: order });
+      }
+      for (let i = 0; i < unitRows.length; i += 500) {
+        const chunk = unitRows.slice(i, i + 500);
+        await withRetry("prewarm.createUnits", () => prisma.unit.createMany({ data: chunk }));
+      }
+      if (unitRows.length > 0) {
+        modules = await loadModules();
+        const fresh = new Set(unitRows.map((r) => JSON.stringify([r.moduleId, r.name])));
+        for (const m of modules) for (const u of m.units) if (fresh.has(JSON.stringify([m.id, u.name]))) created.units.push(u.id);
+      }
+
+      for (const m of modules) {
+        for (const u of m.units) {
+          const key = JSON.stringify([first.faculty, first.year, first.track, m.name, u.name]);
+          scopeCache.set(key, { facultyId, yearId, moduleId: m.id, unitId: u.id });
+        }
+      }
+      console.log(
+        `prewarm ${first.faculty}/${first.year}: +${missingModules.length} modules, +${unitRows.length} units`
+      );
+    }
+  }
+
+  if (args.apply) {
+    const scopes = [...validLessons.map((v) => v.lesson), ...validQuestions.map((v) => v.question)]
+      .map(scopeOf)
+      .filter((s): s is Scope => s !== null);
+    await prewarmScopes(scopes);
+  }
+
   for (const { row, lesson } of validLessons) {
     const scope = scopeOf(lesson);
     if (!scope) {
@@ -481,7 +571,7 @@ async function main(): Promise<void> {
       reasons.push(`lessons:${row}: scope fields malformed`);
       continue;
     }
-    const resolved = await resolveScope(prisma, scope, null, null, args.apply, plan, created);
+    const resolved = await resolveCached(scope);
     if (!resolved) {
       if (!args.apply) {
         plan.push(`lessons:${row}: needs curriculum creates above — re-run with --apply`);
@@ -550,7 +640,7 @@ async function main(): Promise<void> {
       reasons.push(`questions:${row}: scope fields malformed`);
       continue;
     }
-    const resolved = await resolveScope(prisma, scope, null, null, args.apply, plan, created);
+    const resolved = await resolveCached(scope);
     if (!resolved) {
       if (!args.apply) {
         plan.push(`questions:${row}: needs curriculum creates above — re-run with --apply`);
