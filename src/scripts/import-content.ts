@@ -633,6 +633,67 @@ async function main(): Promise<void> {
     return set;
   }
 
+  // --apply: fill `fingerprints` per year in large pages instead of one SELECT per
+  // unit (~5k units for a full hb-db batch).
+  async function prefetchFingerprints(): Promise<void> {
+    const unitIds = new Set<string>();
+    const yearIds = new Set<string>();
+    for (const r of scopeCache.values()) {
+      unitIds.add(r.unitId);
+      yearIds.add(r.yearId);
+    }
+    for (const id of unitIds) if (!fingerprints.has(id)) fingerprints.set(id, new Set());
+    for (const yearId of yearIds) {
+      let cursor: string | undefined;
+      let loaded = 0;
+      for (;;) {
+        const page = await withRetry("prefetch.questions", () =>
+          prisma.question.findMany({
+            where: { unit: { module: { yearId } } },
+            orderBy: { id: "asc" },
+            take: 1000,
+            ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+            select: {
+              id: true,
+              unitId: true,
+              type: true,
+              bodyRichtext: true,
+              examYear: true,
+              sittingLabel: true,
+              category: true,
+              subcategory: true,
+              period: true,
+              explanationRichtext: true,
+              options: { select: { bodyText: true, isCorrect: true } },
+            },
+          })
+        );
+        for (const q of page) {
+          const body = typeof (q.bodyRichtext as { text?: unknown })?.text === "string"
+            ? ((q.bodyRichtext as { text: string }).text)
+            : JSON.stringify(q.bodyRichtext);
+          const explanation = typeof (q.explanationRichtext as { text?: unknown })?.text === "string"
+            ? ((q.explanationRichtext as { text: string }).text)
+            : null;
+          const opts = q.options.map((o) => ({ text: o.bodyText, correct: o.isCorrect }));
+          let set = fingerprints.get(q.unitId);
+          if (!set) {
+            set = new Set();
+            fingerprints.set(q.unitId, set);
+          }
+          set.add(
+            questionHash(q.unitId, q.type, body, opts, q.examYear, q.sittingLabel, explanation, q.category, q.subcategory, q.period)
+          );
+        }
+        loaded += page.length;
+        if (page.length < 1000) break;
+        cursor = page[page.length - 1]?.id;
+      }
+      console.log(`prefetch year ${yearId}: ${loaded} existing questions`);
+    }
+  }
+  if (args.apply) await prefetchFingerprints();
+
   for (const { row, question } of validQuestions) {
     const scope = scopeOf(question);
     if (!scope) {
