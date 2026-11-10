@@ -56,8 +56,8 @@ export interface SessionBuilderProps {
   className?: string;
 }
 
-const MAX_SIZE = 200;
-const SIZE_PRESETS = [10, 20, 40, 60, 100, 200];
+const MAX_SIZE = 5000;
+const SIZE_PRESETS = [10, 20, 40, 60, 100, 200, 500, 1000];
 const TIME_LIMIT_VALUES_MINUTES: (number | null)[] = [null, 10, 15, 30, 45, 60, 90, 120];
 
 const TYPE_OPTIONS: { value: QuestionType; labelKey: I18nKey }[] = [
@@ -536,6 +536,15 @@ export function SessionBuilder({
                 {preset}
               </Chip>
             ))}
+            {total !== undefined && total > 0 ? (
+              <Chip
+                selected={effectiveSize === Math.min(total, MAX_SIZE)}
+                onClick={() => setSize(Math.min(total, MAX_SIZE))}
+                disabled={isStarting}
+              >
+                {t("rb.countAll", { count: Math.min(total, MAX_SIZE) })}
+              </Chip>
+            ) : null}
             <Input
               id="builder-size"
               label={t("rb.countCustom")}

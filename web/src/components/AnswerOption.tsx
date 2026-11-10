@@ -40,6 +40,8 @@ export interface AnswerOptionProps {
   variant: "multi" | "single";
   onSelect: (optionId: string) => void;
   disabled?: boolean;
+  /** On-screen letter (A, B, …) shown in the selector badge. */
+  letter?: string;
 }
 
 /**
@@ -61,10 +63,11 @@ export function AnswerOption({
   variant,
   onSelect,
   disabled,
+  letter,
 }: AnswerOptionProps) {
   const { t } = useLanguage();
   const base =
-    "flex min-h-touch-target w-full items-start gap-3 rounded-control border px-4 py-3 text-left text-body transition duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 disabled:opacity-60 disabled:cursor-not-allowed";
+    "flex min-h-touch-target w-full items-start gap-3 rounded-input border px-3 py-2.5 text-left text-[0.9375rem] leading-snug transition duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring active:bg-surface-2 disabled:cursor-default sm:px-4 sm:text-body";
 
   // Post-submit precedence (practice only — exam mode stays neutral by design):
   // a correct option is green even when the student's own answer was wrong (it
@@ -97,20 +100,22 @@ export function AnswerOption({
     >
       <span
         className={cx(
-          "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center border text-[10px]",
-          variant === "multi" ? "rounded-[4px]" : "rounded-full",
-          selected ? "border-accent-qcm bg-accent-qcm text-on-accent" : "border-border"
+          "flex h-6 w-6 shrink-0 items-center justify-center border text-caption font-bold",
+          variant === "multi" ? "rounded-[6px]" : "rounded-full",
+          revealed && isCorrectOption
+            ? "border-success bg-success text-on-accent"
+            : revealed && selected && isCorrect === false
+              ? "border-danger bg-danger text-on-accent"
+              : selected
+                ? "border-accent-qcm bg-accent-qcm text-on-accent"
+                : "border-border text-text-secondary"
         )}
         aria-hidden
       >
-        {variant === "multi" ? (
-          selected ? "✓" : ""
-        ) : selected ? (
-            <span className="h-2 w-2 rounded-full bg-on-accent" />
-        ) : null}
+        {letter ?? (selected ? "✓" : "")}
       </span>
-      <span className="min-w-0 flex-1">
-        <span className={struck ? "line-through opacity-70" : undefined}>{label}</span>
+      <span className="min-w-0 flex-1 pt-0.5">
+        <span className={struck ? "line-through opacity-60" : undefined}>{label}</span>
       </span>
       {onToggleStrike && !submitted ? (
         <span

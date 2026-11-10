@@ -98,6 +98,8 @@ export interface LessonDetail {
 export interface QuestionOptionRef {
   id: string;
   bodyText: string;
+  /** Position in the original paper (0 = A); explanations cite these letters. */
+  orderIndex?: number;
 }
 
 export interface ClinicalCasePartRef {

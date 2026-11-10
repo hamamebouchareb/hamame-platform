@@ -141,7 +141,9 @@ function loadSessionWithQuestions(sessionId: string) {
               // moduleId is part of the derived config echo below (Question has no
               // moduleId column — questions attach at unit level).
               unit: { select: { name: true, moduleId: true, module: { select: { name: true } } } },
-              options: { select: { id: true, bodyText: true } },
+              // orderIndex = the paper's own letter (A=0…), which explanations
+              // cite; the presented order is the shuffled option_order snapshot.
+              options: { orderBy: { orderIndex: "asc" }, select: { id: true, bodyText: true, orderIndex: true } },
               clinicalCaseParts: {
                 orderBy: { partOrder: "asc" },
                 select: { id: true, partOrder: true, promptText: true },
@@ -268,7 +270,7 @@ const createSessionSchema = z.object({
   subcategories: z.array(z.string().min(1).max(120)).optional(),
   period: z.string().min(1).max(120).optional(),
   periods: z.array(z.string().min(1).max(120)).optional(),
-  size: z.number().int().min(1).max(200),
+  size: z.number().int().min(1).max(5000),
   isOfficialMock: z.boolean().optional().default(false),
   timeLimitSeconds: z.number().int().min(1).optional(),
   sort: z.enum(["by_year", "by_course", "random"]).optional().default("random"),

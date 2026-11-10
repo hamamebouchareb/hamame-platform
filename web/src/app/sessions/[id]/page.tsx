@@ -70,6 +70,15 @@ function formatRemaining(totalSeconds: number): string {
 // resume source of truth — the backend has no active-session endpoint.
 const ACTIVE_SESSION_KEY = "hamame_active_session";
 
+const NAV_PAGE_SIZE = 100;
+type NavFilter = "all" | "unanswered" | "marked" | "wrong";
+const NAV_FILTER_KEYS = {
+  all: "player.filterAll",
+  unanswered: "player.filterUnanswered",
+  marked: "player.filterMarked",
+  wrong: "player.filterWrong",
+} as const;
+
 function clearActiveSession() {
   try {
     window.localStorage.removeItem(ACTIVE_SESSION_KEY);
@@ -105,7 +114,6 @@ export default function SessionQuestionPage() {
   // shows the banner; practice and untimed sessions never touch it.
   const [timeUp, setTimeUp] = useState(false);
   const autoFinishRef = useRef(false);
-  const currentRailRef = useRef<HTMLButtonElement | null>(null);
 
   // Fresh session id = fresh expiry state (the component itself is not
   // remounted when navigating between sessions).
@@ -113,10 +121,6 @@ export default function SessionQuestionPage() {
     setTimeUp(false);
     autoFinishRef.current = false;
   }, [sessionId]);
-
-  useEffect(() => {
-    currentRailRef.current?.scrollIntoView({ block: "nearest" });
-  }, [currentIndex]);
 
   // A completed session has nothing left to answer here — drop the resume marker and
   // send the user straight to its results instead of showing (now-frozen) question UI.
@@ -431,6 +435,122 @@ export default function SessionQuestionPage() {
     }
   }
 
+  const isChoiceCurrent = currentEntry
+    ? currentEntry.question.type === "QCM" || currentEntry.question.type === "QCS"
+    : false;
+  const canSubmitCurrent =
+    !!currentEntry &&
+    !currentAnswer.submitted &&
+    !isSubmittingAnswer &&
+    !timeUp &&
+    (isChoiceCurrent ? currentAnswer.selectedOptionIds.length > 0 : currentAnswer.freeText.trim().length > 0);
+  const isLast = currentIndex >= questions.length - 1;
+
+  function goTo(index: number) {
+    setCurrentIndex(Math.min(Math.max(0, index), Math.max(0, questions.length - 1)));
+  }
+
+  // Each question starts at the top of the scroll area, not mid-explanation.
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [currentIndex]);
+
+  // Question navigator drawer: paged grid instead of an always-on rail, so a
+  // 5,000-question session never renders 5,000 buttons at once.
+  const [navOpen, setNavOpen] = useState(false);
+  const [navFilter, setNavFilter] = useState<NavFilter>("all");
+  const [navPage, setNavPage] = useState(0);
+  const [jumpValue, setJumpValue] = useState("");
+
+  function openNavigator() {
+    setNavFilter("all");
+    setNavPage(Math.floor(currentIndex / NAV_PAGE_SIZE));
+    setJumpValue("");
+    setNavOpen(true);
+  }
+
+  const navIndices = useMemo(
+    () =>
+      questions
+        .map((_, index) => index)
+        .filter((index) => {
+          const entry = questions[index]!;
+          const state = answers[entry.sessionQuestionId];
+          switch (navFilter) {
+            case "unanswered":
+              return !state?.submitted;
+            case "marked":
+              return !!markedForReview[entry.sessionQuestionId];
+            case "wrong":
+              return state?.isCorrect === false;
+            default:
+              return true;
+          }
+        }),
+    [questions, answers, markedForReview, navFilter]
+  );
+  const navPageCount = Math.max(1, Math.ceil(navIndices.length / NAV_PAGE_SIZE));
+  const safeNavPage = Math.min(navPage, navPageCount - 1);
+  const navPageIndices = navIndices.slice(safeNavPage * NAV_PAGE_SIZE, (safeNavPage + 1) * NAV_PAGE_SIZE);
+
+  function submitJump() {
+    const n = Number.parseInt(jumpValue, 10);
+    if (!Number.isFinite(n) || n < 1 || n > questions.length) return;
+    goTo(n - 1);
+    setNavOpen(false);
+  }
+
+  // Keyboard shortcuts (MBset-style): letters/digits pick, Enter validates then
+  // advances, arrows navigate. Inert while typing or while a dialog is open.
+  const keyHandlerRef = useRef<(event: KeyboardEvent) => void>(() => undefined);
+  useEffect(() => {
+    keyHandlerRef.current = (event: KeyboardEvent) => {
+      if (navOpen) {
+        if (event.key === "Escape") setNavOpen(false);
+        return;
+      }
+      if (!session || session.completedAt || !currentEntry || reportOpen || exitOpen) return;
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT" || target.isContentEditable)) {
+        return;
+      }
+      const key = event.key;
+      if (key === "ArrowRight") {
+        event.preventDefault();
+        goTo(currentIndex + 1);
+        return;
+      }
+      if (key === "ArrowLeft") {
+        event.preventDefault();
+        goTo(currentIndex - 1);
+        return;
+      }
+      if (key === "Enter") {
+        if (target?.tagName === "BUTTON" && !target.closest("[data-answer-options]")) return;
+        event.preventDefault();
+        if (canSubmitCurrent) void handleSubmitAnswer();
+        else if (currentAnswer.submitted && !isLast) goTo(currentIndex + 1);
+        return;
+      }
+      if (!isChoiceCurrent || currentAnswer.submitted || timeUp) return;
+      let optionIndex = -1;
+      if (/^[1-9]$/.test(key)) optionIndex = Number(key) - 1;
+      else if (/^[a-jA-J]$/.test(key)) optionIndex = key.toUpperCase().charCodeAt(0) - 65;
+      const option = currentEntry.options[optionIndex];
+      if (!option) return;
+      event.preventDefault();
+      if (currentEntry.question.type === "QCM") toggleQcmOption(option.id);
+      else selectQcsOption(option.id);
+    };
+  });
+  useEffect(() => {
+    const listener = (event: KeyboardEvent) => keyHandlerRef.current(event);
+    window.addEventListener("keydown", listener);
+    return () => window.removeEventListener("keydown", listener);
+  }, []);
+
   if (!isHydrated || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-card-padding">
@@ -440,54 +560,115 @@ export default function SessionQuestionPage() {
   }
 
   const playing = Boolean(session && !session.completedAt && questions.length > 0);
-  const sideButton =
-    "inline-flex min-h-touch-target w-full items-center justify-center gap-2 rounded-control border border-border px-2 py-2 text-center text-meta font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-40";
+  const focusRing =
+    "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring";
+  const iconButtonBase = `h-touch-target w-touch-target shrink-0 items-center justify-center rounded-control text-text-secondary transition hover:bg-surface-2 hover:text-text-primary disabled:opacity-40 ${focusRing}`;
+  const iconButton = `inline-flex ${iconButtonBase}`;
+  const barButton = `inline-flex min-h-touch-target shrink-0 items-center justify-center gap-1.5 rounded-control border border-border px-3 text-meta font-medium text-text-primary transition hover:bg-surface-2 disabled:opacity-40 disabled:pointer-events-none ${focusRing}`;
+  const primaryButton = `inline-flex min-h-touch-target flex-1 items-center justify-center gap-1.5 rounded-control bg-accent-qcm px-4 text-body font-semibold text-on-accent shadow-glow-qcm transition hover:brightness-110 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none ${focusRing}`;
+  const timerSeconds = timed ? remainingSeconds : elapsedSeconds;
 
   return (
-    <main className="flex h-dvh overflow-hidden bg-background text-text-primary">
+    <main className="flex h-dvh flex-col overflow-hidden bg-background text-text-primary">
       <h1 className="sr-only">{t("player.srTitle")}</h1>
-      {playing ? (
-        <aside className="flex w-[4.5rem] shrink-0 flex-col border-r border-border bg-surface-1">
-          <div className="border-b border-border px-1.5 py-3 text-center">
-            <p className="text-caption font-semibold tabular-nums text-text-secondary">
-              {currentIndex + 1}/{questions.length}
-            </p>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-pill bg-surface-3" aria-hidden>
-              <div className="h-full rounded-pill bg-accent-qcm" style={{ width: `${progressPct}%` }} />
+
+      {playing && session ? (
+        <header className="shrink-0 border-b border-border bg-surface-1">
+          <div className="mx-auto flex w-full max-w-5xl items-center gap-1 px-2 py-1.5 sm:gap-2 sm:px-4">
+            <button
+              type="button"
+              onClick={() => setExitOpen(true)}
+              className={iconButton}
+              aria-label={t("player.quit")}
+              title={t("player.quit")}
+            >
+              <Icon name="close" size={20} />
+            </button>
+            <button
+              type="button"
+              onClick={openNavigator}
+              aria-haspopup="dialog"
+              aria-label={t("player.navOpen")}
+              className={`inline-flex min-h-touch-target items-center gap-2 rounded-control px-2 text-body font-semibold tabular-nums transition hover:bg-surface-2 ${focusRing}`}
+            >
+              <Icon name="grid" size={18} />
+              <span>
+                {currentIndex + 1}
+                <span className="font-normal text-text-tertiary"> / {questions.length}</span>
+              </span>
+            </button>
+            <span className="hidden text-caption text-text-tertiary md:inline">
+              {t("player.answered", { count: answeredCount })}
+            </span>
+
+            <div className="ml-auto flex items-center gap-0.5 sm:gap-1">
+              {timerSeconds !== null ? (
+                <span
+                  aria-live={timed ? "polite" : "off"}
+                  className={[
+                    "mr-1 rounded-pill border px-2.5 py-1 text-meta font-semibold tabular-nums sm:text-body",
+                    timed && remainingSeconds !== null && remainingSeconds <= 60
+                      ? "border-danger text-danger"
+                      : "border-border text-text-secondary",
+                  ].join(" ")}
+                >
+                  {formatRemaining(timerSeconds)}
+                </span>
+              ) : null}
+              <button
+                type="button"
+                onClick={toggleMarkForReview}
+                aria-pressed={isMarked}
+                aria-label={isMarked ? t("player.marked") : t("player.mark")}
+                title={isMarked ? t("player.marked") : t("player.mark")}
+                className={[iconButton, isMarked ? "bg-accent-qcm/15 text-accent-soft" : ""].join(" ")}
+              >
+                <Icon name="bookmark" size={18} />
+              </button>
+              <button
+                type="button"
+                onClick={openReport}
+                className={iconButton}
+                aria-label={t("player.reportErrorLong")}
+                title={t("player.reportError")}
+              >
+                <Icon name="flag" size={18} />
+              </button>
+              <button
+                type="button"
+                onClick={toggleFullscreen}
+                aria-pressed={isFullscreen}
+                aria-label={isFullscreen ? t("player.exitFullscreen") : t("player.enterFullscreen")}
+                title={isFullscreen ? t("player.exitFullscreen") : t("player.fullscreen")}
+                className={`${iconButtonBase} hidden sm:inline-flex`}
+              >
+                <Icon name={isFullscreen ? "minimize" : "maximize"} size={18} />
+              </button>
+              <button
+                type="button"
+                onClick={handleFinishSession}
+                disabled={isFinishing}
+                className={`ml-1 hidden min-h-touch-target items-center justify-center rounded-control bg-accent-qcm px-3 text-meta font-semibold text-on-accent transition hover:brightness-110 disabled:opacity-60 sm:inline-flex ${focusRing}`}
+              >
+                {isFinishing ? t("player.finishing") : t("player.finishShort")}
+              </button>
             </div>
           </div>
-          {questions.length > 1 ? (
-            <nav aria-label={t("player.railAria")} className="flex min-h-0 flex-1 flex-col items-center gap-1.5 overflow-y-auto p-2">
-              {questions.map((entry, index) => {
-                const isCurrent = index === currentIndex;
-                const isAnswered = !!answers[entry.sessionQuestionId]?.submitted;
-                return (
-                  <button
-                    key={entry.sessionQuestionId}
-                    ref={isCurrent ? currentRailRef : undefined}
-                    type="button"
-                    onClick={() => setCurrentIndex(index)}
-                    aria-label={`${t("player.railGo", { n: index + 1 })}${isCurrent ? t("player.railCurrent") : ""}${isAnswered ? t("player.railAnswered") : ""}`}
-                    aria-current={isCurrent ? "true" : undefined}
-                    className={[
-                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-control border text-meta font-semibold tabular-nums transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
-                      isCurrent
-                        ? "border-accent-qcm bg-[linear-gradient(to_bottom_right,var(--color-accent-primary),var(--color-accent-secondary))] text-on-accent ring-2 ring-accent-soft"
-                        : isAnswered
-                          ? "border-success/60 bg-success/10 text-success"
-                          : "border-border bg-surface-1 text-text-secondary hover:bg-surface-2",
-                    ].join(" ")}
-                  >
-                    {index + 1}
-                  </button>
-                );
-              })}
-            </nav>
-          ) : null}
-        </aside>
+          <div
+            className="h-1 bg-surface-3"
+            role="progressbar"
+            aria-valuemin={1}
+            aria-valuemax={questions.length}
+            aria-valuenow={currentIndex + 1}
+            aria-label={t("player.progressAria", { i: currentIndex + 1, n: questions.length })}
+          >
+            <div className="h-full bg-accent-qcm transition-[width] duration-300" style={{ width: `${progressPct}%` }} />
+          </div>
+        </header>
       ) : null}
-      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 py-4">
-        <div className="mx-auto w-full max-w-3xl">
+
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-3xl px-3 py-3 sm:px-4 sm:py-5">
         {isLoading && !session && (
           <div className="mx-auto max-w-xl" aria-busy aria-label={t("player.loadingSession")}>
             <LoadingSkeleton className="mb-3 h-4 w-32" />
@@ -538,146 +719,283 @@ export default function SessionQuestionPage() {
         {session && !session.completedAt && currentEntry && (
           <>
             {timeUp ? (
-              <div
-                role="alert"
-                className="mx-auto mb-4 max-w-xl rounded-card border border-danger bg-surface-2 p-card-padding"
-              >
-                <p className="font-display text-h3 font-semibold text-danger">{t("player.timeUp")}</p>
-                <p className="mt-1 text-body text-text-secondary">{t("player.timeUpDesc")}</p>
+              <div role="alert" className="mb-3 rounded-card border border-danger bg-surface-2 p-4">
+                <p className="text-body font-semibold text-danger">{t("player.timeUp")}</p>
+                <p className="mt-1 text-meta text-text-secondary">{t("player.timeUpDesc")}</p>
               </div>
             ) : null}
             <QuestionCard
               key={currentEntry.sessionQuestionId}
-            meta={
-              <>
-                {currentEntry.question.type}
-                <span className="mx-1.5 text-border" aria-hidden="true">·</span>
-                {formatSource(currentEntry.question.source, t)}
-                {currentEntry.question.difficulty ? (
-                  <>
-                    <span className="mx-1.5 text-border" aria-hidden="true">·</span>
-                    {currentEntry.question.difficulty}
-                  </>
-                ) : null}
-              </>
-            }
-            questionText={extractParagraphs(currentEntry.question.bodyRichtext)}
-            type={currentEntry.question.type}
-            options={currentEntry.options}
-            answer={currentAnswer}
-            mode={session.mode}
-            unitName={currentEntry.question.unitName}
-            moduleName={currentEntry.question.moduleName}
-            examYear={currentEntry.question.examYear}
-            sittingLabel={currentEntry.question.sittingLabel}
-            questionId={currentEntry.question.id}
-            sessionId={sessionId}
-            onToggleOption={toggleQcmOption}
-            onSelectOption={selectQcsOption}
-            onFreeTextChange={setFreeText}
-            onSubmit={handleSubmitAnswer}
-            onRetrySubmit={handleSubmitAnswer}
-            isSubmitting={isSubmittingAnswer || timeUp}
-          />
+              meta={
+                <>
+                  {currentEntry.question.type}
+                  <span className="mx-1.5 text-border" aria-hidden="true">·</span>
+                  {formatSource(currentEntry.question.source, t)}
+                  {currentEntry.question.difficulty ? (
+                    <>
+                      <span className="mx-1.5 text-border" aria-hidden="true">·</span>
+                      {currentEntry.question.difficulty}
+                    </>
+                  ) : null}
+                </>
+              }
+              questionText={extractParagraphs(currentEntry.question.bodyRichtext)}
+              type={currentEntry.question.type}
+              options={currentEntry.options}
+              answer={currentAnswer}
+              mode={session.mode}
+              unitName={currentEntry.question.unitName}
+              moduleName={currentEntry.question.moduleName}
+              examYear={currentEntry.question.examYear}
+              sittingLabel={currentEntry.question.sittingLabel}
+              questionId={currentEntry.question.id}
+              sessionId={sessionId}
+              onToggleOption={toggleQcmOption}
+              onSelectOption={selectQcsOption}
+              onFreeTextChange={setFreeText}
+              onSubmit={handleSubmitAnswer}
+              onRetrySubmit={handleSubmitAnswer}
+              isSubmitting={isSubmittingAnswer || timeUp}
+              hideSubmit
+            />
+            <div className="mt-3 flex flex-wrap items-start gap-3">
+              <EnqueueReviewButton questionId={currentEntry.question.id} />
+              {session.mode === "practice" ? (
+                <div className="min-w-[14rem] flex-1">
+                  <StudyTimer embedded />
+                </div>
+              ) : null}
+            </div>
+            {finishError ? (
+              <p role="alert" className="mt-3 text-meta text-danger">
+                {finishError}
+              </p>
+            ) : null}
+            <p className="mt-4 hidden text-caption text-text-tertiary md:block">{t("player.shortcuts")}</p>
           </>
         )}
         </div>
       </div>
 
-      {playing && session ? (
-        <aside
-          className="flex w-60 shrink-0 flex-col gap-2 overflow-y-auto border-l border-border bg-surface-1 p-3"
+      {playing && session && currentEntry ? (
+        <nav
           aria-label={t("player.bottomNav")}
+          className="shrink-0 border-t border-border bg-surface-1 pb-[env(safe-area-inset-bottom)]"
         >
-          {timed && remainingSeconds !== null ? (
-            <p
-              className={[
-                "rounded-pill border px-3 py-2 text-center font-display text-h3 font-semibold tabular-nums",
-                remainingSeconds <= 60 ? "border-danger text-danger" : "border-border text-text-primary",
-              ].join(" ")}
-              aria-live="polite"
+          <div className="mx-auto flex w-full max-w-3xl items-center gap-2 px-3 py-2 sm:px-4">
+            <button
+              type="button"
+              onClick={() => goTo(currentIndex - 1)}
+              disabled={currentIndex === 0}
+              aria-label={t("player.prev")}
+              title={currentIndex === 0 ? t("player.firstQuestion") : t("player.prev")}
+              className={barButton}
             >
-              {formatRemaining(remainingSeconds)}
-            </p>
-          ) : null}
-          {!timed && elapsedSeconds !== null ? (
-            <p
-              aria-live="off"
-              className="rounded-pill border border-border px-3 py-2 text-center font-display text-h3 font-semibold tabular-nums text-text-secondary"
+              <Icon name="chevronLeft" size={18} />
+              <span className="hidden sm:inline">{t("player.prev")}</span>
+            </button>
+            {!currentAnswer.submitted ? (
+              <button
+                type="button"
+                onClick={() => void handleSubmitAnswer()}
+                disabled={!canSubmitCurrent}
+                title={!canSubmitCurrent && !isSubmittingAnswer ? t("qcard.needAnswer") : undefined}
+                className={primaryButton}
+              >
+                {isSubmittingAnswer ? t("qcard.sending") : t("player.validate")}
+              </button>
+            ) : !isLast ? (
+              <button type="button" onClick={() => goTo(currentIndex + 1)} className={primaryButton}>
+                {t("player.next")}
+                <Icon name="chevronRight" size={18} />
+              </button>
+            ) : (
+              <button type="button" onClick={handleFinishSession} disabled={isFinishing} className={primaryButton}>
+                {isFinishing ? t("player.finishing") : t("player.finish")}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => goTo(currentIndex + 1)}
+              disabled={isLast}
+              aria-label={t("player.next")}
+              title={isLast ? t("player.lastQuestion") : t("player.next")}
+              className={barButton}
             >
-              {formatRemaining(elapsedSeconds)}
-            </p>
-          ) : null}
-          <p className="text-center text-caption text-text-tertiary">{t("player.answered", { count: answeredCount })}</p>
-          <button type="button" onClick={() => setExitOpen(true)} className={sideButton}>
-            <Icon name="close" size={16} />
-            {t("player.quit")}
-          </button>
+              <span className="hidden sm:inline">{t("player.next")}</span>
+              <Icon name="chevronRight" size={18} />
+            </button>
+          </div>
+        </nav>
+      ) : null}
+
+      {navOpen && playing && session ? (
+        <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-label={t("player.navTitle")}>
           <button
             type="button"
-            onClick={toggleFullscreen}
-            title={isFullscreen ? t("player.exitFullscreen") : t("player.fullscreen")}
-            aria-label={isFullscreen ? t("player.exitFullscreen") : t("player.enterFullscreen")}
-            aria-pressed={isFullscreen}
-            className={sideButton}
-          >
-            {isFullscreen ? t("player.exitFullscreen") : t("player.fullscreen")}
-          </button>
-          <button type="button" onClick={openReport} className={sideButton} aria-label={t("player.reportErrorLong")}>
-            <Icon name="flag" size={16} />
-            {t("player.reportError")}
-          </button>
-          {currentEntry ? (
-            <div className="[&_button]:w-full">
-              <EnqueueReviewButton questionId={currentEntry.question.id} />
+            tabIndex={-1}
+            aria-label={t("player.navClose")}
+            onClick={() => setNavOpen(false)}
+            className="absolute inset-0 bg-black/50"
+          />
+          <div className="relative flex h-full w-full max-w-sm flex-col border-l border-border bg-surface-1 shadow-card">
+            <div className="flex items-center gap-2 border-b border-border px-4 py-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-body font-semibold text-text-primary">{t("player.navTitle")}</p>
+                <p className="text-caption text-text-tertiary">
+                  {t("player.answered", { count: answeredCount })} · {questions.length}
+                </p>
+              </div>
+              <button type="button" onClick={() => setNavOpen(false)} className={iconButton} aria-label={t("player.navClose")}>
+                <Icon name="close" size={20} />
+              </button>
             </div>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
-            disabled={currentIndex === 0}
-            title={currentIndex === 0 ? t("player.firstQuestion") : undefined}
-            className={sideButton}
-          >
-            <Icon name="chevronLeft" size={16} />
-            {t("player.prev")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setCurrentIndex((i) => Math.min(questions.length - 1, i + 1))}
-            disabled={currentIndex >= questions.length - 1}
-            title={currentIndex >= questions.length - 1 ? t("player.lastQuestion") : undefined}
-            className={sideButton}
-          >
-            {t("player.next")}
-            <Icon name="chevronRight" size={16} />
-          </button>
-          <button
-            type="button"
-            onClick={toggleMarkForReview}
-            aria-pressed={isMarked}
-            className={[
-              sideButton,
-              isMarked ? "border-accent-qcm bg-accent-qcm/15 text-accent-soft" : "text-text-secondary",
-            ].join(" ")}
-          >
-            {isMarked ? t("player.marked") : t("player.mark")}
-          </button>
-          <button
-            type="button"
-            onClick={handleFinishSession}
-            disabled={isFinishing}
-            className="inline-flex min-h-touch-target w-full items-center justify-center rounded-control bg-accent-qcm px-3 py-2 text-center text-meta font-semibold text-on-accent shadow-glow-qcm transition hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-60"
-          >
-            {isFinishing ? t("player.finishing") : t("player.finish")}
-          </button>
-          {finishError ? (
-            <p role="alert" className="text-meta text-danger">
-              {finishError}
-            </p>
-          ) : null}
-          {session.mode === "practice" ? <StudyTimer embedded /> : null}
-        </aside>
+
+            <div className="flex flex-wrap gap-1.5 px-4 pt-3" role="group">
+              {(["all", "unanswered", "marked", ...(session.mode === "practice" ? (["wrong"] as const) : [])] as NavFilter[]).map(
+                (filter) => (
+                  <button
+                    key={filter}
+                    type="button"
+                    aria-pressed={navFilter === filter}
+                    onClick={() => {
+                      setNavFilter(filter);
+                      setNavPage(0);
+                    }}
+                    className={[
+                      `rounded-pill border px-3 py-1 text-caption font-medium transition ${focusRing}`,
+                      navFilter === filter
+                        ? "border-accent-qcm bg-accent-qcm/15 text-accent-soft"
+                        : "border-border text-text-secondary hover:bg-surface-2",
+                    ].join(" ")}
+                  >
+                    {t(NAV_FILTER_KEYS[filter])}
+                  </button>
+                )
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-x-3 gap-y-1 px-4 pt-2 text-caption text-text-tertiary" aria-hidden>
+              <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-accent-qcm" />{t("player.legendCurrent")}</span>
+              {session.mode === "practice" ? (
+                <>
+                  <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-success" />{t("player.legendCorrect")}</span>
+                  <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-danger" />{t("player.legendWrong")}</span>
+                </>
+              ) : (
+                <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-accent-qcm/40" />{t("player.legendAnswered")}</span>
+              )}
+              <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-accent-secondary" />{t("player.legendMarked")}</span>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+              {navPageIndices.length === 0 ? (
+                <p className="text-meta text-text-secondary">{t("player.navEmpty")}</p>
+              ) : (
+                <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-7">
+                  {navPageIndices.map((index) => {
+                    const entry = questions[index]!;
+                    const state = answers[entry.sessionQuestionId];
+                    const isCurrent = index === currentIndex;
+                    const marked = !!markedForReview[entry.sessionQuestionId];
+                    return (
+                      <button
+                        key={entry.sessionQuestionId}
+                        type="button"
+                        onClick={() => {
+                          goTo(index);
+                          setNavOpen(false);
+                        }}
+                        aria-label={`${t("player.railGo", { n: index + 1 })}${isCurrent ? t("player.railCurrent") : ""}${state?.submitted ? t("player.railAnswered") : ""}`}
+                        aria-current={isCurrent ? "true" : undefined}
+                        className={[
+                          `relative flex h-10 items-center justify-center rounded-input border text-meta font-semibold tabular-nums transition ${focusRing}`,
+                          isCurrent
+                            ? "border-accent-qcm bg-accent-qcm text-on-accent"
+                            : state?.isCorrect === true
+                              ? "border-success/60 bg-success/15 text-success"
+                              : state?.isCorrect === false
+                                ? "border-danger/60 bg-danger/15 text-danger"
+                                : state?.submitted
+                                  ? "border-accent-qcm/50 bg-accent-qcm/10 text-accent-soft"
+                                  : "border-border text-text-secondary hover:bg-surface-2",
+                        ].join(" ")}
+                      >
+                        {index + 1}
+                        {marked ? (
+                          <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-accent-secondary" aria-hidden />
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {navPageCount > 1 ? (
+              <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-2">
+                <button
+                  type="button"
+                  onClick={() => setNavPage(Math.max(0, safeNavPage - 1))}
+                  disabled={safeNavPage === 0}
+                  aria-label={t("player.pagePrev")}
+                  className={iconButton}
+                >
+                  <Icon name="chevronLeft" size={18} />
+                </button>
+                <span className="text-meta tabular-nums text-text-secondary">
+                  {(navPageIndices[0] ?? 0) + 1}–{(navPageIndices[navPageIndices.length - 1] ?? 0) + 1}
+                  <span className="text-text-tertiary"> · {safeNavPage + 1}/{navPageCount}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setNavPage(Math.min(navPageCount - 1, safeNavPage + 1))}
+                  disabled={safeNavPage >= navPageCount - 1}
+                  aria-label={t("player.pageNext")}
+                  className={iconButton}
+                >
+                  <Icon name="chevronRight" size={18} />
+                </button>
+              </div>
+            ) : null}
+
+            <form
+              className="flex items-center gap-2 border-t border-border px-4 py-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                submitJump();
+              }}
+            >
+              <label htmlFor="player-jump" className="shrink-0 text-meta text-text-secondary">
+                {t("player.jumpLabel")}
+              </label>
+              <input
+                id="player-jump"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={questions.length}
+                value={jumpValue}
+                onChange={(event) => setJumpValue(event.target.value)}
+                className={`min-h-touch-target w-full min-w-0 rounded-input border border-border bg-surface-2 px-3 text-body tabular-nums text-text-primary ${focusRing}`}
+              />
+              <button type="submit" className={barButton}>
+                {t("player.jumpGo")}
+              </button>
+            </form>
+
+            <div className="border-t border-border px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+              <button
+                type="button"
+                onClick={handleFinishSession}
+                disabled={isFinishing}
+                className={`${primaryButton} w-full`}
+              >
+                {isFinishing ? t("player.finishing") : t("player.finish")}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       <Modal
