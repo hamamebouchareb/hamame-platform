@@ -187,7 +187,18 @@ export function QuestionCard({
             </span>
           ))}
         </div>
-        {questionId ? <ShareWithFriend questionId={questionId} /> : null}
+        {questionId ? (
+          <ShareWithFriend
+            questionId={questionId}
+            preview={{
+              text: blocks.join("\n\n"),
+              options: options.map((option) => option.bodyText),
+              module: moduleName,
+              unit: unitName,
+              sitting: sittingLabel ?? (examYear != null ? String(examYear) : undefined),
+            }}
+          />
+        ) : null}
       </div>
 
       {caseBlocks.length > 0 ? (

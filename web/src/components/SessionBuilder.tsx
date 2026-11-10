@@ -20,7 +20,8 @@ export interface SessionConfig {
   mode: "practice" | "exam";
   name: string;
   yearLabel: string;
-  facultyId?: string;
+  /** Faculties whose papers are drawn; empty = every faculty. */
+  facultyIds: string[];
   /** Sitting years; empty = every year. */
   examYears: number[];
   /** Épreuves; empty = the whole paper. */
@@ -79,6 +80,20 @@ function toggle<T>(list: T[], value: T): T[] {
 /** "Faculté de Médecine d'Alger" → "Alger" for chips and quiz names. */
 function facultyShortName(name: string): string {
   return name.replace(/^Facult[ée] de M[ée]decine\s*(—\s*|d'|de\s+)/i, "").trim() || name;
+}
+
+/** First typed digit replaces the number already shown (preset 10 + type 3 → 3). */
+function digitsReplacing(previous: string, next: string): string {
+  const digits = next.replace(/\D/g, "").slice(0, 4);
+  if (!previous || digits.length !== previous.length + 1) return digits.replace(/^0+(?=\d)/, "");
+  let index = 0;
+  let extra = "";
+  for (const char of digits) {
+    if (index < previous.length && char === previous[index]) index += 1;
+    else extra += char;
+  }
+  if (index === previous.length && extra.length === 1) return extra === "0" ? "0" : extra.replace(/^0+/, "");
+  return digits.replace(/^0+(?=\d)/, "");
 }
 
 function yearsLabel(years: number[]): string {
@@ -184,7 +199,7 @@ export function SessionBuilder({
 }: SessionBuilderProps) {
   const { t } = useLanguage();
   const [mode, setMode] = useState<"practice" | "exam">(initialMode);
-  const [facultyId, setFacultyId] = useState("");
+  const [facultyIds, setFacultyIds] = useState<string[]>([]);
   const [examYears, setExamYears] = useState<number[]>([]);
   const [periods, setPeriods] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -204,14 +219,14 @@ export function SessionBuilder({
   const countsQuery = useMemo(() => {
     const params = new URLSearchParams();
     params.append("yearLabel", RESIDANAT_YEAR_LABEL);
-    if (facultyId) params.append("facultyId", facultyId);
+    if (facultyIds.length > 0) params.append("facultyIds", facultyIds.join(","));
     if (examYears.length > 0) params.append("examYears", examYears.join(","));
     for (const period of periods) params.append("periods", period);
     for (const category of categories) params.append("categories", category);
     for (const subcategory of subcategories) params.append("subcategories", subcategory);
     for (const type of questionTypes) params.append("types", type);
     return params.toString();
-  }, [facultyId, examYears, periods, categories, subcategories, questionTypes]);
+  }, [facultyIds, examYears, periods, categories, subcategories, questionTypes]);
 
   const counts = useApiResource<QuestionCountsResponse>(`/questions/counts?${countsQuery}`);
   const data = counts.data;
@@ -249,6 +264,10 @@ export function SessionBuilder({
 
   const total = data?.total;
   const effectiveSize = Math.max(1, Math.min(size, MAX_SIZE, total ?? MAX_SIZE));
+  // Raw text while typing in "Autre", so the field can be emptied mid-edit.
+  const [sizeDraft, setSizeDraft] = useState<string | null>(null);
+  const isPresetSize =
+    SIZE_PRESETS.includes(effectiveSize) || (total !== undefined && effectiveSize === Math.min(total, MAX_SIZE));
 
   // Preselect the student's own faculty once it is known to carry questions.
   const facultyPreselected = useRef(false);
@@ -257,7 +276,7 @@ export function SessionBuilder({
     if (facultyPreselected.current || !initialFacultyId) return;
     if (facultyChips.some((chip) => chip.id === initialFacultyId)) {
       facultyPreselected.current = true;
-      setFacultyId(initialFacultyId);
+      setFacultyIds([initialFacultyId]);
     }
   }, [initialFacultyId, facultyChips]);
 
@@ -280,7 +299,10 @@ export function SessionBuilder({
   }, [categories, subcategories.length]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const facultyLabel = facultyId ? facultyShortName(facultyById.get(facultyId)?.name ?? "") : "";
+  const facultyLabel = facultyIds
+    .map((id) => facultyShortName(facultyById.get(id)?.name ?? ""))
+    .filter(Boolean)
+    .join(" + ");
   const autoName = [RESIDANAT_YEAR_LABEL, facultyLabel, yearsLabel(examYears)].filter(Boolean).join(" ");
   const sessionName = nameTouched && name.trim() ? name.trim() : autoName;
 
@@ -299,7 +321,7 @@ export function SessionBuilder({
     mode,
     name: sessionName,
     yearLabel: RESIDANAT_YEAR_LABEL,
-    ...(facultyId ? { facultyId } : {}),
+    facultyIds,
     examYears,
     periods,
     categories,
@@ -332,16 +354,21 @@ export function SessionBuilder({
         disabled={isStarting}
       />
 
-      <Step index={1} title={t("rb.stepFaculty")} done={facultyId !== ""}>
+      <Step
+        index={1}
+        title={t("rb.stepFaculty")}
+        done={facultyIds.length > 0}
+        hint={facultyIds.length > 0 ? facultyLabel : t("rb.facultyMultiHint")}
+      >
         <div className="flex flex-wrap gap-2">
-          <Chip selected={facultyId === ""} onClick={() => setFacultyId("")} disabled={isStarting}>
+          <Chip selected={facultyIds.length === 0} onClick={() => setFacultyIds([])} disabled={isStarting}>
             {t("rb.allFaculties")}
           </Chip>
           {facultyChips.map((chip) => (
             <Chip
               key={chip.id}
-              selected={facultyId === chip.id}
-              onClick={() => setFacultyId(facultyId === chip.id ? "" : chip.id)}
+              selected={facultyIds.includes(chip.id)}
+              onClick={() => setFacultyIds(toggle(facultyIds, chip.id))}
               count={chip.count}
               disabled={isStarting}
             >
@@ -529,8 +556,11 @@ export function SessionBuilder({
             {SIZE_PRESETS.map((preset) => (
               <Chip
                 key={preset}
-                selected={effectiveSize === preset}
-                onClick={() => setSize(preset)}
+                selected={sizeDraft === null && effectiveSize === preset}
+                onClick={() => {
+                  setSizeDraft(null);
+                  setSize(preset);
+                }}
                 disabled={isStarting || (total !== undefined && preset > total && preset !== SIZE_PRESETS[0])}
               >
                 {preset}
@@ -538,25 +568,68 @@ export function SessionBuilder({
             ))}
             {total !== undefined && total > 0 ? (
               <Chip
-                selected={effectiveSize === Math.min(total, MAX_SIZE)}
-                onClick={() => setSize(Math.min(total, MAX_SIZE))}
+                selected={sizeDraft === null && effectiveSize === Math.min(total, MAX_SIZE)}
+                onClick={() => {
+                  setSizeDraft(null);
+                  setSize(Math.min(total, MAX_SIZE));
+                }}
                 disabled={isStarting}
               >
                 {t("rb.countAll", { count: Math.min(total, MAX_SIZE) })}
               </Chip>
             ) : null}
-            <Input
-              id="builder-size"
-              label={t("rb.countCustom")}
-              inputMode="numeric"
-              value={String(effectiveSize)}
-              onChange={(event) => {
-                const next = Number(event.target.value.replace(/\D/g, ""));
-                if (Number.isFinite(next) && next > 0) setSize(next);
-              }}
-              disabled={isStarting}
-              fieldClassName="w-28"
-            />
+            <label
+              htmlFor="builder-size"
+              className={cx(
+                "inline-flex min-h-touch-target items-center gap-2 rounded-pill border px-3 text-body transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus-ring",
+                sizeDraft !== null || !isPresetSize
+                  ? "border-accent-qcm bg-accent-qcm text-white"
+                  : "border-border bg-surface-2 text-text-primary hover:bg-surface-3"
+              )}
+            >
+              <span>{t("rb.countCustom")}</span>
+              <input
+                id="builder-size"
+                inputMode="numeric"
+                autoComplete="off"
+                value={sizeDraft ?? (isPresetSize ? "" : String(effectiveSize))}
+                placeholder="…"
+                onKeyDown={(event) => {
+                  if (sizeDraft !== null || event.ctrlKey || event.metaKey || event.altKey) return;
+                  if (/^\d$/.test(event.key)) {
+                    event.preventDefault();
+                    setSizeDraft(event.key);
+                    const next = Number(event.key);
+                    if (next > 0) setSize(Math.min(next, MAX_SIZE));
+                  } else if (event.key === "Backspace" || event.key === "Delete") {
+                    event.preventDefault();
+                    setSizeDraft("");
+                  }
+                }}
+                onPaste={(event) => {
+                  event.preventDefault();
+                  const digits = event.clipboardData.getData("text").replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 4);
+                  setSizeDraft(digits);
+                  const next = Number(digits);
+                  if (digits !== "" && next > 0) setSize(Math.min(next, MAX_SIZE));
+                }}
+                onChange={(event) => {
+                  // While a draft is already open, keep every new digit. The
+                  // replace helper only applies to the first edit of the
+                  // committed number (preset 10 + type 3 must not become 103).
+                  const digits =
+                    sizeDraft === null
+                      ? digitsReplacing(isPresetSize ? "" : String(effectiveSize), event.target.value)
+                      : event.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 4);
+                  setSizeDraft(digits);
+                  const next = Number(digits);
+                  if (digits !== "" && next > 0) setSize(Math.min(next, MAX_SIZE));
+                }}
+                onBlur={() => setSizeDraft(null)}
+                disabled={isStarting}
+                className="w-14 bg-transparent text-center tabular-nums text-inherit outline-none placeholder:text-current/60"
+              />
+            </label>
           </div>
           {total !== undefined ? (
             <p className="mt-1 text-meta text-text-tertiary">{t("rb.countHint", { count: total })}</p>

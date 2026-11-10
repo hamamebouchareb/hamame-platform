@@ -9,7 +9,7 @@ import { useRequireAuth } from "@/lib/useRequireAuth";
 import { apiFetch, ApiError } from "@/lib/api";
 import { AppHeader, EmptyState, Footer, LoadingSkeleton, UserAvatar } from "@/components";
 import { cx } from "@/lib/cx";
-import { shareLabel } from "@/lib/share-message";
+import { isQuestionShare, shareLabel } from "@/lib/share-message";
 import { MessageBody } from "@/components/ShareWithFriend";
 import { PresenceDot } from "@/components/PresenceDot";
 import { DmComposer } from "@/components/DmComposer";
@@ -162,14 +162,16 @@ export default function MessagesPage() {
   }, [isHydrated, user, loadConversations, loadFriends, loadInvites, t]);
 
   useEffect(() => {
-    if (queryOpened.current || conversations.length === 0) return;
+    if (queryOpened.current || isLoading) return;
     const id = new URLSearchParams(window.location.search).get("c");
-    if (!id || !conversations.some((c) => c.id === id)) return;
+    if (!id) return;
     queryOpened.current = true;
+    // Open even when the thread is not in the first page of the list — the
+    // share flow lands here with ?c= right after the conversation is created.
     selectConversation(id);
     // selectConversation is stable enough for this one-shot open from ?c=
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversations]);
+  }, [conversations, isLoading]);
 
   // Polling loop (no realtime transport in this stack — zero-new-dependency
   // precedent). Refreshes the conversation list, the open thread (cursor-based)
@@ -544,18 +546,23 @@ export default function MessagesPage() {
                       <ul className="flex flex-col gap-2">
                         {messages.map((message) => {
                           const fromMe = message.senderId === user.id;
+                          const questionCard = isQuestionShare(message.body);
                           return (
                             <li key={message.id} className={cx("flex", fromMe ? "justify-end" : "justify-start")}>
                               <div
                                 className={cx(
-                                  "max-w-[75%] px-3 py-2 text-body",
-                                  fromMe
-                                    ? "rounded-2xl rounded-br-sm bg-accent-primary text-on-accent"
-                                    : "rounded-2xl rounded-bl-sm bg-surface-2 text-text-primary"
+                                  questionCard
+                                    ? "w-full max-w-sm"
+                                    : cx(
+                                        "max-w-[75%] px-3 py-2 text-body",
+                                        fromMe
+                                          ? "rounded-2xl rounded-br-sm bg-accent-primary text-on-accent"
+                                          : "rounded-2xl rounded-bl-sm bg-surface-2 text-text-primary"
+                                      )
                                 )}
                               >
                                 <MessageBody body={message.body} />
-                                <p className={cx("mt-1 text-caption", fromMe ? "text-on-accent/70" : "text-text-tertiary")}>
+                                <p className={cx("mt-1 text-caption", questionCard || !fromMe ? "text-text-tertiary" : "text-on-accent/70")}>
                                   {formatWhen(message.createdAt, lang)}
                                 </p>
                               </div>

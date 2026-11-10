@@ -247,6 +247,8 @@ const createSessionSchema = z.object({
   name: z.string().min(1),
   mode: z.enum(["practice", "exam"]),
   facultyId: z.string().uuid().optional(),
+  facultyIds: z.array(z.string().uuid()).max(50).optional(),
+  questionIds: z.array(z.string().uuid()).min(1).max(5000).optional(),
   yearId: z.string().uuid().optional(),
   moduleIds: z.array(z.string().uuid()).optional(),
   unitIds: z.array(z.string().uuid()).optional(),
@@ -287,6 +289,8 @@ export interface BuildSessionParams {
   name: string;
   mode: "practice" | "exam";
   facultyId?: string;
+  facultyIds?: string[];
+  questionIds?: string[];
   yearId?: string;
   moduleIds?: string[];
   unitIds?: string[];
@@ -320,6 +324,8 @@ export async function buildSessionForUser(userId: string, params: BuildSessionPa
     name,
     mode,
     facultyId,
+    facultyIds,
+    questionIds,
     yearId,
     moduleIds,
     unitIds,
@@ -369,10 +375,12 @@ export async function buildSessionForUser(userId: string, params: BuildSessionPa
   const viewerUniversityId = await resolveViewerUniversityId(prisma, userId);
 
   const where = buildQuestionWhere({
+    ids: questionIds,
     unitIds,
     moduleIds,
     yearId,
     facultyId,
+    facultyIds,
     types: questionTypes,
     source,
     dateFrom,
@@ -537,6 +545,8 @@ async function createSession(req: Request, res: Response, next: NextFunction) {
       name: body.name,
       mode: effectiveMode,
       facultyId: body.facultyId,
+      facultyIds: body.facultyIds,
+      questionIds: body.questionIds,
       yearId: body.yearId,
       moduleIds: body.moduleIds,
       unitIds: body.unitIds,
@@ -1163,7 +1173,7 @@ async function getSessionResults(req: Request, res: Response, next: NextFunction
             explanationRichtext: true,
             options: {
               orderBy: { orderIndex: "asc" },
-              select: { id: true, bodyText: true, isCorrect: true },
+              select: { id: true, bodyText: true, isCorrect: true, orderIndex: true },
             },
             clinicalCaseParts: {
               orderBy: { partOrder: "asc" },
@@ -1193,7 +1203,7 @@ async function getSessionResults(req: Request, res: Response, next: NextFunction
           ? { selectedOptionIds: latestAttempt.selectedOptionIds, freeTextAnswer: latestAttempt.freeTextAnswer }
           : null,
         isCorrect: latestAttempt ? latestAttempt.isCorrect : null,
-        options: sessionQuestion.question.options,
+        options: reorderOptions(sessionQuestion.question.options, sessionQuestion.optionOrder),
         clinicalCaseParts: sessionQuestion.question.clinicalCaseParts,
         explanation: sessionQuestion.question.explanationRichtext,
       };

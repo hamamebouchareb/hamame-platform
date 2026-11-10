@@ -11,6 +11,8 @@ const VISIBLE_ROLLOUT_STATUSES = ["beta", "live"] as const;
 // POST /api/sessions (array filters for the session builder). Kept in one place so the
 // unit -> module -> year -> faculty traversal isn't duplicated/drifted between the two.
 export interface QuestionFilterInput {
+  // Explicit question pick (shared-question link). Every gate below still applies.
+  ids?: string[];
   unitId?: string;
   unitIds?: string[];
   moduleId?: string;
@@ -19,6 +21,8 @@ export interface QuestionFilterInput {
   // Stage label ('Résidanat') — scopes across faculties without year ids.
   yearLabel?: string;
   facultyId?: string;
+  // Multi-faculty pick (builder chips). Ignored when facultyId is set.
+  facultyIds?: string[];
   type?: string;
   types?: string[];
   source?: string;
@@ -55,6 +59,10 @@ export interface QuestionFilterInput {
 
 export function buildQuestionWhere(input: QuestionFilterInput): Prisma.QuestionWhereInput {
   const where: Prisma.QuestionWhereInput = { status: input.status ?? "approved" };
+
+  if (input.ids && input.ids.length > 0) {
+    where.id = { in: input.ids };
+  }
 
   if (input.unitId) {
     where.unitId = input.unitId;
@@ -122,6 +130,8 @@ export function buildQuestionWhere(input: QuestionFilterInput): Prisma.QuestionW
   };
   if (input.facultyId) {
     yearFilter.facultyId = input.facultyId;
+  } else if (input.facultyIds && input.facultyIds.length > 0) {
+    yearFilter.facultyId = { in: input.facultyIds };
   }
   if (input.yearLabel) {
     yearFilter.label = input.yearLabel;

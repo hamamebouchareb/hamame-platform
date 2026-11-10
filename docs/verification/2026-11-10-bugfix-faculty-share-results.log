@@ -1,0 +1,22 @@
+GET /plans 200 plans=2
+registered A=804b3061-3cd0-4b2a-9bcd-b535a3fb0710 B=e4706dbc-6dec-4534-bab3-95e22a5893f5
+PUT /users/me faculty 200 facultyIdSet=true
+counts all status=200 total=23877 faculties=10
+faculty A count=5590 B count=4626 A+B counts=10216 listTotal=10216 listStatus=200
+multi-select sum check: both===A+B true both>each true
+POST /sessions facultyIds status=201 questions=2 code=
+practice session 201 questions=1
+practice answer 201 hasExplanation=true choiceLines=5 hasIsCorrect=true
+submit 200 results 200
+result optionKeys=id,bodyText,isCorrect,orderIndex orderIndexes=1,4,2,3,0
+result explanation choiceLines=5 textChars=1555
+GET /questions?ids status=200 total=1
+exam session 201 questions=1
+exam results before submit 409 code=SESSION_NOT_COMPLETED
+exam answer 201 leakedCorrectness=false attemptKeys=id,sessionQuestionId,selectedOptionIds,freeTextAnswer,answeredAt
+exam submit 200 results 200 explanationPresent=true isCorrectType=boolean
+friend request 201 accept 200
+dm open 200 send 201 thread 200
+share kind=question hasText=true options=5 hasId=true hasNote=true leakedCorrect=false
+DELETE /users/me 804b3061-3cd0-4b2a-9bcd-b535a3fb0710 200
+DELETE /users/me e4706dbc-6dec-4534-bab3-95e22a5893f5 200

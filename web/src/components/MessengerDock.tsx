@@ -10,7 +10,7 @@ import { apiFetch } from "@/lib/api";
 import { Icon } from "@/components/Icon";
 import { UserAvatar } from "@/components/UserAvatar";
 import { PresenceDot } from "@/components/PresenceDot";
-import { shareLabel } from "@/lib/share-message";
+import { isQuestionShare, shareLabel } from "@/lib/share-message";
 import { MessageBody } from "@/components/ShareWithFriend";
 import { DmComposer } from "@/components/DmComposer";
 import type { ConversationSummary, DirectMessageItem } from "@/lib/dm-types";
@@ -280,18 +280,23 @@ function MiniChat({
           <ul className="flex flex-col gap-1.5">
             {messages.map((message) => {
               const fromMe = message.senderId === userId;
+              const questionCard = isQuestionShare(message.body);
               return (
                 <li key={message.id} className={cx("flex", fromMe ? "justify-end" : "justify-start")}>
                   <div
                     className={cx(
-                      "max-w-[80%] px-3 py-1.5 text-meta",
-                      fromMe
-                        ? "rounded-2xl rounded-br-sm bg-accent-primary text-on-accent"
-                        : "rounded-2xl rounded-bl-sm bg-surface-2 text-text-primary"
+                      questionCard
+                        ? "w-full max-w-sm"
+                        : cx(
+                            "max-w-[80%] px-3 py-1.5 text-meta",
+                            fromMe
+                              ? "rounded-2xl rounded-br-sm bg-accent-primary text-on-accent"
+                              : "rounded-2xl rounded-bl-sm bg-surface-2 text-text-primary"
+                          )
                     )}
                   >
                     <MessageBody body={message.body} />
-                    <p className={cx("mt-0.5 text-[10px]", fromMe ? "text-on-accent/70" : "text-text-tertiary")}>
+                    <p className={cx("mt-0.5 text-[10px]", questionCard || !fromMe ? "text-text-tertiary" : "text-on-accent/70")}>
                       {formatWhen(message.createdAt, lang)}
                     </p>
                   </div>

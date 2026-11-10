@@ -504,7 +504,7 @@ export interface SessionResultItem {
   };
   studentAnswer: { selectedOptionIds: string[] | null; freeTextAnswer: string | null } | null;
   isCorrect: boolean | null;
-  options: { id: string; bodyText: string; isCorrect: boolean }[];
+  options: { id: string; bodyText: string; isCorrect: boolean; orderIndex?: number }[];
   clinicalCaseParts: {
     id: string;
     partOrder: number;

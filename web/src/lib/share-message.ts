@@ -15,7 +15,19 @@ function isInlineImage(url: string): boolean {
 }
 
 export type SharedPayload =
-  | { kind: "question"; id: string; unitId: string; title: string; note?: string }
+  | {
+      kind: "question";
+      id: string;
+      unitId: string;
+      title: string;
+      note?: string;
+      /** Rich preview (shares sent after 2026-11-10); older shares carry only `title`. */
+      text?: string;
+      options?: string[];
+      module?: string;
+      unit?: string;
+      sitting?: string;
+    }
   | { kind: "resource"; id: string; title: string; note?: string }
   | { kind: "image"; url: string; name?: string; note?: string }
   | { kind: "file"; name: string; mime: string; size: number; url: string; note?: string };
@@ -23,33 +35,44 @@ export type SharedPayload =
 export function parseShare(body: string): SharedPayload | null {
   if (!body.startsWith(SHARE_PREFIX)) return null;
   try {
-    const parsed = JSON.parse(body.slice(SHARE_PREFIX.length)) as Partial<SharedPayload> & { kind?: string; url?: string };
-    if (parsed.kind === "question" && parsed.id && parsed.unitId) {
-      return { kind: "question", id: parsed.id, unitId: parsed.unitId, title: parsed.title ?? "", note: parsed.note };
+    const parsed = JSON.parse(body.slice(SHARE_PREFIX.length)) as Record<string, unknown>;
+    const str = (value: unknown) => (typeof value === "string" && value.length > 0 ? value : undefined);
+    const note = str(parsed.note);
+    if (parsed.kind === "question" && str(parsed.id) && str(parsed.unitId)) {
+      return {
+        kind: "question",
+        id: parsed.id as string,
+        unitId: parsed.unitId as string,
+        title: str(parsed.title) ?? "",
+        note,
+        text: str(parsed.text),
+        options: Array.isArray(parsed.options)
+          ? parsed.options.filter((option): option is string => typeof option === "string")
+          : undefined,
+        module: str(parsed.module),
+        unit: str(parsed.unit),
+        sitting: str(parsed.sitting),
+      };
     }
-    if (parsed.kind === "resource" && parsed.id && parsed.title) {
-      return { kind: "resource", id: parsed.id, title: parsed.title, note: parsed.note };
+    if (parsed.kind === "resource" && str(parsed.id) && str(parsed.title)) {
+      return { kind: "resource", id: parsed.id as string, title: parsed.title as string, note };
     }
-    if (parsed.kind === "image" && typeof parsed.url === "string") {
-      if (parsed.url.startsWith("https://") || isInlineImage(parsed.url)) {
-        return {
-          kind: "image",
-          url: parsed.url,
-          name: typeof parsed.name === "string" ? parsed.name : undefined,
-          note: parsed.note,
-        };
+    const url = str(parsed.url);
+    if (parsed.kind === "image" && url) {
+      if (url.startsWith("https://") || isInlineImage(url)) {
+        return { kind: "image", url, name: str(parsed.name), note };
       }
       return null;
     }
-    if (parsed.kind === "file" && typeof parsed.name === "string" && typeof parsed.url === "string") {
-      if (parsed.url.startsWith("https://") || parsed.url.includes(";base64,")) {
+    if (parsed.kind === "file" && str(parsed.name) && url) {
+      if (url.startsWith("https://") || url.includes(";base64,")) {
         return {
           kind: "file",
-          name: parsed.name,
-          mime: typeof parsed.mime === "string" ? parsed.mime : "application/octet-stream",
+          name: parsed.name as string,
+          mime: str(parsed.mime) ?? "application/octet-stream",
           size: typeof parsed.size === "number" ? parsed.size : 0,
-          url: parsed.url,
-          note: parsed.note,
+          url,
+          note,
         };
       }
       return null;
@@ -58,6 +81,10 @@ export function parseShare(body: string): SharedPayload | null {
   } catch {
     return null;
   }
+}
+
+export function isQuestionShare(body: string): boolean {
+  return parseShare(body)?.kind === "question";
 }
 
 export function shareLabel(body: string): string | null {

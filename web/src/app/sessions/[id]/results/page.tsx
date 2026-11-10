@@ -8,8 +8,23 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useApiResource } from "@/lib/useApiResource";
 import { apiFetch, ApiError } from "@/lib/api";
 import { extractParagraphs } from "@/lib/richtext";
+import { ExplanationBody } from "@/components/ExplanationBody";
 import { ShareWithFriend } from "@/components/ShareWithFriend";
 import type { SessionDetail, SessionResultItem, SessionSummary } from "@/lib/types";
+
+const LETTERS = "ABCDEFGHIJ".split("");
+
+/** Paper letter (explanation text) → letter shown for this session's option order. */
+function presentedLetterMap(options: { orderIndex?: number }[]): Record<string, string> {
+  const map: Record<string, string> = {};
+  options.forEach((option, index) => {
+    if (typeof option.orderIndex !== "number") return;
+    const paper = LETTERS[option.orderIndex];
+    const shown = LETTERS[index];
+    if (paper && shown) map[paper] = shown;
+  });
+  return map;
+}
 
 function isGradable(type: string): boolean {
   return type === "QCM" || type === "QCS";
@@ -291,39 +306,58 @@ export default function SessionResultsPage() {
                         <span className="text-meta text-text-tertiary">{t("results.ungraded")}</span>
                       )}
                       <span className="ml-auto">
-                        <ShareWithFriend questionId={result.question.id} />
+                        <ShareWithFriend
+                          questionId={result.question.id}
+                          preview={{
+                            text: extractParagraphs(result.question.bodyRichtext).join("\n\n"),
+                            options: result.options.map((option) => option.bodyText),
+                          }}
+                        />
                       </span>
                     </div>
 
-                    <div className="mt-2 flex flex-col gap-2 text-body text-text-primary">
+                    <div className="mt-2 flex flex-col gap-2 text-body font-medium leading-relaxed text-text-primary">
                       {extractParagraphs(result.question.bodyRichtext).map((paragraph, i) => (
-                        <p key={i}>{paragraph}</p>
+                        <p key={i} className="whitespace-pre-line">{paragraph}</p>
                       ))}
                     </div>
 
                     {result.options.length > 0 && (
                       <ul className="mt-3 flex flex-col gap-1.5">
-                        {result.options.map((option) => {
+                        {result.options.map((option, index) => {
                           const wasSelected =
                             result.studentAnswer?.selectedOptionIds?.includes(option.id) ?? false;
-                          let classes =
-                            "rounded-control border px-3 py-2 text-meta border-border text-text-secondary";
                           // Correct and selected-wrong must be distinguishable at once.
-                          if (option.isCorrect && wasSelected) {
-                            classes =
-                              "rounded-control border px-3 py-2 text-meta border-success bg-surface-2 text-success";
-                          } else if (option.isCorrect) {
-                            classes =
-                              "rounded-control border px-3 py-2 text-meta border-success/60 text-success";
-                          } else if (wasSelected) {
-                            classes =
-                              "rounded-control border px-3 py-2 text-meta border-danger bg-surface-2 text-danger";
-                          }
+                          const tone =
+                            option.isCorrect && wasSelected
+                              ? "border-success bg-success/10 text-success"
+                              : option.isCorrect
+                                ? "border-success/60 text-success"
+                                : wasSelected
+                                  ? "border-danger bg-danger/10 text-danger"
+                                  : "border-border text-text-secondary";
                           return (
-                            <li key={option.id} className={classes}>
-                              {option.bodyText}
-                              {wasSelected ? t("results.yourChoice") : ""}
-                              {option.isCorrect ? t("results.rightAnswer") : ""}
+                            <li
+                              key={option.id}
+                              className={`flex items-start gap-2.5 rounded-input border px-3 py-2 text-meta ${tone}`}
+                            >
+                              <span
+                                aria-hidden
+                                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-caption font-bold ${
+                                  option.isCorrect
+                                    ? "bg-success text-on-accent"
+                                    : wasSelected
+                                      ? "bg-danger text-on-accent"
+                                      : "bg-surface-3 text-text-secondary"
+                                }`}
+                              >
+                                {LETTERS[index]}
+                              </span>
+                              <span className="min-w-0 flex-1 pt-0.5">
+                                {option.bodyText}
+                                {wasSelected ? t("results.yourChoice") : ""}
+                                {option.isCorrect ? t("results.rightAnswer") : ""}
+                              </span>
                             </li>
                           );
                         })}
@@ -339,13 +373,18 @@ export default function SessionResultsPage() {
                     )}
 
                     {extractParagraphs(result.explanation).length > 0 && (
-                      <div className="mt-3 border-t border-border pt-3 text-meta text-text-secondary">
-                        {extractParagraphs(result.explanation).map((paragraph, i) => (
-                          <p key={i} className={i > 0 ? "mt-2" : undefined}>
-                            {paragraph}
-                          </p>
-                        ))}
-                      </div>
+                      <section className="mt-3 rounded-input border border-border bg-surface-2/60 px-3 py-3 sm:px-4">
+                        <h3 className="mb-2 text-meta font-semibold uppercase tracking-wide text-accent-soft">
+                          {t("qcard.explanation")}
+                        </h3>
+                        <ExplanationBody
+                          paragraphs={extractParagraphs(result.explanation)}
+                          letterMap={presentedLetterMap(result.options)}
+                          correctLetters={result.options
+                            .map((option, index) => (option.isCorrect ? LETTERS[index] : null))
+                            .filter((letter): letter is string => letter !== null)}
+                        />
+                      </section>
                     )}
                   </li>
                 ))}

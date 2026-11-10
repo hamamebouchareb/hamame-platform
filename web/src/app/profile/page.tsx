@@ -103,7 +103,7 @@ export default function ProfilePage() {
   const friends = useMemo(() => friendsData.data?.friends ?? [], [friendsData.data]);  const filteredFriends = useMemo(() => {
     if (!friendSearch.trim()) return friends;
     const q = friendSearch.toLowerCase();
-    return friends.filter((f) => f.fullName.toLowerCase().includes(q));
+    return friends.filter((f) => (f.fullName ?? "").toLowerCase().includes(q));
   }, [friends, friendSearch]);
 
   // Find-new-friends search (GET /api/users/search — id + fullName +
@@ -404,7 +404,7 @@ export default function ProfilePage() {
                     className="flex min-w-0 flex-1 items-center gap-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
                   >
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-surface-3 font-display text-caption font-bold text-accent-soft" aria-hidden>
-                      {initials(friend.fullName)}
+                      {initials(friend.fullName ?? "")}
                     </span>
                     <span className="truncate text-body font-medium text-text-primary">{friend.fullName}</span>
                   </Link>

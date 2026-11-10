@@ -81,7 +81,7 @@ export default function QcmBuilderClient({ initialMode = "practice" }: QcmBuilde
           name: config.name,
           mode: config.mode,
           yearLabel: config.yearLabel,
-          ...(config.facultyId ? { facultyId: config.facultyId } : {}),
+          ...(config.facultyIds.length > 0 ? { facultyIds: config.facultyIds } : {}),
           ...(config.examYears.length > 0 ? { examYears: config.examYears } : {}),
           ...(config.periods.length > 0 ? { periods: config.periods } : {}),
           ...(config.categories.length > 0 ? { categories: config.categories } : {}),

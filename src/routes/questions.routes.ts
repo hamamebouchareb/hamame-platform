@@ -13,12 +13,23 @@ import { resolveViewerUniversityId, universityScopeFilter } from "../lib/univers
 // endpoints; session-lifecycle endpoints live in sessions.routes.ts).
 const router = Router();
 
+/** Comma-separated or repeated uuid query param (`facultyIds`, `ids`, `unitIds`). */
+const uuidArrayQueryParam = z.preprocess((value) => {
+  if (value === undefined) return undefined;
+  const parts = Array.isArray(value) ? value : String(value).split(",");
+  return parts.map((part) => String(part).trim()).filter((part) => part.length > 0);
+}, z.array(z.string().uuid()).optional());
+
 // GET /api/questions — filtered list, FR-15. Left public like curriculum browsing;
 // the free plan includes full question-bank access per PRD BR-1, so listing itself
 // does not require a paid plan, only (arguably) authentication — revisit if guests
 // should NOT see this.
 const listQuestionsQuerySchema = paginationQuery.extend({
   facultyId: z.string().uuid().optional(),
+  // Multi-faculty pick. Singular facultyId wins inside buildQuestionWhere.
+  facultyIds: uuidArrayQueryParam,
+  // Explicit question pick (shared-question link). Every other gate still applies.
+  ids: uuidArrayQueryParam,
   yearId: z.string().uuid().optional(),
   moduleId: z.string().uuid().optional(),
   unitId: z.string().uuid().optional(),
@@ -29,7 +40,7 @@ const listQuestionsQuerySchema = paginationQuery.extend({
   examYear: z.coerce.number().int().min(1000).max(9999).optional(),
   sittingLabel: z.string().min(1).max(120).optional(),
   // Résidanat facets (hb-db/MBset parity, migration 20261106000000).
-  // Singular exact-match params for browse; plural arrays live on /counts.
+  // Singular exact-match params for browse; facultyIds/ids are the plural exceptions.
   category: z.string().min(1).max(120).optional(),
   subcategory: z.string().min(1).max(120).optional(),
   period: z.string().min(1).max(120).optional(),
@@ -41,6 +52,8 @@ async function listQuestions(req: Request, res: Response, next: NextFunction) {
       page,
       limit,
       facultyId,
+      facultyIds,
+      ids,
       yearId,
       moduleId,
       unitId,
@@ -64,10 +77,12 @@ async function listQuestions(req: Request, res: Response, next: NextFunction) {
     // anonymous caller resolves to null, i.e. global questions only (FR-10a).
     const viewerUniversityId = await resolveViewerUniversityId(prisma, req.auth?.userId);
     const where = buildQuestionWhere({
+      ids,
       unitId,
       moduleId,
       yearId,
       facultyId,
+      facultyIds,
       type,
       source,
       dateFrom,
@@ -142,12 +157,6 @@ router.get("/questions", optionalAuth, validateQuery(listQuestionsQuerySchema), 
 // - `byModule` ignores `moduleId`+`unitIds` (year scope only) for module-dropdown labels.
 //   Present only when `yearId` is given, else [].
 // - With no scope params, total = everything visible to the viewer; both lists are [].
-const uuidArrayQueryParam = z.preprocess((value) => {
-  if (value === undefined) return undefined;
-  const parts = Array.isArray(value) ? value : String(value).split(",");
-  return parts.map((part) => String(part).trim()).filter((part) => part.length > 0);
-}, z.array(z.string().uuid()).optional());
-
 const questionTypeQueryEnum = z.enum(["QCM", "QCS", "QROC", "CLINICAL_CASE"]);
 
 // Résidanat facet arrays (comma-separated or repeated key, same preprocessing
@@ -172,6 +181,7 @@ const yearArrayQueryParam = z.preprocess((value) => {
 
 const countsQuerySchema = z.object({
   facultyId: z.string().uuid().optional(),
+  facultyIds: uuidArrayQueryParam,
   yearId: z.string().uuid().optional(),
   moduleId: z.string().uuid().optional(),
   // Multi-module scope for the session builder's module chips (same uuid-array
@@ -203,6 +213,7 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
   try {
     const {
       facultyId,
+      facultyIds,
       yearId,
       moduleId,
       moduleIds,
@@ -228,6 +239,7 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
     // Same scoping as the list endpoint: guests resolve to null = global only.
     const viewerUniversityId = await resolveViewerUniversityId(prisma, req.auth?.userId);
 
+    const facultyScope = { facultyId, facultyIds };
     const sittingScope = { examYear, examYears, examYearFrom, examYearTo, sittingLabel };
     const facetScope = { category, categories, subcategory, subcategories, period, periods };
 
@@ -238,7 +250,7 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
       moduleId,
       moduleIds,
       yearId,
-      facultyId,
+      ...facultyScope,
       yearLabel,
       types: typeList,
       source,
@@ -254,7 +266,7 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
       const badgeWhere = buildQuestionWhere({
         moduleId,
         yearId,
-        facultyId,
+        ...facultyScope,
         yearLabel,
         types: typeList,
         source,
@@ -277,7 +289,7 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
     if (yearId) {
       const yearWhere = buildQuestionWhere({
         yearId,
-        facultyId,
+        ...facultyScope,
         yearLabel,
         types: typeList,
         source,
@@ -320,7 +332,7 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
       moduleId,
       moduleIds,
       yearId,
-      facultyId,
+      ...facultyScope,
       yearLabel,
       types: typeList,
       source,
@@ -355,7 +367,7 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
       moduleId,
       moduleIds,
       yearId,
-      facultyId,
+      ...facultyScope,
       yearLabel,
       types: typeList,
       source,
@@ -432,7 +444,7 @@ async function getQuestionCounts(req: Request, res: Response, next: NextFunction
           moduleId,
           moduleIds,
           yearId,
-          facultyId,
+          ...facultyScope,
           yearLabel,
           types: typeList,
           source,

@@ -227,19 +227,49 @@ function snippet(raw: string): string {
   return raw.replace(/[{}"\\[\]]/g, " ").replace(/\b(text|type|content|attrs)\s*:/gi, " ").replace(/\s+/g, " ").trim().slice(0, 140);
 }
 
+/** Plain text of a question body ({ text } or { blocks: [{ text }] }). */
+function richText(doc: unknown): string {
+  if (!doc || typeof doc !== "object") return "";
+  const record = doc as { text?: unknown; blocks?: Array<{ text?: unknown }> };
+  if (Array.isArray(record.blocks)) {
+    return record.blocks
+      .map((block) => (typeof block?.text === "string" ? block.text : ""))
+      .filter(Boolean)
+      .join("\n\n")
+      .trim();
+  }
+  return typeof record.text === "string" ? record.text.trim() : snippet(JSON.stringify(doc));
+}
+
 async function composeBody(input: z.infer<typeof sendMessageSchema>): Promise<{ stored: string; preview: string }> {
   const note = input.body?.trim();
   if (input.questionId) {
     const question = await prisma.question.findFirst({
       where: { id: input.questionId, status: "approved" },
-      select: { id: true, unitId: true, bodyRichtext: true },
+      select: {
+        id: true,
+        unitId: true,
+        bodyRichtext: true,
+        examYear: true,
+        sittingLabel: true,
+        options: { orderBy: { orderIndex: "asc" }, select: { bodyText: true } },
+        unit: { select: { name: true, module: { select: { name: true } } } },
+      },
     });
     if (!question) throw new ApiError(404, "QUESTION_NOT_FOUND", "That question is not available to share.");
+    const text = richText(question.bodyRichtext);
+    // A readable "screenshot" of the question: the chat renders it as a card
+    // without a second fetch. No correctness data ever rides in a share.
     const payload = {
       kind: "question" as const,
       id: question.id,
       unitId: question.unitId,
-      title: snippet(JSON.stringify(question.bodyRichtext)),
+      title: text.slice(0, 140),
+      text: text.slice(0, 900),
+      options: question.options.slice(0, 8).map((option) => option.bodyText.slice(0, 200)),
+      module: question.unit.module.name,
+      unit: question.unit.name,
+      sitting: question.sittingLabel ?? (question.examYear !== null ? String(question.examYear) : undefined),
       note: note || undefined,
     };
     return { stored: SHARE_PREFIX + JSON.stringify(payload), preview: payload.title || "Question" };
