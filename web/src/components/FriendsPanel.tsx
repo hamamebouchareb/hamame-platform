@@ -7,6 +7,7 @@ import { cx } from "@/lib/cx";
 import { useLanguage } from "@/context/LanguageContext";
 import { apiFetch, ApiError } from "@/lib/api";
 import { EmptyState } from "@/components/EmptyState";
+import { Icon } from "@/components/Icon";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { PresenceDot } from "@/components/PresenceDot";
 import type { UserSearchResult } from "@/lib/types";
@@ -140,15 +141,27 @@ export function FriendsPanel({ className }: { className?: string }) {
   async function remove(userId: string) {
     await apiFetch(`/friends/${userId}`, { method: "DELETE" });
     await reload();
+    const q = query.trim();
+    if (q.length >= 3) await fetchSearch(q).catch(() => undefined);
   }
 
   async function message(userId: string) {
-    const data = await apiFetch<{ conversation: { id: string } }>("/dms/conversations", {
-      method: "POST",
-      body: JSON.stringify({ userId }),
-    });
-    router.push(`/messages?c=${data.conversation.id}`);
+    setError(null);
+    try {
+      const data = await apiFetch<{ conversation: { id: string } }>("/dms/conversations", {
+        method: "POST",
+        body: JSON.stringify({ userId }),
+      });
+      router.push(`/messages?c=${data.conversation.id}`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("friends.messageFailed"));
+    }
   }
+
+  const friendIds = new Set(friends.map((friend) => friend.id));
+  const pendingOut = outgoing.filter((person) => !friendIds.has(person.id));
+  const talkButton =
+    "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-pill border border-accent-qcm/50 bg-accent-qcm px-3 text-caption font-semibold text-on-accent transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring";
 
   return (
     <section className={cx("rounded-card border border-border bg-surface-1 p-card-padding shadow-card", className)}>
@@ -177,7 +190,12 @@ export function FriendsPanel({ className }: { className?: string }) {
                 person.relationship === "friend" ? (
                   <span className="shrink-0 text-caption text-text-tertiary">{t("friends.alreadyFriends")}</span>
                 ) : person.relationship === "pending_sent" ? (
-                  <span className="shrink-0 text-caption text-text-tertiary">{t("friends.pending")}</span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <span className="text-caption text-text-tertiary">{t("friends.pending")}</span>
+                    <button type="button" onClick={() => void remove(person.id)} className="text-caption font-medium text-danger">
+                      {t("friends.cancel")}
+                    </button>
+                  </span>
                 ) : person.relationship === "pending_received" ? (
                   <button type="button" onClick={() => void accept(person.id)} className="shrink-0 text-caption font-semibold text-accent-soft">
                     {t("friends.approve")}
@@ -226,15 +244,27 @@ export function FriendsPanel({ className }: { className?: string }) {
           ) : null}
           {query.trim().length < 3 ? (
             <>
-              {outgoing.length > 0 ? (
-                <ul className="mt-2 flex flex-col gap-1">
-                  {outgoing.map((person) => (
-                    <li key={person.id} className="flex items-center justify-between gap-2 text-meta text-text-secondary">
-                      <span className="min-w-0 truncate">{person.fullName ?? "—"}</span>
-                      <span className="shrink-0 text-caption">{t("friends.pending")}</span>
-                    </li>
-                  ))}
-                </ul>
+              {pendingOut.length > 0 ? (
+                <div className="mt-3">
+                  <p className="text-caption font-medium uppercase tracking-wide text-text-tertiary">{t("friends.outgoing")}</p>
+                  <ul className="mt-1 flex flex-col gap-1">
+                    {pendingOut.map((person) => (
+                      <li key={person.id} className="flex items-center justify-between gap-2 rounded-control px-1 py-1">
+                        <span className="min-w-0 truncate text-meta text-text-secondary">{person.fullName ?? "—"}</span>
+                        <span className="flex shrink-0 items-center gap-2">
+                          <span className="text-caption text-text-tertiary">{t("friends.pending")}</span>
+                          <button
+                            type="button"
+                            onClick={() => void remove(person.id)}
+                            className="text-caption font-medium text-danger"
+                          >
+                            {t("friends.cancel")}
+                          </button>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               ) : null}
               {friends.length === 0 && incoming.length === 0 ? (
                 <div className="mt-3">
@@ -266,7 +296,8 @@ export function FriendsPanel({ className }: { className?: string }) {
                         </span>
                         <span className="min-w-0 truncate text-body font-medium text-text-primary">{friend.fullName ?? "—"}</span>
                       </Link>
-                      <button type="button" onClick={() => void message(friend.id)} className="shrink-0 text-caption font-medium text-accent-soft">
+                      <button type="button" onClick={() => void message(friend.id)} className={talkButton}>
+                        <Icon name="messages" size={14} />
                         {t("friends.message")}
                       </button>
                     </li>

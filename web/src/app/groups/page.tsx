@@ -483,13 +483,13 @@ export default function GroupsPage() {
                 onClick={() => setSelected(null)}
                 className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
               >
-                â† {t("grp.title")}
+                ← {t("grp.title")}
               </button>
               <h1 className="text-2xl font-bold text-slate-900 dark:text-white mt-2">{selected.name}</h1>
               <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                {selected.faculty.name} Â· {selected.year.label}
+                {selected.faculty.name} · {selected.year.label}
                 {selected.memberCount !== null
-                  ? ` Â· ${t("grp.membersCount").replace("{count}", String(selected.memberCount))}`
+                  ? ` · ${t("grp.membersCount", { count: selected.memberCount })}`
                   : ""}
               </p>
               {selected.description && (
@@ -668,7 +668,7 @@ export default function GroupsPage() {
                         >
                           <h3 className="font-semibold text-slate-900 dark:text-white">{a.title}</h3>
                           <p className="text-xs text-slate-500 dark:text-slate-400">
-                            {a.authorName} Â· {formatWhen(a.createdAt, lang)}
+                            {a.authorName} · {formatWhen(a.createdAt, lang)}
                           </p>
                           <p className="mt-2 text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap">{a.body}</p>
                         </article>
@@ -719,7 +719,7 @@ export default function GroupsPage() {
                             <div className="min-w-0">
                               <p className="font-semibold text-sm text-slate-900 dark:text-white truncate">{a.title}</p>
                               <p className="text-xs text-slate-500 dark:text-slate-400">
-                                {a.uploadedBy} Â· {formatWhen(a.createdAt, lang)}
+                                {a.uploadedBy} · {formatWhen(a.createdAt, lang)}
                               </p>
                             </div>
                             <div className="flex shrink-0 items-center gap-2">
@@ -979,9 +979,9 @@ export default function GroupsPage() {
                       <div>
                         <h3 className="font-semibold text-slate-900 dark:text-white">{g.name}</h3>
                         <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {g.faculty.name} Â· {g.year.label}
+                          {g.faculty.name} · {g.year.label}
                           {g.memberCount !== null
-                            ? ` Â· ${t("grp.membersCount").replace("{count}", String(g.memberCount))}`
+                            ? ` · ${t("grp.membersCount", { count: g.memberCount })}`
                             : ""}
                         </p>
                         {g.description && (
@@ -993,7 +993,7 @@ export default function GroupsPage() {
                         onClick={() => void openDetail(g)}
                         className="shrink-0 rounded-full border border-blue-300 dark:border-blue-800 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950"
                       >
-                        {g.myRole === "owner" ? t("grp.ownerBadge") : t("grp.open")}
+                        {g.myRole === "owner" ? t("grp.ownerBadge") : g.myRole ? t("grp.memberBadge") : t("grp.open")}
                       </button>
                     </article>
                   </li>
@@ -1009,7 +1009,7 @@ export default function GroupsPage() {
                   disabled={page <= 1}
                   className="rounded-full border border-slate-300 dark:border-slate-700 px-3 py-1.5 font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-50"
                 >
-                  â†
+                  ←
                 </button>
                 <span className="text-slate-600 dark:text-slate-400">
                   {page} / {totalPages}
@@ -1020,7 +1020,7 @@ export default function GroupsPage() {
                   disabled={page >= totalPages}
                   className="rounded-full border border-slate-300 dark:border-slate-700 px-3 py-1.5 font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-50"
                 >
-                  â†’
+                  →
                 </button>
               </div>
             )}

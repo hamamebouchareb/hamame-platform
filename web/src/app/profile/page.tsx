@@ -10,6 +10,7 @@ import { useApiResource } from "@/lib/useApiResource";
 import { apiFetch, ApiError } from "@/lib/api";
 import { AppHeader, BadgeShelf, ButtonLink, EmptyState, Footer, MetricCard } from "@/components";
 import type { EarnedBadge } from "@/components";
+import { Icon } from "@/components/Icon";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import type {
   ExamReadiness,
@@ -117,6 +118,7 @@ export default function ProfilePage() {
   const [userSearchError, setUserSearchError] = useState<string | null>(null);
   const [userSearched, setUserSearched] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);
+  const [friendActionError, setFriendActionError] = useState<string | null>(null);
 
   // The query as SUBMITTED (not the live input value): convergence below must
   // re-run exactly the search that is on screen, even if the user kept typing.
@@ -153,6 +155,19 @@ export default function ProfilePage() {
       window.clearInterval(interval);
     };
   }, [convergeSearch]);
+
+  async function messageFriend(userId: string) {
+    setFriendActionError(null);
+    try {
+      const data = await apiFetch<{ conversation: { id: string } }>("/dms/conversations", {
+        method: "POST",
+        body: JSON.stringify({ userId }),
+      });
+      router.push(`/messages?c=${data.conversation.id}`);
+    } catch (err) {
+      setFriendActionError(err instanceof ApiError ? err.message : t("friends.messageFailed"));
+    }
+  }
 
   async function handleUserSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -370,6 +385,9 @@ export default function ProfilePage() {
             )}
           </div>
 
+          {friendActionError ? (
+            <p role="alert" className="mt-3 text-meta text-danger">{friendActionError}</p>
+          ) : null}
           {friendsData.isLoading ? (
             <div className="mt-3 flex flex-col gap-2" aria-busy="true">
               {[0, 1, 2].map((i) => (
@@ -408,6 +426,14 @@ export default function ProfilePage() {
                     </span>
                     <span className="truncate text-body font-medium text-text-primary">{friend.fullName}</span>
                   </Link>
+                  <button
+                    type="button"
+                    onClick={() => void messageFriend(friend.id)}
+                    className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-pill border border-accent-qcm/50 bg-accent-qcm px-3 text-caption font-semibold text-on-accent transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+                  >
+                    <Icon name="messages" size={14} />
+                    {t("friends.message")}
+                  </button>
                 </li>
               ))}
             </ul>

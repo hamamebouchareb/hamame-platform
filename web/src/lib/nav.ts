@@ -58,8 +58,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/messages", labelKey: "nav.messages", icon: "messages" },
       { href: "/groups", labelKey: "nav.groups", icon: "groups" },
       { href: "/classement", labelKey: "nav.leaderboard", icon: "trophy" },
-      { href: "/associations", labelKey: "nav.assoc", icon: "associations" },
-      { href: "/internships", labelKey: "nav.internships", icon: "internships" },
     ],
   },
   {
@@ -100,7 +98,6 @@ export const ADMIN_NAV: NavKeyEntry[] = [
   { href: "/admin/reports", labelKey: "admin.reports", icon: "flag" },
   { href: "/admin/payouts", labelKey: "admin.payouts", icon: "payout" },
   { href: "/admin/wallet", labelKey: "admin.wallet", icon: "wallet" },
-  { href: "/admin/associations", labelKey: "admin.assocTitle", icon: "associations" },
 ];
 // NOTE: admin.applications / admin.promos / admin.notifications / admin.jobs
 // keys stay in i18n for the pages when they are built; only entries with a

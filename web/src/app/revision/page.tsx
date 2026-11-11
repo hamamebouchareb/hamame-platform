@@ -122,7 +122,11 @@ export default function RevisionPage() {
           currentIndex: nextIndex,
           completedCount: prev.completedCount + 1,
           passedCount: prev.passedCount + (passed ? 1 : 0),
-          nextDueDate: isDone ? response.item.dueAt : prev.nextDueDate,
+          nextDueDate: (() => {
+            const due = response.item.dueAt;
+            if (!prev.nextDueDate) return due;
+            return new Date(due).getTime() < new Date(prev.nextDueDate).getTime() ? due : prev.nextDueDate;
+          })(),
         };
       });
     } catch (err) {

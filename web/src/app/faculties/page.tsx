@@ -78,7 +78,7 @@ export default function FacultiesPage() {
                   ? t("library.resumeDesc")
                   : t("library.needYearDesc")}
               </p>
-              <span className="mt-1 inline-flex min-h-touch-target w-fit items-center justify-center gap-2 rounded-control px-5 text-body font-semibold text-background transition group-hover:brightness-110 active:scale-[0.98]">
+              <span className="mt-1 inline-flex min-h-touch-target w-fit items-center justify-center gap-2 rounded-control bg-accent-library px-5 text-body font-semibold text-on-accent transition group-hover:brightness-110 active:scale-[0.98]">
                 {myYear ? t("library.resumeCourses") : t("library.chooseYear")}
                 <span aria-hidden className="transition-transform group-hover:translate-x-1">
                   →

@@ -95,6 +95,11 @@ async function acceptFriendRequest(req: Request, res: Response, next: NextFuncti
       where: { userIdA_userIdB: { userIdA: userId, userIdB: me } },
       data: { status: "accepted" },
     });
+    // Drop a leftover request in the opposite direction so the sender's card
+    // does not keep showing "En attente" for someone who is already a friend.
+    await prisma.friendship.deleteMany({
+      where: { userIdA: me, userIdB: userId, status: "pending" },
+    });
 
     // Social notification for the original sender (best-effort, never fails
     // the accept flow). Name lookup kept minimal (fullName only).
@@ -203,8 +208,25 @@ async function listOutgoingRequests(req: Request, res: Response, next: NextFunct
       orderBy: { userIdB: "asc" },
       include: { userB: { select: { id: true, fullName: true } } },
     });
+    // A pending row must not survive once the pair is already friends (a second
+    // row in the other direction). Those leftovers are why "En attente" stayed
+    // on the card after the request had been accepted.
+    const accepted = await prisma.friendship.findMany({
+      where: { status: "accepted", OR: [{ userIdA: me }, { userIdB: me }] },
+      select: { userIdA: true, userIdB: true },
+    });
+    const friendIds = new Set(accepted.map((row) => (row.userIdA === me ? row.userIdB : row.userIdA)));
+    const stale = requests.filter((row) => friendIds.has(row.userB.id));
+    if (stale.length > 0) {
+      await prisma.friendship.deleteMany({
+        where: {
+          OR: stale.map((row) => ({ userIdA: row.userIdA, userIdB: row.userIdB, status: "pending" })),
+        },
+      });
+    }
+    const live = requests.filter((row) => !friendIds.has(row.userB.id));
     res.status(200).json({
-      requests: requests.map((row) => ({ userId: row.userB.id, fullName: row.userB.fullName })),
+      requests: live.map((row) => ({ userId: row.userB.id, fullName: row.userB.fullName })),
     });
   } catch (err) {
     next(err);
