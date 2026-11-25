@@ -230,6 +230,10 @@ export function SessionBuilder({
 
   const counts = useApiResource<QuestionCountsResponse>(`/questions/counts?${countsQuery}`);
   const data = counts.data;
+  const qrocCounts = useApiResource<QuestionCountsResponse>(
+    `/questions/counts?yearLabel=${encodeURIComponent(RESIDANAT_YEAR_LABEL)}&types=QROC`
+  );
+  const hasQrocInBank = (qrocCounts.data?.total ?? 1) > 0;
 
   const facultyById = useMemo(
     () => new Map((faculties.data?.faculties ?? []).map((faculty) => [faculty.id, faculty])),
@@ -297,6 +301,33 @@ export function SessionBuilder({
   useEffect(() => {
     if (categories.length === 0 && subcategories.length > 0) setSubcategories([]);
   }, [categories, subcategories.length]);
+
+  // Auto-prune selected examYears, categories, and subcategories that are no longer
+  // present in the latest counts response so stale invisible filters never zero out counts.
+  useEffect(() => {
+    if (!data) return;
+    if (data.byExamYear && examYears.length > 0) {
+      const validYears = new Set(data.byExamYear.map((entry) => entry.examYear));
+      const nextYears = examYears.filter((year) => validYears.has(year));
+      if (nextYears.length !== examYears.length) setExamYears(nextYears);
+    }
+    if (data.byCategory && categories.length > 0) {
+      const validCategories = new Set(data.byCategory.map((entry) => entry.category));
+      const nextCategories = categories.filter((category) => validCategories.has(category));
+      if (nextCategories.length !== categories.length) setCategories(nextCategories);
+    }
+    if (categories.length > 0 && data.bySubcategory && subcategories.length > 0) {
+      const validSubcategories = new Set(data.bySubcategory.map((entry) => entry.subcategory));
+      const nextSubcategories = subcategories.filter((sub) => validSubcategories.has(sub));
+      if (nextSubcategories.length !== subcategories.length) setSubcategories(nextSubcategories);
+    }
+  }, [data, examYears, categories, subcategories]);
+
+  useEffect(() => {
+    if (!hasQrocInBank && questionTypes.includes("QROC")) {
+      setQuestionTypes((prev) => prev.filter((type) => type !== "QROC"));
+    }
+  }, [hasQrocInBank, questionTypes]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const facultyLabel = facultyIds
@@ -561,7 +592,7 @@ export function SessionBuilder({
                   setSizeDraft(null);
                   setSize(preset);
                 }}
-                disabled={isStarting || (total !== undefined && preset > total && preset !== SIZE_PRESETS[0])}
+                disabled={isStarting || (total !== undefined && preset > total)}
               >
                 {preset}
               </Chip>
@@ -639,7 +670,7 @@ export function SessionBuilder({
         <fieldset>
           <legend className="mb-2 text-meta font-medium text-text-secondary">{t("rb.types")}</legend>
           <div className="flex flex-wrap gap-2">
-            {TYPE_OPTIONS.map((option) => (
+            {TYPE_OPTIONS.filter((option) => option.value !== "QROC" || hasQrocInBank).map((option) => (
               <Chip
                 key={option.value}
                 selected={questionTypes.includes(option.value)}

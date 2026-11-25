@@ -7,7 +7,7 @@ import { AnswerOption } from "@/components/AnswerOption";
 import { AiExplainPanel } from "@/components/AiExplainPanel";
 import { ExplanationBody } from "@/components/ExplanationBody";
 import { ShareWithFriend } from "@/components/ShareWithFriend";
-import type { QuestionOptionRef, QuestionType } from "@/lib/types";
+import type { ClinicalCasePartRef, QuestionOptionRef, QuestionType } from "@/lib/types";
 
 const LETTERS = "ABCDEFGHIJ".split("");
 
@@ -32,6 +32,7 @@ export interface QuestionCardProps {
   questionText: string[];
   type: QuestionType;
   options: QuestionOptionRef[];
+  clinicalCaseParts?: ClinicalCasePartRef[];
   answer: QuestionAnswerState;
   mode: "practice" | "exam";
   /** P5 player chips: course + sitting labels. Omitted chips simply don't render. */
@@ -64,6 +65,7 @@ export function QuestionCard({
   questionText,
   type,
   options,
+  clinicalCaseParts,
   answer,
   mode,
   unitName,
@@ -216,6 +218,17 @@ export function QuestionCard({
         {stem}
       </p>
 
+      {clinicalCaseParts && clinicalCaseParts.length > 0 ? (
+        <ol className="mt-3 flex flex-col gap-2">
+          {clinicalCaseParts.map((part) => (
+            <li key={part.id} className="rounded-input border border-border bg-surface-2 px-3 py-2 text-body text-text-primary">
+              <span className="mr-1.5 font-semibold text-accent-soft">{part.partOrder}.</span>
+              <span className="whitespace-pre-line">{part.promptText}</span>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+
       <div className="mt-3 flex flex-col gap-1.5" role="group" aria-label={t("qcard.optionsAria")} data-answer-options>
         {isChoiceType(type) &&
           options.map((option, index) => (
@@ -237,6 +250,7 @@ export function QuestionCard({
               struck={struckIds.has(option.id)}
               strikeDisabled={answer.submitted || isSubmitting}
               onToggleStrike={toggleStrike}
+              disabled={isSubmitting}
               variant={choiceVariant}
               onSelect={(id) => selectAndForgive(type === "QCM" ? onToggleOption : onSelectOption, id)}
             />
@@ -245,7 +259,7 @@ export function QuestionCard({
         {(type === "QROC" || type === "CLINICAL_CASE") && (
           <textarea
             value={answer.freeText}
-            disabled={answer.submitted}
+            disabled={answer.submitted || isSubmitting}
             onChange={(event) => onFreeTextChange(event.target.value)}
             rows={4}
             placeholder={t("qcard.freePh")}
@@ -261,7 +275,8 @@ export function QuestionCard({
             <button
               type="button"
               onClick={onRetrySubmit}
-              className="mt-2 text-meta font-medium text-accent-soft underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+              disabled={isSubmitting}
+              className="mt-2 text-meta font-medium text-accent-soft underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none"
             >
               {t("qcard.retrySend")}
             </button>
@@ -322,7 +337,7 @@ export function QuestionCard({
 
             {/* AI explanation (opt-in, one credit, retry-free): only with both ids
                 supplied; the player passes them. */}
-            {questionId && sessionId ? <AiExplainPanel questionId={questionId} sessionId={sessionId} /> : null}
+            {questionId && sessionId ? <AiExplainPanel questionId={questionId} sessionId={sessionId} letterMap={letterMap} /> : null}
           </div>
         ) : (
           <p className="mt-4 inline-flex rounded-pill border border-border px-3 py-1 text-meta text-text-secondary">{t("qcard.answeredBadge")}</p>

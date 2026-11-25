@@ -8,6 +8,7 @@ import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
 import { buildQuestionWhere } from "../lib/question-filters";
 import { isExamAnswerExpired } from "../lib/exam-deadline";
+import { sortQuestionIdsByKey } from "../lib/session-sort";
 import { computeSessionScore, isAutoGradableType } from "../lib/scoring";
 import { shuffle } from "../lib/shuffle";
 import { awardSessionPoints } from "../lib/points";
@@ -514,22 +515,11 @@ async function orderSelectedQuestions<T extends { id: string }>(
       where: { id: { in: selected.map((question) => question.id) } },
       select: {
         id: true,
+        examYear: true,
         unit: { select: { module: { select: { orderIndex: true, year: { select: { orderIndex: true } } } } } },
       },
     });
-    const shuffledIndexById = new Map(selected.map((question, index) => [question.id, index]));
-    const keyById = new Map(keyRows.map((row) => [row.id, row]));
-    return [...selected].sort((a, b) => {
-      const keyA = keyById.get(a.id)!;
-      const keyB = keyById.get(b.id)!;
-      const yearDiff = keyA.unit.module.year.orderIndex - keyB.unit.module.year.orderIndex;
-      if (yearDiff !== 0) return yearDiff;
-      if (sort === "by_course") {
-        const moduleDiff = keyA.unit.module.orderIndex - keyB.unit.module.orderIndex;
-        if (moduleDiff !== 0) return moduleDiff;
-      }
-      return shuffledIndexById.get(a.id)! - shuffledIndexById.get(b.id)!;
-    });
+    return sortQuestionIdsByKey(selected, keyRows, sort);
   }
   return selected;
 }
@@ -686,6 +676,7 @@ async function listSessions(req: Request, res: Response, next: NextFunction) {
           if (isCorrect) entry.correct += 1;
           byUnit.set(key, entry);
         }
+        const hideCorrectness = session.mode === "exam" && session.completedAt === null;
         return {
           id: session.id,
           name: session.name,
@@ -693,8 +684,15 @@ async function listSessions(req: Request, res: Response, next: NextFunction) {
           startedAt: session.startedAt,
           completedAt: session.completedAt,
           score: serializeScore(session.score),
-          stats: { total: session.sessionQuestions.length, answered, correct },
-          units: [...byUnit.values()],
+          stats: {
+            total: session.sessionQuestions.length,
+            answered,
+            correct: hideCorrectness ? null : correct,
+          },
+          units: [...byUnit.values()].map((u) => ({
+            ...u,
+            correct: hideCorrectness ? null : u.correct,
+          })),
         };
       }),
       pagination: { page, limit, total },
@@ -744,44 +742,64 @@ async function submitAnswer(req: Request, res: Response, next: NextFunction) {
       throw new ApiError(409, "SESSION_TIME_EXPIRED", "The exam time limit has passed.");
     }
 
-    const sessionQuestion = await prisma.sessionQuestion.findFirst({
-      where: { sessionId: id, questionId },
-      include: {
-        question: {
-          select: {
-            type: true,
-            explanationRichtext: true,
-            options: { select: { id: true, isCorrect: true } },
+    const { attempt, sessionQuestion } = await prisma.$transaction(async (tx) => {
+      const [lockedSession] = await tx.$queryRaw<
+        Array<{ completed_at: Date | null; mode: string; time_limit_seconds: number | null; started_at: Date }>
+      >`SELECT completed_at, mode, time_limit_seconds, started_at FROM study_sessions WHERE id = ${id}::uuid FOR SHARE`;
+      if (!lockedSession || lockedSession.completed_at) {
+        throw new ApiError(409, "SESSION_ALREADY_COMPLETED", "This session has already been submitted.");
+      }
+      if (
+        isExamAnswerExpired(
+          lockedSession.mode,
+          lockedSession.time_limit_seconds,
+          lockedSession.started_at
+        )
+      ) {
+        throw new ApiError(409, "SESSION_TIME_EXPIRED", "The exam time limit has passed.");
+      }
+
+      const sq = await tx.sessionQuestion.findFirst({
+        where: { sessionId: id, questionId },
+        include: {
+          question: {
+            select: {
+              type: true,
+              explanationRichtext: true,
+              options: { select: { id: true, isCorrect: true } },
+            },
           },
         },
-      },
-    });
-    if (!sessionQuestion) {
-      throw new ApiError(404, "SESSION_QUESTION_NOT_FOUND", "This question is not part of this session.");
-    }
+      });
+      if (!sq) {
+        throw new ApiError(404, "SESSION_QUESTION_NOT_FOUND", "This question is not part of this session.");
+      }
 
-    // QROC/clinical-case questions are not auto-gradable — automated grading is a V2 AI
-    // feature (out of scope here). They need human/AI review not yet built, so
-    // isCorrect stays null for them.
-    let isCorrect: boolean | null = null;
-    if (isAutoGradableType(sessionQuestion.question.type)) {
-      const correctOptionIds = sessionQuestion.question.options
-        .filter((option) => option.isCorrect)
-        .map((option) => option.id);
-      const submittedOptionIds = selectedOptionIds ?? [];
-      isCorrect =
-        correctOptionIds.length === submittedOptionIds.length &&
-        correctOptionIds.every((optionId) => submittedOptionIds.includes(optionId));
-    }
+      // QROC/clinical-case questions are not auto-gradable — automated grading is a V2 AI
+      // feature (out of scope here). They need human/AI review not yet built, so
+      // isCorrect stays null for them.
+      let isCorrect: boolean | null = null;
+      if (isAutoGradableType(sq.question.type)) {
+        const correctOptionIds = sq.question.options
+          .filter((option) => option.isCorrect)
+          .map((option) => option.id);
+        const submittedOptionIds = selectedOptionIds ?? [];
+        isCorrect =
+          correctOptionIds.length === submittedOptionIds.length &&
+          correctOptionIds.every((optionId) => submittedOptionIds.includes(optionId));
+      }
 
-    const attempt = await prisma.attempt.create({
-      data: {
-        sessionQuestionId: sessionQuestion.id,
-        selectedOptionIds: selectedOptionIds ?? undefined,
-        freeTextAnswer: freeTextAnswer ?? undefined,
-        isCorrect,
-        answeredAt: new Date(),
-      },
+      const createdAttempt = await tx.attempt.create({
+        data: {
+          sessionQuestionId: sq.id,
+          selectedOptionIds: selectedOptionIds ?? undefined,
+          freeTextAnswer: freeTextAnswer ?? undefined,
+          isCorrect,
+          answeredAt: new Date(),
+        },
+      });
+
+      return { attempt: createdAttempt, sessionQuestion: sq };
     });
 
     const responseAttempt: Record<string, unknown> = {
@@ -998,6 +1016,14 @@ async function finalizeSession(req: Request, res: Response, next: NextFunction) 
     let newlyAwardedBadgeIds: string[] = [];
 
     const completedResult = await prisma.$transaction(async (tx) => {
+      const [lockedSession] = await tx.$queryRaw<
+        Array<{ completed_at: Date | null }>
+      >`SELECT completed_at FROM study_sessions WHERE id = ${id}::uuid FOR UPDATE`;
+      if (lockedSession?.completed_at) {
+        const current = await tx.studySession.findUnique({ where: { id } });
+        return { session: current!, first: false };
+      }
+
       const sessionQuestions = await tx.sessionQuestion.findMany({
         where: { sessionId: id },
         select: {

@@ -303,7 +303,11 @@ export default function SessionResultsPage() {
                         </span>
                       )}
                       {result.isCorrect === null && (
-                        <span className="text-meta text-text-tertiary">{t("results.ungraded")}</span>
+                        <span className="text-meta text-text-tertiary">
+                          {isGradable(result.question.type) && result.studentAnswer === null
+                            ? t("results.unansweredShort")
+                            : t("results.ungraded")}
+                        </span>
                       )}
                       <span className="ml-auto">
                         <ShareWithFriend
@@ -321,6 +325,25 @@ export default function SessionResultsPage() {
                         <p key={i} className="whitespace-pre-line">{paragraph}</p>
                       ))}
                     </div>
+
+                    {result.clinicalCaseParts.length > 0 && (
+                      <ol className="mt-3 flex flex-col gap-2">
+                        {result.clinicalCaseParts.map((part) => (
+                          <li
+                            key={part.id}
+                            className="rounded-input border border-border bg-surface-2 px-3 py-2 text-meta text-text-primary"
+                          >
+                            <p className="whitespace-pre-line font-medium">
+                              <span className="mr-1.5 text-accent-soft">{part.partOrder}.</span>
+                              {part.promptText}
+                            </p>
+                            {part.expectedAnswerText ? (
+                              <p className="mt-1 whitespace-pre-line text-success">{part.expectedAnswerText}</p>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ol>
+                    )}
 
                     {result.options.length > 0 && (
                       <ul className="mt-3 flex flex-col gap-1.5">
