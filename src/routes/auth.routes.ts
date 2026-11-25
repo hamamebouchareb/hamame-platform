@@ -41,8 +41,37 @@ function maskIdentifier(identifier: string | null | undefined): string {
   return `***${identifier.slice(-2)}`;
 }
 
+function shouldExposeDevAuthTokens(): boolean {
+  return (
+    process.env.NODE_ENV === "test" ||
+    (process.env.NODE_ENV === "development" && process.env.EXPOSE_DEV_AUTH_TOKENS === "true")
+  );
+}
+
+function createVerificationToken(channel: "email" | "phone", target: string): {
+  rawToken: string;
+  tokenHash: string;
+} {
+  const payload = JSON.stringify({ c: channel, t: target, r: randomBytes(32).toString("hex") });
+  const rawToken = Buffer.from(payload, "utf8").toString("base64url");
+  return { rawToken, tokenHash: sha256(rawToken) };
+}
+
+function parseVerificationToken(rawToken: string): { channel: "email" | "phone"; target: string } | null {
+  try {
+    const decoded = Buffer.from(rawToken, "base64url").toString("utf8");
+    const parsed = JSON.parse(decoded) as { c?: unknown; t?: unknown };
+    if ((parsed.c === "email" || parsed.c === "phone") && typeof parsed.t === "string" && parsed.t.length > 0) {
+      return { channel: parsed.c, target: parsed.t };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function logTokenIssued(kind: string, identifier: string | null | undefined, rawToken: string): void {
-  if (process.env.NODE_ENV === "production") {
+  if (!shouldExposeDevAuthTokens()) {
     console.log(`[auth] ${kind} token issued for ${maskIdentifier(identifier)}`);
     return;
   }
@@ -154,11 +183,16 @@ async function register(req: Request, res: Response, next: NextFunction) {
     // FR-3: mint a single-use verification token right after creation so the new account
     // is ready for POST /api/auth/verify immediately. Same hashing/expiry rationale as
     // the password reset token, but with a 24h TTL since verification isn't urgent.
-    const rawVerificationToken = randomBytes(32).toString("hex");
+    const verificationChannel = user.email ? "email" : "phone";
+    const verificationTarget = (user.email ?? user.phone)!;
+    const { rawToken: rawVerificationToken, tokenHash: verificationTokenHash } = createVerificationToken(
+      verificationChannel,
+      verificationTarget
+    );
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        verificationTokenHash: sha256(rawVerificationToken),
+        verificationTokenHash,
         verificationTokenExpiresAt: new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS),
       },
     });
@@ -213,7 +247,7 @@ async function register(req: Request, res: Response, next: NextFunction) {
       verificationSmsSent: boolean;
       verificationToken?: string;
     } = { accessToken, user: toUserResponse(user), verificationEmailSent, verificationSmsSent };
-    if (process.env.NODE_ENV !== "production") {
+    if (shouldExposeDevAuthTokens()) {
       responseBody.verificationToken = rawVerificationToken;
     }
     res.status(201).json(responseBody);
@@ -339,7 +373,7 @@ async function forgotPassword(req: Request, res: Response, next: NextFunction) {
         await sendPasswordResetSms({ to: user.phone, token: rawToken });
       }
 
-      if (process.env.NODE_ENV !== "production") {
+      if (shouldExposeDevAuthTokens()) {
         res.status(200).json({ message: RESET_TOKEN_GENERIC_MESSAGE, resetToken: rawToken });
       } else {
         res.status(200).json({ message: RESET_TOKEN_GENERIC_MESSAGE });
@@ -441,15 +475,23 @@ async function verify(req: Request, res: Response, next: NextFunction) {
       throw invalidOrExpiredToken();
     }
 
-    // Verify whichever identifier is still unverified — email takes precedence when both
-    // exist. If both are already verified (or neither identifier is present), the token
-    // is still consumed but the field write is a no-op.
+    const parsedToken = parseVerificationToken(token);
+    if (!parsedToken) {
+      throw invalidOrExpiredToken();
+    }
+
     let emailVerifiedAt = user.emailVerifiedAt;
     let phoneVerifiedAt = user.phoneVerifiedAt;
-    if (user.email && !user.emailVerifiedAt) {
-      emailVerifiedAt = new Date();
-    } else if (user.phone && !user.phoneVerifiedAt) {
-      phoneVerifiedAt = new Date();
+    if (parsedToken.channel === "email") {
+      if (!user.email || user.email !== parsedToken.target) {
+        throw invalidOrExpiredToken();
+      }
+      emailVerifiedAt = user.emailVerifiedAt ?? new Date();
+    } else {
+      if (!user.phone || user.phone !== parsedToken.target) {
+        throw invalidOrExpiredToken();
+      }
+      phoneVerifiedAt = user.phoneVerifiedAt ?? new Date();
     }
 
     // Single-use: consuming the token clears both verification fields so it can't be replayed.
@@ -497,27 +539,32 @@ async function resendVerification(req: Request, res: Response, next: NextFunctio
       throw new ApiError(404, "USER_NOT_FOUND", "User not found.");
     }
 
-    if (caller.emailVerifiedAt || (caller.phone && !caller.email && caller.phoneVerifiedAt)) {
-      res.status(200).json({ alreadyVerified: true, message: "This account is already verified." });
-      return;
-    }
-
     if (!caller.email && !caller.phone) {
       throw new ApiError(400, "NO_EMAIL_ON_ACCOUNT", "This account has no email address or phone number to verify.");
     }
 
-    const rawToken = randomBytes(32).toString("hex");
+    const needsEmail = Boolean(caller.email && !caller.emailVerifiedAt);
+    const needsPhone = Boolean(caller.phone && !caller.phoneVerifiedAt);
+
+    if (!needsEmail && !needsPhone) {
+      res.status(200).json({ alreadyVerified: true, message: "This account is already verified." });
+      return;
+    }
+
+    const channel = needsEmail ? "email" : "phone";
+    const target = (needsEmail ? caller.email : caller.phone)!;
+    const { rawToken, tokenHash } = createVerificationToken(channel, target);
     await prisma.user.update({
       where: { id: caller.id },
       data: {
-        verificationTokenHash: sha256(rawToken),
+        verificationTokenHash: tokenHash,
         verificationTokenExpiresAt: new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS),
       },
     });
 
-    if (caller.email) {
+    if (needsEmail) {
       const verificationEmailSent = await sendVerificationEmail({
-        to: caller.email,
+        to: caller.email!,
         token: rawToken,
         fullName: caller.fullName,
       });
@@ -532,7 +579,7 @@ async function resendVerification(req: Request, res: Response, next: NextFunctio
       return;
     }
 
-    // Phone-only account (the neither-identifier case threw above, so phone is set).
+    // Unverified phone (either phone-only or email already verified).
     const verificationSmsSent = await sendVerificationSms({
       to: caller.phone!,
       token: rawToken,
@@ -597,7 +644,12 @@ async function changePassword(req: Request, res: Response, next: NextFunction) {
       where: { id: user.id },
       // Bump the token version in the SAME write that changes the password,
       // so no request can slip between the two (atomic revocation).
-      data: { passwordHash, tokenVersion: { increment: 1 } },
+      data: {
+        passwordHash,
+        passwordResetTokenHash: null,
+        passwordResetTokenExpiresAt: null,
+        tokenVersion: { increment: 1 },
+      },
       select: { ...safeUserSelect, tokenVersion: true },
     });
     invalidateAccountState(user.id);
@@ -613,7 +665,7 @@ async function changePassword(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-router.post("/change-password", requireAuth, validateBody(changePasswordSchema), changePassword);
+router.post("/change-password", requireAuth, limitLogins, validateBody(changePasswordSchema), changePassword);
 
 // ---------------------------------------------------------------------------
 // Google OAuth (M9) — authorization-code flow, env-gated (see src/lib/oauth-google.ts).
@@ -684,17 +736,20 @@ router.get("/google/callback", async (req: Request, res: Response, next: NextFun
 
     let user = await prisma.user.findUnique({
       where: { googleSub: profile.sub },
-      select: { ...safeUserSelect, tokenVersion: true },
+      select: { ...safeUserSelect, suspendedUntil: true, tokenVersion: true },
     });
 
     if (!user) {
       const byEmail = await prisma.user.findFirst({
         where: { email: normalizeEmail(profile.email) },
-        select: safeUserSelect,
+        select: { ...safeUserSelect, suspendedUntil: true },
       });
       if (byEmail) {
         if (byEmail.status === "deleted") {
           return fail("account_deleted");
+        }
+        if (isEffectivelySuspended(byEmail.status, byEmail.suspendedUntil)) {
+          return fail("account_suspended");
         }
         // Link hijack guard: when the stored email was never verified, the
         // pre-link password may predate proof of ownership, so replace it
@@ -708,14 +763,19 @@ router.get("/google/callback", async (req: Request, res: Response, next: NextFun
           data: {
             googleSub: profile.sub,
             emailVerifiedAt: byEmail.emailVerifiedAt ?? new Date(),
+            ...(!byEmail.emailVerifiedAt
+              ? { verificationTokenHash: null, verificationTokenExpiresAt: null }
+              : {}),
             ...(rotates
               ? {
                   passwordHash: await bcrypt.hash(randomBytes(32).toString("hex"), BCRYPT_SALT_ROUNDS),
+                  passwordResetTokenHash: null,
+                  passwordResetTokenExpiresAt: null,
                   tokenVersion: { increment: 1 },
                 }
               : {}),
           },
-          select: { ...safeUserSelect, tokenVersion: true },
+          select: { ...safeUserSelect, suspendedUntil: true, tokenVersion: true },
         });
         if (rotates) invalidateAccountState(byEmail.id);
       } else {
@@ -728,7 +788,7 @@ router.get("/google/callback", async (req: Request, res: Response, next: NextFun
             googleSub: profile.sub,
             emailVerifiedAt: new Date(),
           },
-          select: { ...safeUserSelect, tokenVersion: true },
+          select: { ...safeUserSelect, suspendedUntil: true, tokenVersion: true },
         });
         const studentFreeRole = await prisma.role.findUnique({ where: { name: "student_free" } });
         if (studentFreeRole) {
@@ -740,6 +800,9 @@ router.get("/google/callback", async (req: Request, res: Response, next: NextFun
 
     if (user.status === "deleted") {
       return fail("account_deleted");
+    }
+    if (isEffectivelySuspended(user.status, user.suspendedUntil)) {
+      return fail("account_suspended");
     }
 
     const accessToken = signAccessToken({ userId: user.id, tokenVersion: user.tokenVersion });

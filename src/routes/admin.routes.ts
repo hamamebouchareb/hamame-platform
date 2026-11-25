@@ -641,9 +641,20 @@ async function grantRole(req: Request, res: Response, next: NextFunction) {
     const { id } = req.params;
     const { roleName } = req.body as z.infer<typeof grantRoleSchema>;
 
+    const actorRoles = await getRoleNames(req.auth!.userId);
+    const actorIsSuperAdmin = actorRoles.includes("super_admin");
+    if (roleName === "super_admin" && !actorIsSuperAdmin) {
+      throw new ApiError(403, "FORBIDDEN", "Only a super_admin can grant the super_admin role.");
+    }
+
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) {
       throw new ApiError(404, "USER_NOT_FOUND", "No user exists with this id.");
+    }
+
+    const targetRoles = await getRoleNames(id);
+    if (targetRoles.includes("super_admin") && !actorIsSuperAdmin) {
+      throw new ApiError(403, "FORBIDDEN", "Only a super_admin can modify roles on a super_admin.");
     }
 
     const granted = await grantRoleByName(prisma, id, roleName);
@@ -669,6 +680,12 @@ async function revokeRole(req: Request, res: Response, next: NextFunction) {
   try {
     const { id, roleName } = req.params;
 
+    const actorRoles = await getRoleNames(req.auth!.userId);
+    const actorIsSuperAdmin = actorRoles.includes("super_admin");
+    if (roleName === "super_admin" && !actorIsSuperAdmin) {
+      throw new ApiError(403, "FORBIDDEN", "Only a super_admin can revoke the super_admin role.");
+    }
+
     // Self-lockout protection: an admin must not be able to strip their own gate.
     // Removing another user's admin/super_admin, or your own non-admin roles, stays fine.
     if (req.auth!.userId === id && (roleName === "admin" || roleName === "super_admin")) {
@@ -682,6 +699,11 @@ async function revokeRole(req: Request, res: Response, next: NextFunction) {
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) {
       throw new ApiError(404, "USER_NOT_FOUND", "No user exists with this id.");
+    }
+
+    const targetRoles = await getRoleNames(id);
+    if (targetRoles.includes("super_admin") && !actorIsSuperAdmin) {
+      throw new ApiError(403, "FORBIDDEN", "Only a super_admin can modify roles on a super_admin.");
     }
 
     const role = await prisma.role.findUnique({ where: { name: roleName } });

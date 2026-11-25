@@ -47,6 +47,7 @@ interface AttachmentRow {
   id: string;
   title: string;
   url: string;
+  uploaderId?: string | null;
   uploadedBy: string | null;
   createdAt: string;
 }
@@ -723,15 +724,17 @@ export default function GroupsPage() {
                               </p>
                             </div>
                             <div className="flex shrink-0 items-center gap-2">
-                              <a
-                                href={a.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="rounded-full border border-blue-300 dark:border-blue-800 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950"
-                              >
-                                {t("grp.open")}
-                              </a>
-                              {(isOwner || a.uploadedBy === user.fullName) && (
+                              {/^https?:\/\//i.test(a.url) && (
+                                <a
+                                  href={a.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="rounded-full border border-blue-300 dark:border-blue-800 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950"
+                                >
+                                  {t("grp.open")}
+                                </a>
+                              )}
+                              {(isOwner || a.uploaderId === user.id) && (
                                 <button
                                   type="button"
                                   onClick={() => void removeAttachment(a.id)}

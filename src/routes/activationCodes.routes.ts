@@ -1,10 +1,12 @@
 import { randomBytes } from "crypto";
 import { NextFunction, Request, Response, Router } from "express";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { paginationQuery, uuidParam } from "../lib/common-schemas";
 import { validateBody, validateParams, validateQuery } from "../middleware/validate";
 import { requireAuth } from "../middleware/auth";
 import { requireRole } from "../middleware/requireRole";
+import { limitWalletActions } from "../middleware/rateLimit";
 import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
 import { createNotificationBestEffort } from "./notifications.routes";
@@ -96,6 +98,30 @@ async function redeemActivationCode(req: Request, res: Response, next: NextFunct
     }
 
     const { subscription, payment } = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`subscription:${userId}`}))`;
+
+      const profile = await tx.user.findUnique({ where: { id: userId }, select: { yearId: true } });
+      const activeSubscription = await tx.subscription.findFirst({
+        where: { userId, status: "active" },
+        orderBy: { currentPeriodEnd: "desc" },
+        include: { plan: { select: { priceDzd: true } } },
+      });
+
+      const runningPaid =
+        activeSubscription !== null &&
+        activeSubscription.plan.priceDzd !== null &&
+        activeSubscription.plan.priceDzd.toNumber() > 0 &&
+        activeSubscription.currentPeriodEnd > now;
+      if (runningPaid) {
+        const runningYearId = activeSubscription.yearId ?? profile?.yearId ?? null;
+        if (runningYearId !== null && runningYearId !== activationCode.yearId) {
+          throw new ApiError(409, "PREMIUM_OTHER_YEAR", "Your current Premium covers another year. Wait until it ends.", {
+            yearId: runningYearId,
+            currentPeriodEnd: activeSubscription.currentPeriodEnd.toISOString(),
+          });
+        }
+      }
+
       // Atomic claim — must be the first write so a lost race aborts everything below.
       const claimed = await tx.activationCode.updateMany({
         where: { id: activationCode.id, status: "active" },
@@ -104,10 +130,6 @@ async function redeemActivationCode(req: Request, res: Response, next: NextFunct
       if (claimed.count !== 1) {
         throw new ApiError(409, "ACTIVATION_CODE_ALREADY_REDEEMED", "This code has already been redeemed.");
       }
-
-      const activeSubscription = await tx.subscription.findFirst({
-        where: { userId, status: "active" },
-      });
 
       // Extend from max(currentPeriodEnd, now) — same stacking rule as promo-code
       // redemption: a healthy future expiry extends from itself; a stale
@@ -130,6 +152,8 @@ async function redeemActivationCode(req: Request, res: Response, next: NextFunct
             currentPeriodEnd: addDays(base, ACTIVATION_GRANT_DAYS),
             facultyId: activationCode.facultyId,
             yearId: activationCode.yearId,
+            autoRenew: false,
+            cancelledAt: null,
           },
           include: { plan: true },
         });
@@ -141,7 +165,8 @@ async function redeemActivationCode(req: Request, res: Response, next: NextFunct
             status: "active",
             startedAt: now,
             currentPeriodEnd: addDays(now, ACTIVATION_GRANT_DAYS),
-            autoRenew: true,
+            autoRenew: false,
+            cancelledAt: null,
             facultyId: activationCode.facultyId,
             yearId: activationCode.yearId,
           },
@@ -193,7 +218,7 @@ async function redeemActivationCode(req: Request, res: Response, next: NextFunct
   }
 }
 
-router.post("/redeem", validateBody(redeemSchema), redeemActivationCode);
+router.post("/redeem", limitWalletActions, validateBody(redeemSchema), redeemActivationCode);
 
 // ---------------------------------------------------------------------------
 // Support Agent / Admin — issue + list (mounted at /api/admin/activation-codes;
@@ -203,7 +228,7 @@ router.post("/redeem", validateBody(redeemSchema), redeemActivationCode);
 
 const adminActivationCodesRouter = Router();
 adminActivationCodesRouter.use(requireAuth);
-const requireSupportAgentOrAdmin = requireRole("support_agent", "admin");
+const requireSupportAgentOrAdmin = requireRole("support_agent", "admin", "super_admin");
 
 const ISSUE_CODE_SCHEMA = z.object({
   facultyId: z.string().uuid(),
@@ -274,8 +299,12 @@ async function listActivationCodes(req: Request, res: Response, next: NextFuncti
   try {
     const { page, limit, status, facultyId } = req.query as unknown as z.infer<typeof LIST_QUERY_SCHEMA>;
 
-    const where = {
-      ...(status ? { status } : {}),
+    const where: Prisma.ActivationCodeWhereInput = {
+      ...(status === "expired"
+        ? { status: "active", expiresAt: { lt: new Date() } }
+        : status
+          ? { status }
+          : {}),
       ...(facultyId ? { facultyId } : {}),
     };
 

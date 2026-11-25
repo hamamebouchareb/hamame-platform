@@ -2,6 +2,7 @@ import { NextFunction, Request, Response, Router } from "express";
 import { z } from "zod";
 import { validateBody } from "../middleware/validate";
 import { requireAuth } from "../middleware/auth";
+import { limitWalletActions } from "../middleware/rateLimit";
 import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
 
@@ -117,6 +118,7 @@ async function redeemPromoCode(req: Request, res: Response, next: NextFunction) 
       // Prisma cannot deserialize as a result column ($executeRaw only
       // reports the affected-row count and never touches columns).
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${promoCode.id + userId}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`subscription:${userId}`}))`;
       const lockedCount = await tx.promoCodeRedemption.count({
         where: { promoCodeId: promoCode.id, userId },
       });
@@ -126,6 +128,11 @@ async function redeemPromoCode(req: Request, res: Response, next: NextFunction) 
 
       const createdRedemption = await tx.promoCodeRedemption.create({
         data: { promoCodeId: promoCode.id, userId },
+      });
+
+      const profile = await tx.user.findUnique({
+        where: { id: userId },
+        select: { facultyId: true, yearId: true },
       });
 
       const activeSubscription = await tx.subscription.findFirst({
@@ -143,10 +150,15 @@ async function redeemPromoCode(req: Request, res: Response, next: NextFunction) 
       if (activeSubscription) {
         // A free-plan row's currentPeriodEnd is ~100 years out; only a running
         // Premium period is extended from.
-        const base =
-          activeSubscription.planId === premiumPlan.id && activeSubscription.currentPeriodEnd > now
-            ? activeSubscription.currentPeriodEnd
-            : now;
+        const isRunningPremium =
+          activeSubscription.planId === premiumPlan.id && activeSubscription.currentPeriodEnd > now;
+        const base = isRunningPremium ? activeSubscription.currentPeriodEnd : now;
+        const facultyId = isRunningPremium
+          ? (activeSubscription.facultyId ?? profile?.facultyId ?? null)
+          : (profile?.facultyId ?? null);
+        const yearId = isRunningPremium
+          ? (activeSubscription.yearId ?? profile?.yearId ?? null)
+          : (profile?.yearId ?? null);
         subscriptionResult = await tx.subscription.update({
           // Same plan-switch rule as activation-code redemption: an active
           // row off the premium plan (e.g. free) moves onto it, otherwise
@@ -155,6 +167,10 @@ async function redeemPromoCode(req: Request, res: Response, next: NextFunction) 
           data: {
             ...(activeSubscription.planId !== premiumPlan.id ? { planId: premiumPlan.id } : {}),
             currentPeriodEnd: addDays(base, grantsDays),
+            facultyId,
+            yearId,
+            autoRenew: false,
+            cancelledAt: null,
           },
           include: { plan: true },
         });
@@ -166,7 +182,10 @@ async function redeemPromoCode(req: Request, res: Response, next: NextFunction) 
             status: "active",
             startedAt: now,
             currentPeriodEnd: addDays(now, grantsDays),
-            autoRenew: true,
+            facultyId: profile?.facultyId ?? null,
+            yearId: profile?.yearId ?? null,
+            autoRenew: false,
+            cancelledAt: null,
           },
           include: { plan: true },
         });
@@ -188,6 +207,6 @@ async function redeemPromoCode(req: Request, res: Response, next: NextFunction) 
   }
 }
 
-router.post("/redeem", validateBody(redeemSchema), redeemPromoCode);
+router.post("/redeem", limitWalletActions, validateBody(redeemSchema), redeemPromoCode);
 
 export default router;

@@ -209,6 +209,32 @@ async function restrictUser(req: Request, res: Response, next: NextFunction) {
     if (!targetUser) {
       throw new ApiError(404, "USER_NOT_FOUND", "No user exists with this id.");
     }
+
+    const actorRoleRows = await prisma.userRole.findMany({
+      where: { userId: actingUserId },
+      include: { role: { select: { name: true } } },
+    });
+    const actorRoles = new Set(actorRoleRows.map((r) => r.role.name));
+
+    const targetRoleRows = await prisma.userRole.findMany({
+      where: { userId: id },
+      include: { role: { select: { name: true } } },
+    });
+    const targetRoles = new Set(targetRoleRows.map((r) => r.role.name));
+
+    if (targetRoles.has("super_admin")) {
+      throw new ApiError(403, "FORBIDDEN", "A super_admin account cannot be restricted.");
+    }
+    if (!actorRoles.has("super_admin")) {
+      if (actorRoles.has("admin")) {
+        if (targetRoles.has("admin")) {
+          throw new ApiError(403, "FORBIDDEN", "An admin cannot restrict another admin.");
+        }
+      } else if (targetRoles.has("moderator") || targetRoles.has("admin")) {
+        throw new ApiError(403, "FORBIDDEN", "A moderator cannot restrict moderators or admins.");
+      }
+    }
+
     if (targetUser.status === "suspended" || targetUser.status === "deleted") {
       throw new ApiError(
         409,
