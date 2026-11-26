@@ -1,6 +1,6 @@
 ## Politique de confidentialité
 
-Dernière mise à jour : [DATE D'ENTRÉE EN VIGUEUR]. Éditeur : [NOM LÉGAL / RAISON SOCIALE], [ADRESSE], Algérie. Contact : [EMAIL DE CONTACT].
+Dernière mise à jour : 26 novembre 2026. Éditeur : Abderrahmane Hamame Bouchareb, Sétif, Algérie. Contact : hamamebouchareb@gmail.com.
 
 ### 1. Qui sommes-nous
 
@@ -31,7 +31,7 @@ Certaines fonctions (indices, explications) envoient à un fournisseur d'intelli
 
 ### 5. Prestataires et hébergement
 
-Nous faisons appel à : Supabase (base de données, région Irlande), Railway (serveur de l'application), Vercel (site web), Resend (envoi d'e-mails), Twilio (envoi de SMS), Google (connexion facultative) et Anthropic (fonctions d'IA). Nous ne vendons pas vos données et nous n'affichons pas de publicité. Certains de ces prestataires se trouvent hors d'Algérie : vos données peuvent donc être traitées à l'étranger. [À VÉRIFIER AVEC UN JURISTE : conditions applicables aux transferts hors d'Algérie.]
+Nous faisons appel à : Supabase (base de données, région Irlande), Railway (serveur de l'application), Vercel (site web), Resend (envoi d'e-mails), Twilio (envoi de SMS), Google (connexion facultative) et Anthropic (fonctions d'IA). Nous ne vendons pas vos données et nous n'affichons pas de publicité. Certains de ces prestataires se trouvent hors d'Algérie : vos données peuvent donc être traitées à l'étranger.
 
 ### 6. Stockage dans votre navigateur
 
@@ -39,11 +39,11 @@ Nous faisons appel à : Supabase (base de données, région Irlande), Railway (s
 
 ### 7. Durée de conservation
 
-Vos données sont conservées tant que votre compte existe. Si vous supprimez votre compte, vos identifiants personnels (e-mail, téléphone, nom, photo) sont effacés ou remplacés, et votre activité d'étude est dissociée de votre identité et conservée sous forme anonyme pour les statistiques. Les données de paiement sont conservées [DURÉE LÉGALE À CONFIRMER] pour nos obligations comptables.
+Vos données sont conservées tant que votre compte existe. Si vous supprimez votre compte, vos identifiants personnels (e-mail, téléphone, nom, photo) sont effacés ou remplacés, et votre activité d'étude est dissociée de votre identité et conservée sous forme anonyme pour les statistiques. Les données de paiement sont conservées pendant la durée légale applicable pour nos obligations comptables.
 
 ### 8. Vos droits
 
-Vous pouvez accéder à vos données, les corriger, demander leur suppression, vous opposer à certains traitements, retirer votre consentement et obtenir une copie de vos données. Vous pouvez exporter vos données et supprimer votre compte depuis votre compte, ou nous écrire à [EMAIL DE CONTACT]. Vous pouvez aussi adresser une réclamation à l'autorité nationale de protection des données à caractère personnel (ANPDP).
+Vous pouvez accéder à vos données, les corriger, demander leur suppression, vous opposer à certains traitements, retirer votre consentement et obtenir une copie de vos données. Vous pouvez exporter vos données et supprimer votre compte depuis votre compte, ou nous écrire à hamamebouchareb@gmail.com. Vous pouvez aussi adresser une réclamation à l'autorité nationale de protection des données à caractère personnel (ANPDP).
 
 ### 9. Sécurité, âge, modifications
 

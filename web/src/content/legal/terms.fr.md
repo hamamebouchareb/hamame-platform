@@ -1,6 +1,6 @@
 ## Conditions générales d'utilisation
 
-Dernière mise à jour : [DATE D'ENTRÉE EN VIGUEUR]. Éditeur : [NOM LÉGAL / RAISON SOCIALE], [ADRESSE], Algérie. Contact : [EMAIL DE CONTACT].
+Dernière mise à jour : 26 novembre 2026. Éditeur : Abderrahmane Hamame Bouchareb, Sétif, Algérie. Contact : hamamebouchareb@gmail.com.
 
 ### 1. Objet
 
@@ -16,7 +16,7 @@ Il est interdit de : copier, extraire en masse ou redistribuer les questions, ex
 
 ### 4. Contenu et propriété intellectuelle
 
-Les questions, explications, cours, textes et l'interface appartiennent à [NOM LÉGAL / RAISON SOCIALE] ou à ses concédants. Nous vous accordons un droit personnel, non exclusif et non transférable de les utiliser pour vos études. Vos notes et fiches vous appartiennent ; vous nous autorisez à les stocker pour fournir le service. Vous pouvez nous signaler une erreur de contenu depuis l'application.
+Les questions, explications, cours, textes et l'interface appartiennent à Abderrahmane Hamame Bouchareb ou à ses concédants. Nous vous accordons un droit personnel, non exclusif et non transférable de les utiliser pour vos études. Vos notes et fiches vous appartiennent ; vous nous autorisez à les stocker pour fournir le service. Vous pouvez nous signaler une erreur de contenu depuis l'application.
 
 ### 5. Nature pédagogique du service
 
@@ -24,7 +24,7 @@ Hamame est un outil de préparation aux examens, pas un avis médical ni une ré
 
 ### 6. Offres et paiement
 
-L'offre gratuite donne accès à la banque de questions, aux modes entraînement et examen, à des statistiques de base et à un nombre limité de crédits d'IA. L'offre premium ajoute les cours officiels complets, des examens blancs illimités, davantage de crédits d'IA et une assistance prioritaire. Prix actuel du premium : 1 500 DA par mois ; le prix affiché au moment du paiement s'applique. Le paiement se fait pour l'instant hors de la plateforme ; après confirmation du paiement, un code d'activation vous est remis. Le code est personnel et à usage unique, et donne accès au premium pour la durée prévue. À l'expiration, votre compte repasse à l'offre gratuite. Remboursement : [RÈGLE DE REMBOURSEMENT].
+L'offre gratuite donne accès à la banque de questions, aux modes entraînement et examen, à des statistiques de base et à un nombre limité de crédits d'IA. L'offre premium ajoute les cours officiels complets, des examens blancs illimités, davantage de crédits d'IA et une assistance prioritaire. Prix actuel du premium : 1 500 DA par mois ; le prix affiché au moment du paiement s'applique. Le paiement se fait pour l'instant hors de la plateforme ; après confirmation du paiement, un code d'activation vous est remis. Le code est personnel et à usage unique, et donne accès au premium pour la durée prévue. À l'expiration, votre compte repasse à l'offre gratuite. Remboursement : les codes d'activation utilisés ne sont pas remboursables, sauf obligation légale ou dysfonctionnement majeur du service ; contactez-nous par e-mail pour toute demande.
 
 ### 7. Suspension et résiliation
 
@@ -40,4 +40,4 @@ Le traitement de vos données est décrit dans notre politique de confidentialit
 
 ### 10. Modifications et droit applicable
 
-Nous pouvons modifier ces conditions ; la version en vigueur est celle publiée sur le site. Elles sont régies par le droit algérien. En cas de litige, la juridiction compétente est [JURIDICTION À PRÉCISER]. Contact : [EMAIL DE CONTACT].
+Nous pouvons modifier ces conditions ; la version en vigueur est celle publiée sur le site. Elles sont régies par le droit algérien. En cas de litige, la juridiction compétente est le tribunal de Sétif. Contact : hamamebouchareb@gmail.com.

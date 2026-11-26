@@ -1,6 +1,6 @@
 ## Privacy Policy
 
-Last updated: [EFFECTIVE DATE]. Publisher: [LEGAL NAME / COMPANY NAME], [ADDRESS], Algeria. Contact: [CONTACT EMAIL].
+Last updated: November 26, 2026. Publisher: Abderrahmane Hamame Bouchareb, Sétif, Algeria. Contact: hamamebouchareb@gmail.com.
 
 ### 1. Who we are
 
@@ -31,7 +31,7 @@ Some features (hints, explanations) send to an AI provider (Anthropic) the quest
 
 ### 5. Providers and hosting
 
-We use: Supabase (database, Ireland region), Railway (application server), Vercel (website), Resend (email delivery), Twilio (SMS delivery), Google (optional sign-in) and Anthropic (AI features). We do not sell your data and we do not show advertising. Some of these providers are located outside Algeria, so your data may be processed abroad. [TO CHECK WITH A LAWYER: rules that apply to transfers outside Algeria.]
+We use: Supabase (database, Ireland region), Railway (application server), Vercel (website), Resend (email delivery), Twilio (SMS delivery), Google (optional sign-in) and Anthropic (AI features). We do not sell your data and we do not show advertising. Some of these providers are located outside Algeria, so your data may be processed abroad.
 
 ### 6. Browser storage
 
@@ -39,11 +39,11 @@ Today we use no advertising cookies and no analytics tools. The site stores in y
 
 ### 7. Retention
 
-We keep your data while your account exists. If you delete your account, your personal identifiers (email, phone, name, photo) are erased or replaced, and your study activity is detached from your identity and kept in anonymous form for statistics. Payment records are kept for [LEGAL PERIOD TO CONFIRM] to meet accounting obligations.
+We keep your data while your account exists. If you delete your account, your personal identifiers (email, phone, name, photo) are erased or replaced, and your study activity is detached from your identity and kept in anonymous form for statistics. Payment records are kept for the applicable legal period to meet accounting obligations.
 
 ### 8. Your rights
 
-You can access your data, correct it, ask for its deletion, object to certain processing, withdraw your consent and obtain a copy of your data. You can export your data and delete your account from your account, or write to [CONTACT EMAIL]. You may also lodge a complaint with the national authority for personal data protection (ANPDP).
+You can access your data, correct it, ask for its deletion, object to certain processing, withdraw your consent and obtain a copy of your data. You can export your data and delete your account from your account, or write to hamamebouchareb@gmail.com. You may also lodge a complaint with the national authority for personal data protection (ANPDP).
 
 ### 9. Security, age, changes
 
