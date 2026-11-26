@@ -16,6 +16,7 @@ jobs:
         env:
           SUPABASE_BACKUP_URL: ${{ secrets.SUPABASE_BACKUP_URL }}
         run: |
+          set -euo pipefail
           if [ -z "$SUPABASE_BACKUP_URL" ]; then
             echo "SUPABASE_BACKUP_URL secret is not set" >&2
             exit 1
@@ -25,13 +26,15 @@ jobs:
         env:
           SUPABASE_BACKUP_URL: ${{ secrets.SUPABASE_BACKUP_URL }}
         run: |
+          set -euo pipefail
           STAMP=$(date -u +"%Y%m%dT%H%M%SZ")
           mkdir -p "$RUNNER_TEMP/backups"
           docker run --rm \
             -e DATABASE_URL="$SUPABASE_BACKUP_URL" \
+            -e BACKUP_FILE="hamame-db-${STAMP}.dump" \
             -v "$RUNNER_TEMP/backups:/backups" \
             postgres:17-alpine \
-            pg_dump "$DATABASE_URL" --format=custom --no-owner --no-privileges --file="/backups/hamame-db-${STAMP}.dump"
+            sh -c 'pg_dump "$DATABASE_URL" --format=custom --no-owner --no-privileges --file="/backups/$BACKUP_FILE"'
 
       - name: Upload backup artifact
         uses: actions/upload-artifact@v4
