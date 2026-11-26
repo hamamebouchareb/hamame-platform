@@ -77,6 +77,7 @@ const fr = {
   "theme.system": "Système",
   // ── Primary / secondary nav (single source of truth: web/src/lib/nav.ts) ──
   "nav.dashboard": "Tableau de bord",
+  "nav.homeShort": "Accueil",
   "nav.qcm": "QCM",
   "nav.library": "Bibliothèque",
   "nav.progress": "Suivi",
@@ -236,6 +237,8 @@ const fr = {
   "admin.codes": "Codes d'activation",
   "admin.faculties": "Facultés",
   "admin.roles": "Rôles",
+  "admin.review": "Révision",
+  "admin.authoring": "Rédaction",
   "admin.applications": "Candidatures instructeurs",
   "admin.promos": "Codes promo",
   "admin.notifications": "Notifications",
@@ -726,7 +729,7 @@ const fr = {
   "qcm.subtitle":
     "Des milliers de questions officielles et rédigées par la communauté, filtrées par module. Gratuites pour tous les membres inscrits.",
   "qcm.modeAria": "Choix du mode",
-  "qcm.freeBadge": "100% gratuit",
+  "qcm.freeBadge": "20 QCM gratuits / jour",
   "qcm.practiceTitle": "Créer une session",
   "qcm.practiceDesc":
     "Choisissez votre module, les types de questions et le nombre. Chaque réponse est corrigée immédiatement avec son explication.",
@@ -744,7 +747,7 @@ const fr = {
   "qcm.recentSub": "Reprenez là où vous vous êtes arrêté.",
   "qcm.viewAll": "Tout voir",
   "qcm.footnote":
-    "La banque QCM est entièrement gratuite pour tous les membres — aucun abonnement requis pour s'entraîner.",
+    "L'accès gratuit inclut 20 QCM par jour. Passez à Premium pour un entraînement illimité.",
   // ── QCM builder ──
   "qcmBuilder.back": "Retour à la banque QCM",
   "qcmBuilder.title": "Configurer une session",
@@ -1891,6 +1894,7 @@ const en: Record<I18nKey, string> = {
   "theme.system": "System",
   // ── Primary / secondary nav ──
   "nav.dashboard": "Dashboard",
+  "nav.homeShort": "Home",
   "nav.qcm": "QCM",
   "nav.library": "Library",
   "nav.progress": "Progress",
@@ -2050,6 +2054,8 @@ const en: Record<I18nKey, string> = {
   "admin.codes": "Activation codes",
   "admin.faculties": "Faculties",
   "admin.roles": "Roles",
+  "admin.review": "Review",
+  "admin.authoring": "Authoring",
   "admin.applications": "Instructor applications",
   "admin.promos": "Promo codes",
   "admin.notifications": "Notifications",
@@ -2540,7 +2546,7 @@ const en: Record<I18nKey, string> = {
   "qcm.subtitle":
     "Thousands of official and community-written questions, filtered by module. Free for all registered members.",
   "qcm.modeAria": "Choose a mode",
-  "qcm.freeBadge": "100% free",
+  "qcm.freeBadge": "20 free MCQs / day",
   "qcm.practiceTitle": "Create a session",
   "qcm.practiceDesc":
     "Pick your module, question types, and count. Each answer is graded immediately with its explanation.",
@@ -2558,7 +2564,7 @@ const en: Record<I18nKey, string> = {
   "qcm.recentSub": "Pick up where you left off.",
   "qcm.viewAll": "View all",
   "qcm.footnote":
-    "The QCM bank is entirely free for all members — no subscription needed to practice.",
+    "Free access includes 20 MCQs per day. Upgrade to Premium for unlimited practice.",
   // ── QCM builder ──
   "qcmBuilder.back": "Back to the QCM bank",
   "qcmBuilder.title": "Set up a session",

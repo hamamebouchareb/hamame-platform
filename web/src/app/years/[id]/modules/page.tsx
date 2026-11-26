@@ -7,7 +7,7 @@ import { useAuthedPage } from "@/lib/useAuthedPage";
 import { useApiResource } from "@/lib/useApiResource";
 import { useApiList } from "@/lib/useApiList";
 import { Breadcrumb, CourseCard, CurriculumToolbar, EmptyState, LoadingSkeleton, PageShell, ResidanatLadder, curriculumTrail } from "@/components";
-import type { CurriculumContext, CurriculumModule, ModuleProgress, Unit } from "@/lib/types";
+import type { CurriculumContext, CurriculumModule, ModuleProgress } from "@/lib/types";
 
 type SortValue = "az" | "za" | "progress-desc" | "progress-asc";
 type FilterValue = "all" | "not_started" | "in_progress" | "completed";
@@ -33,9 +33,7 @@ export default function YearModulesPage() {
   const residanatYearId =
     data?.context?.year?.label === "Résidanat" ? data.context.year.id : null;
   const progressPaths = modules.map((m) => `/progress/modules/${m.id}`);
-  const unitPaths = modules.map((m) => `/modules/${m.id}/units`);
   const { data: progressBatches, isLoading: progressLoading } = useApiList<ModuleProgress>(progressPaths);
-  const { data: unitBatches, isLoading: unitsLoading } = useApiList<{ units: Unit[] }>(unitPaths);
 
   const progressByModule = useMemo(() => {
     const map = new Map<string, ModuleProgress>();
@@ -45,15 +43,6 @@ export default function YearModulesPage() {
     });
     return map;
   }, [modules, progressBatches]);
-
-  const unitCountByModule = useMemo(() => {
-    const map = new Map<string, number>();
-    modules.forEach((module, index) => {
-      const units = unitBatches[index]?.units;
-      if (units) map.set(module.id, units.length);
-    });
-    return map;
-  }, [modules, unitBatches]);
 
   const normalizedSearch = search.trim().toLocaleLowerCase("fr");
   const visibleModules = useMemo(() => {
@@ -75,7 +64,10 @@ export default function YearModulesPage() {
     });
   }, [modules, normalizedSearch, sort, filter, progressByModule]);
 
-  const totalLessons = modules.reduce((sum, module) => sum + (progressByModule.get(module.id)?.totalLessons ?? 0), 0);
+  const totalLessons = modules.reduce(
+    (sum, module) => sum + (module._count?.lessons ?? progressByModule.get(module.id)?.totalLessons ?? 0),
+    0
+  );
 
   return (
     <PageShell
@@ -171,7 +163,8 @@ export default function YearModulesPage() {
         <ul className="mt-4 grid gap-card-gap">
           {visibleModules.map((module) => {
             const progress = progressByModule.get(module.id);
-            const unitCount = unitCountByModule.get(module.id);
+            const unitCount = module._count?.units ?? 0;
+            const lessonCount = module._count?.lessons ?? progress?.totalLessons ?? 0;
             const percentage = progress?.percentage ?? 0;
             const statusLabel = percentage === 100 ? t("modules.done") : percentage > 0 ? t("dashboard.inProgress") : t("modules.notStarted");
             return (
@@ -182,11 +175,7 @@ export default function YearModulesPage() {
                   tone="library"
                   progressPct={percentage}
                   progressLoading={progressLoading}
-                  description={
-                    progressLoading || unitsLoading
-                      ? t("builder.loadingShort")
-                      : `${t((progress?.totalLessons ?? 0) === 1 ? "modules.lessonsOne" : "modules.lessonsMany", { count: progress?.totalLessons ?? 0 })} · ${t((unitCount ?? 0) === 1 ? "modules.unitsOne" : "modules.unitsMany", { count: unitCount ?? 0 })}`
-                  }
+                  description={`${t(lessonCount === 1 ? "modules.lessonsOne" : "modules.lessonsMany", { count: lessonCount })} · ${t(unitCount === 1 ? "modules.unitsOne" : "modules.unitsMany", { count: unitCount })}`}
                   actionLabel={percentage === 100 ? t("modules.review") : percentage > 0 ? t("modules.resume") : t("modules.start")}
                   meta={
                     <span

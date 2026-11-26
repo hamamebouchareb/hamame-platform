@@ -101,7 +101,7 @@ export function PageShell({
         {...(menuLinks !== undefined ? { menuLinks } : {})}
       />
 
-      <main className={cx("mx-auto w-full flex-1 px-card-padding py-section-gap", widthClasses[width], className)}>
+      <main className={cx("mx-auto w-full min-w-0 flex-1 overflow-x-hidden px-card-padding py-section-gap pb-24 md:pb-section-gap", widthClasses[width], className)}>
         {leading ? <div className="mb-2">{leading}</div> : null}
         {back ? <BackLink href={back.href}>{back.label}</BackLink> : null}
 

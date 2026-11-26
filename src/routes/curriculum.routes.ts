@@ -121,14 +121,31 @@ async function listModulesForYear(req: Request, res: Response, next: NextFunctio
     const modules = await prisma.module.findMany({
       where: { yearId: id },
       orderBy: { orderIndex: "asc" },
+      include: { _count: { select: { units: true } } },
     });
+
+    const publishedLessons = await prisma.lesson.findMany({
+      where: { currentVersionId: { not: null }, unit: { module: { yearId: id } } },
+      select: { unit: { select: { moduleId: true } } },
+    });
+    const lessonCountByModule = new Map<string, number>();
+    for (const row of publishedLessons) {
+      const mid = row.unit.moduleId;
+      lessonCountByModule.set(mid, (lessonCountByModule.get(mid) ?? 0) + 1);
+    }
 
     res.status(200).json({
       context: {
         faculty: { id: year.faculty.id, name: year.faculty.name },
         year: { id: year.id, label: year.label },
       },
-      modules,
+      modules: modules.map((m) => ({
+        ...m,
+        _count: {
+          units: m._count.units,
+          lessons: lessonCountByModule.get(m.id) ?? 0,
+        },
+      })),
     });
   } catch (err) {
     next(err);
@@ -166,6 +183,14 @@ async function listUnitsForModule(req: Request, res: Response, next: NextFunctio
     const units = await prisma.unit.findMany({
       where: { moduleId: id },
       orderBy: { orderIndex: "asc" },
+      include: {
+        _count: {
+          select: {
+            lessons: { where: { currentVersionId: { not: null } } },
+            questions: { where: { status: "approved" } },
+          },
+        },
+      },
     });
 
     res.status(200).json({

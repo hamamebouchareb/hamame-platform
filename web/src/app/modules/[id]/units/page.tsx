@@ -5,13 +5,8 @@ import { useParams } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuthedPage } from "@/lib/useAuthedPage";
 import { useApiResource } from "@/lib/useApiResource";
-import { useApiList } from "@/lib/useApiList";
 import { Breadcrumb, CourseCard, CurriculumToolbar, EmptyState, LoadingSkeleton, PageShell, curriculumTrail } from "@/components";
-import type { CurriculumContext, LessonSummary, Unit } from "@/lib/types";
-
-interface QuestionListInfo {
-  pagination: { total: number };
-}
+import type { CurriculumContext, Unit } from "@/lib/types";
 
 type SortValue = "az" | "za" | "question-desc";
 
@@ -28,28 +23,6 @@ export default function ModuleUnitsPage() {
   );
 
   const units = useMemo(() => data?.units ?? [], [data]);
-  const lessonPaths = units.map((u) => `/units/${u.id}/lessons`);
-  const questionPaths = units.map((u) => `/questions?unitId=${u.id}&limit=1`);
-  const { data: lessonBatches, isLoading: lessonsLoading } = useApiList<{ lessons: LessonSummary[] }>(lessonPaths);
-  const { data: questionBatches, isLoading: questionsLoading } = useApiList<QuestionListInfo>(questionPaths);
-
-  const lessonCountByUnit = useMemo(() => {
-    const map = new Map<string, number>();
-    units.forEach((unit, index) => {
-      const lessons = lessonBatches[index]?.lessons;
-      if (lessons) map.set(unit.id, lessons.length);
-    });
-    return map;
-  }, [units, lessonBatches]);
-
-  const questionCountByUnit = useMemo(() => {
-    const map = new Map<string, number>();
-    units.forEach((unit, index) => {
-      const total = questionBatches[index]?.pagination.total;
-      if (total !== undefined) map.set(unit.id, total);
-    });
-    return map;
-  }, [units, questionBatches]);
 
   const normalizedSearch = search.trim().toLocaleLowerCase("fr");
   const visibleUnits = useMemo(() => {
@@ -58,12 +31,12 @@ export default function ModuleUnitsPage() {
     );
     return [...filtered].sort((a, b) => {
       if (sort === "question-desc") {
-        return (questionCountByUnit.get(b.id) ?? 0) - (questionCountByUnit.get(a.id) ?? 0);
+        return (b._count?.questions ?? 0) - (a._count?.questions ?? 0);
       }
       if (sort === "za") return -1 * a.name.localeCompare(b.name, "fr", { sensitivity: "base" });
       return a.name.localeCompare(b.name, "fr", { sensitivity: "base" });
     });
-  }, [units, normalizedSearch, sort, questionCountByUnit]);
+  }, [units, normalizedSearch, sort]);
 
   return (
     <PageShell
@@ -144,20 +117,15 @@ export default function ModuleUnitsPage() {
 
         <ul className="mt-4 grid gap-card-gap">
           {visibleUnits.map((unit) => {
-            const lessonCount = lessonCountByUnit.get(unit.id);
-            const questionCount = questionCountByUnit.get(unit.id);
-            const loadingMeta = lessonsLoading || questionsLoading || lessonCount === undefined || questionCount === undefined;
+            const lessonCount = unit._count?.lessons ?? 0;
+            const questionCount = unit._count?.questions ?? 0;
             return (
               <li key={unit.id}>
                 <CourseCard
                   href={`/units/${unit.id}`}
                   title={unit.name}
                   tone="library"
-                  description={
-                    loadingMeta
-                      ? t("units.cardLoading")
-                      : `${t((lessonCount ?? 0) === 1 ? "modules.lessonsOne" : "modules.lessonsMany", { count: lessonCount ?? 0 })} · ${t((questionCount ?? 0) === 1 ? "units.qcmOne" : "units.qcmMany", { count: questionCount ?? 0 })}`
-                  }
+                  description={`${t(lessonCount === 1 ? "modules.lessonsOne" : "modules.lessonsMany", { count: lessonCount })} · ${t(questionCount === 1 ? "units.qcmOne" : "units.qcmMany", { count: questionCount })}`}
                   actionLabel={t("library.explore")}
                   meta={
                     <span className="rounded-pill border border-success/40 bg-success/15 px-2 py-0.5 font-medium text-success">

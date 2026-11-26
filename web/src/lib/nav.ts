@@ -92,12 +92,14 @@ export const ACCOUNT_NAV: NavKeyEntry[] = [
  * entries anywhere. Labels resolve via useLanguage like every other entry.
  */
 export const ADMIN_NAV: NavKeyEntry[] = [
+  { href: "/admin/wallet", labelKey: "admin.wallet", icon: "wallet" },
   { href: "/admin/codes", labelKey: "admin.codes", icon: "key" },
   { href: "/admin/faculties", labelKey: "admin.faculties", icon: "building" },
   { href: "/admin/roles", labelKey: "admin.roles", icon: "shield" },
   { href: "/admin/reports", labelKey: "admin.reports", icon: "flag" },
   { href: "/admin/payouts", labelKey: "admin.payouts", icon: "payout" },
-  { href: "/admin/wallet", labelKey: "admin.wallet", icon: "wallet" },
+  { href: "/review", labelKey: "admin.review", icon: "revision" },
+  { href: "/authoring", labelKey: "admin.authoring", icon: "notes" },
 ];
 // NOTE: admin.applications / admin.promos / admin.notifications / admin.jobs
 // keys stay in i18n for the pages when they are built; only entries with a
@@ -108,21 +110,20 @@ const ADMIN_FAMILY = ["admin", "super_admin"];
 /**
  * Visible admin entries for a role list (roles from GET /api/users/me via
  * AuthContext — client-side UX gating only; every endpoint re-checks
- * server-side and 403s regardless). The admin family sees all;
- * support_agent sees /admin/codes and /admin/wallet (matching the
- * activation-code and wallet staff endpoints' gates; pack prices stay
- * admin-only server-side); moderator sees /admin/reports only (matching the
- * moderation endpoints' gate, which support_agent cannot call).
+ * server-side and 403s regardless).
  */
 export function adminNavForRoles(roles: string[] | undefined): NavKeyEntry[] {
   if (!roles || roles.length === 0) return [];
   if (roles.some((r) => ADMIN_FAMILY.includes(r))) return ADMIN_NAV;
-  const entries: NavKeyEntry[] = [];
+  const hrefs = new Set<string>();
   if (roles.includes("support_agent")) {
-    entries.push(...ADMIN_NAV.filter((e) => e.href === "/admin/codes" || e.href === "/admin/wallet"));
+    hrefs.add("/admin/codes");
+    hrefs.add("/admin/wallet");
   }
-  if (roles.includes("moderator")) entries.push(...ADMIN_NAV.filter((e) => e.href === "/admin/reports"));
-  return entries;
+  if (roles.includes("moderator")) hrefs.add("/admin/reports");
+  if (roles.includes("academic_reviewer")) hrefs.add("/review");
+  if (roles.includes("content_author") || roles.includes("instructor")) hrefs.add("/authoring");
+  return ADMIN_NAV.filter((e) => hrefs.has(e.href));
 }
 
 /**

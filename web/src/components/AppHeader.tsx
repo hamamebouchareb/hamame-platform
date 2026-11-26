@@ -313,7 +313,7 @@ export function AppHeader({
                 )}
               >
                 {item.icon ? <Icon name={item.icon} size={18} /> : null}
-                <span className="line-clamp-1">{t(item.labelKey)}</span>
+                <span className="line-clamp-1">{t(item.href === "/dashboard" ? "nav.homeShort" : item.labelKey)}</span>
               </Link>
             );
           })}
