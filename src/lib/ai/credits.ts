@@ -50,8 +50,8 @@ export async function resolveAiCreditAllowances(
   userId: string
 ): Promise<AiCreditAllowances> {
   const subscription = await client.subscription.findFirst({
-    where: { userId, status: "active" },
-    orderBy: { startedAt: "desc" },
+    where: { userId, status: "active", currentPeriodEnd: { gt: new Date() } },
+    orderBy: { currentPeriodEnd: "desc" },
     select: { plan: { select: { features: true } } },
   });
 

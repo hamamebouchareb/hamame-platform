@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { apiFetch } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
 
 const STORAGE_KEY = "hamame_auth";
 
@@ -126,7 +126,10 @@ async function fetchProfileWithRoles(fallbackUser: Omit<AuthUser, "roles"> & { r
       ...profile,
       roles: Array.isArray(profile.roles) ? profile.roles : [],
     };
-  } catch {
+  } catch (err) {
+    if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+      throw err;
+    }
     // Profile fetch failed (network blip, etc.) — keep the auth session usable
     // without roles rather than failing login entirely. Role-gated UI will simply
     // hide until the next successful hydrate/login.
@@ -156,13 +159,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(stored.user);
       setToken(stored.token);
 
-      // If roles are missing (pre-roles localStorage), refresh from /users/me.
-      // Token is already in localStorage so apiFetch can attach it.
-      if (stored.user.roles.length === 0) {
+      // Always revalidate /users/me on hydrate so revoked/suspended sessions or
+      // updated roles are reflected immediately.
+      try {
         const profile = await fetchProfileWithRoles(stored.user);
         if (!cancelled) {
           setUser(profile);
           writeStoredAuth({ token: stored.token, user: profile });
+        }
+      } catch {
+        clearStoredAuth();
+        if (!cancelled) {
+          setUser(null);
+          setToken(null);
         }
       }
 
@@ -218,17 +227,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const loginWithToken = useCallback(async (accessToken: string) => {
-    // Stage the token first so the profile fetch below authenticates; a stale
-    // entry can never linger because readStoredAuth() rejects user-less rows
-    // and every path below either writes a complete session or clears.
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ token: accessToken, user: null }));
     try {
-      const profile = await apiFetch<AuthUser>("/users/me");
+      const profile = await apiFetch<AuthUser>("/users/me", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
       setToken(accessToken);
       setUser(profile);
       writeStoredAuth({ token: accessToken, user: profile });
     } catch {
       clearStoredAuth();
+      setToken(null);
+      setUser(null);
       throw new Error("External token rejected by /users/me.");
     }
   }, []);
@@ -244,9 +253,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshProfile = useCallback(async () => {
     const stored = readStoredAuth();
     if (!stored) return;
-    const profile = await fetchProfileWithRoles(stored.user);
-    setUser(profile);
-    writeStoredAuth({ token: stored.token, user: profile });
+    try {
+      const profile = await fetchProfileWithRoles(stored.user);
+      setUser(profile);
+      writeStoredAuth({ token: stored.token, user: profile });
+    } catch {
+      clearStoredAuth();
+      setUser(null);
+      setToken(null);
+    }
   }, []);
 
   const value = useMemo(

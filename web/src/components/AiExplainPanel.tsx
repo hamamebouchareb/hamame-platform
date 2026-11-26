@@ -24,7 +24,15 @@ import { AiUpgradePrompt } from "@/components/AiUpgradePrompt";
  * error copy states that no credit was used, which the backend enforces by
  * refunding on any generation failure.
  */
-export function AiExplainPanel({ questionId, sessionId }: { questionId: string; sessionId: string }) {
+export function AiExplainPanel({
+  questionId,
+  sessionId,
+  letterMap,
+}: {
+  questionId: string;
+  sessionId: string;
+  letterMap?: Record<string, string>;
+}) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -119,14 +127,17 @@ export function AiExplainPanel({ questionId, sessionId }: { questionId: string; 
 
           {explanation.incorrectOptions.length > 0 ? (
             <ul className="mt-3 flex flex-col gap-2" aria-label={t("aiExplain.incorrectHeading")}>
-              {explanation.incorrectOptions.map((entry) => (
-                <li key={`${entry.optionLabel}-${entry.optionText}`} className="rounded-control border border-border bg-surface-1 px-3 py-2">
-                  <p className="text-body font-medium text-text-secondary">
-                    {entry.optionLabel} — {entry.optionText}
-                  </p>
-                  <p className="mt-1 text-meta text-text-secondary">{entry.whyIncorrect}</p>
-                </li>
-              ))}
+              {explanation.incorrectOptions.map((entry) => {
+                const displayLabel = letterMap?.[entry.optionLabel] ?? entry.optionLabel;
+                return (
+                  <li key={`${entry.optionLabel}-${entry.optionText}`} className="rounded-control border border-border bg-surface-1 px-3 py-2">
+                    <p className="text-body font-medium text-text-secondary">
+                      {displayLabel} — {entry.optionText}
+                    </p>
+                    <p className="mt-1 text-meta text-text-secondary">{entry.whyIncorrect}</p>
+                  </li>
+                );
+              })}
             </ul>
           ) : null}
 

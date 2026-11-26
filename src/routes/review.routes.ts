@@ -218,10 +218,14 @@ async function approveContent(req: Request, res: Response, next: NextFunction) {
       }
 
       const { updatedVersion, updatedLesson } = await prisma.$transaction(async (tx) => {
-        const nextVersion = await tx.lessonVersion.update({
-          where: { id },
+        const claimed = await tx.lessonVersion.updateMany({
+          where: { id, status: "pending_review" },
           data: { status: "approved", reviewedBy: userId, reviewedAt: new Date(), reviewComment: null },
         });
+        if (claimed.count !== 1) {
+          throw new ApiError(409, "INVALID_STATUS", "This lesson version is no longer pending review.");
+        }
+        const nextVersion = await tx.lessonVersion.findUniqueOrThrow({ where: { id } });
         // The lesson's "published" content is whatever its currentVersionId points at
         // (see GET /api/lessons/:id in curriculum.routes.ts) — approving a version is
         // what makes it live.
@@ -243,11 +247,14 @@ async function approveContent(req: Request, res: Response, next: NextFunction) {
       if (review.status !== "pending_review") {
         throw new ApiError(409, "INVALID_STATUS", `This internship review cannot be approved from status '${review.status}'.`);
       }
-      const updated = await prisma.internshipReview.update({
-        where: { id },
+      const claimed = await prisma.internshipReview.updateMany({
+        where: { id, status: "pending_review" },
         data: { status: "approved", reviewedBy: userId, reviewedAt: new Date(), reviewComment: null },
       });
-      res.status(200).json({ review: { id: updated.id, status: updated.status } });
+      if (claimed.count !== 1) {
+        throw new ApiError(409, "INVALID_STATUS", "This internship review is no longer pending review.");
+      }
+      res.status(200).json({ review: { id, status: "approved" } });
       void createNotificationBestEffort({
         userId: review.userId,
         category: "systeme",
@@ -265,10 +272,14 @@ async function approveContent(req: Request, res: Response, next: NextFunction) {
       throw new ApiError(409, "INVALID_STATUS", `This question cannot be approved from status '${question.status}'.`);
     }
 
-    const updatedQuestion = await prisma.question.update({
-      where: { id },
+    const claimed = await prisma.question.updateMany({
+      where: { id, status: "pending_review" },
       data: { status: "approved", reviewedBy: userId, reviewedAt: new Date(), reviewComment: null },
     });
+    if (claimed.count !== 1) {
+      throw new ApiError(409, "INVALID_STATUS", "This question is no longer pending review.");
+    }
+    const updatedQuestion = await prisma.question.findUniqueOrThrow({ where: { id } });
 
     res.status(200).json({ question: updatedQuestion });
 
@@ -294,7 +305,7 @@ router.post(
 
 // POST /api/review/:type/:id/reject — reject with mandatory comment.
 const rejectSchema = z.object({
-  reviewComment: z.string().min(1),
+  reviewComment: z.string().trim().min(1).max(2000),
 });
 
 // Role-gated to Academic Reviewers (and Admins) via requireRole below (PRD Section 6).
@@ -317,10 +328,14 @@ async function rejectContent(req: Request, res: Response, next: NextFunction) {
         );
       }
 
-      const updatedVersion = await prisma.lessonVersion.update({
-        where: { id },
+      const claimed = await prisma.lessonVersion.updateMany({
+        where: { id, status: "pending_review" },
         data: { status: "rejected", reviewedBy: userId, reviewedAt: new Date(), reviewComment },
       });
+      if (claimed.count !== 1) {
+        throw new ApiError(409, "INVALID_STATUS", "This lesson version is no longer pending review.");
+      }
+      const updatedVersion = await prisma.lessonVersion.findUniqueOrThrow({ where: { id } });
       return res.status(200).json({ version: updatedVersion });
     }
 
@@ -332,11 +347,14 @@ async function rejectContent(req: Request, res: Response, next: NextFunction) {
       if (review.status !== "pending_review") {
         throw new ApiError(409, "INVALID_STATUS", `This internship review cannot be rejected from status '${review.status}'.`);
       }
-      const updated = await prisma.internshipReview.update({
-        where: { id },
+      const claimed = await prisma.internshipReview.updateMany({
+        where: { id, status: "pending_review" },
         data: { status: "rejected", reviewedBy: userId, reviewedAt: new Date(), reviewComment },
       });
-      res.status(200).json({ review: { id: updated.id, status: updated.status } });
+      if (claimed.count !== 1) {
+        throw new ApiError(409, "INVALID_STATUS", "This internship review is no longer pending review.");
+      }
+      res.status(200).json({ review: { id, status: "rejected" } });
       void createNotificationBestEffort({
         userId: review.userId,
         category: "systeme",
@@ -354,10 +372,14 @@ async function rejectContent(req: Request, res: Response, next: NextFunction) {
       throw new ApiError(409, "INVALID_STATUS", `This question cannot be rejected from status '${question.status}'.`);
     }
 
-    const updatedQuestion = await prisma.question.update({
-      where: { id },
+    const claimed = await prisma.question.updateMany({
+      where: { id, status: "pending_review" },
       data: { status: "rejected", reviewedBy: userId, reviewedAt: new Date(), reviewComment },
     });
+    if (claimed.count !== 1) {
+      throw new ApiError(409, "INVALID_STATUS", "This question is no longer pending review.");
+    }
+    const updatedQuestion = await prisma.question.findUniqueOrThrow({ where: { id } });
     res.status(200).json({ question: updatedQuestion });
   } catch (err) {
     next(err);

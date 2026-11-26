@@ -42,6 +42,12 @@ export default function SubscriptionPage() {
   const [entitlements, setEntitlements] = useState<Entitlements | null>(null);
   const [offers, setOffers] = useState<PremiumOffer[]>([]);
   const [balance, setBalance] = useState(0);
+  const [contacts, setContacts] = useState<{
+    whatsapp?: string | null;
+    telegram?: string | null;
+    instagram?: string | null;
+    facebook?: string | null;
+  }>({});
   const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [years, setYears] = useState<Year[]>([]);
   const [facultyId, setFacultyId] = useState("");
@@ -53,11 +59,21 @@ export default function SubscriptionPage() {
 
   const load = useCallback(async () => {
     const ent = await apiFetch<Entitlements>("/subscriptions/me/entitlements");
-    const wallet = await apiFetch<{ balance: number; premiumOffers: PremiumOffer[] }>("/wallet");
+    const wallet = await apiFetch<{
+      balance: number;
+      premiumOffers: PremiumOffer[];
+      contacts?: {
+        whatsapp?: string | null;
+        telegram?: string | null;
+        instagram?: string | null;
+        facebook?: string | null;
+      };
+    }>("/wallet");
     const facultyData = await apiFetch<{ faculties: Faculty[] }>("/faculties");
     setEntitlements(ent);
     setOffers(wallet.premiumOffers);
     setBalance(wallet.balance);
+    setContacts(wallet.contacts ?? {});
     setFaculties(facultyData.faculties);
     return ent;
   }, []);
@@ -113,6 +129,20 @@ export default function SubscriptionPage() {
     }
   }
 
+  async function retryLoad() {
+    setLoadError(null);
+    setIsLoading(true);
+    try {
+      const ent = await load();
+      setFacultyId(ent.premium?.facultyId ?? user?.facultyId ?? "");
+      setYearId(ent.premium?.yearId ?? user?.yearId ?? "");
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : t("auth.genericError"));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   async function buy(offer: PremiumOffer) {
     setNotice(null);
     if (!yearId) {
@@ -158,7 +188,7 @@ export default function SubscriptionPage() {
       loadingLabel={t("billing.loading")}
     >
       {isLoading && <LoadingSkeleton className="mt-section-gap h-40 w-full rounded-card" ariaLabel={t("billing.loadingSub")} />}
-      {loadError && <ErrorState message={loadError} onRetry={() => void refresh()} className="mt-section-gap" />}
+      {loadError && <ErrorState message={loadError} onRetry={() => void retryLoad()} className="mt-section-gap" />}
 
       {entitlements && (
         <div className="mt-section-gap flex flex-col gap-section-gap">
@@ -176,6 +206,11 @@ export default function SubscriptionPage() {
                     : t("prem.statusPremiumNoYear")}
                 </p>
                 <p className="mt-1 text-meta text-text-secondary">{t("prem.until", { date: formatDate(premium.currentPeriodEnd, lang) })}</p>
+                {!premium.yearId && (
+                  <p className="mt-1 text-meta text-text-secondary">
+                    {t("quota.left", { remaining: entitlements.dailyQuestions.remaining, limit: entitlements.dailyQuestions.limit })}
+                  </p>
+                )}
               </>
             ) : (
               <>
@@ -300,7 +335,7 @@ export default function SubscriptionPage() {
               {t("prem.codesTitle")}
             </h2>
             <div className="mt-4 flex flex-col gap-card-gap">
-              <ActivationCodeCard onRedeemed={() => void refresh()} />
+              <ActivationCodeCard onRedeemed={() => void refresh()} contacts={contacts} />
               <PromoCodeCard onRedeemed={() => void refresh()} />
             </div>
           </section>

@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response, Router } from "express";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { validateBody, validateParams } from "../middleware/validate";
 import { uuidParam } from "../lib/common-schemas";
@@ -53,9 +54,22 @@ async function sendFriendRequest(req: Request, res: Response, next: NextFunction
       return res.status(200).json({ friendship: existing });
     }
 
-    const friendship = await prisma.friendship.create({
-      data: { userIdA: me, userIdB: userId, status: "pending" },
-    });
+    let friendship;
+    try {
+      friendship = await prisma.friendship.create({
+        data: { userIdA: me, userIdB: userId, status: "pending" },
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+        const concurrent = await prisma.friendship.findFirst({
+          where: { OR: [{ userIdA: me, userIdB: userId }, { userIdA: userId, userIdB: me }] },
+        });
+        if (concurrent) {
+          return res.status(200).json({ friendship: concurrent });
+        }
+      }
+      throw err;
+    }
 
     const sender = await prisma.user.findUnique({ where: { id: me }, select: { fullName: true } });
     await createNotificationBestEffort({
@@ -129,14 +143,9 @@ async function removeFriend(req: Request, res: Response, next: NextFunction) {
     const me = req.auth!.userId;
     const { userId } = req.params;
 
-    const friendship = await prisma.friendship.findFirst({
+    await prisma.friendship.deleteMany({
       where: { OR: [{ userIdA: me, userIdB: userId }, { userIdA: userId, userIdB: me }] },
     });
-    if (friendship) {
-      await prisma.friendship.delete({
-        where: { userIdA_userIdB: { userIdA: friendship.userIdA, userIdB: friendship.userIdB } },
-      });
-    }
 
     res.status(200).json({ message: "OK" });
   } catch (err) {

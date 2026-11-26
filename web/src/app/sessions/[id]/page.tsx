@@ -98,12 +98,15 @@ export default function SessionQuestionPage() {
   const { data, error, isLoading, refetch } = useApiResource<{ session: SessionDetail }>(
     isHydrated && user ? `/sessions/${sessionId}` : null
   );
-  const session = data?.session ?? null;
+  const session = data?.session?.id === sessionId ? data.session : null;
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, AnswerState>>({});
+  const answersRef = useRef(answers);
+  answersRef.current = answers;
   const [markedForReview, setMarkedForReview] = useState<Record<string, boolean>>({});
   const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false);
+  const inFlightSubmitRef = useRef<Promise<void> | null>(null);
   const [isFinishing, setIsFinishing] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
   const [exitOpen, setExitOpen] = useState(false);
@@ -115,11 +118,20 @@ export default function SessionQuestionPage() {
   const [timeUp, setTimeUp] = useState(false);
   const autoFinishRef = useRef(false);
 
-  // Fresh session id = fresh expiry state (the component itself is not
+  // Fresh session id = fresh per-session state (the component itself is not
   // remounted when navigating between sessions).
   useEffect(() => {
+    setCurrentIndex(0);
+    setAnswers({});
+    setMarkedForReview({});
+    setIsSubmittingAnswer(false);
+    setIsFinishing(false);
+    setFinishError(null);
     setTimeUp(false);
     autoFinishRef.current = false;
+    setNavOpen(false);
+    setReportOpen(false);
+    setExitOpen(false);
   }, [sessionId]);
 
   // A completed session has nothing left to answer here — drop the resume marker and
@@ -188,7 +200,7 @@ export default function SessionQuestionPage() {
   }
 
   function toggleQcmOption(optionId: string) {
-    if (currentAnswer.submitted || timeUp) return;
+    if (currentAnswer.submitted || timeUp || isSubmittingAnswer) return;
     setCurrentAnswer((prev) => ({
       ...prev,
       selectedOptionIds: prev.selectedOptionIds.includes(optionId)
@@ -198,12 +210,12 @@ export default function SessionQuestionPage() {
   }
 
   function selectQcsOption(optionId: string) {
-    if (currentAnswer.submitted || timeUp) return;
+    if (currentAnswer.submitted || timeUp || isSubmittingAnswer) return;
     setCurrentAnswer((prev) => ({ ...prev, selectedOptionIds: [optionId] }));
   }
 
   function setFreeText(value: string) {
-    if (currentAnswer.submitted || timeUp) return;
+    if (currentAnswer.submitted || timeUp || isSubmittingAnswer) return;
     setCurrentAnswer((prev) => ({ ...prev, freeText: value }));
   }
 
@@ -216,83 +228,93 @@ export default function SessionQuestionPage() {
   }
 
   async function handleSubmitAnswer() {
-    if (!session || !currentEntry) return;
+    if (!session || !currentEntry || isSubmittingAnswer) return;
+    const activeSessionId = sessionId;
+    const targetEntry = currentEntry;
+    const isChoiceType = targetEntry.question.type === "QCM" || targetEntry.question.type === "QCS";
+    const selectedIds = currentAnswer.selectedOptionIds;
+    const freeText = currentAnswer.freeText;
+
     setIsSubmittingAnswer(true);
     setCurrentAnswer((prev) => ({ ...prev, submitError: null }));
-    try {
-      const isChoiceType = currentEntry.question.type === "QCM" || currentEntry.question.type === "QCS";
-      const { attempt } = await apiFetch<{ attempt: AnswerAttemptResponse }>(
-        `/sessions/${sessionId}/answers`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            questionId: currentEntry.question.id,
-            ...(isChoiceType
-              ? { selectedOptionIds: currentAnswer.selectedOptionIds }
-              : { freeTextAnswer: currentAnswer.freeText }),
-          }),
-        }
-      );
 
-      setCurrentAnswer((prev) => ({
-        ...prev,
-        submitted: true,
-        submitError: null,
-        // Only present in practice mode (BR-4) — undefined here in exam mode, so no
-        // feedback is shown, just the "Answered" marker.
-        isCorrect: attempt.isCorrect,
-        explanationParagraphs: attempt.explanation ? extractParagraphs(attempt.explanation) : undefined,
-        // Practice-only (see AnswerAttemptResponse): never set in exam mode, where
-        // revealing the key pre-submission would leak answers.
-        correctOptionIds: attempt.correctOptionIds,
-      }));
-
-      // Community pick-rates: enrichment only, practice + choice types. Best-effort —
-      // a stats failure must never break or delay the correctness feedback above.
-      // Keyed by sessionQuestionId (captured now) in case the student navigates away
-      // while the fetch is in flight.
-      if (session.mode === "practice" && isChoiceType) {
-        const statsQuestionId = currentEntry.question.id;
-        const statsSessionQuestionId = currentEntry.sessionQuestionId;
-        try {
-          const stats = await apiFetch<AnswerStatsResponse>(
-            `/questions/${statsQuestionId}/answer-stats`
-          );
-          if (stats.options.length > 0) {
-            const byOption: Record<string, number> = {};
-            for (const option of stats.options) byOption[option.optionId] = option.percentage;
-            setAnswers((prev) => ({
-              ...prev,
-              [statsSessionQuestionId]: {
-                ...(prev[statsSessionQuestionId] ?? emptyAnswerState()),
-                answerStats: { attempts: stats.attempts, byOption },
-              },
-            }));
+    const submitPromise = (async () => {
+      try {
+        const { attempt } = await apiFetch<{ attempt: AnswerAttemptResponse }>(
+          `/sessions/${activeSessionId}/answers`,
+          {
+            method: "POST",
+            body: JSON.stringify({
+              questionId: targetEntry.question.id,
+              ...(isChoiceType ? { selectedOptionIds: selectedIds } : { freeTextAnswer: freeText }),
+            }),
           }
-        } catch {
-          // No stats (no attempts yet, offline, …) — feedback already stands alone.
+        );
+
+        setAnswers((prev) => ({
+          ...prev,
+          [targetEntry.sessionQuestionId]: {
+            ...(prev[targetEntry.sessionQuestionId] ?? emptyAnswerState()),
+            submitted: true,
+            submitError: null,
+            isCorrect: attempt.isCorrect,
+            explanationParagraphs: attempt.explanation ? extractParagraphs(attempt.explanation) : undefined,
+            correctOptionIds: attempt.correctOptionIds,
+          },
+        }));
+
+        // Community pick-rates: enrichment only, practice + choice types. Fire-and-forget
+        // so it never blocks setIsSubmittingAnswer(false).
+        if (session.mode === "practice" && isChoiceType) {
+          const statsQuestionId = targetEntry.question.id;
+          const statsSessionQuestionId = targetEntry.sessionQuestionId;
+          void apiFetch<AnswerStatsResponse>(`/questions/${statsQuestionId}/answer-stats`)
+            .then((stats) => {
+              if (stats.options.length > 0) {
+                const byOption: Record<string, number> = {};
+                for (const option of stats.options) byOption[option.optionId] = option.percentage;
+                setAnswers((prev) => ({
+                  ...prev,
+                  [statsSessionQuestionId]: {
+                    ...(prev[statsSessionQuestionId] ?? emptyAnswerState()),
+                    answerStats: { attempts: stats.attempts, byOption },
+                  },
+                }));
+              }
+            })
+            .catch(() => undefined);
         }
-      }
-    } catch (err) {
-      // Late answer on an expired exam (or a double submit): never a generic
-      // error — show the banner and finish once, exactly like the timer path.
-      if (
-        err instanceof ApiError &&
-        (err.code === "SESSION_TIME_EXPIRED" || err.code === "SESSION_ALREADY_COMPLETED")
-      ) {
-        setTimeUp(true);
-        if (!autoFinishRef.current) {
-          autoFinishRef.current = true;
-          void handleFinishSession();
+      } catch (err) {
+        if (
+          err instanceof ApiError &&
+          (err.code === "SESSION_TIME_EXPIRED" || err.code === "SESSION_ALREADY_COMPLETED")
+        ) {
+          setTimeUp(true);
+          if (!autoFinishRef.current) {
+            autoFinishRef.current = true;
+            void handleFinishSession();
+          }
+          return;
         }
-        return;
+        setAnswers((prev) => ({
+          ...prev,
+          [targetEntry.sessionQuestionId]: {
+            ...(prev[targetEntry.sessionQuestionId] ?? emptyAnswerState()),
+            submitError: err instanceof ApiError ? err.message : t("player.submitError"),
+          },
+        }));
+      } finally {
+        setIsSubmittingAnswer(false);
       }
-      setCurrentAnswer((prev) => ({
-        ...prev,
-        submitError: err instanceof ApiError ? err.message : t("player.submitError"),
-      }));
+    })();
+
+    inFlightSubmitRef.current = submitPromise;
+    try {
+      await submitPromise;
     } finally {
-      setIsSubmittingAnswer(false);
+      if (inFlightSubmitRef.current === submitPromise) {
+        inFlightSubmitRef.current = null;
+      }
     }
   }
 
@@ -338,38 +360,43 @@ export default function SessionQuestionPage() {
   // sessions never enter (isTimedExam).
   useEffect(() => {
     if (!isTimedExam || remainingSeconds !== 0 || autoFinishRef.current) return;
-    if (!session || !currentEntry) return;
+    if (!session) return;
     autoFinishRef.current = true;
     setTimeUp(true);
-    const entry = currentEntry;
-    const pending =
-      entry.question.type === "QCM" || entry.question.type === "QCS"
-        ? currentAnswer.selectedOptionIds.length > 0 && !currentAnswer.submitted
-        : currentAnswer.freeText.trim().length > 0 && !currentAnswer.submitted;
     void (async () => {
-      try {
-        if (pending) {
-          const isChoiceType = entry.question.type === "QCM" || entry.question.type === "QCS";
-          await apiFetch<{ attempt: AnswerAttemptResponse }>(`/sessions/${sessionId}/answers`, {
-            method: "POST",
-            body: JSON.stringify({
-              questionId: entry.question.id,
-              ...(isChoiceType
-                ? { selectedOptionIds: currentAnswer.selectedOptionIds }
-                : { freeTextAnswer: currentAnswer.freeText }),
-            }),
-          });
-          setAnswers((prev) => ({
-            ...prev,
-            [entry.sessionQuestionId]: {
-              ...(prev[entry.sessionQuestionId] ?? emptyAnswerState()),
-              submitted: true,
-            },
-          }));
-        }
-      } catch {
-        // Late or failed flush (grace passed, offline, …) — finishing with
-        // whatever was stored in time is the correct outcome, not an error.
+      if (inFlightSubmitRef.current) {
+        await inFlightSubmitRef.current.catch(() => undefined);
+      }
+      const latestAnswers = answersRef.current;
+      const unsubmitted = session.questions.filter((entry) => {
+        const state = latestAnswers[entry.sessionQuestionId];
+        if (!state || state.submitted) return false;
+        const isChoiceType = entry.question.type === "QCM" || entry.question.type === "QCS";
+        return isChoiceType ? state.selectedOptionIds.length > 0 : state.freeText.trim().length > 0;
+      });
+      if (unsubmitted.length > 0) {
+        await Promise.allSettled(
+          unsubmitted.map(async (entry) => {
+            const state = latestAnswers[entry.sessionQuestionId]!;
+            const isChoiceType = entry.question.type === "QCM" || entry.question.type === "QCS";
+            await apiFetch<{ attempt: AnswerAttemptResponse }>(`/sessions/${sessionId}/answers`, {
+              method: "POST",
+              body: JSON.stringify({
+                questionId: entry.question.id,
+                ...(isChoiceType
+                  ? { selectedOptionIds: state.selectedOptionIds }
+                  : { freeTextAnswer: state.freeText }),
+              }),
+            });
+            setAnswers((prev) => ({
+              ...prev,
+              [entry.sessionQuestionId]: {
+                ...(prev[entry.sessionQuestionId] ?? emptyAnswerState()),
+                submitted: true,
+              },
+            }));
+          })
+        );
       }
       await handleFinishSession();
     })();
@@ -510,6 +537,7 @@ export default function SessionQuestionPage() {
         if (event.key === "Escape") setNavOpen(false);
         return;
       }
+      if (document.querySelector('[role="dialog"][aria-modal="true"]')) return;
       if (!session || session.completedAt || !currentEntry || reportOpen || exitOpen) return;
       if (event.ctrlKey || event.metaKey || event.altKey) return;
       const target = event.target as HTMLElement | null;
@@ -528,13 +556,18 @@ export default function SessionQuestionPage() {
         return;
       }
       if (key === "Enter") {
-        if (target?.tagName === "BUTTON" && !target.closest("[data-answer-options]")) return;
+        if (target?.closest("a[href]")) return;
+        const button = target?.closest("button");
+        if (button) {
+          const inOptions = Boolean(button.closest("[data-answer-options]"));
+          if (!inOptions || button.getAttribute("aria-pressed") !== "true") return;
+        }
         event.preventDefault();
         if (canSubmitCurrent) void handleSubmitAnswer();
         else if (currentAnswer.submitted && !isLast) goTo(currentIndex + 1);
         return;
       }
-      if (!isChoiceCurrent || currentAnswer.submitted || timeUp) return;
+      if (!isChoiceCurrent || currentAnswer.submitted || timeUp || isSubmittingAnswer) return;
       let optionIndex = -1;
       if (/^[1-9]$/.test(key)) optionIndex = Number(key) - 1;
       else if (/^[a-jA-J]$/.test(key)) optionIndex = key.toUpperCase().charCodeAt(0) - 65;
@@ -742,6 +775,7 @@ export default function SessionQuestionPage() {
               questionText={extractParagraphs(currentEntry.question.bodyRichtext)}
               type={currentEntry.question.type}
               options={currentEntry.options}
+              clinicalCaseParts={currentEntry.clinicalCaseParts}
               answer={currentAnswer}
               mode={session.mode}
               unitName={currentEntry.question.unitName}

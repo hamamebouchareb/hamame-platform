@@ -30,9 +30,19 @@ interface Bucket {
   resetAt: number;
 }
 
-const buckets = new Map<string, Bucket>();
-
 const MAX_BUCKETS = 5000;
+
+export function normalizePathname(originalUrl: string): string {
+  const rawPath = originalUrl.split("?")[0] ?? "/";
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(rawPath);
+  } catch {
+    decoded = rawPath;
+  }
+  const collapsed = decoded.replace(/\/+/g, "/").replace(/\/+$/, "").toLowerCase();
+  return collapsed || "/";
+}
 
 function clientIp(req: Request): string {
   const forwarded = req.headers["x-forwarded-for"];
@@ -46,12 +56,14 @@ function clientIp(req: Request): string {
   return req.socket?.remoteAddress ?? "unknown";
 }
 
-function rateLimit(windowMs: number, max: number) {
+export function rateLimit(windowMs: number, max: number) {
+  const buckets = new Map<string, Bucket>();
+
   return (req: Request, res: Response, next: NextFunction) => {
     // originalUrl ("/api/auth/register") — unique across routers, unlike the
     // router-relative req.path ("/register" could exist under two mounts).
-    const pathname = req.originalUrl.split("?")[0];
-    const key = `${clientIp(req)}:${pathname}`;
+    const pathname = normalizePathname(req.originalUrl);
+    const key = `${clientIp(req).toLowerCase()}:${pathname}`;
     const now = Date.now();
 
     let bucket = buckets.get(key);

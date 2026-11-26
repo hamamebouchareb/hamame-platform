@@ -1,6 +1,6 @@
 ## Terms of Use
 
-Last updated: [EFFECTIVE DATE]. Publisher: [LEGAL NAME / COMPANY NAME], [ADDRESS], Algeria. Contact: [CONTACT EMAIL].
+Last updated: November 26, 2026. Publisher: Abderrahmane Hamame Bouchareb, Sétif, Algeria. Contact: hamamebouchareb@gmail.com.
 
 ### 1. Purpose
 
@@ -16,7 +16,7 @@ You must not: copy, bulk-extract or redistribute the questions, explanations and
 
 ### 4. Content and intellectual property
 
-The questions, explanations, courses, texts and interface belong to [LEGAL NAME / COMPANY NAME] or its licensors. We grant you a personal, non-exclusive, non-transferable right to use them for your studies. Your notes and flashcards belong to you; you allow us to store them to provide the service. You can report a content error from the app.
+The questions, explanations, courses, texts and interface belong to Abderrahmane Hamame Bouchareb or its licensors. We grant you a personal, non-exclusive, non-transferable right to use them for your studies. Your notes and flashcards belong to you; you allow us to store them to provide the service. You can report a content error from the app.
 
 ### 5. Educational nature of the service
 
@@ -24,7 +24,7 @@ Hamame is an exam-preparation tool, not medical advice or a clinical reference. 
 
 ### 6. Plans and payment
 
-The free plan gives access to the question bank, practice and exam modes, basic statistics and a limited number of AI credits. The premium plan adds the full official courses, unlimited mock exams, more AI credits and priority support. Current premium price: 1,500 DZD per month; the price shown at the time of payment applies. Payment is currently made outside the platform; after we confirm payment, you receive an activation code. The code is personal and single-use, and gives premium access for the period it covers. When it ends, your account returns to the free plan. Refunds: [REFUND RULE].
+The free plan gives access to the question bank, practice and exam modes, basic statistics and a limited number of AI credits. The premium plan adds the full official courses, unlimited mock exams, more AI credits and priority support. Current premium price: 1,500 DZD per month; the price shown at the time of payment applies. Payment is currently made outside the platform; after we confirm payment, you receive an activation code. The code is personal and single-use, and gives premium access for the period it covers. When it ends, your account returns to the free plan. Refunds: redeemed activation codes are non-refundable, except where required by law or in case of a major service malfunction; contact us by email for any request.
 
 ### 7. Suspension and termination
 
@@ -40,4 +40,4 @@ How we process your data is described in our privacy policy.
 
 ### 10. Changes and governing law
 
-We may update these terms; the version in force is the one published on the site. They are governed by Algerian law. In case of dispute, the competent court is [JURISDICTION TO BE SPECIFIED]. Contact: [CONTACT EMAIL].
+We may update these terms; the version in force is the one published on the site. They are governed by Algerian law. In case of dispute, the competent court is the court of Sétif. Contact: hamamebouchareb@gmail.com.

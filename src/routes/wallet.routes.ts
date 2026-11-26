@@ -26,6 +26,7 @@ import {
   type ChargilyCheckoutStatus,
 } from "../lib/chargily";
 import {
+  deleteReceipt,
   isReceiptStorageConfigured,
   RECEIPT_MAX_BYTES,
   signedReceiptUrl,
@@ -266,6 +267,7 @@ async function getWallet(req: Request, res: Response, next: NextFunction) {
         receiptUpload: isReceiptStorageConfigured(),
       },
       contacts: {
+        whatsapp: envValue("WALLET_CONTACT_WHATSAPP"),
         telegram: envValue("WALLET_CONTACT_TELEGRAM"),
         instagram: envValue("WALLET_CONTACT_INSTAGRAM"),
         facebook: envValue("WALLET_CONTACT_FACEBOOK"),
@@ -381,7 +383,7 @@ async function confirmCheckout(req: Request, res: Response, next: NextFunction) 
       throw new ApiError(404, "ORDER_NOT_FOUND", "This order does not exist.");
     }
     let current = order;
-    if (order.status === "pending" && order.providerCheckoutId && isChargilyConfigured()) {
+    if (order.status !== "paid" && order.providerCheckoutId && isChargilyConfigured()) {
       const checkout = await getChargilyCheckout(order.providerCheckoutId);
       current = (await settleOnlineOrder(order.id, checkout.status)) ?? order;
     }
@@ -397,7 +399,7 @@ async function confirmCheckout(req: Request, res: Response, next: NextFunction) 
 
 const depositSchema = z.object({
   amountDzd: z.number().int().min(DZD_PER_JETON).max(1_000_000).nullable().optional(),
-  receiptBase64: z.string().min(16).max(Math.ceil((RECEIPT_MAX_BYTES * 4) / 3) + 16),
+  receiptBase64: z.string().min(16).max(Math.ceil((RECEIPT_MAX_BYTES * 4) / 3) + 64),
 });
 
 // POST /api/wallet/transfer-deposits — submit a CCP/BaridiMob receipt.
@@ -436,9 +438,25 @@ async function createDeposit(req: Request, res: Response, next: NextFunction) {
       throw new ApiError(502, "RECEIPT_UPLOAD_FAILED", "The receipt could not be stored. Please try again.");
     }
 
-    const deposit = await prisma.walletTransferDeposit.create({
-      data: { userId, amountDzd: body.amountDzd ?? null, receiptPath: path, receiptMime: mime },
-    });
+    let deposit;
+    try {
+      deposit = await prisma.$transaction(
+        async (tx) => {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`deposit:${userId}`}))`;
+          const lockedPending = await tx.walletTransferDeposit.count({ where: { userId, status: "pending" } });
+          if (lockedPending >= MAX_PENDING_DEPOSITS) {
+            throw new ApiError(409, "TOO_MANY_PENDING", "You already have receipts awaiting review.");
+          }
+          return tx.walletTransferDeposit.create({
+            data: { userId, amountDzd: body.amountDzd ?? null, receiptPath: path, receiptMime: mime },
+          });
+        },
+        { maxWait: 10000, timeout: 20000 }
+      );
+    } catch (err) {
+      await deleteReceipt(path).catch(() => undefined);
+      throw err;
+    }
     res.status(201).json({
       deposit: { id: deposit.id, status: deposit.status, amountDzd: deposit.amountDzd, createdAt: deposit.createdAt },
     });
@@ -542,6 +560,7 @@ async function buyPremium(req: Request, res: Response, next: NextFunction) {
     const now = new Date();
     const result = await prisma.$transaction(
       async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`subscription:${userId}`}))`;
         const account = await lockWalletRow(tx, userId);
         if (account.balance < offer.priceJetons) {
           throw new ApiError(409, "INSUFFICIENT_JETONS", "Not enough jetons for this offer.", {

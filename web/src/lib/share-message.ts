@@ -14,6 +14,16 @@ function isInlineImage(url: string): boolean {
   return INLINE_IMAGE_PREFIXES.some((prefix) => url.startsWith(prefix));
 }
 
+const INLINE_FILE_PREFIXES = [
+  "data:application/pdf;base64,",
+  "data:text/plain;base64,",
+  "data:text/csv;base64,",
+] as const;
+
+function isInlineFile(url: string): boolean {
+  return INLINE_FILE_PREFIXES.some((prefix) => url.startsWith(prefix));
+}
+
 export type SharedPayload =
   | {
       kind: "question";
@@ -65,7 +75,7 @@ export function parseShare(body: string): SharedPayload | null {
       return null;
     }
     if (parsed.kind === "file" && str(parsed.name) && url) {
-      if (url.startsWith("https://") || url.includes(";base64,")) {
+      if (url.startsWith("https://") || isInlineFile(url)) {
         return {
           kind: "file",
           name: parsed.name as string,

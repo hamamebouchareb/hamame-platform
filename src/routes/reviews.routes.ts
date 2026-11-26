@@ -7,6 +7,7 @@ import { uuidParam } from "../lib/common-schemas";
 import { requireAuth } from "../middleware/auth";
 import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
+import { resolveViewerUniversityId, universityScopeFilter } from "../lib/university-scope";
 
 // Spaced repetition engine (FR-26/27, V2): ReviewSettings + ReviewQueueItem. Manual
 // enqueue lives here (POST /enqueue); sessions.routes.ts's finalizeSession also
@@ -57,7 +58,7 @@ router.get("/settings", getReviewSettings);
 const updateSettingsSchema = z.object({
   isEnabled: z.boolean(),
   notificationsEnabled: z.boolean(),
-  scheduleDays: z.array(z.number()),
+  scheduleDays: z.array(z.number().int().min(0).max(6)).max(7),
 });
 
 async function updateReviewSettings(req: Request, res: Response, next: NextFunction) {
@@ -192,16 +193,33 @@ async function enqueueReview(req: Request, res: Response, next: NextFunction) {
     const userId = req.auth!.userId;
     const { lessonId, questionId } = req.body as z.infer<typeof enqueueSchema>;
 
-    // FK guard, mirroring notes.routes.ts: a bad target would otherwise surface as a
-    // confusing P2003 FK error on create.
+    // FK + visibility/rollout/university gates (BR-2, FR-10a): missing or
+    // hidden targets surface as 404 rather than leaking existence or P2003.
+    const viewerUniversityId = await resolveViewerUniversityId(prisma, userId);
     if (questionId) {
-      const question = await prisma.question.findUnique({ where: { id: questionId }, select: { id: true } });
+      const question = await prisma.question.findFirst({
+        where: {
+          id: questionId,
+          status: "approved",
+          unit: { module: { year: { faculty: { rolloutStatus: { in: ["beta", "live"] } } } } },
+          AND: [universityScopeFilter(viewerUniversityId)],
+        },
+        select: { id: true },
+      });
       if (!question) {
         throw new ApiError(404, "QUESTION_NOT_FOUND", "No question exists with this id.");
       }
     }
     if (lessonId) {
-      const lesson = await prisma.lesson.findUnique({ where: { id: lessonId }, select: { id: true } });
+      const lesson = await prisma.lesson.findFirst({
+        where: {
+          id: lessonId,
+          currentVersionId: { not: null },
+          unit: { module: { year: { faculty: { rolloutStatus: { in: ["beta", "live"] } } } } },
+          AND: [universityScopeFilter(viewerUniversityId)],
+        },
+        select: { id: true },
+      });
       if (!lesson) {
         throw new ApiError(404, "LESSON_NOT_FOUND", "No lesson exists with this id.");
       }

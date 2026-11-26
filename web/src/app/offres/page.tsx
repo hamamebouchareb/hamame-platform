@@ -1,10 +1,12 @@
 "use client";
 
-import { useAuthedPage } from "@/lib/useAuthedPage";
+import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { localeFor, type UiLanguage } from "@/lib/i18n";
 import { useApiResource } from "@/lib/useApiResource";
-import { ButtonLink, Card, ErrorState, LoadingSkeleton, PageShell } from "@/components";
+import { ButtonLink, Card, ErrorState, Footer, LoadingSkeleton, PageShell } from "@/components";
+import { LegalBackRow } from "@/components/LegalBackRow";
 import type { AiCreditPack, PremiumOffer } from "@/lib/types";
 
 // Free vs Premium vs jetons in one place. Every number is read from the API
@@ -26,11 +28,10 @@ function formatNumber(value: number, lang: UiLanguage): string {
 }
 
 export default function OffersPage() {
-  const { user, isHydrated, handleLogout } = useAuthedPage();
+  const { user, isHydrated, logout } = useAuth();
   const { lang, t } = useLanguage();
-  const canFetch = isHydrated && !!user;
-  const plans = useApiResource<{ plans: PlanRow[] }>(canFetch ? "/plans" : null);
-  const catalog = useApiResource<Catalog>(canFetch ? "/wallet/catalog" : null);
+  const plans = useApiResource<{ plans: PlanRow[] }>("/plans");
+  const catalog = useApiResource<Catalog>("/wallet/catalog");
 
   const free = plans.data?.plans.find((plan) => plan.name === "free");
   const premium = plans.data?.plans.find((plan) => plan.name === "premium");
@@ -56,16 +57,8 @@ export default function OffersPage() {
   const error = plans.error ?? catalog.error;
   const loading = plans.isLoading || catalog.isLoading;
 
-  return (
-    <PageShell
-      user={user}
-      isHydrated={isHydrated}
-      onLogout={handleLogout}
-      width="content"
-      title={t("offers.title")}
-      description={t("offers.subtitle")}
-      loadingLabel={t("common.loading")}
-    >
+  const content = (
+    <>
       {loading && <LoadingSkeleton className="mt-section-gap h-64 w-full rounded-card" ariaLabel={t("common.loading")} />}
       {error && <ErrorState message={error} className="mt-section-gap" />}
 
@@ -157,6 +150,46 @@ export default function OffersPage() {
           </section>
         </div>
       )}
-    </PageShell>
+    </>
+  );
+
+  if (isHydrated && user) {
+    return (
+      <PageShell
+        user={user}
+        isHydrated={isHydrated}
+        onLogout={logout}
+        width="content"
+        title={t("offers.title")}
+        description={t("offers.subtitle")}
+        loadingLabel={t("common.loading")}
+      >
+        {content}
+      </PageShell>
+    );
+  }
+
+  return (
+    <>
+      <main className="mx-auto w-full max-w-4xl flex-1 px-card-padding py-section-gap">
+        <LegalBackRow />
+        <header className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="font-display text-h2 font-bold leading-tight text-text-primary sm:text-h1">
+              {t("offers.title")}
+            </h1>
+            <p className="mt-2 text-body text-text-secondary">{t("offers.subtitle")}</p>
+          </div>
+          <Link
+            href="/login"
+            className="inline-flex min-h-touch-target shrink-0 items-center justify-center rounded-control bg-accent-primary px-4 text-body font-semibold text-on-accent transition hover:brightness-110"
+          >
+            {t("auth.loginCta")}
+          </Link>
+        </header>
+        {content}
+      </main>
+      <Footer />
+    </>
   );
 }

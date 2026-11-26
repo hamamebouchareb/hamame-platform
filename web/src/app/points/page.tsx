@@ -6,7 +6,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { localeFor, type I18nKey, type UiLanguage } from "@/lib/i18n";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { apiFetch, ApiError } from "@/lib/api";
-import { AppHeader, EmptyState, Footer, LoadingSkeleton } from "@/components";
+import { EmptyState, LoadingSkeleton, PageShell } from "@/components";
 import { cx } from "@/lib/cx";
 
 interface PointsAccount {
@@ -212,14 +212,16 @@ export default function PointsPage() {
   }
 
   return (
-    <div className="min-h-screen dark:bg-slate-950 bg-white">
-      <AppHeader user={user} onLogout={handleLogout} />
-      <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-        <header>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t("pts.title")}</h1>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{t("pts.subtitle")}</p>
-        </header>
-
+    <PageShell
+      user={user}
+      isHydrated={isHydrated}
+      onLogout={handleLogout}
+      width="narrow"
+      title={t("pts.title")}
+      description={t("pts.subtitle")}
+      loadingLabel={t("common.loading")}
+    >
+      <div className="mt-section-gap space-y-6">
         {error && (
           <EmptyState
             title={t("pts.loadFailed")}
@@ -232,14 +234,14 @@ export default function PointsPage() {
 
         {!isLoading && account && (
           <>
-            <section className="rounded-2xl border border-slate-200 dark:border-slate-800 p-6 bg-slate-50 dark:bg-slate-900">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            <section className="rounded-2xl border border-border bg-surface-1 p-6">
+              <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
                 {t("pts.balanceLabel")}
               </p>
-              <p className="text-4xl font-extrabold text-blue-600 dark:text-blue-400">
+              <p className="text-4xl font-extrabold text-accent-soft">
                 {account.balance} <span className="text-lg font-semibold">{t("pts.unit")}</span>
               </p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              <p className="mt-1 text-xs text-text-tertiary">
                 {t("pts.totals")
                   .replace("{earned}", String(account.earnedTotal))
                   .replace("{spent}", String(account.spentTotal))}
@@ -249,16 +251,16 @@ export default function PointsPage() {
                   type="button"
                   onClick={handleClaimDaily}
                   disabled={claimBusy || dailyClaimed}
-                  className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="rounded-full bg-accent-primary px-4 py-2 text-sm font-semibold text-on-accent hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {dailyClaimed ? t("pts.claimedButton") : t("pts.claimButton")}
                 </button>
               </div>
             </section>
 
-            <section className="rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t("pts.earnTitle")}</h2>
-              <ul className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-300 list-disc list-inside">
+            <section className="rounded-2xl border border-border bg-surface-1 p-6">
+              <h2 className="text-lg font-semibold text-text-primary">{t("pts.earnTitle")}</h2>
+              <ul className="mt-3 space-y-2 text-sm text-text-secondary list-disc list-inside">
                 <li>{t("pts.earnSession")}</li>
                 <li>{t("pts.earnDaily")}</li>
                 <li>{t("pts.earnStreak")}</li>
@@ -266,7 +268,7 @@ export default function PointsPage() {
             </section>
 
             <section className="space-y-3">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t("pts.shopTitle")}</h2>
+              <h2 className="text-lg font-semibold text-text-primary">{t("pts.shopTitle")}</h2>
               {shop.length === 0 ? (
                 <EmptyState
                   title={t("pts.shopEmpty")}
@@ -280,20 +282,20 @@ export default function PointsPage() {
                     return (
                       <article
                         key={item.id}
-                        className="rounded-2xl border border-slate-200 dark:border-slate-800 p-4 flex flex-col gap-2"
+                        className="rounded-2xl border border-border bg-surface-1 p-4 flex flex-col gap-2"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <h3 className="font-semibold text-slate-900 dark:text-white">{item.name}</h3>
+                            <h3 className="font-semibold text-text-primary">{item.name}</h3>
                             {item.description && (
-                              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{item.description}</p>
+                              <p className="text-xs text-text-secondary mt-1">{item.description}</p>
                             )}
                           </div>
-                          <span className="shrink-0 rounded-full bg-blue-50 dark:bg-blue-950 px-2.5 py-1 text-xs font-bold text-blue-700 dark:text-blue-300">
+                          <span className="shrink-0 rounded-full bg-accent-primary/15 px-2.5 py-1 text-xs font-bold text-accent-soft">
                             {item.costPoints} {t("pts.unit")}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                        <p className="text-xs text-text-tertiary">
                           {item.kind === "plan_days"
                             ? item.planName
                               ? `${t("pts.kindPlanDaysPrefix")} ${item.amount} ${t("pts.daysSuffix")}`
@@ -309,14 +311,15 @@ export default function PointsPage() {
                           className={cx(
                             "mt-auto rounded-full px-4 py-2 text-sm font-semibold",
                             affordable
-                              ? "bg-blue-600 text-white hover:bg-blue-700"
-                              : "bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-500"
+                              ? "bg-accent-primary text-on-accent hover:brightness-110"
+                              : "bg-surface-3 text-text-tertiary"
                           )}
                         >
-                          {redeemBusyId === item.id ? t("pts.redeeming") : t("pts.redeemButton")}                        </button>
+                          {redeemBusyId === item.id ? t("pts.redeeming") : t("pts.redeemButton")}
+                        </button>
                         {confirmingId === item.id && (
-                          <div className="rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950 p-3 text-xs space-y-2">
-                            <p className="text-blue-900 dark:text-blue-200">
+                          <div className="rounded-xl border border-accent-primary/30 bg-accent-primary/10 p-3 text-xs space-y-2">
+                            <p className="text-text-primary">
                               {t("pts.confirmRedeem")
                                 .replace("{cost}", String(item.costPoints))
                                 .replace("{name}", item.name)}
@@ -325,14 +328,14 @@ export default function PointsPage() {
                               <button
                                 type="button"
                                 onClick={() => void handleRedeem(item.id)}
-                                className="rounded-full bg-blue-600 px-3 py-1.5 font-semibold text-white hover:bg-blue-700"
+                                className="rounded-full bg-accent-primary px-3 py-1.5 font-semibold text-on-accent hover:brightness-110"
                               >
                                 {t("pts.confirmYes")}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setConfirmingId(null)}
-                                className="rounded-full border border-slate-300 dark:border-slate-700 px-3 py-1.5 font-semibold text-slate-700 dark:text-slate-300"
+                                className="rounded-full border border-border px-3 py-1.5 font-semibold text-text-secondary hover:bg-surface-2"
                               >
                                 {t("pts.confirmNo")}
                               </button>
@@ -347,13 +350,13 @@ export default function PointsPage() {
             </section>
 
             {redemptions.length > 0 && (
-              <section className="rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t("pts.redemptionsTitle")}</h2>
-                <ul className="mt-3 divide-y divide-slate-200 dark:divide-slate-800">
+              <section className="rounded-2xl border border-border bg-surface-1 p-6">
+                <h2 className="text-lg font-semibold text-text-primary">{t("pts.redemptionsTitle")}</h2>
+                <ul className="mt-3 divide-y divide-border">
                   {redemptions.map((row) => (
                     <li key={row.id} className="py-2 flex items-center justify-between gap-3 text-sm">
-                      <span className="text-slate-800 dark:text-slate-200">{row.itemName}</span>
-                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                      <span className="text-text-primary">{row.itemName}</span>
+                      <span className="text-xs text-text-tertiary">
                         −{row.costPoints} {t("pts.unit")} · {formatWhen(row.grantedAt, lang)}
                       </span>
                     </li>
@@ -362,8 +365,8 @@ export default function PointsPage() {
               </section>
             )}
 
-            <section className="rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t("pts.ledgerTitle")}</h2>
+            <section className="rounded-2xl border border-border bg-surface-1 p-6">
+              <h2 className="text-lg font-semibold text-text-primary">{t("pts.ledgerTitle")}</h2>
               {ledger.length === 0 ? (
                 <EmptyState
                   title={t("pts.ledgerEmpty")}
@@ -371,22 +374,22 @@ export default function PointsPage() {
                   action={{ href: "/dashboard", label: t("pts.backHome") }}
                 />
               ) : (
-                <ul className="mt-3 divide-y divide-slate-200 dark:divide-slate-800">
+                <ul className="mt-3 divide-y divide-border">
                   {ledger.map((row) => (
                     <li key={row.id} className="py-2 flex items-center justify-between gap-3 text-sm">
-                      <span className="text-slate-800 dark:text-slate-200">
+                      <span className="text-text-primary">
                         {t((REASON_LABEL_KEYS[row.reason] || "pts.reasonAdmin") as I18nKey)}
                       </span>
                       <span className="flex items-center gap-3">
                         <span
                           className={cx(
                             "font-semibold",
-                            row.delta >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                            row.delta >= 0 ? "text-success" : "text-danger"
                           )}
                         >
                           {row.delta >= 0 ? `+${row.delta}` : row.delta}
                         </span>
-                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                        <span className="text-xs text-text-tertiary">
                           {formatWhen(row.createdAt, lang)}
                         </span>
                       </span>
@@ -397,19 +400,18 @@ export default function PointsPage() {
             </section>
 
             {actionNotice && (
-              <p className="rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-200">
+              <p className="rounded-xl border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
                 {actionNotice}
               </p>
             )}
             {actionError && (
-              <p className="rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950 px-4 py-3 text-sm text-rose-800 dark:text-rose-200">
+              <p className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
                 {actionError}
               </p>
             )}
           </>
         )}
-      </main>
-      <Footer />
-    </div>
+      </div>
+    </PageShell>
   );
 }

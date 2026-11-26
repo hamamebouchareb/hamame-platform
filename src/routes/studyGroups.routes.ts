@@ -39,7 +39,13 @@ const announcementBody = z.object({
 
 const attachmentBody = z.object({
   title: z.string().min(1).max(200),
-  url: z.string().url().max(2000),
+  url: z.string().url().max(2000).regex(/^https?:\/\//i, "Attachment URL must use http or https."),
+});
+
+const listGroupsQuery = paginationQuery.extend({
+  facultyId: z.string().uuid().optional(),
+  yearId: z.string().uuid().optional(),
+  mine: z.enum(["true", "false"]).optional(),
 });
 
 const messagesQuery = paginationQuery.extend({
@@ -250,7 +256,11 @@ async function joinGroup(req: Request, res: Response, next: NextFunction) {
       return;
     }
     if (group.joinPolicy === "open") {
-      await prisma.groupMember.create({ data: { groupId: group.id, userId, role: "member" } });
+      await prisma.groupMember.upsert({
+        where: { groupId_userId: { groupId: group.id, userId } },
+        update: {},
+        create: { groupId: group.id, userId, role: "member" },
+      });
       res.status(201).json({ status: "joined" });
       return;
     }
@@ -442,6 +452,7 @@ async function postMessage(req: Request, res: Response, next: NextFunction) {
     const { body } = req.body as { body: string };
     const message = await prisma.groupMessage.create({
       data: { groupId: group.id, userId: req.auth!.userId, body },
+      include: { user: { select: { id: true, fullName: true } } },
     });
     res.status(201).json({ message: serializeMessage(message) });
   } catch (err) {
@@ -510,6 +521,7 @@ async function listAttachments(req: Request, res: Response, next: NextFunction) 
         id: a.id,
         title: a.title,
         url: a.url,
+        uploaderId: a.uploaderId,
         uploadedBy: a.uploader?.fullName ?? null,
         createdAt: a.createdAt,
       })),
@@ -538,6 +550,7 @@ async function deleteAttachment(req: Request, res: Response, next: NextFunction)
   try {
     const viewerUniversityId = await resolveViewerUniversityId(prisma, req.auth!.userId);
     const group = await getGroupOrNotFound(req.params.id, req.auth!.userId, viewerUniversityId);
+    const membership = requireMembership(group);
     const { attachmentId } = req.params as unknown as { attachmentId: string };
     const attachment = await prisma.groupAttachment.findFirst({
       where: { id: attachmentId, groupId: group.id },
@@ -545,8 +558,7 @@ async function deleteAttachment(req: Request, res: Response, next: NextFunction)
     if (!attachment) {
       throw new ApiError(404, "ATTACHMENT_NOT_FOUND", "This attachment does not belong to the group.");
     }
-    const membership = group.members[0];
-    const isOwner = membership?.role === "owner";
+    const isOwner = membership.role === "owner";
     const isUploader = attachment.uploaderId === req.auth!.userId;
     if (!isOwner && !isUploader) {
       throw new ApiError(403, "NOT_ALLOWED", "Only the owner or the uploader can remove this attachment.");
@@ -563,7 +575,7 @@ const requesterParams = z.object({ id: z.string().uuid(), requesterId: z.string(
 const attachmentParams = z.object({ id: z.string().uuid(), attachmentId: z.string().uuid() });
 
 router.post("/", validateBody(createGroupBody), createGroup);
-router.get("/", validateQuery(paginationQuery), listGroups);
+router.get("/", validateQuery(listGroupsQuery), listGroups);
 router.get("/:id", validateParams(idParams), getGroup);
 router.post("/:id/join", validateParams(idParams), joinGroup);
 router.post("/:id/leave", validateParams(idParams), leaveGroup);

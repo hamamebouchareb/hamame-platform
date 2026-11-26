@@ -88,8 +88,11 @@ async function studyChat(req: Request, res: Response, next: NextFunction) {
     // a request-validity 404, never as a misleading "AI unavailable".
     let context: StudyChatContext | null = null;
     if (body.unitId) {
-      const unit = await prisma.unit.findUnique({
-        where: { id: body.unitId },
+      const unit = await prisma.unit.findFirst({
+        where: {
+          id: body.unitId,
+          module: { year: { faculty: { rolloutStatus: { in: ["beta", "live"] } } } },
+        },
         select: {
           name: true,
           module: {

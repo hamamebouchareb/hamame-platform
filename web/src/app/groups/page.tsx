@@ -6,7 +6,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { localeFor, type UiLanguage } from "@/lib/i18n";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import { apiFetch, ApiError } from "@/lib/api";
-import { AppHeader, EmptyState, Footer, LoadingSkeleton } from "@/components";
+import { EmptyState, LoadingSkeleton, PageShell } from "@/components";
 import { cx } from "@/lib/cx";
 
 // ---------------------------------------------------------------------------
@@ -47,6 +47,7 @@ interface AttachmentRow {
   id: string;
   title: string;
   url: string;
+  uploaderId?: string | null;
   uploadedBy: string | null;
   createdAt: string;
 }
@@ -297,7 +298,9 @@ export default function GroupsPage() {
   }
 
   async function handleJoin(groupId: string) {
+    if (busy) return;
     setActionError(null);
+    setBusy(true);
     try {
       const status = await apiFetch<{ status: string }>(`/groups/${groupId}/join`, { method: "POST" });
       if (status.status === "requested") {
@@ -310,6 +313,8 @@ export default function GroupsPage() {
       if (detail) await openDetail({ ...detail, myRole: status.status === "requested" ? null : "member" });
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : t("grp.actionFailed"));
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -472,28 +477,33 @@ export default function GroupsPage() {
   const totalPages = Math.max(1, Math.ceil(total / 20));
 
   return (
-    <div className="min-h-screen dark:bg-slate-950 bg-white">
-      <AppHeader user={user} onLogout={handleLogout} />
-      <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+    <PageShell
+      user={user}
+      isHydrated={isHydrated}
+      onLogout={handleLogout}
+      width="narrow"
+      loadingLabel={t("common.loading")}
+    >
+      <div className="space-y-6">
         {selected ? (
           <>
             <div>
               <button
                 type="button"
                 onClick={() => setSelected(null)}
-                className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                className="text-sm font-semibold text-accent-soft hover:underline"
               >
                 ← {t("grp.title")}
               </button>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white mt-2">{selected.name}</h1>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+              <h1 className="text-2xl font-bold text-text-primary mt-2">{selected.name}</h1>
+              <p className="text-sm text-text-secondary mt-1">
                 {selected.faculty.name} · {selected.year.label}
                 {selected.memberCount !== null
                   ? ` · ${t("grp.membersCount", { count: selected.memberCount })}`
                   : ""}
               </p>
               {selected.description && (
-                <p className="text-sm text-slate-700 dark:text-slate-300 mt-2">{selected.description}</p>
+                <p className="text-sm text-text-secondary mt-2">{selected.description}</p>
               )}
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 {isOwner && (
@@ -501,7 +511,7 @@ export default function GroupsPage() {
                     type="button"
                     onClick={() => void handleDelete(selected.id)}
                     disabled={busy}
-                    className="rounded-full border border-rose-300 dark:border-rose-800 px-3 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950 disabled:opacity-50"
+                    className="rounded-full border border-danger/40 px-3 py-1.5 text-xs font-semibold text-danger hover:bg-danger/10 disabled:opacity-50"
                   >
                     {t("grp.delete")}
                   </button>
@@ -511,7 +521,7 @@ export default function GroupsPage() {
                     type="button"
                     onClick={() => void handleLeave(selected.id)}
                     disabled={busy}
-                    className="rounded-full border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-50"
+                    className="rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-text-secondary hover:bg-surface-2 disabled:opacity-50"
                   >
                     {t("grp.leave")}
                   </button>
@@ -521,7 +531,7 @@ export default function GroupsPage() {
                     type="button"
                     onClick={() => void handleJoin(selected.id)}
                     disabled={busy}
-                    className="rounded-full bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                    className="rounded-full bg-accent-primary px-4 py-1.5 text-xs font-semibold text-on-accent hover:brightness-110 disabled:opacity-50"
                   >
                     {t("grp.join")}
                   </button>
@@ -531,7 +541,7 @@ export default function GroupsPage() {
                     type="button"
                     onClick={() => void handleJoin(selected.id)}
                     disabled={busy}
-                    className="rounded-full bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                    className="rounded-full bg-accent-primary px-4 py-1.5 text-xs font-semibold text-on-accent hover:brightness-110 disabled:opacity-50"
                   >
                     {t("grp.request")}
                   </button>
@@ -549,7 +559,7 @@ export default function GroupsPage() {
 
             {isMember && (
               <>
-                <nav className="flex gap-1 border-b border-slate-200 dark:border-slate-800">
+                <nav className="flex gap-1 border-b border-border">
                   {(["chat", "announcements", "drive", "members"] as Tab[]).map((key) => (
                     <button
                       key={key}
@@ -558,8 +568,8 @@ export default function GroupsPage() {
                       className={cx(
                         "px-4 py-2 text-sm font-semibold rounded-t-lg",
                         tab === key
-                          ? "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
-                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                          ? "bg-accent-primary/15 text-accent-soft"
+                          : "text-text-secondary hover:text-text-primary"
                       )}
                     >
                       {t(`grp.tabs${key.charAt(0).toUpperCase()}${key.slice(1)}` as "grp.tabsChat")}
@@ -568,34 +578,34 @@ export default function GroupsPage() {
                 </nav>
 
             {actionNotice && (
-              <p className="rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-200">
+              <p className="rounded-xl border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
                 {actionNotice}
               </p>
             )}
             {actionError && (
-              <p className="rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950 px-4 py-3 text-sm text-rose-800 dark:text-rose-200">
+              <p className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
                 {actionError}
               </p>
             )}
             {detailError && (
-              <p className="rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950 px-4 py-3 text-sm text-rose-800 dark:text-rose-200">
+              <p className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
                 {detailError}
               </p>
             )}
 
                 {tab === "chat" && (
                   <section className="space-y-3">
-                    <div className="rounded-2xl border border-slate-200 dark:border-slate-800 p-4 space-y-2 min-h-[16rem] max-h-[28rem] overflow-y-auto">
+                    <div className="rounded-2xl border border-border bg-surface-1 p-4 space-y-2 min-h-[16rem] max-h-[28rem] overflow-y-auto">
                       {messages.length === 0 ? (
-                        <p className="text-sm text-slate-500 dark:text-slate-400">{t("grp.chatEmpty")}</p>
+                        <p className="text-sm text-text-tertiary">{t("grp.chatEmpty")}</p>
                       ) : (
                         messages.map((m) => (
                           <div key={m.id} className="text-sm">
-                            <span className="font-semibold text-blue-700 dark:text-blue-300">
+                            <span className="font-semibold text-accent-soft">
                               {m.senderName}
                             </span>
-                            <span className="ml-2 text-xs text-slate-400">{formatWhen(m.createdAt, lang)}</span>
-                            <p className="text-slate-800 dark:text-slate-200 whitespace-pre-wrap break-words">{m.body}</p>
+                            <span className="ml-2 text-xs text-text-tertiary">{formatWhen(m.createdAt, lang)}</span>
+                            <p className="text-text-primary whitespace-pre-wrap break-words">{m.body}</p>
                           </div>
                         ))
                       )}
@@ -609,13 +619,13 @@ export default function GroupsPage() {
                           if (e.key === "Enter" && chatInput.trim()) void sendChat();
                         }}
                         placeholder={t("grp.placeholder")}
-                        className="flex-1 rounded-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-sm text-slate-900 dark:text-white"
+                        className="flex-1 rounded-full border border-border bg-surface-2 px-4 py-2 text-sm text-text-primary placeholder:text-text-tertiary"
                       />
                       <button
                         type="button"
                         onClick={() => void sendChat()}
                         disabled={busy || !chatInput.trim()}
-                        className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="rounded-full bg-accent-primary px-4 py-2 text-sm font-semibold text-on-accent hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {t("grp.send")}
                       </button>
@@ -626,8 +636,8 @@ export default function GroupsPage() {
                 {tab === "announcements" && (
                   <section className="space-y-3">
                     {isOwner && (
-                      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 p-4 space-y-2">
-                        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                      <div className="rounded-2xl border border-border bg-surface-1 p-4 space-y-2">
+                        <h3 className="text-sm font-semibold text-text-primary">
                           {t("grp.newAnnouncement")}
                         </h3>
                         <input
@@ -635,20 +645,20 @@ export default function GroupsPage() {
                           value={announcementTitle}
                           onChange={(e) => setAnnouncementTitle(e.target.value)}
                           placeholder={t("grp.announcementTitleLabel")}
-                          className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-white"
+                          className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary"
                         />
                         <textarea
                           value={announcementBody}
                           onChange={(e) => setAnnouncementBody(e.target.value)}
                           placeholder={t("grp.announcementBodyLabel")}
                           rows={3}
-                          className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-white"
+                          className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary"
                         />
                         <button
                           type="button"
                           onClick={() => void publishAnnouncement()}
                           disabled={busy || !announcementTitle.trim() || !announcementBody.trim()}
-                          className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                          className="rounded-full bg-accent-primary px-4 py-2 text-sm font-semibold text-on-accent hover:brightness-110 disabled:opacity-50"
                         >
                           {t("grp.publish")}
                         </button>
@@ -664,13 +674,13 @@ export default function GroupsPage() {
                       announcements.map((a) => (
                         <article
                           key={a.id}
-                          className="rounded-2xl border border-slate-200 dark:border-slate-800 p-4"
+                          className="rounded-2xl border border-border bg-surface-1 p-4"
                         >
-                          <h3 className="font-semibold text-slate-900 dark:text-white">{a.title}</h3>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                          <h3 className="font-semibold text-text-primary">{a.title}</h3>
+                          <p className="text-xs text-text-tertiary">
                             {a.authorName} · {formatWhen(a.createdAt, lang)}
                           </p>
-                          <p className="mt-2 text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap">{a.body}</p>
+                          <p className="mt-2 text-sm text-text-secondary whitespace-pre-wrap">{a.body}</p>
                         </article>
                       ))
                     )}
@@ -680,27 +690,27 @@ export default function GroupsPage() {
                 {tab === "drive" && (
                   <section className="space-y-3">
                     {isOwner && (
-                      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 p-4 space-y-2">
-                        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{t("grp.addAttachment")}</h3>
+                      <div className="rounded-2xl border border-border bg-surface-1 p-4 space-y-2">
+                        <h3 className="text-sm font-semibold text-text-primary">{t("grp.addAttachment")}</h3>
                         <input
                           type="text"
                           value={attachmentTitle}
                           onChange={(e) => setAttachmentTitle(e.target.value)}
                           placeholder={t("grp.attachmentTitleLabel")}
-                          className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-white"
+                          className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary"
                         />
                         <input
                           type="text"
                           value={attachmentUrl}
                           onChange={(e) => setAttachmentUrl(e.target.value)}
                           placeholder={t("grp.attachmentUrlLabel")}
-                          className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-white"
+                          className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary"
                         />
                         <button
                           type="button"
                           onClick={() => void addAttachment()}
                           disabled={busy || !attachmentTitle.trim() || !attachmentUrl.trim()}
-                          className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                          className="rounded-full bg-accent-primary px-4 py-2 text-sm font-semibold text-on-accent hover:brightness-110 disabled:opacity-50"
                         >
                           {t("grp.addButton")}
                         </button>
@@ -713,30 +723,32 @@ export default function GroupsPage() {
                         action={{ href: "/groups", label: t("grp.backHome") }}
                       />
                     ) : (
-                      <ul className="divide-y divide-slate-200 dark:divide-slate-800 rounded-2xl border border-slate-200 dark:border-slate-800">
+                      <ul className="divide-y divide-border rounded-2xl border border-border bg-surface-1">
                         {attachments.map((a) => (
                           <li key={a.id} className="px-4 py-3 flex items-center justify-between gap-3">
                             <div className="min-w-0">
-                              <p className="font-semibold text-sm text-slate-900 dark:text-white truncate">{a.title}</p>
-                              <p className="text-xs text-slate-500 dark:text-slate-400">
+                              <p className="font-semibold text-sm text-text-primary truncate">{a.title}</p>
+                              <p className="text-xs text-text-tertiary">
                                 {a.uploadedBy} · {formatWhen(a.createdAt, lang)}
                               </p>
                             </div>
                             <div className="flex shrink-0 items-center gap-2">
-                              <a
-                                href={a.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="rounded-full border border-blue-300 dark:border-blue-800 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950"
-                              >
-                                {t("grp.open")}
-                              </a>
-                              {(isOwner || a.uploadedBy === user.fullName) && (
+                              {/^https?:\/\//i.test(a.url) && (
+                                <a
+                                  href={a.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="rounded-full border border-accent-primary/40 px-3 py-1.5 text-xs font-semibold text-accent-soft hover:bg-accent-primary/10"
+                                >
+                                  {t("grp.open")}
+                                </a>
+                              )}
+                              {(isOwner || a.uploaderId === user.id) && (
                                 <button
                                   type="button"
                                   onClick={() => void removeAttachment(a.id)}
                                   disabled={busy}
-                                  className="rounded-full border border-rose-300 dark:border-rose-800 px-3 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 disabled:opacity-50"
+                                  className="rounded-full border border-danger/40 px-3 py-1.5 text-xs font-semibold text-danger disabled:opacity-50"
                                 >
                                   {t("grp.remove")}
                                 </button>
@@ -752,21 +764,21 @@ export default function GroupsPage() {
                 {tab === "members" && (
                   <section className="space-y-3">
                     {isOwner && (
-                      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
-                        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{t("grp.requestsTitle")}</h3>
+                      <div className="rounded-2xl border border-border bg-surface-1 p-4">
+                        <h3 className="text-sm font-semibold text-text-primary">{t("grp.requestsTitle")}</h3>
                         {requests.length === 0 ? (
-                          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t("grp.requestsEmpty")}</p>
+                          <p className="mt-2 text-xs text-text-tertiary">{t("grp.requestsEmpty")}</p>
                         ) : (
-                          <ul className="mt-2 divide-y divide-slate-200 dark:divide-slate-800">
+                          <ul className="mt-2 divide-y divide-border">
                             {requests.map((r) => (
                               <li key={r.userId} className="py-2 flex items-center justify-between gap-3 text-sm">
-                                <span className="text-slate-800 dark:text-slate-200">{r.fullName ?? r.userId}</span>
+                                <span className="text-text-primary">{r.fullName ?? r.userId}</span>
                                 <span className="flex gap-2">
                                   <button
                                     type="button"
                                     onClick={() => void decideRequest(r.userId, "approve")}
                                     disabled={busy}
-                                    className="rounded-full bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                                    className="rounded-full bg-accent-primary px-3 py-1.5 text-xs font-semibold text-on-accent hover:brightness-110 disabled:opacity-50"
                                   >
                                     {t("grp.approve")}
                                   </button>
@@ -774,7 +786,7 @@ export default function GroupsPage() {
                                     type="button"
                                     onClick={() => void decideRequest(r.userId, "reject")}
                                     disabled={busy}
-                                    className="rounded-full border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-50"
+                                    className="rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-text-secondary disabled:opacity-50"
                                   >
                                     {t("grp.reject")}
                                   </button>
@@ -785,11 +797,11 @@ export default function GroupsPage() {
                         )}
                       </div>
                     )}
-                    <ul className="divide-y divide-slate-200 dark:divide-slate-800 rounded-2xl border border-slate-200 dark:border-slate-800">
+                    <ul className="divide-y divide-border rounded-2xl border border-border bg-surface-1">
                       {members.map((m) => (
                         <li key={m.userId} className="px-4 py-3 flex items-center justify-between gap-3 text-sm">
-                          <span className="text-slate-800 dark:text-slate-200">{m.fullName ?? m.userId}</span>
-                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                          <span className="text-text-primary">{m.fullName ?? m.userId}</span>
+                          <span className="text-xs text-text-tertiary">
                             {m.role === "owner" ? t("grp.roleOwner") : t("grp.roleMember")}
                           </span>
                         </li>
@@ -804,13 +816,13 @@ export default function GroupsPage() {
           <>
             <header className="flex items-start justify-between gap-4">
               <div>
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t("grp.title")}</h1>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{t("grp.subtitle")}</p>
+                <h1 className="text-2xl font-bold text-text-primary">{t("grp.title")}</h1>
+                <p className="text-sm text-text-secondary mt-1">{t("grp.subtitle")}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowCreate((v) => !v)}
-                className="shrink-0 rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                className="shrink-0 rounded-full bg-accent-primary px-4 py-2 text-sm font-semibold text-on-accent hover:brightness-110"
               >
                 {t("grp.createButton")}
               </button>
@@ -825,21 +837,21 @@ export default function GroupsPage() {
             )}
 
             {showCreate && (
-              <section className="rounded-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-3">
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t("grp.createTitle")}</h2>
+              <section className="rounded-2xl border border-border bg-surface-1 p-6 space-y-3">
+                <h2 className="text-lg font-semibold text-text-primary">{t("grp.createTitle")}</h2>
                 <input
                   type="text"
                   value={createName}
                   onChange={(e) => setCreateName(e.target.value)}
                   placeholder={t("grp.nameLabel")}
-                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-white"
+                  className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary"
                 />
                 <input
                   type="text"
                   value={createDescription}
                   onChange={(e) => setCreateDescription(e.target.value)}
                   placeholder={t("grp.descriptionLabel")}
-                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-white"
+                  className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary"
                 />
                 <div className="grid gap-3 sm:grid-cols-2">
                   <select
@@ -849,7 +861,7 @@ export default function GroupsPage() {
                       setCreateYearId("");
                       setYearsForCreate([]);
                     }}
-                    className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-white"
+                    className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm text-text-primary"
                   >
                     <option value="">{t("grp.facultyLabel")}</option>
                     {faculties.map((f) => (
@@ -861,7 +873,7 @@ export default function GroupsPage() {
                   <select
                     value={createYearId}
                     onChange={(e) => setCreateYearId(e.target.value)}
-                    className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-white"
+                    className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm text-text-primary"
                   >
                     <option value="">{t("grp.yearLabel")}</option>
                     {yearsForCreate.map((y) => (
@@ -878,8 +890,8 @@ export default function GroupsPage() {
                     className={cx(
                       "rounded-full px-3 py-1.5 text-xs font-semibold",
                       createPolicy === "open"
-                        ? "bg-blue-600 text-white"
-                        : "border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+                        ? "bg-accent-primary text-on-accent"
+                        : "border border-border text-text-secondary"
                     )}
                   >
                     {t("grp.joinPolicyOpen")}
@@ -890,8 +902,8 @@ export default function GroupsPage() {
                     className={cx(
                       "rounded-full px-3 py-1.5 text-xs font-semibold",
                       createPolicy === "request"
-                        ? "bg-blue-600 text-white"
-                        : "border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+                        ? "bg-accent-primary text-on-accent"
+                        : "border border-border text-text-secondary"
                     )}
                   >
                     {t("grp.joinPolicyRequest")}
@@ -902,14 +914,14 @@ export default function GroupsPage() {
                     type="button"
                     onClick={() => void handleCreate()}
                     disabled={createBusy || !createName.trim() || !createFacultyId || !createYearId}
-                    className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="rounded-full bg-accent-primary px-4 py-2 text-sm font-semibold text-on-accent hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {t("grp.createSubmit")}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowCreate(false)}
-                    className="rounded-full border border-slate-300 dark:border-slate-700 px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300"
+                    className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-text-secondary"
                   >
                     {t("grp.cancel")}
                   </button>
@@ -926,7 +938,7 @@ export default function GroupsPage() {
                 }}
                 className={cx(
                   "rounded-full px-3 py-1.5 text-xs font-semibold",
-                  !mineOnly ? "bg-blue-600 text-white" : "border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+                  !mineOnly ? "bg-accent-primary text-on-accent" : "border border-border text-text-secondary"
                 )}
               >
                 {t("grp.allGroups")}
@@ -939,7 +951,7 @@ export default function GroupsPage() {
                 }}
                 className={cx(
                   "rounded-full px-3 py-1.5 text-xs font-semibold",
-                  mineOnly ? "bg-blue-600 text-white" : "border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+                  mineOnly ? "bg-accent-primary text-on-accent" : "border border-border text-text-secondary"
                 )}
               >
                 {t("grp.mineOnly")}
@@ -950,7 +962,7 @@ export default function GroupsPage() {
                   setFacultyFilter(e.target.value);
                   setPage(1);
                 }}
-                className="rounded-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-900 dark:text-white"
+                className="rounded-full border border-border bg-surface-2 px-3 py-1.5 text-xs text-text-primary"
               >
                 <option value="">{t("grp.facultyLabel")}</option>
                 {(faculties as FacultyRow[]).map((f) => (
@@ -975,23 +987,23 @@ export default function GroupsPage() {
               <ul className="space-y-3">
                 {groups.map((g) => (
                   <li key={g.id}>
-                    <article className="rounded-2xl border border-slate-200 dark:border-slate-800 p-4 flex items-start justify-between gap-3">
+                    <article className="rounded-2xl border border-border bg-surface-1 p-4 flex items-start justify-between gap-3">
                       <div>
-                        <h3 className="font-semibold text-slate-900 dark:text-white">{g.name}</h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                        <h3 className="font-semibold text-text-primary">{g.name}</h3>
+                        <p className="text-xs text-text-tertiary">
                           {g.faculty.name} · {g.year.label}
                           {g.memberCount !== null
                             ? ` · ${t("grp.membersCount", { count: g.memberCount })}`
                             : ""}
                         </p>
                         {g.description && (
-                          <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">{g.description}</p>
+                          <p className="mt-1 text-sm text-text-secondary">{g.description}</p>
                         )}
                       </div>
                       <button
                         type="button"
                         onClick={() => void openDetail(g)}
-                        className="shrink-0 rounded-full border border-blue-300 dark:border-blue-800 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950"
+                        className="shrink-0 rounded-full border border-accent-primary/40 px-3 py-1.5 text-xs font-semibold text-accent-soft hover:bg-accent-primary/10"
                       >
                         {g.myRole === "owner" ? t("grp.ownerBadge") : g.myRole ? t("grp.memberBadge") : t("grp.open")}
                       </button>
@@ -1007,18 +1019,18 @@ export default function GroupsPage() {
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page <= 1}
-                  className="rounded-full border border-slate-300 dark:border-slate-700 px-3 py-1.5 font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-50"
+                  className="rounded-full border border-border px-3 py-1.5 font-semibold text-text-secondary disabled:opacity-50"
                 >
                   ←
                 </button>
-                <span className="text-slate-600 dark:text-slate-400">
+                <span className="text-text-secondary">
                   {page} / {totalPages}
                 </span>
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
-                  className="rounded-full border border-slate-300 dark:border-slate-700 px-3 py-1.5 font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-50"
+                  className="rounded-full border border-border px-3 py-1.5 font-semibold text-text-secondary disabled:opacity-50"
                 >
                   →
                 </button>
@@ -1026,8 +1038,7 @@ export default function GroupsPage() {
             )}
           </>
         )}
-      </main>
-      <Footer />
-    </div>
+      </div>
+    </PageShell>
   );
 }

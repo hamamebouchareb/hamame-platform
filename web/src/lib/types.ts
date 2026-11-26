@@ -31,6 +31,7 @@ export interface CurriculumModule {
   yearId: string;
   name: string;
   orderIndex: number;
+  _count?: { units?: number; lessons?: number };
 }
 
 export interface Unit {
@@ -38,6 +39,7 @@ export interface Unit {
   moduleId: string;
   name: string;
   orderIndex: number;
+  _count?: { lessons?: number; questions?: number };
 }
 
 /** Parent chain added to curriculum list and lesson responses. Each level is present only once the response is scoped to it. */

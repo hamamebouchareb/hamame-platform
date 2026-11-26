@@ -71,17 +71,6 @@ async function createSubscription(req: Request, res: Response, next: NextFunctio
       );
     }
 
-    const existingActiveSubscription = await prisma.subscription.findFirst({
-      where: { userId, status: "active" },
-    });
-    if (existingActiveSubscription) {
-      throw new ApiError(
-        409,
-        "SUBSCRIPTION_ALREADY_ACTIVE",
-        "This user already has an active subscription. Cancel it before subscribing to a new plan."
-      );
-    }
-
     const startedAt = new Date();
     const currentPeriodEnd = computeCurrentPeriodEnd(plan.billingPeriod, startedAt);
 
@@ -93,6 +82,19 @@ async function createSubscription(req: Request, res: Response, next: NextFunctio
     // happens here. This must be replaced by real CIB/Edahabia/BaridiMob gateway
     // integration later.
     const { subscription, payment } = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`subscription:${userId}`}))`;
+
+      const existingActiveSubscription = await tx.subscription.findFirst({
+        where: { userId, status: "active" },
+      });
+      if (existingActiveSubscription) {
+        throw new ApiError(
+          409,
+          "SUBSCRIPTION_ALREADY_ACTIVE",
+          "This user already has an active subscription. Cancel it before subscribing to a new plan."
+        );
+      }
+
       const createdSubscription = await tx.subscription.create({
         data: {
           userId,
@@ -192,24 +194,28 @@ async function cancelCurrentSubscription(req: Request, res: Response, next: Next
   try {
     const userId = req.auth!.userId;
 
-    const subscription = await prisma.subscription.findFirst({
-      where: { userId, status: "active" },
-    });
-    if (!subscription) {
-      throw new ApiError(404, "SUBSCRIPTION_NOT_FOUND", "No active subscription exists for this user.");
-    }
+    const updated = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`subscription:${userId}`}))`;
 
-    // BR-7: cancellation only takes effect at the end of the current paid period, so
-    // status stays 'active' and currentPeriodEnd is untouched here — this endpoint
-    // just marks cancellation intent (cancelledAt + autoRenew: false).
-    //
-    // Gap: actually flipping status to 'expired' once currentPeriodEnd passes requires
-    // a scheduled job that does not exist yet anywhere in this codebase. Until that job
-    // is built, an expired-but-not-renewed subscription will keep reporting
-    // status: 'active' from this API.
-    const updated = await prisma.subscription.update({
-      where: { id: subscription.id },
-      data: { cancelledAt: new Date(), autoRenew: false },
+      const subscription = await tx.subscription.findFirst({
+        where: { userId, status: "active", currentPeriodEnd: { gt: new Date() } },
+      });
+      if (!subscription) {
+        throw new ApiError(404, "SUBSCRIPTION_NOT_FOUND", "No active subscription exists for this user.");
+      }
+
+      // BR-7: cancellation only takes effect at the end of the current paid period, so
+      // status stays 'active' and currentPeriodEnd is untouched here — this endpoint
+      // just marks cancellation intent (cancelledAt + autoRenew: false).
+      //
+      // Gap: actually flipping status to 'expired' once currentPeriodEnd passes requires
+      // a scheduled job that does not exist yet anywhere in this codebase. Until that job
+      // is built, an expired-but-not-renewed subscription will keep reporting
+      // status: 'active' from this API.
+      return tx.subscription.update({
+        where: { id: subscription.id },
+        data: { cancelledAt: new Date(), autoRenew: false },
+      });
     });
 
     res.status(200).json({ subscription: updated });

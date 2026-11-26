@@ -77,6 +77,7 @@ const fr = {
   "theme.system": "Système",
   // ── Primary / secondary nav (single source of truth: web/src/lib/nav.ts) ──
   "nav.dashboard": "Tableau de bord",
+  "nav.homeShort": "Accueil",
   "nav.qcm": "QCM",
   "nav.library": "Bibliothèque",
   "nav.progress": "Suivi",
@@ -236,6 +237,8 @@ const fr = {
   "admin.codes": "Codes d'activation",
   "admin.faculties": "Facultés",
   "admin.roles": "Rôles",
+  "admin.review": "Révision",
+  "admin.authoring": "Rédaction",
   "admin.applications": "Candidatures instructeurs",
   "admin.promos": "Codes promo",
   "admin.notifications": "Notifications",
@@ -726,7 +729,7 @@ const fr = {
   "qcm.subtitle":
     "Des milliers de questions officielles et rédigées par la communauté, filtrées par module. Gratuites pour tous les membres inscrits.",
   "qcm.modeAria": "Choix du mode",
-  "qcm.freeBadge": "100% gratuit",
+  "qcm.freeBadge": "20 QCM gratuits / jour",
   "qcm.practiceTitle": "Créer une session",
   "qcm.practiceDesc":
     "Choisissez votre module, les types de questions et le nombre. Chaque réponse est corrigée immédiatement avec son explication.",
@@ -744,7 +747,7 @@ const fr = {
   "qcm.recentSub": "Reprenez là où vous vous êtes arrêté.",
   "qcm.viewAll": "Tout voir",
   "qcm.footnote":
-    "La banque QCM est entièrement gratuite pour tous les membres — aucun abonnement requis pour s'entraîner.",
+    "L'accès gratuit inclut 20 QCM par jour. Passez à Premium pour un entraînement illimité.",
   // ── QCM builder ──
   "qcmBuilder.back": "Retour à la banque QCM",
   "qcmBuilder.title": "Configurer une session",
@@ -1095,6 +1098,7 @@ const fr = {
   "auth.hasAccount": "Déjà un compte ?",
   "auth.forgotTitle": "Mot de passe oublié",
   "auth.emailAddress": "Adresse e-mail",
+  "auth.emailPlaceholder": "vous@exemple.com",
   "auth.sending": "Envoi en cours...",
   "auth.sendResetLink": "Envoyer le lien de réinitialisation",
   "auth.newPassword": "Nouveau mot de passe",
@@ -1417,6 +1421,8 @@ const fr = {
   "activation.fail": "Impossible d'activer ce code. Réessayez.",
   "activation.submitting": "Activation...",
   "activation.submit": "Activer",
+  "activation.getCode": "Besoin d'un code ?",
+  "activation.orWallet": "Recharger par CCP / BaridiMob",
   "banner.aria": "Vérification de l'adresse email",
   "banner.lead": "Vérifiez votre adresse email ({email}).",
   "banner.body": "Cliquez sur le lien envoyé à votre boîte mail pour sécuriser votre compte.",
@@ -1888,6 +1894,7 @@ const en: Record<I18nKey, string> = {
   "theme.system": "System",
   // ── Primary / secondary nav ──
   "nav.dashboard": "Dashboard",
+  "nav.homeShort": "Home",
   "nav.qcm": "QCM",
   "nav.library": "Library",
   "nav.progress": "Progress",
@@ -2047,6 +2054,8 @@ const en: Record<I18nKey, string> = {
   "admin.codes": "Activation codes",
   "admin.faculties": "Faculties",
   "admin.roles": "Roles",
+  "admin.review": "Review",
+  "admin.authoring": "Authoring",
   "admin.applications": "Instructor applications",
   "admin.promos": "Promo codes",
   "admin.notifications": "Notifications",
@@ -2537,7 +2546,7 @@ const en: Record<I18nKey, string> = {
   "qcm.subtitle":
     "Thousands of official and community-written questions, filtered by module. Free for all registered members.",
   "qcm.modeAria": "Choose a mode",
-  "qcm.freeBadge": "100% free",
+  "qcm.freeBadge": "20 free MCQs / day",
   "qcm.practiceTitle": "Create a session",
   "qcm.practiceDesc":
     "Pick your module, question types, and count. Each answer is graded immediately with its explanation.",
@@ -2555,7 +2564,7 @@ const en: Record<I18nKey, string> = {
   "qcm.recentSub": "Pick up where you left off.",
   "qcm.viewAll": "View all",
   "qcm.footnote":
-    "The QCM bank is entirely free for all members — no subscription needed to practice.",
+    "Free access includes 20 MCQs per day. Upgrade to Premium for unlimited practice.",
   // ── QCM builder ──
   "qcmBuilder.back": "Back to the QCM bank",
   "qcmBuilder.title": "Set up a session",
@@ -2906,6 +2915,7 @@ const en: Record<I18nKey, string> = {
   "auth.hasAccount": "Already have an account?",
   "auth.forgotTitle": "Forgot password",
   "auth.emailAddress": "Email address",
+  "auth.emailPlaceholder": "you@example.com",
   "auth.sending": "Sending...",
   "auth.sendResetLink": "Send the reset link",
   "auth.newPassword": "New password",
@@ -3228,6 +3238,8 @@ const en: Record<I18nKey, string> = {
   "activation.fail": "Could not redeem this code. Try again.",
   "activation.submitting": "Activating...",
   "activation.submit": "Redeem",
+  "activation.getCode": "Need a code?",
+  "activation.orWallet": "Top up via CCP / BaridiMob",
   "banner.aria": "Email verification",
   "banner.lead": "Verify your email address ({email}).",
   "banner.body": "Click the link sent to your inbox to secure your account.",

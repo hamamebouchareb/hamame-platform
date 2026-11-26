@@ -43,14 +43,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`${manrope.variable} ${fraunces.variable} h-full antialiased`}>
-      {/* Pre-paint theme: mirrors ThemeContext resolution (stored pick, else
-          dark) so returners never flash the wrong theme. No secrets here. */}
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `(function(){try{var t=localStorage.getItem("hamame_theme");var r=t==="light"?"light":t==="system"&&matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";document.documentElement.dataset.theme=r;var s=localStorage.getItem("hamame_sidebar");document.documentElement.dataset.sidebar=s==="collapsed"?"collapsed":"open";}catch(e){}})();`,
-        }}
-      />
+    <html
+      lang="fr"
+      suppressHydrationWarning
+      className={`${manrope.variable} ${fraunces.variable} h-full antialiased`}
+    >
+      <head>
+        {/* Pre-paint theme: mirrors ThemeContext resolution (stored pick, else
+            dark) so returners never flash the wrong theme. No secrets here. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("hamame_theme");var r=t==="light"?"light":t==="system"&&matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";document.documentElement.dataset.theme=r;var s=localStorage.getItem("hamame_sidebar");document.documentElement.dataset.sidebar=s==="collapsed"?"collapsed":"open";}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body className="flex min-h-full flex-col font-sans">
         <AuthProvider>
           <LanguageProvider>

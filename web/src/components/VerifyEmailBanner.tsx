@@ -38,8 +38,8 @@ export function VerifyEmailBanner() {
       aria-label={t("banner.aria")}
       className="rounded-control border border-accent-primary/40 bg-surface-2 px-4 py-3"
     >
-      <div className="flex flex-wrap items-center gap-3">
-        <p className="min-w-0 flex-1 text-sm text-text-secondary">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <p className="min-w-0 flex-1 break-all text-sm text-text-secondary">
           <span className="font-medium text-text-primary">{t("banner.lead", { email: user.email })} </span>
           {t("banner.body")}
         </p>

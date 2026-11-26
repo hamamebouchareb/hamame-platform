@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useLanguage } from "@/context/LanguageContext";
 import { useToast } from "@/components/Toast";
@@ -17,7 +18,22 @@ interface UnlockedInfo {
  * messages (unknown code / already redeemed / expired) surface verbatim.
  * `onRedeemed` lets the parent refresh its subscription state.
  */
-export function ActivationCodeCard({ onRedeemed, className }: { onRedeemed?: () => void; className?: string }) {
+export interface ActivationContacts {
+  whatsapp?: string | null;
+  telegram?: string | null;
+  instagram?: string | null;
+  facebook?: string | null;
+}
+
+export function ActivationCodeCard({
+  onRedeemed,
+  contacts,
+  className,
+}: {
+  onRedeemed?: () => void;
+  contacts?: ActivationContacts;
+  className?: string;
+}) {
   const toast = useToast();
   const { t } = useLanguage();
   const [code, setCode] = useState("");
@@ -103,6 +119,34 @@ export function ActivationCodeCard({ onRedeemed, className }: { onRedeemed?: () 
           {error}
         </p>
       ) : null}
+
+      <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-3">
+        <span className="text-meta text-text-secondary">{t("activation.getCode")}</span>
+        {[
+          { name: "WhatsApp", href: contacts?.whatsapp },
+          { name: "Telegram", href: contacts?.telegram },
+          { name: "Instagram", href: contacts?.instagram },
+          { name: "Facebook", href: contacts?.facebook },
+        ]
+          .filter((c): c is { name: string; href: string } => Boolean(c.href && /^https?:\/\//i.test(c.href)))
+          .map((c) => (
+            <a
+              key={c.name}
+              href={c.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-touch-target items-center rounded-pill border border-border bg-surface-2 px-3 py-1 text-meta font-medium text-text-primary transition hover:bg-surface-3"
+            >
+              {c.name}
+            </a>
+          ))}
+        <Link
+          href="/wallet"
+          className="inline-flex min-h-touch-target items-center text-meta font-semibold text-accent-primary hover:underline"
+        >
+          {t("activation.orWallet")} →
+        </Link>
+      </div>
     </section>
   );
 }

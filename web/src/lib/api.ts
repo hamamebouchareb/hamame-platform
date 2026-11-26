@@ -54,7 +54,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
 
   const headers = new Headers(options.headers);
   headers.set("Content-Type", "application/json");
-  if (token) {
+  if (token && !headers.has("Authorization")) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 

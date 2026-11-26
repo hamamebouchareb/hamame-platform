@@ -43,7 +43,7 @@ function SimulationCard({
 }: {
   sim: SimulationItem;
   busyId: string | null;
-  actionError: string | null;
+  actionError: { id: string; message: string } | null;
   onRegister: (id: string) => void;
   onUnregister: (id: string) => void;
   onStart: (id: string) => void;
@@ -130,8 +130,8 @@ function SimulationCard({
         </div>
       ) : null}
 
-      {busyId === sim.id && actionError ? (
-        <ErrorState message={actionError} className="mt-2" />
+      {actionError?.id === sim.id ? (
+        <ErrorState message={actionError.message} className="mt-2" />
       ) : null}
     </Card>
   );
@@ -145,7 +145,7 @@ export default function SimulationsPage() {
 
   const simsRes = useApiResource<{ simulations: SimulationItem[] }>(canFetch ? "/simulations" : null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<{ id: string; message: string } | null>(null);
 
   async function mutate(id: string, path: string, method: string, onOk: () => void) {
     setBusyId(id);
@@ -155,7 +155,7 @@ export default function SimulationsPage() {
       onOk();
       await simsRes.refetch();
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : t("player.submitError"));
+      setActionError({ id, message: err instanceof ApiError ? err.message : t("player.submitError") });
     } finally {
       setBusyId(null);
     }
@@ -167,7 +167,7 @@ export default function SimulationsPage() {
     apiFetch<{ session: { id: string } }>(`/simulations/${id}/start`, { method: "POST" })
       .then(({ session }) => router.push(`/sessions/${session.id}`))
       .catch((err: unknown) => {
-        setActionError(err instanceof ApiError ? err.message : t("player.submitError"));
+        setActionError({ id, message: err instanceof ApiError ? err.message : t("player.submitError") });
         setBusyId(null);
       });
   }

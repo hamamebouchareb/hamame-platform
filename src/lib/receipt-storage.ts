@@ -70,6 +70,16 @@ export async function uploadReceipt(path: string, bytes: Buffer, mime: ReceiptMi
   }
 }
 
+export async function deleteReceipt(path: string): Promise<void> {
+  const cfg = config();
+  if (!cfg) return;
+  await fetch(`${cfg.url}/storage/v1/object/${BUCKET}/${path}`, {
+    method: "DELETE",
+    headers: headers(cfg.key),
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  });
+}
+
 export async function signedReceiptUrl(path: string): Promise<string | null> {
   const cfg = config();
   if (!cfg) return null;

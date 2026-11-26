@@ -34,7 +34,7 @@ interface WalletState {
     transfer: { ccpAccount: string | null; ccpKey: string | null; rip: string | null; beneficiary: string } | null;
     receiptUpload: boolean;
   };
-  contacts: { telegram: string | null; instagram: string | null; facebook: string | null };
+  contacts: { whatsapp: string | null; telegram: string | null; instagram: string | null; facebook: string | null };
 }
 
 interface LedgerRow {
@@ -347,6 +347,7 @@ function WalletContent() {
   const customValid =
     !!wallet && Number.isInteger(custom) && custom >= wallet.pricing.customMin && custom <= wallet.pricing.customMax;
   const contacts: { name: string; href: string }[] = [];
+  if (wallet?.contacts.whatsapp) contacts.push({ name: "WhatsApp", href: wallet.contacts.whatsapp });
   if (wallet?.contacts.telegram) contacts.push({ name: "Telegram", href: wallet.contacts.telegram });
   if (wallet?.contacts.instagram) contacts.push({ name: "Instagram", href: wallet.contacts.instagram });
   if (wallet?.contacts.facebook) contacts.push({ name: "Facebook", href: wallet.contacts.facebook });

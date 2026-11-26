@@ -560,7 +560,13 @@ export default function AuthoringPage() {
   // AuthContext roles (from GET /users/me) — same gate as the dashboard link.
   // The 403 FORBIDDEN path below covers the API rejecting the call regardless.
   const canAuthor =
-    !!user && (user.roles.includes("instructor") || user.roles.includes("academic_reviewer"));
+    !!user &&
+    (user.roles.includes("instructor") ||
+      user.roles.includes("content_author") ||
+      user.roles.includes("academic_reviewer") ||
+      user.roles.includes("admin") ||
+      user.roles.includes("super_admin"));
+  const isInstructor = !!user && user.roles.includes("instructor");
 
   if (!canAuthor || statsErrorCode === "FORBIDDEN") {
     return (
@@ -605,7 +611,7 @@ export default function AuthoringPage() {
       <div className="mt-section-gap flex flex-col gap-card-gap">
         <LessonForm />
         <QuestionForm />
-        <PayoutsCard />
+        {isInstructor ? <PayoutsCard /> : null}
       </div>
     </PageShell>
   );

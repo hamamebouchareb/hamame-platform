@@ -12,7 +12,7 @@ import {
   createFlashcardFromQuestion,
   findFlashcardSourceQuestion,
 } from "../lib/flashcard-from-question";
-import { resolveViewerUniversityId } from "../lib/university-scope";
+import { resolveViewerUniversityId, universityScopeFilter } from "../lib/university-scope";
 
 // Flashcard content type (prisma/schema.prisma's Flashcard model) — user-generated
 // front/back pairs, optionally sourced from a question or lesson. Integration with the
@@ -59,18 +59,37 @@ async function createFlashcard(req: Request, res: Response, next: NextFunction) 
     const userId = req.auth!.userId;
     const { front, back, sourceQuestionId, sourceLessonId } = req.body as z.infer<typeof createFlashcardSchema>;
 
-    // FK guards, mirroring notes.routes.ts: a bad target would otherwise surface as a
-    // confusing P2003 FK error on create.
-    if (sourceQuestionId) {
-      const question = await prisma.question.findUnique({ where: { id: sourceQuestionId }, select: { id: true } });
-      if (!question) {
-        throw new ApiError(404, "QUESTION_NOT_FOUND", "No question exists with this id.");
+    // FK + visibility/rollout/university gates (BR-2, FR-10a): hidden or
+    // other-university targets resolve to 404 rather than leaking or P2003.
+    if (sourceQuestionId || sourceLessonId) {
+      const viewerUniversityId = await resolveViewerUniversityId(prisma, userId);
+      if (sourceQuestionId) {
+        const question = await prisma.question.findFirst({
+          where: {
+            id: sourceQuestionId,
+            status: "approved",
+            unit: { module: { year: { faculty: { rolloutStatus: { in: ["beta", "live"] } } } } },
+            AND: [universityScopeFilter(viewerUniversityId)],
+          },
+          select: { id: true },
+        });
+        if (!question) {
+          throw new ApiError(404, "QUESTION_NOT_FOUND", "No question exists with this id.");
+        }
       }
-    }
-    if (sourceLessonId) {
-      const lesson = await prisma.lesson.findUnique({ where: { id: sourceLessonId }, select: { id: true } });
-      if (!lesson) {
-        throw new ApiError(404, "LESSON_NOT_FOUND", "No lesson exists with this id.");
+      if (sourceLessonId) {
+        const lesson = await prisma.lesson.findFirst({
+          where: {
+            id: sourceLessonId,
+            currentVersionId: { not: null },
+            unit: { module: { year: { faculty: { rolloutStatus: { in: ["beta", "live"] } } } } },
+            AND: [universityScopeFilter(viewerUniversityId)],
+          },
+          select: { id: true },
+        });
+        if (!lesson) {
+          throw new ApiError(404, "LESSON_NOT_FOUND", "No lesson exists with this id.");
+        }
       }
     }
 

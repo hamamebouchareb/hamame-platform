@@ -28,12 +28,21 @@ export default function AiChatPage() {
     data: credits,
     error: creditsError,
     isLoading: creditsLoading,
+    refetch: refetchCredits,
   } = useApiResource<CreditsData>(canFetch ? "/ai/credits" : null);
 
   const { history, sending, sendError, creditsExhausted, send } = useAskHamame();
   const outOfCredits = creditsExhausted || (credits?.remainingToday === 0 && !credits.purchasedCredits);
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const wasSendingRef = useRef(false);
+
+  useEffect(() => {
+    if (wasSendingRef.current && !sending && canFetch) {
+      void refetchCredits();
+    }
+    wasSendingRef.current = sending;
+  }, [sending, canFetch, refetchCredits]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });

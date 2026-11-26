@@ -254,10 +254,22 @@ async function updateCurrentProfile(req: Request, res: Response, next: NextFunct
     // Verification binds to the NUMBER, not the account: changing (or
     // clearing) the phone resets phoneVerifiedAt, while re-sending the
     // identical value leaves verification untouched.
-    let phoneFields: { phone: string | null; phoneVerifiedAt: Date | null } | undefined;
+    let phoneFields:
+      | {
+          phone: string | null;
+          phoneVerifiedAt: Date | null;
+          verificationTokenHash?: null;
+          verificationTokenExpiresAt?: null;
+        }
+      | undefined;
     if (body.phone !== undefined) {
       if (body.phone === null) {
-        phoneFields = { phone: null, phoneVerifiedAt: null };
+        phoneFields = {
+          phone: null,
+          phoneVerifiedAt: null,
+          verificationTokenHash: null,
+          verificationTokenExpiresAt: null,
+        };
       } else {
         const current = await prisma.user.findUnique({
           where: { id: userId },
@@ -277,7 +289,12 @@ async function updateCurrentProfile(req: Request, res: Response, next: NextFunct
           if (clash) {
             throw new ApiError(409, "PHONE_IN_USE", "Another account already uses this phone number.");
           }
-          phoneFields = { phone: body.phone, phoneVerifiedAt: null };
+          phoneFields = {
+            phone: body.phone,
+            phoneVerifiedAt: null,
+            verificationTokenHash: null,
+            verificationTokenExpiresAt: null,
+          };
         }
       }
     }
@@ -545,6 +562,15 @@ async function deleteCurrentUser(req: Request, res: Response, next: NextFunction
         profilePhotoUrl: null,
         // Invalidates the password outright — no real hash could ever match this.
         passwordHash: crypto.randomBytes(32).toString("hex"),
+        googleSub: null,
+        telegramChatId: null,
+        telegramLinkCode: null,
+        telegramLinkExpiresAt: null,
+        passwordResetTokenHash: null,
+        passwordResetTokenExpiresAt: null,
+        verificationTokenHash: null,
+        verificationTokenExpiresAt: null,
+        tokenVersion: { increment: 1 },
       },
       select: { id: true, status: true },
     });

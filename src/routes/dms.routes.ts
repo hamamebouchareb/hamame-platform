@@ -5,6 +5,7 @@ import { paginationQuery, uuidParam } from "../lib/common-schemas";
 import { requireAuth } from "../middleware/auth";
 import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
+import { resolveViewerUniversityId, universityScopeFilter } from "../lib/university-scope";
 import { createNotificationBestEffort } from "./notifications.routes";
 import { isOnline } from "../lib/presence";
 import {
@@ -56,8 +57,8 @@ async function getConversationForMe(me: string, conversationId: string) {
   const conversation = await prisma.conversation.findFirst({
     where: { id: conversationId, OR: [{ userAId: me }, { userBId: me }] },
     include: {
-      userA: { select: { id: true, fullName: true } },
-      userB: { select: { id: true, fullName: true } },
+      userA: { select: { id: true, fullName: true, status: true } },
+      userB: { select: { id: true, fullName: true, status: true } },
     },
   });
   if (!conversation) {
@@ -221,6 +222,12 @@ const sendMessageSchema = z
   .refine(
     (value) => Boolean(value.body || value.questionId || value.resourceId || value.imageUrl || value.attachment),
     { message: "A message needs text or something to share." }
+  )
+  .refine(
+    (value) =>
+      Boolean(value.questionId || value.resourceId || value.imageUrl || value.attachment) ||
+      !value.body?.startsWith(SHARE_PREFIX),
+    { message: "Plain-text messages cannot start with the share prefix.", path: ["body"] }
   );
 
 function snippet(raw: string): string {
@@ -241,11 +248,19 @@ function richText(doc: unknown): string {
   return typeof record.text === "string" ? record.text.trim() : snippet(JSON.stringify(doc));
 }
 
-async function composeBody(input: z.infer<typeof sendMessageSchema>): Promise<{ stored: string; preview: string }> {
+async function composeBody(
+  input: z.infer<typeof sendMessageSchema>,
+  viewerUniversityId: string | null
+): Promise<{ stored: string; preview: string }> {
   const note = input.body?.trim();
   if (input.questionId) {
     const question = await prisma.question.findFirst({
-      where: { id: input.questionId, status: "approved" },
+      where: {
+        id: input.questionId,
+        status: "approved",
+        unit: { module: { year: { faculty: { rolloutStatus: { in: ["beta", "live"] } } } } },
+        AND: [universityScopeFilter(viewerUniversityId)],
+      },
       select: {
         id: true,
         unitId: true,
@@ -325,9 +340,15 @@ async function sendMessage(req: Request, res: Response, next: NextFunction) {
     const me = req.auth!.userId;
     const { id } = req.params;
     const input = req.body as z.infer<typeof sendMessageSchema>;
-    const { stored, preview } = await composeBody(input);
 
     const { conversation, other } = await getConversationForMe(me, id);
+    if (other.status !== "active") {
+      throw new ApiError(404, "USER_NOT_FOUND", "No active user exists with this id.");
+    }
+    await requireAcceptedFriendship(me, other.id);
+
+    const viewerUniversityId = await resolveViewerUniversityId(prisma, me);
+    const { stored, preview } = await composeBody(input, viewerUniversityId);
 
     const [message] = await prisma.$transaction([
       prisma.directMessage.create({

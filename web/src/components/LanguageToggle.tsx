@@ -37,7 +37,9 @@ export function LanguageToggle({ className }: { className?: string }) {
             onClick={() => setLanguage(option.value)}
             className={cx(
               "min-h-touch-target rounded-pill px-3 text-meta font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
-              active ? "bg-surface-3 text-accent-soft" : "text-text-tertiary hover:text-text-primary"
+              active
+                ? "bg-accent-primary text-on-accent shadow-sm"
+                : "text-text-secondary hover:text-text-primary"
             )}
           >
             {option.endonym}
