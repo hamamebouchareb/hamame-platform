@@ -121,7 +121,7 @@ export function AskHamameProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         setSendError(t(sendFailKey(err)));
         setCreditsExhausted(isCreditsExhausted(err));
-        setConversation({ ownerId: userId, messages: nextHistory });
+        setConversation({ ownerId: userId, messages: history });
       } finally {
         setSending(false);
       }

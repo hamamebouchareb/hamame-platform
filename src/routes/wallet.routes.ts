@@ -267,6 +267,7 @@ async function getWallet(req: Request, res: Response, next: NextFunction) {
         receiptUpload: isReceiptStorageConfigured(),
       },
       contacts: {
+        whatsapp: envValue("WALLET_CONTACT_WHATSAPP"),
         telegram: envValue("WALLET_CONTACT_TELEGRAM"),
         instagram: envValue("WALLET_CONTACT_INSTAGRAM"),
         facebook: envValue("WALLET_CONTACT_FACEBOOK"),

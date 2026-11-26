@@ -12,24 +12,28 @@ import { apiFetch } from "@/lib/api";
  */
 export function GoogleSignInButton({ className }: { className?: string }) {
   const { t } = useLanguage();
-  const [enabled, setEnabled] = useState(false);
+  const [status, setStatus] = useState<"loading" | "enabled" | "disabled">("loading");
   const [starting, setStarting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     apiFetch<{ providers: { google: boolean } }>("/auth/providers")
       .then((data) => {
-        if (!cancelled) setEnabled(data.providers.google === true);
+        if (!cancelled) setStatus(data.providers.google === true ? "enabled" : "disabled");
       })
       .catch(() => {
         // Unreachable API — button stays hidden rather than dead.
+        if (!cancelled) setStatus("disabled");
       });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  if (!enabled) return null;
+  if (status === "loading") {
+    return <div className={"min-h-[48px] w-full " + (className ?? "")} aria-hidden="true" />;
+  }
+  if (status === "disabled") return null;
 
   async function start() {
     setStarting(true);

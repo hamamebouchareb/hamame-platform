@@ -123,24 +123,30 @@ export function DmComposer({
     setSending(true);
     setSendError(null);
     const remaining: DmAttachment[] = [...pending];
+    let textToSend = text.trim();
     let failed = false;
     try {
       for (const attachment of remaining) {
+        const withText = textToSend.length > 0 && attachment === remaining[0];
         try {
           await post({
             attachment: { kind: attachment.kind, name: attachment.name, mime: attachment.mime, dataUrl: attachment.dataUrl },
-            ...(text.trim() && attachment === pending[0] ? { body: text.trim() } : {}),
+            ...(withText ? { body: textToSend } : {}),
           });
           setPending((prev) => prev.filter((item) => item.id !== attachment.id));
+          if (withText) {
+            setText("");
+            textToSend = "";
+          }
         } catch {
           setSendError(t("dms.attachSendFailed", { name: attachment.name }));
           failed = true;
           break; // keep the rest staged; user retries
         }
       }
-      if (!failed && text.trim().length > 0) {
+      if (!failed && remaining.length === 0 && textToSend.length > 0) {
         try {
-          await post({ body: text.trim() });
+          await post({ body: textToSend });
           setText("");
         } catch {
           setSendError(t("dms.sendFailed"));

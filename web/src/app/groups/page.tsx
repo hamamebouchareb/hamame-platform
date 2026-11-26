@@ -298,7 +298,9 @@ export default function GroupsPage() {
   }
 
   async function handleJoin(groupId: string) {
+    if (busy) return;
     setActionError(null);
+    setBusy(true);
     try {
       const status = await apiFetch<{ status: string }>(`/groups/${groupId}/join`, { method: "POST" });
       if (status.status === "requested") {
@@ -311,6 +313,8 @@ export default function GroupsPage() {
       if (detail) await openDetail({ ...detail, myRole: status.status === "requested" ? null : "member" });
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : t("grp.actionFailed"));
+    } finally {
+      setBusy(false);
     }
   }
 

@@ -62,9 +62,7 @@ const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
  */
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [theme, setThemeState] = useState<ThemeChoice>(() =>
-    typeof window === "undefined" ? DEFAULT_THEME : (readStored() ?? DEFAULT_THEME)
-  );
+  const [theme, setThemeState] = useState<ThemeChoice>(DEFAULT_THEME);
 
   // First-run convergence + server adoption (localStorage unavailable during SSR).
   // Sync-from-external-system on mount — same documented convention as
@@ -72,12 +70,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     try {
+      const stored = readStored();
+      if (stored) {
+        setThemeState(stored);
+      }
       if (window.localStorage.getItem(THEME_SET_KEY) === "1") return;
       const server = user?.theme;
       if (server === "dark" || server === "system") {
         setThemeState(server);
         window.localStorage.setItem(THEME_STORAGE_KEY, server);
-      } else {
+      } else if (!stored) {
         window.localStorage.setItem(THEME_STORAGE_KEY, DEFAULT_THEME);
         if (user) {
           void apiFetch("/users/me/preferences", {

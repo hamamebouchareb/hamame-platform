@@ -122,6 +122,7 @@ export default function MessagesPage() {
     const data = await apiFetch<{ messages: DirectMessageItem[] }>(
       `/dms/conversations/${conversationId}/messages${query}`
     );
+    if (selectedIdRef.current !== conversationId) return;
     if (data.messages.length > 0) {
       setMessages((prev) => {
         if (!after) return data.messages;
