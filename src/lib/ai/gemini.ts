@@ -27,6 +27,7 @@ import { z } from "zod";
 // Default chosen from the live probe set above: gemini-3.5-flash responded 200 on the
 // free key while the older 2.5 generation is 404-closed for new keys.
 export const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash";
+export const FAST_FALLBACK_GEMINI_MODEL = "gemini-3.5-flash-lite";
 
 // FREE-TIER ALLOWLIST — the zero-cost guarantee is enforced HERE, not by an
 // operational promise: only model ids verified live 2026-10-24 to answer
@@ -126,7 +127,7 @@ export function classifyGeminiError(err: unknown): GeminiFailureKind {
   if (/\b503\b|UNAVAILABLE|overloaded|high demand/i.test(message)) {
     return "PROVIDER_UNAVAILABLE";
   }
-  if (/timeout|timed out|aborted/i.test(message)) {
+  if (/\b504\b|DEADLINE_EXCEEDED|timeout|timed out|aborted/i.test(message)) {
     return "TIMEOUT";
   }
   return "PROVIDER_ERROR";
@@ -206,38 +207,56 @@ function usageFrom(response: { usageMetadata?: { promptTokenCount?: number; cand
   };
 }
 
+/**
+ * Runs a Gemini call using the configured model, retrying once on `FAST_FALLBACK_GEMINI_MODEL`
+ * when `GEMINI_MODEL` is unset and the default model times out.
+ */
+export async function withGeminiTimeoutFallback<T>(run: (model: string) => Promise<T>): Promise<T> {
+  const model = getGeminiModel();
+  const canFallback = !process.env.GEMINI_MODEL?.trim() && model !== FAST_FALLBACK_GEMINI_MODEL;
+  try {
+    return await run(model);
+  } catch (err) {
+    if (canFallback && err instanceof GeminiError && err.kind === "TIMEOUT") {
+      return await run(FAST_FALLBACK_GEMINI_MODEL);
+    }
+    throw err;
+  }
+}
+
 // One plain-text completion (chat turns). Roles map to the SDK's names: our
 // "assistant" history entries become the SDK's "model" role.
 export async function generateGeminiText(request: GeminiTextRequest): Promise<GeminiTextResult> {
-  const model = getGeminiModel();
   const timeoutMs = getTimeoutMs();
   const contents = request.messages.map((message) => ({
     role: message.role === "assistant" ? "model" : "user",
     parts: [{ text: message.content }],
   }));
 
-  let response: { text?: string; usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number } };
-  try {
-    response = await getGeminiClient().models.generateContent({
-      model,
-      contents,
-      config: {
-        systemInstruction: request.system,
-        temperature: request.temperature ?? 0.4,
-        maxOutputTokens: getMaxOutputTokens(),
-        httpOptions: { timeout: timeoutMs },
-      },
-    });
-  } catch (err) {
-    const kind = isGeminiConfigured() ? classifyGeminiError(err) : "NOT_CONFIGURED";
-    throw new GeminiError(kind, redactKeyLike(err instanceof Error ? err.message : String(err)));
-  }
+  return withGeminiTimeoutFallback(async (model) => {
+    let response: { text?: string; usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number } };
+    try {
+      response = await getGeminiClient().models.generateContent({
+        model,
+        contents,
+        config: {
+          systemInstruction: request.system,
+          temperature: request.temperature ?? 0.4,
+          maxOutputTokens: getMaxOutputTokens(),
+          httpOptions: { timeout: timeoutMs },
+        },
+      });
+    } catch (err) {
+      const kind = isGeminiConfigured() ? classifyGeminiError(err) : "NOT_CONFIGURED";
+      throw new GeminiError(kind, redactKeyLike(err instanceof Error ? err.message : String(err)));
+    }
 
-  const text = (response.text ?? "").trim();
-  if (text.length === 0) {
-    throw new GeminiError("EMPTY_RESPONSE", "Gemini returned an empty response.");
-  }
-  return { text, usage: usageFrom(response), model, timeoutMs };
+    const text = (response.text ?? "").trim();
+    if (text.length === 0) {
+      throw new GeminiError("EMPTY_RESPONSE", "Gemini returned an empty response.");
+    }
+    return { text, usage: usageFrom(response), model, timeoutMs };
+  });
 }
 
 // One structured (responseJsonSchema) completion. The returned `data` is parsed by the
@@ -247,33 +266,34 @@ export async function generateGeminiJson(request: GeminiJsonRequest): Promise<Ge
   if (injectedJsonGenerator !== null) {
     return injectedJsonGenerator(request);
   }
-  const model = getGeminiModel();
   const timeoutMs = getTimeoutMs();
 
-  let response: { parsed?: unknown; text?: string; usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number } };
-  try {
-    response = await getGeminiClient().models.generateContent({
-      model,
-      contents: [{ role: "user", parts: [{ text: request.user }] }],
-      config: {
-        systemInstruction: request.system,
-        temperature: request.temperature ?? 0.3,
-        maxOutputTokens: getMaxOutputTokens(),
-        responseMimeType: "application/json",
-        responseJsonSchema: request.jsonSchema,
-        httpOptions: { timeout: timeoutMs },
-      },
-    });
-  } catch (err) {
-    const kind = isGeminiConfigured() ? classifyGeminiError(err) : "NOT_CONFIGURED";
-    throw new GeminiError(kind, redactKeyLike(err instanceof Error ? err.message : String(err)));
-  }
+  return withGeminiTimeoutFallback(async (model) => {
+    let response: { parsed?: unknown; text?: string; usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number } };
+    try {
+      response = await getGeminiClient().models.generateContent({
+        model,
+        contents: [{ role: "user", parts: [{ text: request.user }] }],
+        config: {
+          systemInstruction: request.system,
+          temperature: request.temperature ?? 0.3,
+          maxOutputTokens: getMaxOutputTokens(),
+          responseMimeType: "application/json",
+          responseJsonSchema: request.jsonSchema,
+          httpOptions: { timeout: timeoutMs },
+        },
+      });
+    } catch (err) {
+      const kind = isGeminiConfigured() ? classifyGeminiError(err) : "NOT_CONFIGURED";
+      throw new GeminiError(kind, redactKeyLike(err instanceof Error ? err.message : String(err)));
+    }
 
-  const data = response.parsed ?? safeParseJson(response.text ?? "");
-  if (data === null) {
-    throw new GeminiError("EMPTY_RESPONSE", "Gemini returned no parsable JSON.");
-  }
-  return { data, usage: usageFrom(response), model, timeoutMs };
+    const data = response.parsed ?? safeParseJson(response.text ?? "");
+    if (data === null) {
+      throw new GeminiError("EMPTY_RESPONSE", "Gemini returned no parsable JSON.");
+    }
+    return { data, usage: usageFrom(response), model, timeoutMs };
+  });
 }
 
 function safeParseJson(text: string): unknown {

@@ -848,17 +848,19 @@ export default function SessionQuestionPage() {
                 {isFinishing ? t("player.finishing") : t("player.finish")}
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => goTo(currentIndex + 1)}
-              disabled={isLast}
-              aria-label={t("player.next")}
-              title={isLast ? t("player.lastQuestion") : t("player.next")}
-              className={barButton}
-            >
-              <span className="hidden sm:inline">{t("player.next")}</span>
-              <Icon name="chevronRight" size={18} />
-            </button>
+            {!currentAnswer.submitted ? (
+              <button
+                type="button"
+                onClick={() => goTo(currentIndex + 1)}
+                disabled={isLast}
+                aria-label={t("player.next")}
+                title={isLast ? t("player.lastQuestion") : t("player.next")}
+                className={barButton}
+              >
+                <span className="hidden sm:inline">{t("player.next")}</span>
+                <Icon name="chevronRight" size={18} />
+              </button>
+            ) : null}
           </div>
         </nav>
       ) : null}

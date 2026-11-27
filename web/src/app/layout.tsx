@@ -57,7 +57,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="flex min-h-full flex-col font-sans">
+      <body className="flex min-h-full min-w-0 flex-col font-sans">
         <AuthProvider>
           <LanguageProvider>
             <ThemeProvider>

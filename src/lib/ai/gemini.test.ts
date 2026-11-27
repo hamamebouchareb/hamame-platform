@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { z } from "zod";
 import {
   DEFAULT_GEMINI_MODEL,
+  FAST_FALLBACK_GEMINI_MODEL,
   GeminiError,
   classifyGeminiError,
   generateGeminiJson,
@@ -10,6 +11,7 @@ import {
   injectGeminiJsonForTests,
   redactKeyLike,
   validatedJsonResult,
+  withGeminiTimeoutFallback,
 } from "./gemini";
 
 // Mocked (no network, no key needed): pins the provider-error classification table
@@ -41,8 +43,10 @@ describe("classifyGeminiError", () => {
     assert.equal(classifyGeminiError(new Error("model is currently experiencing high demand")), "PROVIDER_UNAVAILABLE");
   });
 
-  it("maps timeouts to TIMEOUT", () => {
+  it("maps timeouts and 504 DEADLINE_EXCEEDED to TIMEOUT", () => {
     assert.equal(classifyGeminiError(new Error("Request timed out")), "TIMEOUT");
+    assert.equal(classifyGeminiError(new Error('[504] DEADLINE_EXCEEDED: "Deadline expired"')), "TIMEOUT");
+    assert.equal(classifyGeminiError(new Error("HTTP 504 gateway timeout")), "TIMEOUT");
   });
 
   it("maps unknown failures to PROVIDER_ERROR without leaking a key", () => {
@@ -165,5 +169,51 @@ describe("generateGeminiJson (public path, injected stub)", () => {
       generateGeminiJson(baseRequest),
       (err: unknown) => err instanceof GeminiError && err.kind === "QUOTA_EXHAUSTED"
     );
+  });
+});
+
+describe("withGeminiTimeoutFallback", () => {
+  const originalModel = process.env.GEMINI_MODEL;
+  afterEach(() => {
+    if (originalModel === undefined) delete process.env.GEMINI_MODEL;
+    else process.env.GEMINI_MODEL = originalModel;
+  });
+
+  it("retries once on gemini-3.5-flash-lite when GEMINI_MODEL is unset and default times out", async () => {
+    delete process.env.GEMINI_MODEL;
+    const seen: string[] = [];
+    const result = await withGeminiTimeoutFallback(async (model) => {
+      seen.push(model);
+      if (model === DEFAULT_GEMINI_MODEL) {
+        throw new GeminiError("TIMEOUT", "504 DEADLINE_EXCEEDED");
+      }
+      return { model, ok: true };
+    });
+    assert.deepEqual(seen, [DEFAULT_GEMINI_MODEL, FAST_FALLBACK_GEMINI_MODEL]);
+    assert.deepEqual(result, { model: FAST_FALLBACK_GEMINI_MODEL, ok: true });
+  });
+
+  it("does not fall back on non-TIMEOUT errors or when GEMINI_MODEL is explicitly set", async () => {
+    delete process.env.GEMINI_MODEL;
+    const seenQuota: string[] = [];
+    await assert.rejects(
+      withGeminiTimeoutFallback(async (model) => {
+        seenQuota.push(model);
+        throw new GeminiError("QUOTA_EXHAUSTED", "429");
+      }),
+      (err: unknown) => err instanceof GeminiError && err.kind === "QUOTA_EXHAUSTED"
+    );
+    assert.deepEqual(seenQuota, [DEFAULT_GEMINI_MODEL]);
+
+    process.env.GEMINI_MODEL = DEFAULT_GEMINI_MODEL;
+    const seenPinned: string[] = [];
+    await assert.rejects(
+      withGeminiTimeoutFallback(async (model) => {
+        seenPinned.push(model);
+        throw new GeminiError("TIMEOUT", "504 DEADLINE_EXCEEDED");
+      }),
+      (err: unknown) => err instanceof GeminiError && err.kind === "TIMEOUT"
+    );
+    assert.deepEqual(seenPinned, [DEFAULT_GEMINI_MODEL]);
   });
 });
