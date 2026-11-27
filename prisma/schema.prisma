@@ -114,6 +114,10 @@ model User {
   // requireAuth/optionalAuth via src/lib/presence.ts. Nullable — a row with a
   // null value simply reads as offline until its first authenticated request.
   lastActiveAt                DateTime? @map("last_active_at") @db.Timestamptz
+  // Per-student admin quota overrides (null/false = use plan default).
+  dailyQuestionLimitOverride  Int?      @map("daily_question_limit_override")
+  unlimitedQuestionsOverride  Boolean   @default(false) @map("unlimited_questions_override")
+  aiDailyAllowanceOverride    Int?      @map("ai_daily_allowance_override")
   createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt                   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 

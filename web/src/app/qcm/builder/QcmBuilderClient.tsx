@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { useRequireAuth } from "@/lib/useRequireAuth";
+import { useApiResource } from "@/lib/useApiResource";
 import { apiFetch, ApiError } from "@/lib/api";
 import {
   Button,
@@ -15,7 +16,7 @@ import {
   type SessionBuilderPrefill,
   type SessionConfig,
 } from "@/components";
-import type { SessionDetail } from "@/lib/types";
+import type { Entitlements, SessionDetail } from "@/lib/types";
 
 export interface QcmBuilderClientProps {
   initialMode?: "practice" | "exam";
@@ -33,6 +34,9 @@ export default function QcmBuilderClient({ initialMode = "practice" }: QcmBuilde
   // config echo. idle: button ready; loading: fetching; none: nothing to repeat.
   const [prefill, setPrefill] = useState<SessionBuilderPrefill | null>(null);
   const [repeatState, setRepeatState] = useState<"idle" | "loading" | "none" | "error">("idle");
+  const entitlements = useApiResource<Entitlements>(
+    isHydrated && user ? `/subscriptions/me/entitlements?_k=${quotaKey}` : null
+  );
 
   function handleLogout() {
     logout();
@@ -141,6 +145,7 @@ export default function QcmBuilderClient({ initialMode = "practice" }: QcmBuilde
             className="mt-section-gap"
             initialMode={initialMode}
             initialFacultyId={authed.facultyId ?? null}
+            entitlements={entitlements.data ?? null}
             prefill={prefill}
             onStart={handleStart}
             isStarting={isStarting}

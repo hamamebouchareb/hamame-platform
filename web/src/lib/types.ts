@@ -358,8 +358,10 @@ export interface Entitlements {
     faculty: string | null;
     yearId: string | null;
     year: string | null;
+    unrestricted?: boolean;
+    allResidanatFaculties?: boolean;
   } | null;
-  dailyQuestions: { limit: number; usedToday: number; remaining: number; resetAt: string };
+  dailyQuestions: { limit: number; usedToday: number; remaining: number; resetAt: string; isUnlimited?: boolean };
 }
 
 // GET /api/wallet → premiumOffers / aiCreditPacks

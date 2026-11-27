@@ -178,6 +178,8 @@ async function getEntitlements(req: Request, res: Response, next: NextFunction) 
             faculty: year?.faculty.name ?? null,
             yearId: scope.yearId,
             year: year?.label ?? null,
+            unrestricted: Boolean(scope.unrestricted),
+            allResidanatFaculties: Boolean(scope.allResidanatFaculties),
           }
         : null,
       dailyQuestions,
