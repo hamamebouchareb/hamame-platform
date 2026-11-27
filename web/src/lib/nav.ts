@@ -98,6 +98,7 @@ export const ADMIN_NAV: NavKeyEntry[] = [
   { href: "/admin/roles", labelKey: "admin.roles", icon: "shield" },
   { href: "/admin/reports", labelKey: "admin.reports", icon: "flag" },
   { href: "/admin/payouts", labelKey: "admin.payouts", icon: "payout" },
+  { href: "/admin/simulations", labelKey: "admin.simulations", icon: "simulations" },
   { href: "/review", labelKey: "admin.review", icon: "revision" },
   { href: "/authoring", labelKey: "admin.authoring", icon: "notes" },
 ];
