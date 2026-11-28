@@ -4,6 +4,7 @@ import { z } from "zod";
 import { validateBody, validateParams, validateQuery } from "../middleware/validate";
 import { paginationQuery, uuidParam } from "../lib/common-schemas";
 import { optionalAuth, requireAuth } from "../middleware/auth";
+import { limitQuestionReads } from "../middleware/rateLimit";
 import { ApiError } from "../lib/errors";
 import { prisma } from "../lib/prisma";
 import { buildQuestionWhere } from "../lib/question-filters";
@@ -136,7 +137,7 @@ async function listQuestions(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-router.get("/questions", optionalAuth, validateQuery(listQuestionsQuerySchema), listQuestions);
+router.get("/questions", requireAuth, limitQuestionReads, validateQuery(listQuestionsQuerySchema), listQuestions);
 
 // GET /api/questions/counts — live question counts for the session builder (Phase 1
 // builder depth). Same visibility rules as GET /api/questions (BR-2 approved-only +

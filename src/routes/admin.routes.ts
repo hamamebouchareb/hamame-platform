@@ -13,6 +13,8 @@ import { generateLeaderboardSnapshots } from "../jobs/generateLeaderboardSnapsho
 import { generateContributorsLeaderboardSnapshots } from "../jobs/generateContributorsLeaderboardSnapshots";
 import { sendDailyPushReminders } from "../jobs/sendDailyPushReminders";
 import { awardBadgeIdempotent, notifyBadgeEarned } from "../lib/badge-awards";
+import { getDailyQuestionsView, parsePlanFeatures } from "../lib/entitlements";
+import { resolveAiCreditAllowances } from "../lib/ai/credits";
 
 // ============================================================================
 // SECURITY GAP CLOSED — role enforcement is now in place on this router.
@@ -263,15 +265,29 @@ router.put(
   setFacultyTrailer
 );
 
+const planFeaturesPatchSchema = z
+  .object({
+    dailyQuestionLimit: z.number().int().min(0).max(5000).optional(),
+    unlimitedFreeAccess: z.boolean().optional(),
+    residanatAllFaculties: z.boolean().optional(),
+    aiCredits: z
+      .object({
+        dailyAllowance: z.number().int().min(0).max(5000),
+        monthlyAllowance: z.number().int().min(0).max(150000),
+      })
+      .optional(),
+  })
+  .passthrough();
+
 const updatePlanSchema = z.object({
   name: z.string().min(1).optional(),
   priceDzd: z.number().nonnegative().nullable().optional(),
   billingPeriod: z.enum(["monthly", "yearly"]).nullable().optional(),
-  features: jsonObject.optional(),
+  features: planFeaturesPatchSchema.optional(),
   isActive: z.boolean().optional(),
 });
 
-// PUT /api/admin/plans/:id — BR-1, BR-6 to BR-9 monetization config.
+// PUT / PATCH /api/admin/plans/:id — BR-1, BR-6 to BR-9 monetization config.
 //
 // Can reconfigure pricing/plan features platform-wide — role-gated to Admins/Super
 // Admins via requireRole below (see the top-of-file comment).
@@ -285,17 +301,16 @@ async function updatePlan(req: Request, res: Response, next: NextFunction) {
       throw new ApiError(404, "PLAN_NOT_FOUND", "No plan exists with this id.");
     }
 
-    // Only fields actually present in the body are updated — Prisma treats an explicit
-    // `undefined` the same as "not provided", so omitted optional fields are simply
-    // passed through untouched. Fields validated as nullable (priceDzd, billingPeriod)
-    // can still be deliberately reset to null this way, distinct from being omitted.
+    const existingFeatures = parsePlanFeatures(plan.features) ?? {};
+    const mergedFeatures = features !== undefined ? { ...existingFeatures, ...features } : undefined;
+
     const updated = await prisma.plan.update({
       where: { id },
       data: {
         name,
         priceDzd,
         billingPeriod,
-        features: features as Prisma.InputJsonValue | undefined,
+        features: mergedFeatures as Prisma.InputJsonValue | undefined,
         isActive,
       },
     });
@@ -312,6 +327,93 @@ router.put(
   validateParams(uuidParam("id")),
   validateBody(updatePlanSchema),
   updatePlan
+);
+
+router.patch(
+  "/plans/:id",
+  requireAdmin,
+  validateParams(uuidParam("id")),
+  validateBody(updatePlanSchema),
+  updatePlan
+);
+
+// GET / PATCH /api/admin/users/:id/limits — per-student quota overrides.
+const userLimitsPatchSchema = z.object({
+  dailyQuestionLimitOverride: z.number().int().min(0).max(5000).nullable().optional(),
+  unlimitedQuestionsOverride: z.boolean().optional(),
+  aiDailyAllowanceOverride: z.number().int().min(0).max(5000).nullable().optional(),
+});
+
+async function getUserLimits(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params as { id: string };
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        dailyQuestionLimitOverride: true,
+        unlimitedQuestionsOverride: true,
+        aiDailyAllowanceOverride: true,
+      },
+    });
+    if (!user) {
+      throw new ApiError(404, "USER_NOT_FOUND", "No user exists with this id.");
+    }
+    const dailyQuestions = await getDailyQuestionsView(prisma, id);
+    const aiCredits = await resolveAiCreditAllowances(prisma, id);
+    res.status(200).json({ user, effective: { dailyQuestions, aiCredits } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function patchUserLimits(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params as { id: string };
+    const body = req.body as z.infer<typeof userLimitsPatchSchema>;
+    const existing = await prisma.user.findUnique({ where: { id }, select: { id: true } });
+    if (!existing) {
+      throw new ApiError(404, "USER_NOT_FOUND", "No user exists with this id.");
+    }
+    const user = await prisma.user.update({
+      where: { id },
+      data: {
+        ...(body.dailyQuestionLimitOverride !== undefined
+          ? { dailyQuestionLimitOverride: body.dailyQuestionLimitOverride }
+          : {}),
+        ...(body.unlimitedQuestionsOverride !== undefined
+          ? { unlimitedQuestionsOverride: body.unlimitedQuestionsOverride }
+          : {}),
+        ...(body.aiDailyAllowanceOverride !== undefined
+          ? { aiDailyAllowanceOverride: body.aiDailyAllowanceOverride }
+          : {}),
+      },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        dailyQuestionLimitOverride: true,
+        unlimitedQuestionsOverride: true,
+        aiDailyAllowanceOverride: true,
+      },
+    });
+    const dailyQuestions = await getDailyQuestionsView(prisma, id);
+    const aiCredits = await resolveAiCreditAllowances(prisma, id);
+    res.status(200).json({ user, effective: { dailyQuestions, aiCredits } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+router.get("/users/:id/limits", requireAdmin, validateParams(uuidParam("id")), getUserLimits);
+router.patch(
+  "/users/:id/limits",
+  requireAdmin,
+  validateParams(uuidParam("id")),
+  validateBody(userLimitsPatchSchema),
+  patchUserLimits
 );
 
 // PromoCode.type is a plain String in the schema ('referral' | 'discount') — validate the

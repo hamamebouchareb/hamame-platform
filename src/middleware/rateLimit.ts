@@ -126,3 +126,6 @@ export const limitAiCalls = rateLimit(10 * 60 * 1000, 30);
 // Wallet money surfaces: recharge-code redemption (code-guessing friction) and
 // receipt uploads (storage abuse). 10 per 10 minutes per IP per endpoint.
 export const limitWalletActions = rateLimit(10 * 60 * 1000, 10);
+
+// Question bank browse scraping friction: 120 requests per 10 minutes per IP.
+export const limitQuestionReads = rateLimit(10 * 60 * 1000, 120);

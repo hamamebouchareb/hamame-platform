@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { cx } from "@/lib/cx";
 import { useLanguage } from "@/context/LanguageContext";
 import type { I18nKey } from "@/lib/i18n";
@@ -9,7 +10,7 @@ import { Button } from "@/components/Button";
 import { ErrorState } from "@/components/ErrorState";
 import { Input, Select } from "@/components/Field";
 import { Icon } from "@/components/Icon";
-import type { Faculty, QuestionCountsResponse, QuestionType } from "@/lib/types";
+import type { Entitlements, Faculty, QuestionCountsResponse, QuestionType } from "@/lib/types";
 
 export type ResultSort = "by_year" | "by_course" | "random";
 
@@ -50,6 +51,7 @@ export interface SessionBuilderPrefill {
 export interface SessionBuilderProps {
   initialMode?: "practice" | "exam";
   initialFacultyId?: string | null;
+  entitlements?: Entitlements | null;
   prefill?: SessionBuilderPrefill | null;
   onStart: (config: SessionConfig) => void;
   isStarting?: boolean;
@@ -191,6 +193,7 @@ function Step({
 export function SessionBuilder({
   initialMode = "practice",
   initialFacultyId = null,
+  entitlements = null,
   prefill = null,
   onStart,
   isStarting = false,
@@ -267,11 +270,32 @@ export function SessionBuilder({
   }, [data, topicSearch, subcategories]);
 
   const total = data?.total;
-  const effectiveSize = Math.max(1, Math.min(size, MAX_SIZE, total ?? MAX_SIZE));
+  const isUnlimited =
+    !entitlements ||
+    entitlements.dailyQuestions.isUnlimited === true ||
+    entitlements.premium?.unrestricted === true ||
+    entitlements.premium?.allResidanatFaculties === true ||
+    (entitlements.premium?.yearId != null &&
+      entitlements.premium.facultyId != null &&
+      facultyIds.length === 1 &&
+      facultyIds[0] === entitlements.premium.facultyId);
+  const maxAllowed = isUnlimited
+    ? MAX_SIZE
+    : Math.min(MAX_SIZE, Math.max(0, entitlements.dailyQuestions.remaining));
+  const effectiveMax = isUnlimited ? MAX_SIZE : Math.max(1, maxAllowed);
+  const effectiveSize = Math.max(1, Math.min(size, effectiveMax, total ?? effectiveMax));
+  const sizeTouched = useRef(false);
   // Raw text while typing in "Autre", so the field can be emptied mid-edit.
   const [sizeDraft, setSizeDraft] = useState<string | null>(null);
   const isPresetSize =
-    SIZE_PRESETS.includes(effectiveSize) || (total !== undefined && effectiveSize === Math.min(total, MAX_SIZE));
+    SIZE_PRESETS.includes(effectiveSize) || (total !== undefined && effectiveSize === Math.min(total, effectiveMax));
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!entitlements || isUnlimited || sizeTouched.current) return;
+    setSize(Math.min(20, Math.max(1, maxAllowed)));
+  }, [entitlements, isUnlimited, maxAllowed]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Preselect the student's own faculty once it is known to carry questions.
   const facultyPreselected = useRef(false);
@@ -364,7 +388,7 @@ export function SessionBuilder({
     ...(mode === "exam" ? { timeLimitSeconds } : {}),
   };
 
-  const canStart = !isStarting && questionTypes.length > 0 && (total ?? 0) > 0;
+  const canStart = !isStarting && questionTypes.length > 0 && (total ?? 0) > 0 && (isUnlimited || maxAllowed > 0);
 
   return (
     <form
@@ -589,24 +613,26 @@ export function SessionBuilder({
                 key={preset}
                 selected={sizeDraft === null && effectiveSize === preset}
                 onClick={() => {
+                  sizeTouched.current = true;
                   setSizeDraft(null);
                   setSize(preset);
                 }}
-                disabled={isStarting || (total !== undefined && preset > total)}
+                disabled={isStarting || (total !== undefined && preset > total) || (!isUnlimited && preset > maxAllowed)}
               >
                 {preset}
               </Chip>
             ))}
             {total !== undefined && total > 0 ? (
               <Chip
-                selected={sizeDraft === null && effectiveSize === Math.min(total, MAX_SIZE)}
+                selected={sizeDraft === null && effectiveSize === Math.min(total, effectiveMax)}
                 onClick={() => {
+                  sizeTouched.current = true;
                   setSizeDraft(null);
-                  setSize(Math.min(total, MAX_SIZE));
+                  setSize(Math.min(total, effectiveMax));
                 }}
-                disabled={isStarting}
+                disabled={isStarting || (!isUnlimited && maxAllowed === 0)}
               >
-                {t("rb.countAll", { count: Math.min(total, MAX_SIZE) })}
+                {t("rb.countAll", { count: Math.min(total, effectiveMax) })}
               </Chip>
             ) : null}
             <label
@@ -629,22 +655,26 @@ export function SessionBuilder({
                   if (sizeDraft !== null || event.ctrlKey || event.metaKey || event.altKey) return;
                   if (/^\d$/.test(event.key)) {
                     event.preventDefault();
+                    sizeTouched.current = true;
                     setSizeDraft(event.key);
                     const next = Number(event.key);
-                    if (next > 0) setSize(Math.min(next, MAX_SIZE));
+                    if (next > 0) setSize(Math.min(next, effectiveMax));
                   } else if (event.key === "Backspace" || event.key === "Delete") {
                     event.preventDefault();
+                    sizeTouched.current = true;
                     setSizeDraft("");
                   }
                 }}
                 onPaste={(event) => {
                   event.preventDefault();
+                  sizeTouched.current = true;
                   const digits = event.clipboardData.getData("text").replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 4);
                   setSizeDraft(digits);
                   const next = Number(digits);
-                  if (digits !== "" && next > 0) setSize(Math.min(next, MAX_SIZE));
+                  if (digits !== "" && next > 0) setSize(Math.min(next, effectiveMax));
                 }}
                 onChange={(event) => {
+                  sizeTouched.current = true;
                   // While a draft is already open, keep every new digit. The
                   // replace helper only applies to the first edit of the
                   // committed number (preset 10 + type 3 must not become 103).
@@ -654,16 +684,26 @@ export function SessionBuilder({
                       : event.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 4);
                   setSizeDraft(digits);
                   const next = Number(digits);
-                  if (digits !== "" && next > 0) setSize(Math.min(next, MAX_SIZE));
+                  if (digits !== "" && next > 0) setSize(Math.min(next, effectiveMax));
                 }}
                 onBlur={() => setSizeDraft(null)}
-                disabled={isStarting}
+                disabled={isStarting || (!isUnlimited && maxAllowed === 0)}
                 className="w-14 bg-transparent text-center tabular-nums text-inherit outline-none placeholder:text-current/60"
               />
             </label>
           </div>
           {total !== undefined ? (
             <p className="mt-1 text-meta text-text-tertiary">{t("rb.countHint", { count: total })}</p>
+          ) : null}
+          {entitlements && !isUnlimited ? (
+            <p className={cx("mt-2 text-meta", maxAllowed === 0 ? "text-danger" : "text-text-secondary")}>
+              {maxAllowed === 0
+                ? t("qcmBuilder.quotaZeroNote")
+                : t("qcmBuilder.quotaCapNote", { remaining: maxAllowed })}{" "}
+              <Link href="/subscription" className="font-medium text-accent-soft underline underline-offset-2">
+                {t("qcmBuilder.quotaUpgradeLink")}
+              </Link>
+            </p>
           ) : null}
         </fieldset>
 

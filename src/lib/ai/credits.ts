@@ -45,6 +45,19 @@ export function parseAiCreditAllowances(features: Prisma.JsonValue | undefined):
 //
 // Sequential awaits, never Promise.all: the Supabase session pooler throws intermittent
 // P1001 under ~10+ concurrent Prisma queries (handoff Section 1).
+export function applyAiAllowanceOverride(
+  planAllowances: AiCreditAllowances,
+  dailyOverride: number | null | undefined
+): AiCreditAllowances {
+  if (typeof dailyOverride === "number" && Number.isInteger(dailyOverride) && dailyOverride >= 0) {
+    return {
+      dailyAllowance: dailyOverride,
+      monthlyAllowance: Math.max(dailyOverride * 30, planAllowances.monthlyAllowance),
+    };
+  }
+  return planAllowances;
+}
+
 export async function resolveAiCreditAllowances(
   client: PrismaClient,
   userId: string
@@ -55,17 +68,21 @@ export async function resolveAiCreditAllowances(
     select: { plan: { select: { features: true } } },
   });
 
-  const subscribedAllowances = parseAiCreditAllowances(subscription?.plan.features);
-  if (subscribedAllowances) {
-    return subscribedAllowances;
+  let planAllowances = parseAiCreditAllowances(subscription?.plan.features);
+  if (!planAllowances) {
+    const freePlan = await client.plan.findFirst({
+      where: { name: "free", isActive: true },
+      select: { features: true },
+    });
+    planAllowances = parseAiCreditAllowances(freePlan?.features) ?? { ...FALLBACK_AI_CREDITS };
   }
 
-  const freePlan = await client.plan.findFirst({
-    where: { name: "free", isActive: true },
-    select: { features: true },
+  const user = await client.user.findUnique({
+    where: { id: userId },
+    select: { aiDailyAllowanceOverride: true },
   });
 
-  return parseAiCreditAllowances(freePlan?.features) ?? { ...FALLBACK_AI_CREDITS };
+  return applyAiAllowanceOverride(planAllowances, user?.aiDailyAllowanceOverride);
 }
 
 export interface AiCreditUpgrade {

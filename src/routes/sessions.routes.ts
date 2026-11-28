@@ -17,7 +17,7 @@ import { resolveViewerUniversityId } from "../lib/university-scope";
 import {
   nextUtcDay,
   questionsUsedToday,
-  resolveDailyQuestionLimit,
+  resolveDailyQuestionPolicy,
   resolvePremiumScope,
   utcDay,
 } from "../lib/entitlements";
@@ -406,13 +406,27 @@ export async function buildSessionForUser(userId: string, params: BuildSessionPa
   // cap at `size` in application code rather than relying on DB-level randomness.
   const candidates = await prisma.question.findMany({
     where,
-    select: { id: true, options: { select: { id: true } }, unit: { select: { module: { select: { yearId: true } } } } },
+    select: {
+      id: true,
+      options: { select: { id: true } },
+      unit: { select: { module: { select: { yearId: true, year: { select: { label: true } } } } } },
+    },
   });
   const shuffled = shuffle(candidates);
 
   const premiumScope = enforceDailyLimit ? await resolvePremiumScope(prisma, userId) : null;
-  const dailyLimit = enforceDailyLimit ? await resolveDailyQuestionLimit(prisma) : 0;
+  const { limit: dailyLimit, isUnlimited } = enforceDailyLimit
+    ? await resolveDailyQuestionPolicy(prisma, userId)
+    : { limit: 0, isUnlimited: true };
   const coveredYearId = premiumScope?.yearId ?? null;
+  let allowAllResidanat = false;
+  if (premiumScope?.allResidanatFaculties && coveredYearId) {
+    const coveredYear = await prisma.year.findUnique({
+      where: { id: coveredYearId },
+      select: { label: true },
+    });
+    allowAllResidanat = coveredYear?.label === "Résidanat";
+  }
 
   const { session, dailyQuestions } = await prisma.$transaction(async (tx) => {
     // Serializes concurrent session builds for this user so two requests can't
@@ -420,14 +434,17 @@ export async function buildSessionForUser(userId: string, params: BuildSessionPa
     let selected = shuffled.slice(0, size);
     let limitedCount = 0;
     let usedToday = 0;
-    if (enforceDailyLimit && !premiumScope?.unrestricted) {
+    if (enforceDailyLimit && !premiumScope?.unrestricted && !isUnlimited) {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`daily-questions:${userId}`}))`;
       usedToday = await questionsUsedToday(tx, userId);
       let remaining = Math.max(dailyLimit - usedToday, 0);
       selected = [];
       for (const question of shuffled) {
         if (selected.length >= size) break;
-        if (coveredYearId !== null && question.unit.module.yearId === coveredYearId) {
+        const isCovered =
+          (coveredYearId !== null && question.unit.module.yearId === coveredYearId) ||
+          (allowAllResidanat && question.unit.module.year.label === "Résidanat");
+        if (isCovered) {
           selected.push(question);
         } else if (remaining > 0) {
           selected.push(question);
@@ -489,7 +506,8 @@ export async function buildSessionForUser(userId: string, params: BuildSessionPa
         ? {
             limit: dailyLimit,
             usedToday: usedAfter,
-            remaining: Math.max(dailyLimit - usedAfter, 0),
+            remaining: isUnlimited ? dailyLimit : Math.max(dailyLimit - usedAfter, 0),
+            isUnlimited,
             premiumYearId: coveredYearId,
             limitedBySize: selected.length < Math.min(size, shuffled.length),
           }

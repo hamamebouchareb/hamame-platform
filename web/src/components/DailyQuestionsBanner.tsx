@@ -38,7 +38,7 @@ export function DailyQuestionsBanner({ refreshKey = 0, className }: DailyQuestio
     };
   }, [refreshKey]);
 
-  if (!entitlements || entitlements.premium) return null;
+  if (!entitlements || entitlements.premium || entitlements.dailyQuestions.isUnlimited) return null;
   const { remaining, limit } = entitlements.dailyQuestions;
   const exhausted = remaining === 0;
 
